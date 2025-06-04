@@ -76,7 +76,7 @@ def load_hf_dataset(dataset_path, split, hf_token=None, size=None, name=None, pa
 
     return datasets
 
-def get_task(hf=True, size=None):
+def get_task(hf=True, size=None, include_private: bool = False):
     # Load dataset from HuggingFace with customized parsing
     datasets = {}
     for split in ["train", "validation", "test"]:
@@ -87,13 +87,15 @@ def get_task(hf=True, size=None):
             size=size
         )
         datasets.update(temp)
-    private = load_hf_dataset(
-        dataset_path="mech-interp-bench/arc_easy_private_test",
-        split="test",
-        parse_fn=parse_arc_easy_example,
-        size=size
-    )
-    datasets.update({k+"private":v for k,v in private.items()})
+
+    if include_private:
+        private = load_hf_dataset(
+            dataset_path="mech-interp-bench/arc_easy_private_test",
+            split="test",
+            parse_fn=parse_arc_easy_example,
+            size=size
+        )
+        datasets.update({k+"private":v for k,v in private.items()})
     
     # Build a prompt-to-answerKey lookup dictionary for efficient searching
     prompt_to_answerkey = {}

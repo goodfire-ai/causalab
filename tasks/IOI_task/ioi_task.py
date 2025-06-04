@@ -21,7 +21,7 @@ def get_data(path):
         data = json.load(f)
     return data
 
-def get_task(hf=True, size=None):
+def get_task(hf=True, size=None, include_private: bool = False):
     variables = ["output_position", "output_token", "template", "name_A", "name_B", "name_C", "place", "object", "logit_diff"]
 
     name_path = os.path.join("tasks", os.path.join("IOI_task", 'names.json'))
@@ -213,14 +213,16 @@ def get_task(hf=True, size=None):
                 ignore_names=["random", "abc"]
             )
             datasets.update(temp)
-        private = model.load_hf_dataset(
-            dataset_path="mech-interp-bench/ioi_private_test",
-            split="test",
-            parse_fn=input_parser,
-            size=size,
-            ignore_names=["random", "abc"]
-        )
-        datasets.update({k+"private":v for k,v in private.items()})
+
+        if include_private:
+            private = model.load_hf_dataset(
+                dataset_path="mech-interp-bench/ioi_private_test",
+                split="test",
+                parse_fn=input_parser,
+                size=size,
+                ignore_names=["random", "abc"]
+            )
+            datasets.update({k+"private":v for k,v in private.items()})
 
     return Task(model, datasets, input_dumper, output_dumper,input_parser, id=f"ioi_task")
 

@@ -14,7 +14,7 @@ from model_units.LM_units import TokenPosition, get_last_token_index
 import re
 import random
 
-def get_task(hf=True, size=None):
+def get_task(hf=True, size=None, include_private: bool = False):
     variables = [
         "op1_tens", "op1_ones",
         "op2_tens", "op2_ones",
@@ -85,14 +85,15 @@ def get_task(hf=True, size=None):
             )
             datasets.update(temp)
 
-        private = model.load_hf_dataset(
-            dataset_path="mech-interp-bench/arithmetic_addition_private_test",
-            split="test",
-            size=size,
-            parse_fn=parse_arithmetic_example,
-            ignore_names=["ones_op1", "ones_op2", "tens_op1", "tens_op2", "tens_carry"]
-        )
-        datasets.update({k+"private":v for k,v in private.items()})
+        if include_private:
+            private = model.load_hf_dataset(
+                dataset_path="mech-interp-bench/arithmetic_addition_private_test",
+                split="test",
+                size=size,
+                parse_fn=parse_arithmetic_example,
+                ignore_names=["ones_op1", "ones_op2", "tens_op1", "tens_op2", "tens_carry"]
+            )
+            datasets.update({k+"private":v for k,v in private.items()})
 
         return Task(model, datasets, input_dumper, output_dumper, id="arithmetic")
 

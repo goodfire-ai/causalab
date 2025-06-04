@@ -17,7 +17,7 @@ from model_units.LM_units import TokenPosition, get_last_token_index
 import re
 
 
-def get_task(hf=True, size=None):
+def get_task(hf=True, size=None, include_private: bool = False):
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'object_color_pairs.json')
     #Load grandparent directory
     with open(path, 'r') as f:
@@ -102,15 +102,17 @@ def get_task(hf=True, size=None):
                 ignore_names=["noun", "color", "symbol"]
             )
             datasets.update(temp)
-        private = model.load_hf_dataset(
-            dataset_path="mech-interp-bench/copycolors_mcqa_private_test",
-            split="test",
-            name=f"{NUM_CHOICES}_answer_choices",
-            parse_fn=parse_mcqa_example,
-            size=size,
-            ignore_names=["noun", "color", "symbol"]
-        )
-        datasets.update({k+"private":v for k,v in private.items()})
+
+        if include_private:
+            private = model.load_hf_dataset(
+                dataset_path="mech-interp-bench/copycolors_mcqa_private_test",
+                split="test",
+                name=f"{NUM_CHOICES}_answer_choices",
+                parse_fn=parse_mcqa_example,
+                size=size,
+                ignore_names=["noun", "color", "symbol"]
+            )
+            datasets.update({k+"private":v for k,v in private.items()})
 
         return Task(model, datasets, input_dumper, output_dumper,input_parser, id=f"{NUM_CHOICES}_answer_MCQA")
 

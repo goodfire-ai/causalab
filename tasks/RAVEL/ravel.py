@@ -43,7 +43,7 @@ def generate_prompt_to_template(task):
   return prompt_to_template
 
 
-def get_task(hf=True, size=None):
+def get_task(hf=True, size=None, include_private: bool = False):
     if not _CITY_ENTITY:
         _CITY_ENTITY.update(json.load(open(os.path.join(_RAVEL_DATA_DIR, 'ravel_city_entity.json'))))
 
@@ -118,14 +118,16 @@ def get_task(hf=True, size=None):
                 shuffle=True
             )
             datasets.update(temp)
-        private = model.load_hf_dataset(
-            dataset_path="yiksiu/mib_ravel_private_test",
-            split="test",
-            parse_fn=parse_ravel_example,
-            size=size,
-            shuffle=True
-        )
-        datasets.update({k+"private":v for k,v in private.items()})
+
+        if include_private:
+            private = model.load_hf_dataset(
+                dataset_path="yiksiu/mib_ravel_private_test",
+                split="test",
+                parse_fn=parse_ravel_example,
+                size=size,
+                shuffle=True
+            )
+            datasets.update({k+"private":v for k,v in private.items()})
 
         return Task(model, datasets, input_dumper, output_dumper, id="RAVEL_task")
 
