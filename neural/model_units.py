@@ -251,3 +251,4 @@ class AtomicModelUnit:
 
     def get_layer(self):
         return self.component.layer
+

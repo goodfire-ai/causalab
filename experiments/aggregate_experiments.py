@@ -41,8 +41,7 @@ def residual_stream_baselines(
         List of variable names to target for interventions
     checker : function
         Function that checks if model output matches expected output
-    start : intThe Reversible Residual Network: Backpropagation Without Storing Activations
-Aidan N. Gomez, Mengye Ren, Raquel Urtasun, Roger B. Grosse
+    start : int
         Starting layer index for interventions
     end : int
         Ending layer index for interventions
