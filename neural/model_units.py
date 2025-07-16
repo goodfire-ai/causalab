@@ -19,7 +19,7 @@ from typing import List, Union, Optional
 
 import pyvene as pv
 
-from neural.featurizers import Featurizer, SubspaceFeaturizer 
+from neural.featurizers import Featurizer, SubspaceFeaturizer, SubspaceFeaturizerRevNet 
 
 
 class ComponentIndexer:

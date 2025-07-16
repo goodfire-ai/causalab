@@ -41,7 +41,8 @@ def residual_stream_baselines(
         List of variable names to target for interventions
     checker : function
         Function that checks if model output matches expected output
-    start : int
+    start : intThe Reversible Residual Network: Backpropagation Without Storing Activations
+Aidan N. Gomez, Mengye Ren, Raquel Urtasun, Roger B. Grosse
         Starting layer index for interventions
     end : int
         Ending layer index for interventions
@@ -107,11 +108,11 @@ def residual_stream_baselines(
     # Run DAS (Direct Attribution with Subspace) method
     if "DAS" in methods:
         if verbose:
-            print("Running DAS method...")
+            print("Running DAS method with alignment map"+config["alignment_map"]+"...")
             
         config["method_name"] = "DAS"
         experiment = PatchResidualStream(pipeline, task, list(range(start, end)), token_positions, checker, config=config)
-        method_model_dir = os.path.join(model_dir, f"DAS_{pipeline.model.__class__.__name__}_{"-".join(target_variables)}")
+        method_model_dir = os.path.join(model_dir, f"DAS_{config['alignment_map']}_{pipeline.model.__class__.__name__}_{"-".join(target_variables)}")
         experiment.train_interventions(train_data, target_variables, method="DAS", verbose=verbose, model_dir=method_model_dir)
         raw_results = experiment.perform_interventions(test_data, verbose=verbose, target_variables_list=[target_variables], save_dir=results_dir)
         heatmaps(experiment, raw_results, config)
