@@ -428,14 +428,24 @@ class InterventionExperiment:
                 for model_unit in model_units:
                     if method == "DAS":
                         # For DAS, use trainable subspace featurizer
-                        model_unit.set_featurizer(
-                            SubspaceFeaturizer(
-                                shape=(model_unit.shape[0], self.config["n_features"]), 
-                                trainable=True,
-                                id="DAS"
+                        if self.config["alignment_map"]=="Rotation":
+                            model_unit.set_featurizer(
+                                SubspaceFeaturizer(
+                                    shape=(model_unit.shape[0], self.config["n_features"]), 
+                                    trainable=True,
+                                    id="DAS_Rotation"
+                                )
                             )
-                        )
-                        model_unit.set_feature_indices(None)  # Use all features
+                            model_unit.set_feature_indices(None)  # Use all features
+                        if self.config["alignment_map"]=="RevNet":              
+                            model_unit.set_featurizer(
+                                SubspaceFeaturizerRevNet(
+                                    shape=(self.config["number_blocks"], model_unit.shape[0], self.config["hidden_size"]), 
+                                    trainable=True,
+                                    id="DAS_RevNet" 
+                                )
+                            )
+                            model_unit.set_feature_indices(list(range(self.config["n_features"])))  # Use n_features first features
                         
             # Train the intervention
             _train_intervention(self.pipeline, model_units_list, counterfactual_dataset, 
@@ -446,3 +456,4 @@ class InterventionExperiment:
                 self.save_featurizers([model_unit for model_units in model_units_list for model_unit in model_units], model_dir) 
                 
         return self
+
