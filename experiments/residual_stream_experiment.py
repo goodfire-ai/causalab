@@ -218,21 +218,26 @@ class PatchResidualStream(InterventionExperiment):
             **kwargs: Additional configuration options
         """
         self.featurizers = featurizers if featurizers is not None else {}
-        self.loss_and_metric_fn = loss_and_metric_fn 
+        self.loss_and_metric_fn = loss_and_metric_fn
+
+        # Extract featurizer_kwargs from config if present
+        config = kwargs.get('config', {})
+        featurizer_kwargs = config.get('featurizer_kwargs', {})
 
         # Generate all combinations of model units without feature_indices
         model_units_lists = []
         for layer in layers:
             for pos in token_positions:
-                featurizer = self.featurizers.get((layer, pos.id), 
-                                                 Featurizer(n_features=pipeline.model.config.hidden_size))
+                featurizer = self.featurizers.get((layer, pos.id),
+                                                 Featurizer(n_features=pipeline.model.config.hidden_size,
+                                                           **featurizer_kwargs))
                 model_units_lists.append([[
                     ResidualStream(
                         layer=layer,
                         token_indices=pos,
                         featurizer=featurizer,
                         shape=(pipeline.model.config.hidden_size,),
-                        feature_indices=None, 
+                        feature_indices=None,
                         target_output=True
                     )
                 ]])
@@ -289,7 +294,7 @@ class PatchResidualStream(InterventionExperiment):
                             sae = sae_loader(layer)
                             
                             # Set the SAE featurizer for this unit
-                            unit.set_featurizer(SAEFeaturizer(sae))
+                            unit.set_featurizer(SAEFeaturizer(sae, **self.config.get('featurizer_kwargs', {})))
                             
                             # Clear GPU memory after loading each SAE
                             del sae

@@ -53,12 +53,17 @@ class PatchAttentionHeads(InterventionExperiment):
         """
         self.layer_head_list = layer_head_list
         self.featurizers = featurizers if featurizers is not None else {}
-        
+
+        # Extract featurizer_kwargs from config if present
+        if config is None:
+            config = kwargs.get('config', {})
+        featurizer_kwargs = config.get('featurizer_kwargs', {})
+
         # Generate all combinations of model units
         # Different model architectures use different attribute names for number of heads
         p_config = pipeline.model.config
         if hasattr(p_config, 'head_dim'):
-            head_size = p_config.head_dim   
+            head_size = p_config.head_dim
         else:
             if hasattr(p_config, 'n_head'):
                 num_heads = p_config.n_head
@@ -67,15 +72,15 @@ class PatchAttentionHeads(InterventionExperiment):
             elif hasattr(p_config, 'num_heads'):
                 num_heads = p_config.num_heads
             head_size = pipeline.model.config.hidden_size // num_heads
-            
-        
+
+
         model_units = []
         for layer, head in layer_head_list:
             # Get or create featurizer for this head
-            featurizer_key = (layer, head) 
+            featurizer_key = (layer, head)
             featurizer = self.featurizers.get(
                 featurizer_key,
-                Featurizer(n_features=head_size)
+                Featurizer(n_features=head_size, **featurizer_kwargs)
             )
             
             # Create model unit list for this head

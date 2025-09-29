@@ -365,7 +365,8 @@ class InterventionExperiment:
                         SubspaceFeaturizer(
                             rotation_subspace=rotation.T,
                             trainable=False,
-                            id="SVD"
+                            id="SVD",
+                            **self.config.get('featurizer_kwargs', {})
                         )
                     )
                     model_unit.set_feature_indices(None)  # Use all components initially
@@ -436,7 +437,7 @@ class InterventionExperiment:
                             )
                         )
                         model_unit.set_feature_indices(None)  # Use all features
-                        
+
             # Train the intervention
             _train_intervention(self.pipeline, model_units_list, counterfactual_dataset, 
                                intervention_type, self.config, self.loss_and_metric_fn)

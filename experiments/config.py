@@ -60,7 +60,14 @@ DEFAULT_CONFIG = {
     "shuffle": True,
 
     # Whether to save raw_outputs in the results
-    "raw_outputs": True
+    "raw_outputs": True,
+
+    # Keyword arguments to pass to Featurizer constructors
+    # This allows flexible configuration of featurizer behavior
+    "featurizer_kwargs": {
+        # Whether to tie mask weights within each atomic model unit (DBM only)
+        "tie_masks": False
+    }
 }
 
 # Preset configurations for common experiments
