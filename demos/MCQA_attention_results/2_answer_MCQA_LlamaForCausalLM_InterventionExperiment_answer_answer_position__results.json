@@ -1,0 +1,5783 @@
+{
+  "method_name": "InterventionExperiment",
+  "model_name": "LlamaForCausalLM",
+  "task_name": "2_answer_MCQA",
+  "dataset": {
+    "different_symbol_same_position": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.8671875
+          },
+          "answer_position": {
+            "average_score": 0.109375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.09375
+          },
+          "answer_position": {
+            "average_score": 0.890625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.8515625
+          },
+          "answer_position": {
+            "average_score": 0.125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.1015625
+          },
+          "answer_position": {
+            "average_score": 0.8828125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.65625
+          },
+          "answer_position": {
+            "average_score": 0.3203125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.3828125
+          },
+          "answer_position": {
+            "average_score": 0.6015625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.625
+          },
+          "answer_position": {
+            "average_score": 0.34375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.4140625
+          },
+          "answer_position": {
+            "average_score": 0.578125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.609375
+          },
+          "answer_position": {
+            "average_score": 0.359375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.4140625
+          },
+          "answer_position": {
+            "average_score": 0.5703125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.6015625
+          },
+          "answer_position": {
+            "average_score": 0.3671875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.3984375
+          },
+          "answer_position": {
+            "average_score": 0.5859375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.609375
+          },
+          "answer_position": {
+            "average_score": 0.359375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.3828125
+          },
+          "answer_position": {
+            "average_score": 0.59375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.609375
+          },
+          "answer_position": {
+            "average_score": 0.359375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.3828125
+          },
+          "answer_position": {
+            "average_score": 0.59375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.625
+          },
+          "answer_position": {
+            "average_score": 0.34375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.3046875
+          },
+          "answer_position": {
+            "average_score": 0.671875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.625
+          },
+          "answer_position": {
+            "average_score": 0.34375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.3046875
+          },
+          "answer_position": {
+            "average_score": 0.671875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.640625
+          },
+          "answer_position": {
+            "average_score": 0.3359375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.2734375
+          },
+          "answer_position": {
+            "average_score": 0.703125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.640625
+          },
+          "answer_position": {
+            "average_score": 0.3359375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.265625
+          },
+          "answer_position": {
+            "average_score": 0.71875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.640625
+          },
+          "answer_position": {
+            "average_score": 0.3359375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.2578125
+          },
+          "answer_position": {
+            "average_score": 0.7265625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.625
+          },
+          "answer_position": {
+            "average_score": 0.3515625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.2578125
+          },
+          "answer_position": {
+            "average_score": 0.71875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.5859375
+          },
+          "answer_position": {
+            "average_score": 0.3828125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.2265625
+          },
+          "answer_position": {
+            "average_score": 0.7578125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.4140625
+          },
+          "answer_position": {
+            "average_score": 0.5390625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.4453125
+          },
+          "answer_position": {
+            "average_score": 0.484375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.2890625
+          },
+          "answer_position": {
+            "average_score": 0.6640625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.40625
+          },
+          "answer_position": {
+            "average_score": 0.5234375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.4140625
+          },
+          "answer_position": {
+            "average_score": 0.515625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.765625
+          },
+          "answer_position": {
+            "average_score": 0.1953125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.9765625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.828125
+          },
+          "answer_position": {
+            "average_score": 0.1328125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.984375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        }
+      }
+    },
+    "same_symbol_different_position": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        }
+      }
+    },
+    "different_symbol_different_position": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.90625
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.1328125
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.8515625
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.078125
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.640625
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.328125
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.609375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.3046875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.59375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.2578125
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.5625
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.171875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.5625
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.140625
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.5859375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.1328125
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.59375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.1171875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.6328125
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.09375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.6875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0625
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.6796875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.671875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.046875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.609375
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.59375
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0234375
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.484375
+          },
+          "answer_position": {
+            "average_score": 0.1953125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.5
+          },
+          "answer_position": {
+            "average_score": 0.296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.359375
+          },
+          "answer_position": {
+            "average_score": 0.4453125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.4765625
+          },
+          "answer_position": {
+            "average_score": 0.3046875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.484375
+          },
+          "answer_position": {
+            "average_score": 0.296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.7734375
+          },
+          "answer_position": {
+            "average_score": 0.1328125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.8125
+          },
+          "answer_position": {
+            "average_score": 0.109375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 1.0
+          },
+          "answer_position": {
+            "average_score": 0.0
+          }
+        }
+      }
+    },
+    "random_counterfactual": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0390625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-0,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 0,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-0,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.921875
+          },
+          "answer_position": {
+            "average_score": 0.078125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.171875
+          },
+          "answer_position": {
+            "average_score": 0.359375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-1,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 1,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-1,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.90625
+          },
+          "answer_position": {
+            "average_score": 0.0859375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.1484375
+          },
+          "answer_position": {
+            "average_score": 0.359375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-2,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 2,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-2,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.7109375
+          },
+          "answer_position": {
+            "average_score": 0.1484375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.3828125
+          },
+          "answer_position": {
+            "average_score": 0.28125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-3,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 3,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-3,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.671875
+          },
+          "answer_position": {
+            "average_score": 0.15625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.390625
+          },
+          "answer_position": {
+            "average_score": 0.2734375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-4,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 4,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-4,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.65625
+          },
+          "answer_position": {
+            "average_score": 0.1640625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.34375
+          },
+          "answer_position": {
+            "average_score": 0.2734375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-5,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 5,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-5,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.6328125
+          },
+          "answer_position": {
+            "average_score": 0.171875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.328125
+          },
+          "answer_position": {
+            "average_score": 0.2734375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-6,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 6,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-6,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.6484375
+          },
+          "answer_position": {
+            "average_score": 0.1796875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.296875
+          },
+          "answer_position": {
+            "average_score": 0.2734375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-7,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 7,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-7,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.6484375
+          },
+          "answer_position": {
+            "average_score": 0.1875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.2578125
+          },
+          "answer_position": {
+            "average_score": 0.28125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-8,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 8,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-8,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.6484375
+          },
+          "answer_position": {
+            "average_score": 0.1953125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.21875
+          },
+          "answer_position": {
+            "average_score": 0.296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-9,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 9,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-9,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.640625
+          },
+          "answer_position": {
+            "average_score": 0.203125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.203125
+          },
+          "answer_position": {
+            "average_score": 0.3203125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-10,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 10,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-10,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.6484375
+          },
+          "answer_position": {
+            "average_score": 0.203125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.203125
+          },
+          "answer_position": {
+            "average_score": 0.3203125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-11,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 11,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-11,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.640625
+          },
+          "answer_position": {
+            "average_score": 0.203125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.1953125
+          },
+          "answer_position": {
+            "average_score": 0.3203125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-12,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 12,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-12,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.640625
+          },
+          "answer_position": {
+            "average_score": 0.2109375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.1953125
+          },
+          "answer_position": {
+            "average_score": 0.328125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-13,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 13,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-13,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.625
+          },
+          "answer_position": {
+            "average_score": 0.203125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.171875
+          },
+          "answer_position": {
+            "average_score": 0.34375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-14,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 14,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-14,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.03125
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.5859375
+          },
+          "answer_position": {
+            "average_score": 0.2265625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.1640625
+          },
+          "answer_position": {
+            "average_score": 0.34375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-15,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 15,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-15,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.03125
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.046875
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-16,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 16,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-16,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.03125
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-17,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 17,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-17,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.4921875
+          },
+          "answer_position": {
+            "average_score": 0.3671875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-18,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 18,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-18,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.5390625
+          },
+          "answer_position": {
+            "average_score": 0.359375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-19,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 19,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-19,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.375
+          },
+          "answer_position": {
+            "average_score": 0.453125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.046875
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.046875
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-20,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 20,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-20,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.484375
+          },
+          "answer_position": {
+            "average_score": 0.3046875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.046875
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.046875
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-21,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 21,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-21,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.484375
+          },
+          "answer_position": {
+            "average_score": 0.3125
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-22,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 22,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-22,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.7890625
+          },
+          "answer_position": {
+            "average_score": 0.1015625
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-23,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 23,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-23,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.8359375
+          },
+          "answer_position": {
+            "average_score": 0.0859375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-24,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 24,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-24,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9765625
+          },
+          "answer_position": {
+            "average_score": 0.0234375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-25,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 25,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-25,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9765625
+          },
+          "answer_position": {
+            "average_score": 0.0234375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-26,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 26,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-26,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0234375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-27,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 27,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-27,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0234375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-28,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 28,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-28,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0234375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4296875
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-29,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 29,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-29,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.984375
+          },
+          "answer_position": {
+            "average_score": 0.0234375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-30,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 30,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-30,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0234375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-correct_symbol)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "correct_symbol"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-correct_symbol)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-correct_symbol_period)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "correct_symbol_period"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-correct_symbol_period)": null
+          },
+          "answer": {
+            "average_score": 0.0390625
+          },
+          "answer_position": {
+            "average_score": 0.4375
+          }
+        },
+        "[[AtomicModelUnit(id='ResidualStream(Layer-31,Token-last_token)')]]": {
+          "metadata": {
+            "layer": 31,
+            "position": "last_token"
+          },
+          "feature_indices": {
+            "ResidualStream(Layer-31,Token-last_token)": null
+          },
+          "answer": {
+            "average_score": 0.9921875
+          },
+          "answer_position": {
+            "average_score": 0.0234375
+          }
+        }
+      }
+    }
+  }
+}

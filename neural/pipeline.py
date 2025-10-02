@@ -85,12 +85,14 @@ class LMPipeline(Pipeline):
         max_length: int | None = None,
         logit_labels: bool = False,
         position_ids: bool = False,
+        use_chat_template: bool = False,
         **kwargs: Any,
     ) -> None:
         self.max_new_tokens = max_new_tokens
         self.max_length = max_length
         self.logit_labels = logit_labels
         self.position_ids = position_ids
+        self.use_chat_template = use_chat_template
         # pass through kwargs to _setup_model via instance vars
         self._init_extra_kwargs = kwargs
         super().__init__(model_or_name)
@@ -132,7 +134,11 @@ class LMPipeline(Pipeline):
         max_length: int | None = None,
         padding_side: str | None = None,
         add_special_tokens: bool = True,
+        use_chat_template: bool | None = None,
     ) -> Dict[str, torch.Tensor]:
+
+        if use_chat_template is None:
+            use_chat_template = self.use_chat_template
 
         if isinstance(input, str):
             input = [{"raw_input": input}]
@@ -146,6 +152,18 @@ class LMPipeline(Pipeline):
             assert isinstance(input, list) or isinstance(input, tuple), "Input must be a dictionary or a list/tuple of dictionaries."
             assert all("raw_input" in item for item in input), "Each input dictionary must contain 'raw_input' key."
             raw_input = [item["raw_input"] for item in input]
+
+        # Apply chat template if requested
+        if use_chat_template:
+            processed_input = []
+            for text in raw_input:
+                # Convert to messages format and apply chat template
+                messages = [{"role": "user", "content": text}]
+                formatted = self.tokenizer.apply_chat_template(
+                    messages, tokenize=False, add_generation_prompt=True
+                )
+                processed_input.append(formatted)
+            raw_input = processed_input
 
         if max_length is None:
             max_length = self.max_length

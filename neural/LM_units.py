@@ -65,11 +65,16 @@ class TokenPosition(ComponentIndexer):
         )
 
 
-# Convenience indexer
+# Convenience indexers
 def get_last_token_index(input: dict, pipeline: LMPipeline):
     """Return a one-element list containing the *last* token index."""
     ids = list(pipeline.load(input)["input_ids"][0])
     return [len(ids) - 1]
+
+def get_all_tokens(input: dict, pipeline: LMPipeline):
+    """Return a list containing all token indices."""
+    ids = list(pipeline.load(input)["input_ids"][0])
+    return list(range(len(ids)))
 
 
 # --------------------------------------------------------------------------- #

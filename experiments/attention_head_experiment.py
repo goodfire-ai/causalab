@@ -14,6 +14,8 @@ from causal.causal_model import CausalModel
 
 from experiments.pyvene_core import _prepare_intervenable_inputs
 
+from experiments.LM_helpers import LM_loss_and_metric_fn
+
 
 class PatchAttentionHeads(InterventionExperiment):
     """
@@ -26,16 +28,17 @@ class PatchAttentionHeads(InterventionExperiment):
     Attributes:
         layer_head_list (List[Tuple[int, int]]): List of (layer, head) tuples to intervene on
         featurizers (Dict): Mapping of (layer, head, position) tuples to Featurizer instances
-        token_positions (List[TokenPosition]): Token positions to analyze
+        token_position (TokenPosition): Token positions to analyze
     """
     
     def __init__(self,
                  pipeline: LMPipeline,
                  causal_model: CausalModel,
-                 layer_head_list: List[Tuple[int, int]],
-                 token_positions: List[TokenPosition],
+                 layer_head_lists: List[List[Tuple[int, int]]],
+                 token_position: TokenPosition,
                  checker: Callable,
                  featurizers: Dict[Tuple[int, int, str], Featurizer] = None,
+                 loss_and_metric_fn: Callable = LM_loss_and_metric_fn,
                  config: Dict = None,
                  **kwargs):
         """
@@ -46,12 +49,12 @@ class PatchAttentionHeads(InterventionExperiment):
             causal_model: CausalModel object containing the task
             layers: List of layer indices (kept for compatibility but not used directly)
             layer_head_list: List of (layer, head) tuples specifying which heads to intervene on
-            token_positions: List of TokenPosition objects for token positions
+            token_position: TokenPosition object storing token indices
             checker: Function to evaluate output accuracy
             featurizers: Dict mapping (layer, head, position.id) to Featurizer instances
             **kwargs: Additional configuration options
         """
-        self.layer_head_list = layer_head_list
+        self.layer_head_lists = layer_head_lists
         self.featurizers = featurizers if featurizers is not None else {}
 
         # Extract featurizer_kwargs from config if present
@@ -74,17 +77,17 @@ class PatchAttentionHeads(InterventionExperiment):
             head_size = pipeline.model.config.hidden_size // num_heads
 
 
-        model_units = []
-        for layer, head in layer_head_list:
-            # Get or create featurizer for this head
-            featurizer_key = (layer, head)
-            featurizer = self.featurizers.get(
-                featurizer_key,
-                Featurizer(n_features=head_size, **featurizer_kwargs)
-            )
-            
-            # Create model unit list for this head
-            for token_position in token_positions:
+        model_units_lists = []
+        for layer_head_list in layer_head_lists:
+            model_units = []
+            for layer, head in layer_head_list:
+                # Get or create featurizer for this head
+                featurizer_key = (layer, head)
+                featurizer = self.featurizers.get(
+                    featurizer_key,
+                    Featurizer(n_features=head_size, **featurizer_kwargs)
+                )
+                
                 model_units.append(
                     AttentionHead(
                         layer=layer,
@@ -96,7 +99,7 @@ class PatchAttentionHeads(InterventionExperiment):
                         shape=(head_size,)
                     )
                 )
-        model_units_lists = [[model_units]]
+            model_units_lists.append([model_units])
             
         # Metadata function to extract layer and head information
         metadata = lambda x: {
@@ -114,7 +117,281 @@ class PatchAttentionHeads(InterventionExperiment):
             config=config,
             **kwargs
         )
-        if "loss_and_metric_fn" in self.config:
-            self.loss_and_metric_fn = self.config["loss_and_metric_fn"]
+        self.loss_and_metric_fn = loss_and_metric_fn
         
-        self.token_positions = token_positions
+        self.token_position = token_position
+
+    def plot_heatmaps(self, results: Dict, target_variables, save_path: str = None, average_counterfactuals: bool = False):
+        """
+        Generate heatmaps visualizing intervention scores with heads vs layers.
+
+        Args:
+            results: Dictionary containing experiment results from interpret_results()
+            target_variables: List of variable names being analyzed
+            save_path: Optional path to save the generated plots. If None, displays plots interactively.
+            average_counterfactuals: If True, averages scores across counterfactual datasets
+        """
+        # Validate that each layer_head_list contains exactly one entry for heatmap compatibility
+        for i, layer_head_list in enumerate(self.layer_head_lists):
+            if len(layer_head_list) != 1:
+                raise ValueError(f"For heatmap visualization, each layer_head_list must contain exactly one (layer, head) pair. "
+                               f"layer_head_lists[{i}] contains {len(layer_head_list)} entries: {layer_head_list}")
+
+        target_variables_str = "-".join(target_variables)
+
+        if average_counterfactuals:
+            # TODO: Implement average heatmap
+            raise NotImplementedError("Average heatmap not yet implemented")
+        else:
+            self._plot_individual_heatmaps(results, target_variables_str, save_path)
+
+    def _plot_individual_heatmaps(self, results: Dict, target_variables_str: str, save_path: str = None):
+        """Create and save/display individual heatmaps for each dataset."""
+        # Get dataset names
+        dataset_names = list(results["dataset"].keys())
+
+        # Find the range of layers and heads from the layer_head_lists
+        all_layers = [layer_head_list[0][0] for layer_head_list in self.layer_head_lists]
+        all_heads = [layer_head_list[0][1] for layer_head_list in self.layer_head_lists]
+
+        max_layer = max(all_layers)
+        max_head = max(all_heads)
+        min_layer = min(all_layers)
+        min_head = min(all_heads)
+
+        # Create layer and head ranges
+        layers = list(range(min_layer, max_layer + 1))
+        heads = list(range(min_head, max_head + 1))
+
+        # Track if we have valid data for any dataset
+        any_valid_entries = False
+
+        # Create individual heatmaps for each dataset
+        for dataset_name in dataset_names:
+            # Initialize score matrix with NaN (will show as blank)
+            score_matrix = np.full((len(heads), len(layers)), np.nan)
+            valid_entries = False
+
+            # Fill score matrix
+            for unit_str, unit_data in results["dataset"][dataset_name]["model_unit"].items():
+                if "metadata" in unit_data and target_variables_str in unit_data:
+                    if "average_score" in unit_data[target_variables_str]:
+                        metadata = unit_data["metadata"]
+                        layer = metadata.get("layer")
+                        head = metadata.get("head")
+
+                        # Check if this layer/head combination is in our ranges
+                        if layer in layers and head in heads:
+                            layer_idx = layers.index(layer)
+                            head_idx = heads.index(head)
+                            score_matrix[head_idx, layer_idx] = unit_data[target_variables_str]["average_score"]
+                            valid_entries = True
+
+            if valid_entries:
+                any_valid_entries = True
+
+                # Convert dataset name to a safe filename
+                safe_dataset_name = dataset_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+
+                # Create the heatmap
+                self._create_heatmap(
+                    score_matrix=score_matrix,
+                    layers=layers,
+                    heads=heads,
+                    title=f'Attention Head Intervention Accuracy - Dataset: {dataset_name}\nTask: {results["task_name"]}',
+                    save_path=os.path.join(save_path, f'attention_heatmap_{safe_dataset_name}_{results["task_name"]}.png') if save_path else None
+                )
+
+        if not any_valid_entries:
+            print("Warning: No valid data found for visualization.")
+
+    def _create_heatmap(self, score_matrix: np.ndarray, layers: List, heads: List,
+                       title: str, save_path: str = None):
+        """
+        Create and save/display a single heatmap with heads vs layers.
+
+        Args:
+            score_matrix: 2D numpy array with scores for each (head, layer) pair
+            layers: List of layer indices
+            heads: List of head indices
+            title: Title for the heatmap
+            save_path: Path to save the heatmap, or None to display it
+        """
+        plt.figure(figsize=(max(8, len(layers) * 0.8), max(6, len(heads) * 0.4)))
+
+        # Create display matrix for annotations (only show values, not NaN)
+        display_matrix = np.round(score_matrix * 100, 2)
+
+        # Create annotation matrix - show values for non-NaN, empty string for NaN
+        annot_matrix = np.where(np.isnan(score_matrix), "", display_matrix.astype(str))
+
+        # Create the heatmap using seaborn
+        sns.heatmap(
+            score_matrix,
+            xticklabels=[f"L{layer}" for layer in layers],
+            yticklabels=[f"H{head}" for head in heads],
+            cmap='viridis',
+            annot=annot_matrix,
+            fmt="",  # Use string format since we're providing custom annotations
+            cbar_kws={'label': 'Accuracy (%)'},
+            vmin=0,
+            vmax=1,
+            cbar=True
+        )
+
+        plt.yticks(rotation=0)
+        plt.xticks(rotation=0)
+        plt.xlabel('Layer')
+        plt.ylabel('Head')
+        plt.title(title)
+        plt.tight_layout()
+
+        if save_path:
+            # Create directory if it doesn't exist
+            import os
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            plt.savefig(save_path, bbox_inches='tight', dpi=300)
+            plt.close()
+        else:
+            plt.show()
+
+    def plot_mask_heatmap(self, results: Dict, save_path: str = None):
+        """
+        Generate binary heatmap showing which attention heads have features selected (mask=1) or not (mask=0).
+
+        This method is designed for results from experiments with a single model_units_list containing
+        many attention heads, where each head has feature_indices that are either [] (mask=0) or [0] (mask=1).
+
+        Args:
+            results: Dictionary containing experiment results with feature_indices
+            save_path: Optional path to save the generated plot. If None, displays plot interactively.
+        """
+        # Get dataset names
+        dataset_names = list(results["dataset"].keys())
+
+        if not dataset_names:
+            print("Warning: No datasets found in results.")
+            return
+
+        # Process each dataset
+        for dataset_name in dataset_names:
+            dataset_results = results["dataset"][dataset_name]
+
+            if "model_unit" not in dataset_results:
+                print(f"Warning: No model_unit data found for dataset {dataset_name}")
+                continue
+
+            # Find the single model unit key (it's a long string with all heads)
+            model_unit_keys = list(dataset_results["model_unit"].keys())
+            if len(model_unit_keys) != 1:
+                print(f"Warning: Expected exactly 1 model_unit key, found {len(model_unit_keys)}. This method is designed for results with a single model_units_list containing all heads.")
+                continue
+
+            model_unit_key = model_unit_keys[0]
+            model_unit_data = dataset_results["model_unit"][model_unit_key]
+
+            if "feature_indices" not in model_unit_data:
+                print(f"Warning: No feature_indices found in model_unit data for dataset {dataset_name}")
+                continue
+
+            feature_indices = model_unit_data["feature_indices"]
+
+            # Parse attention head information and create binary mask
+            head_info = []
+            for head_key, indices in feature_indices.items():
+                # Parse layer and head from key like "AttentionHead(Layer-0,Head-0,Token-last_token)"
+                if "AttentionHead(Layer-" in head_key:
+                    try:
+                        # Extract layer and head numbers
+                        layer_part = head_key.split("Layer-")[1].split(",")[0]
+                        head_part = head_key.split("Head-")[1].split(",")[0]
+                        layer = int(layer_part)
+                        head = int(head_part)
+
+                        # Create binary mask: 0 for [], 1 for [0]
+                        mask_value = 1 if indices == [0] else 0
+
+                        head_info.append((layer, head, mask_value))
+                    except (ValueError, IndexError) as e:
+                        print(f"Warning: Could not parse head key {head_key}: {e}")
+                        continue
+
+            if not head_info:
+                print(f"Warning: No valid attention head data found for dataset {dataset_name}")
+                continue
+
+            # Determine the grid dimensions
+            layers = sorted(list(set(info[0] for info in head_info)))
+            heads = sorted(list(set(info[1] for info in head_info)))
+
+            # Create binary mask matrix
+            mask_matrix = np.full((len(heads), len(layers)), np.nan)
+
+            for layer, head, mask_value in head_info:
+                if layer in layers and head in heads:
+                    layer_idx = layers.index(layer)
+                    head_idx = heads.index(head)
+                    mask_matrix[head_idx, layer_idx] = mask_value
+
+            # Create the mask heatmap
+            self._create_mask_heatmap(
+                mask_matrix=mask_matrix,
+                layers=layers,
+                heads=heads,
+                title=f'Attention Head Mask - Dataset: {dataset_name}\nTask: {results.get("task_name", "Unknown Task")}',
+                save_path=os.path.join(save_path, f'attention_mask_{dataset_name.replace(" ", "_")}_{results.get("task_name", "unknown_task").replace(" ", "_")}.png') if save_path else None
+            )
+
+    def _create_mask_heatmap(self, mask_matrix: np.ndarray, layers: List, heads: List,
+                            title: str, save_path: str = None):
+        """
+        Create and save/display a binary mask heatmap.
+
+        Args:
+            mask_matrix: 2D numpy array with binary values (0, 1, or NaN for missing)
+            layers: List of layer indices
+            heads: List of head indices
+            title: Title for the heatmap
+            save_path: Path to save the heatmap, or None to display it
+        """
+        plt.figure(figsize=(max(8, len(layers) * 0.8), max(6, len(heads) * 0.4)))
+
+        # Create custom colormap: white for 0, dark blue for 1, light gray for NaN
+        from matplotlib.colors import ListedColormap
+        colors = ['white', '#2E4057']  # White for 0, dark blue for 1
+        cmap = ListedColormap(colors)
+
+        # Create annotation matrix - show "0" and "1" for valid values, empty for NaN
+        annot_matrix = np.where(np.isnan(mask_matrix), "", mask_matrix.astype(int).astype(str))
+
+        # Create the heatmap
+        sns.heatmap(
+            mask_matrix,
+            xticklabels=[f"L{layer}" for layer in layers],
+            yticklabels=[f"H{head}" for head in heads],
+            cmap=cmap,
+            annot=annot_matrix,
+            fmt="",  # Use string format since we're providing custom annotations
+            cbar_kws={'label': 'Mask Value', 'ticks': [0, 1]},
+            vmin=0,
+            vmax=1,
+            cbar=True,
+            linewidths=0.5,
+            linecolor='lightgray'
+        )
+
+        plt.yticks(rotation=0)
+        plt.xticks(rotation=0)
+        plt.xlabel('Layer')
+        plt.ylabel('Head')
+        plt.title(title)
+        plt.tight_layout()
+
+        if save_path:
+            # Create directory if it doesn't exist
+            import os
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            plt.savefig(save_path, bbox_inches='tight', dpi=300)
+            plt.close()
+        else:
+            plt.show()

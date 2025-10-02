@@ -14,6 +14,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import gc
 import collections
+import logging
 from typing import List, Dict, Union
 
 import torch
@@ -27,6 +28,10 @@ from tqdm import *
 from causal.counterfactual_dataset import CounterfactualDataset
 from neural.pipeline import Pipeline
 from neural.model_units import AtomicModelUnit
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)  # Set to INFO by default, debug disabled
 
 def shallow_collate_fn(batch):
     """Only batch at dictionary level, preserve nested structures"""
@@ -143,33 +148,12 @@ def _prepare_intervenable_inputs(pipeline, batch, model_units_list):
     batched_base = pipeline.load(batched_base)
     batched_counterfactuals = [pipeline.load(batched_counterfactual) for batched_counterfactual in batched_counterfactuals]
 
-    if pipeline.tokenizer.padding_side == "left" and model_units_list[0][0].component.unit != "h.pos":
-        pad_token_id = pipeline.tokenizer.pad_token_id
-        # Update base_indices to account for the padding
-        base_indices = [
-            [[j + (base==pad_token_id).sum().item() for j in index] for base, index in zip(batched_base["input_ids"], indices)]
-            for indices in base_indices
-        ]
-        # base_indices = [
-        #     [indices[0],
-        #       [[j + (base==pad_token_id).sum().item() for j in index] for base, index in zip(batched_base["input_ids"], indices[1])]]
-        #     for indices in base_indices
-        # ]
-
-        # Construct extended_batched_counterfactuals: (num_model_units, batch_size) from batched_counterfactuals: (num_counterfactuals, batch_size)
-        extended_batched_counterfactuals = [
-            batched_counterfactual
-            for model_units, batched_counterfactual in zip(model_units_list, batched_counterfactuals)
-            for model_unit in model_units
-        ]
-
-        # Update counterfactual_indices to account for the padding
-        counterfactual_indices = [
-            [[j + (counterfactual==pad_token_id).sum().item() for j in index] for counterfactual, index in zip(batched_counterfactual["input_ids"], indices)]
-            for indices, batched_counterfactual in zip(counterfactual_indices, extended_batched_counterfactuals)
-        ]
-
     inv_locations = {"sources->base": (counterfactual_indices, base_indices)}
+    logger.debug("base %s", base_indices)
+    logger.debug("counterfactual %s", counterfactual_indices)
+    for model_units in model_units_list:
+        for model_unit in model_units:
+            logger.debug("model_unit indices_func id: %s", model_unit.component._indices_func.id)
     # visualize_intervention_tokens(pipeline, batched_base, batched_counterfactuals, inv_locations)
     return batched_base, batched_counterfactuals, inv_locations, feature_indices
 
@@ -350,7 +334,7 @@ def _run_interchange_interventions(
     all_outputs = []
 
     # Process each batch with progress tracking
-    for batch in tqdm(dataloader, desc="Processing batches", disable=not verbose):
+    for batch in tqdm(dataloader, desc="Processing batches", disable=not verbose, leave=False):
         with torch.no_grad():  # Disable gradient tracking for inference
             # Perform interchange interventions on the batch
             scores_or_sequences = _batched_interchange_intervention(
@@ -415,7 +399,7 @@ def _collect_features(dataset, pipeline, model_units_list, config, verbose=False
     data = [[[] for _ in range(len(model_units))] for model_units in model_units_list]
     
     # Process dataset in batches with progress tracking
-    for batch in tqdm(dataloader, desc="Processing batches", disable=not verbose):
+    for batch in tqdm(dataloader, desc="Processing batches", disable=not verbose, leave=False):
         # Prepare batch data including base and counterfactual inputs
         batched_base, batched_counterfactuals, inv_locations, feature_indices = _prepare_intervenable_inputs(
             pipeline, batch, model_units_list)
@@ -600,13 +584,16 @@ def _train_intervention(pipeline: Pipeline,
                 intervenable_model.interventions[k].set_temperature(
                     temperature_schedule[scheduler._step_count])
 
+    # Print model units with truncation
+    print(f"Model units: {str(model_units_list[:200])}")
+
     # ----- Training Loop ----- #
-    train_iterator = trange(0, int(num_epoch), desc="Epoch")
+    train_iterator = range(0, int(num_epoch))
     for epoch in train_iterator:
         epoch_iterator = tqdm(dataloader,
                             desc=f"Epoch: {epoch}",
                             position=0,
-                            leave=True)
+                            leave=False)
         
         aggregated_stats = collections.defaultdict(list)
         
@@ -626,15 +613,22 @@ def _train_intervention(pipeline: Pipeline,
 
             # Add sparsity loss for mask interventions
             if intervention_type == "mask":
+                masks = []
+                temp = temperature_schedule[scheduler._step_count]
                 for k, v in intervenable_model.interventions.items():
                     if isinstance(v, tuple):
                         loss = loss + regularization_coefficient * intervenable_model.interventions[k][0].get_sparsity_loss()
-                        intervenable_model.interventions[k][0].set_temperature(
-                            temperature_schedule[scheduler._step_count])
+                        masks.append(intervenable_model.interventions[k][0].mask)
+                        intervenable_model.interventions[k][0].set_temperature(temp)
                     else:
                         loss = loss + regularization_coefficient * intervenable_model.interventions[k].get_sparsity_loss()
-                        intervenable_model.interventions[k].set_temperature(
-                            temperature_schedule[scheduler._step_count])
+                        masks.append(intervenable_model.interventions[k].mask)
+                        intervenable_model.interventions[k].set_temperature(temp)
+                if config["featurizer_kwargs"]["tie_masks"]:
+                    masks = torch.cat(masks)
+                    sparse_loss = torch.norm(torch.sigmoid(masks / temp,), p=1)
+                    loss = loss + regularization_coefficient * sparse_loss
+
 
             # Update statistics
             aggregated_stats['loss'].append(loss.item())

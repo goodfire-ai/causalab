@@ -95,6 +95,8 @@ class InterventionExperiment:
             - Each unit in the innermost level is intervened upon using that shared input
             - This allows for complex interventions where multiple components are modified simultaneously
         """
+        if isinstance(datasets, CounterfactualDataset):
+            datasets = {datasets.id: datasets}
         # Initialize results structure
         results = {"method_name": self.config["method_name"],
                     "model_name": self.pipeline.model.__class__.__name__,
@@ -104,11 +106,13 @@ class InterventionExperiment:
                     for dataset_name in datasets.keys()}}
         
         # Process each dataset and model unit combination
+        total_combinations = len(datasets) * len(self.model_units_lists)
+        progress_bar = tqdm(total=total_combinations, desc="Running interventions", disable=not verbose)
+
         for dataset_name in datasets.keys():
             for model_units_list in self.model_units_lists:
-                # Run interventions
-                if verbose:
-                    print(f"Running interventions for {dataset_name} with model units {model_units_list}")
+                progress_bar.set_postfix({"dataset": dataset_name, "units": model_units_list})
+                progress_bar.update(1)
                 
                 # Execute interchange interventions using pyvene
                 raw_outputs = _run_interchange_interventions(
@@ -120,11 +124,19 @@ class InterventionExperiment:
                     batch_size=self.config["evaluation_batch_size"]
                 )
                 
-                # Extract metadata for this model unit
+                # Extract metadata and feature indices for this model unit
                 metadata = self.metadata_fn(model_units_list)
+                feature_indices = {}
+                for i, model_units in enumerate(model_units_list):
+                    for j, model_unit in enumerate(model_units):
+                        unit_key = f"{model_unit.id}"
+                        indices = model_unit.get_feature_indices()
+                        feature_indices[unit_key] = indices if indices is not None else None
+
                 results["dataset"][dataset_name]["model_unit"][str(model_units_list)] = {
                     "raw_outputs": raw_outputs,
-                    "metadata": metadata}
+                    "metadata": metadata,
+                    "feature_indices": feature_indices}
 
                 # Process and decode model outputs
                 dumped_outputs = []
@@ -168,6 +180,8 @@ class InterventionExperiment:
                 # Remove raw_outputs to save memory in the results dictionary
                 if not self.config["raw_outputs"]:
                     del results["dataset"][dataset_name]["model_unit"][str(model_units_list)]["raw_outputs"]
+
+        progress_bar.close()
 
         if save_dir is not None:
             # Create directory if it doesn't exist
@@ -403,6 +417,8 @@ class InterventionExperiment:
             Self (for method chaining)
         """
         # Label the datasets with the target variables
+        if isinstance(datasets, CounterfactualDataset):
+            datasets = {datasets.id: datasets}
         counterfactual_dataset = []
         for dataset in datasets.values():
             counterfactual_dataset += self.causal_model.label_counterfactual_data(dataset, target_variables)

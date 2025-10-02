@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "causal-abstraction"
+version = "0.0.0"
+description = "A toolkit for causal analysis of artificial neural networks."
+authors = ["Atticus Geiger"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "*"
+networkx = "*"
+matplotlib = "*"
+pandas = "*"
+numpy = "*"
+pyvene = "*"
+scikit-learn = "*"
+ipywidgets = "*"
+jupyterlab = "*"
+ipycytoscape = "*"
+seaborn = "*"
+transformers = "*"
+tensorboard = "*"
+dash = "*"
+dash-cytoscape = "*"
+jupyter-dash = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
