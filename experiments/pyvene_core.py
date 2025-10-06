@@ -692,9 +692,16 @@ def _train_intervention(pipeline: Pipeline,
             if isinstance(v, tuple):
                 v = v[0]
                 
-            # Get binary mask and indices
-            mask_binary = (torch.sigmoid(v.mask) > 0.5).float().cpu()
-            indices = torch.nonzero(mask_binary).numpy().flatten().tolist()
+            if config["featurizer_kwargs"]["tie_masks"]:
+                # If masks are tied, use the average mask across all units
+                if v.mask[0] > 0.5:
+                    indices = None
+                else:
+                    indices = []
+            else:
+                # Get binary mask and indices
+                mask_binary = (torch.sigmoid(v.mask) > 0.5).float().cpu()
+                indices = torch.nonzero(mask_binary).numpy().flatten().tolist()
             
             # Update model unit
             model_unit.set_feature_indices(indices)
