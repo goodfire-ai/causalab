@@ -1,7 +1,4 @@
-import random, sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
+import random
 import copy
 import itertools
 import random

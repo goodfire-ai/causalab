@@ -1,6 +1,7 @@
 from experiments.pyvene_core import _prepare_intervenable_inputs
 import torch
 import logging
+from typing import Callable, Any, Optional
 
 
 def LM_loss_and_metric_fn(pipeline, intervenable_model, batch, model_units_list):
@@ -133,3 +134,78 @@ def compute_cross_entropy_loss(eval_preds, eval_labels, pad_token_id):
     loss = torch.nn.functional.cross_entropy(active_preds, active_labels)
 
     return loss
+
+
+# ========== SAE (Sparse Autoencoder) Registry ==========
+
+SAE_REGISTRY = {
+    "google/gemma-2-2b": {
+        "release": "gemma-scope-2b-pt-res-canonical",
+        "sae_id_template": "layer_{layer}/width_16k/canonical"
+    },
+    "meta-llama/Meta-Llama-3.1-8B-Instruct": {
+        "release": "llama_scope_lxr_8x",
+        "sae_id_template": "l{layer}r_8x"
+    }
+}
+
+
+def get_sae_loader(model_path: str) -> Optional[Callable[[int], Any]]:
+    """
+    Get a SAE loader function for a specific model.
+
+    This function returns a closure that can load Sparse Autoencoders (SAEs)
+    for different layers of a specific model. The SAEs are used for feature
+    extraction and interpretation in mechanistic interpretability experiments.
+
+    Args:
+        model_path: HuggingFace model path or name (e.g., "google/gemma-2-2b")
+
+    Returns:
+        A function that takes a layer index and returns an SAE instance,
+        or None if no SAE is available for the model.
+
+    Example:
+        >>> loader = get_sae_loader("google/gemma-2-2b")
+        >>> if loader:
+        ...     sae = loader(5)  # Load SAE for layer 5
+
+    Note:
+        Requires sae_lens package to be installed for SAE loading.
+    """
+    if model_path not in SAE_REGISTRY:
+        return None
+
+    config = SAE_REGISTRY[model_path]
+
+    def sae_loader(layer: int) -> Any:
+        """
+        Load a SAE for a specific layer.
+
+        Args:
+            layer: Layer index to load SAE for
+
+        Returns:
+            SAE instance for the specified layer
+
+        Raises:
+            ImportError: If sae_lens is not installed
+            Exception: If SAE loading fails
+        """
+        try:
+            from sae_lens import SAE
+        except ImportError:
+            raise ImportError(
+                "sae_lens package is required for SAE loading. "
+                "Install it with: pip install sae_lens"
+            )
+
+        sae_id = config["sae_id_template"].format(layer=layer)
+        sae, _, _ = SAE.from_pretrained(
+            release=config["release"],
+            sae_id=sae_id,
+            device="cpu"
+        )
+        return sae
+
+    return sae_loader

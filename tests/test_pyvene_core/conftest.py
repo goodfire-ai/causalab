@@ -1,7 +1,4 @@
 # tests/test_experiments/conftest.py
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 import pytest
 import torch
@@ -299,7 +296,7 @@ def model_units_list(mock_tiny_lm, token_positions):
     """Create model units list for testing."""
     units = []
     layers = [0, 2]
-    
+
     for layer in layers:
         for token_position in token_positions:
             unit = ResidualStream(
@@ -308,8 +305,8 @@ def model_units_list(mock_tiny_lm, token_positions):
                 shape=(mock_tiny_lm.model.config.hidden_size,),
                 target_output=True
             )
-            units.append([unit])
-    
+            units.append([[unit]])
+
     return units
 
 

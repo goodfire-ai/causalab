@@ -1,19 +1,15 @@
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 import pytest
 import torch
 import numpy as np
 import os
 from unittest.mock import MagicMock, patch, PropertyMock, ANY
 
-from experiments.residual_stream_experiment import (
-    LM_loss_and_metric_fn, 
-    compute_metrics, 
-    compute_cross_entropy_loss,
-    PatchResidualStream
+from experiments.LM_experiments.LM_utils import (
+    LM_loss_and_metric_fn,
+    compute_metrics,
+    compute_cross_entropy_loss
 )
+from experiments.LM_experiments.residual_stream_experiment import PatchResidualStream
 
 # --------------------------------------------------------------------------- #
 #  Utility Function Tests                                                      #
@@ -161,11 +157,11 @@ class TestLMLossAndMetricFn:
         unit.get_feature_indices.return_value = [0, 1, 2]
         return [[unit]]
     
-    def test_loss_and_metric_fn_basic(self, mock_pipeline, mock_intervenable_model, 
+    def test_loss_and_metric_fn_basic(self, mock_pipeline, mock_intervenable_model,
                                     mock_batch, mock_model_units_list):
         """Test basic functionality of loss_and_metric_fn."""
         # Mock _prepare_intervenable_inputs to return expected values
-        with patch('experiments.residual_stream_experiment._prepare_intervenable_inputs') as mock_prepare:
+        with patch('experiments.LM_experiments.LM_utils._prepare_intervenable_inputs') as mock_prepare:
             # Configure the mock
             mock_prepare.return_value = (
                 {"input_ids": torch.tensor([[1, 2, 3]]), "attention_mask": torch.tensor([[1, 1, 1]])},

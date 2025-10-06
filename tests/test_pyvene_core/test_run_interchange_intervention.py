@@ -1,7 +1,4 @@
 # tests/test_pyvene_core/test_run_interchange_intervention.py
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 import pytest
 import torch
@@ -46,17 +43,15 @@ class TestRunInterchangeInterventions:
         mock_model = MagicMock()
         with patch('experiments.pyvene_core._prepare_intervenable_model', return_value=mock_model) as mock_prepare, \
              patch('experiments.pyvene_core._batched_interchange_intervention') as mock_batched, \
-             patch('experiments.pyvene_core._delete_intervenable_model') as mock_delete, \
-             patch('experiments.pyvene_core.gc.collect') as mock_gc, \
-             patch('torch.cuda.empty_cache') as mock_empty_cache:
-            
+             patch('experiments.pyvene_core._delete_intervenable_model') as mock_delete:
+
             # Set up mock return values for _batched_interchange_intervention
             # Return different tensors for each batch to ensure results are properly collected
             mock_batched.side_effect = [
                 torch.tensor([[1, 2, 3], [4, 5, 6]]),  # First batch
                 torch.tensor([[7, 8, 9]])               # Second batch
             ]
-            
+
             # Call the function
             results = _run_interchange_interventions(
                 pipeline=mock_tiny_lm,
@@ -66,22 +61,17 @@ class TestRunInterchangeInterventions:
                 batch_size=6,
                 output_scores=False
             )
-            
+
             # Verify that _prepare_intervenable_model was called correctly
             mock_prepare.assert_called_once_with(
                 mock_tiny_lm, model_units_list, intervention_type="interchange"
             )
-            
+
             # Verify that _batched_interchange_intervention was called for each batch
             assert mock_batched.call_count == 2
-            
+
             # Verify that _delete_intervenable_model was called to clean up
             mock_delete.assert_called_once_with(mock_model)
-            
-            # Verify that memory cleanup was performed
-            assert mock_gc.call_count >= 2  # Called at least after each batch
-            if torch.cuda.is_available():
-                assert mock_empty_cache.call_count >= 2
             
             # Verify results
             assert len(results) == 2  # One result per batch

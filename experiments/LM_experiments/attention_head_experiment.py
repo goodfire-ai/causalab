@@ -1,6 +1,3 @@
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -14,7 +11,7 @@ from causal.causal_model import CausalModel
 
 from experiments.pyvene_core import _prepare_intervenable_inputs
 
-from experiments.LM_helpers import LM_loss_and_metric_fn
+from .LM_utils import LM_loss_and_metric_fn
 
 
 class PatchAttentionHeads(InterventionExperiment):
@@ -139,34 +136,42 @@ class PatchAttentionHeads(InterventionExperiment):
 
         target_variables_str = "-".join(target_variables)
 
-        if average_counterfactuals:
-            # TODO: Implement average heatmap
-            raise NotImplementedError("Average heatmap not yet implemented")
-        else:
-            self._plot_individual_heatmaps(results, target_variables_str, save_path)
-
-    def _plot_individual_heatmaps(self, results: Dict, target_variables_str: str, save_path: str = None):
-        """Create and save/display individual heatmaps for each dataset."""
-        # Get dataset names
-        dataset_names = list(results["dataset"].keys())
-
         # Find the range of layers and heads from the layer_head_lists
         all_layers = [layer_head_list[0][0] for layer_head_list in self.layer_head_lists]
         all_heads = [layer_head_list[0][1] for layer_head_list in self.layer_head_lists]
 
-        max_layer = max(all_layers)
-        max_head = max(all_heads)
-        min_layer = min(all_layers)
-        min_head = min(all_heads)
+        layers = list(range(min(all_layers), max(all_layers) + 1))
+        heads = list(range(min(all_heads), max(all_heads) + 1))
 
-        # Create layer and head ranges
-        layers = list(range(min_layer, max_layer + 1))
-        heads = list(range(min_head, max_head + 1))
+        if average_counterfactuals:
+            self._plot_average_heatmap(results, layers, heads, target_variables_str, save_path)
+        else:
+            self._plot_individual_heatmaps(results, layers, heads, target_variables_str, save_path)
 
-        # Track if we have valid data for any dataset
-        any_valid_entries = False
+    def _build_score_matrix(self,
+                            results: Dict,
+                            layers: List,
+                            heads: List,
+                            target_variables_str: str,
+                            dataset_names: Optional[List[str]] = None) -> Dict[str, np.ndarray]:
+        """
+        Extract score matrices from results for specified datasets.
 
-        # Create individual heatmaps for each dataset
+        Args:
+            results: Dictionary containing experiment results
+            layers: List of layer indices
+            heads: List of head indices
+            target_variables_str: String identifier for target variables
+            dataset_names: List of dataset names to process. If None, processes all datasets.
+
+        Returns:
+            Dictionary mapping dataset names to their score matrices (with NaN for missing entries)
+        """
+        if dataset_names is None:
+            dataset_names = list(results["dataset"].keys())
+
+        matrices = {}
+
         for dataset_name in dataset_names:
             # Initialize score matrix with NaN (will show as blank)
             score_matrix = np.full((len(heads), len(layers)), np.nan)
@@ -187,23 +192,92 @@ class PatchAttentionHeads(InterventionExperiment):
                             score_matrix[head_idx, layer_idx] = unit_data[target_variables_str]["average_score"]
                             valid_entries = True
 
+            # Only include datasets with valid entries
             if valid_entries:
-                any_valid_entries = True
+                matrices[dataset_name] = score_matrix
 
-                # Convert dataset name to a safe filename
-                safe_dataset_name = dataset_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+        return matrices
 
-                # Create the heatmap
-                self._create_heatmap(
-                    score_matrix=score_matrix,
-                    layers=layers,
-                    heads=heads,
-                    title=f'Attention Head Intervention Accuracy - Dataset: {dataset_name}\nTask: {results["task_name"]}',
-                    save_path=os.path.join(save_path, f'attention_heatmap_{safe_dataset_name}_{results["task_name"]}.png') if save_path else None
-                )
+    def _aggregate_matrices(self,
+                           matrices: Dict[str, np.ndarray],
+                           aggregation: str = "average") -> np.ndarray:
+        """
+        Aggregate multiple score matrices using specified method with NaN support.
 
-        if not any_valid_entries:
+        Args:
+            matrices: Dictionary mapping dataset names to score matrices
+            aggregation: Aggregation method - "average", "sum", "max", or "min"
+
+        Returns:
+            Aggregated score matrix
+
+        Raises:
+            ValueError: If aggregation method is not supported or no matrices provided
+        """
+        if not matrices:
+            raise ValueError("No valid matrices to aggregate")
+
+        matrix_array = np.stack(list(matrices.values()))
+
+        if aggregation == "average":
+            return np.nanmean(matrix_array, axis=0)
+        elif aggregation == "sum":
+            return np.nansum(matrix_array, axis=0)
+        elif aggregation == "max":
+            return np.nanmax(matrix_array, axis=0)
+        elif aggregation == "min":
+            return np.nanmin(matrix_array, axis=0)
+        else:
+            raise ValueError(f"Unsupported aggregation method: {aggregation}")
+
+    def _plot_average_heatmap(self, results: Dict, layers: List, heads: List,
+                             target_variables_str: str, save_path: Optional[str] = None):
+        """Create and save/display an averaged heatmap across all datasets."""
+        # Build score matrices for all datasets
+        matrices = self._build_score_matrix(results, layers, heads, target_variables_str)
+
+        if not matrices:
             print("Warning: No valid data found for visualization.")
+            return
+
+        # Aggregate matrices
+        score_matrix = self._aggregate_matrices(matrices, aggregation="average")
+
+        # Use "averaged" for filename
+        safe_dataset_name = "averaged_across_datasets"
+
+        # Create the heatmap
+        self._create_heatmap(
+            score_matrix=score_matrix,
+            layers=layers,
+            heads=heads,
+            title=f'Attention Head Intervention Accuracy (Averaged)\nTask: {results["task_name"]}',
+            save_path=os.path.join(save_path, f'attention_heatmap_{safe_dataset_name}_{results["task_name"]}.png') if save_path else None
+        )
+
+    def _plot_individual_heatmaps(self, results: Dict, layers: List, heads: List,
+                                 target_variables_str: str, save_path: Optional[str] = None):
+        """Create and save/display individual heatmaps for each dataset."""
+        # Build score matrices for all datasets
+        matrices = self._build_score_matrix(results, layers, heads, target_variables_str)
+
+        if not matrices:
+            print("Warning: No valid data found for visualization.")
+            return
+
+        # Create individual heatmaps for each dataset
+        for dataset_name, score_matrix in matrices.items():
+            # Convert dataset name to a safe filename
+            safe_dataset_name = dataset_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+
+            # Create the heatmap
+            self._create_heatmap(
+                score_matrix=score_matrix,
+                layers=layers,
+                heads=heads,
+                title=f'Attention Head Intervention Accuracy - Dataset: {dataset_name}\nTask: {results["task_name"]}',
+                save_path=os.path.join(save_path, f'attention_heatmap_{safe_dataset_name}_{results["task_name"]}.png') if save_path else None
+            )
 
     def _create_heatmap(self, score_matrix: np.ndarray, layers: List, heads: List,
                        title: str, save_path: str = None):
@@ -251,9 +325,7 @@ class PatchAttentionHeads(InterventionExperiment):
             import os
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             plt.savefig(save_path, bbox_inches='tight', dpi=300)
-            plt.close()
-        else:
-            plt.show()
+        plt.show()
 
     def plot_mask_heatmap(self, results: Dict, save_path: str = None):
         """

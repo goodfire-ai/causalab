@@ -1,7 +1,4 @@
 # tests/test_pyvene_core/test_train_intervention.py
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import pytest
 import torch
@@ -80,11 +77,13 @@ class TestTrainIntervention:
     def mock_config(self):
         """Create a config dictionary for testing."""
         return {
-            "batch_size": 2,
+            "train_batch_size": 2,
             "training_epoch": 2,
             "init_lr": 1e-3,
-            "regularization_coefficient": 1e-4,
-            "temperature_schedule": (1.0, 0.01),
+            "masking": {
+                "regularization_coefficient": 1e-4,
+                "temperature_schedule": (1.0, 0.01),
+            },
             "log_dir": "test_logs",
             "memory_cleanup_freq": 1  # Clean up after every batch
         }
@@ -207,12 +206,14 @@ class TestTrainIntervention:
         """Test early stopping functionality."""
         # Create config with early stopping
         config = {
-            "batch_size": 2,
+            "train_batch_size": 2,
             "training_epoch": 10,  # Set high to trigger early stopping
             "init_lr": 1e-3,
-            "regularization_coefficient": 1e-4,
+            "masking": {
+                "regularization_coefficient": 1e-4,
+                "temperature_schedule": (1.0, 0.01),
+            },
             "patience": 2,  # Stop after 2 epochs without improvement
-            "temperature_schedule": (1.0, 0.01),
             "log_dir": "test_logs",
             "scheduler_type": "constant"
         }

@@ -1,7 +1,3 @@
-import sys
-from pathlib import Path
-
-sys.path.append(str(Path(__file__).resolve().parent.parent))
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -13,7 +9,7 @@ import torch
 import logging
 from collections import Counter
 
-from experiments.LM_helpers import LM_loss_and_metric_fn
+from .LM_utils import LM_loss_and_metric_fn
 from experiments.intervention_experiment import *
 from causal.causal_model import CausalModel
 from neural.LM_units import *
@@ -192,62 +188,35 @@ class PatchResidualStream(InterventionExperiment):
         else:
             self._plot_individual_heatmaps(results, layers, token_ids, target_variables_str, save_path)
     
-    def _plot_average_heatmap(self, results: Dict, layers: List, positions: List, 
-                             target_variables_str: str, save_path: Optional[str] = None):
-        """Create and save/display an averaged heatmap across all datasets."""
-        # Initialize score matrix and counter
-        score_matrix = np.zeros((len(layers), len(positions)))
-        dataset_count = 0.0
-        
-        # Sum scores across all datasets
-        for dataset_name in results["dataset"]:
-            temp_matrix = np.zeros((len(layers), len(positions)))
-            valid_entries = False
-            
-            # Fill temporary matrix for this dataset
-            for i, layer in enumerate(layers):
-                for j, pos in enumerate(positions):
-                    for unit_str, unit_data in results["dataset"][dataset_name]["model_unit"].items():
-                        if "metadata" in unit_data and target_variables_str in unit_data:
-                            if "average_score" in unit_data[target_variables_str]:
-                                metadata = unit_data["metadata"]
-                                if metadata.get("layer") == layer and metadata.get("position") == pos:
-                                    temp_matrix[i, j] = unit_data[target_variables_str]["average_score"]
-                                    valid_entries = True
-            
-            # Only include datasets with valid entries
-            if valid_entries:
-                score_matrix += temp_matrix
-                dataset_count += 1
-        
-        # Calculate average across datasets
-        if dataset_count > 0:
-            score_matrix /= dataset_count
-            
-            # Create the heatmap
-            self._create_heatmap(
-                score_matrix=score_matrix,
-                layers=layers,
-                positions=positions,
-                title=f'Intervention Accuracy - Average across {dataset_count} datasets\nTask: {results["task_name"]}',
-                save_path=os.path.join(save_path, f'heatmap_average_{results["task_name"]}.png') if save_path else None
-            )
-    
-    def _plot_individual_heatmaps(self, results: Dict, layers: List, positions: List, 
-                                 target_variables_str: str, save_path: Optional[str] = None):
-        """Create and save/display individual heatmaps for each dataset."""
-        # Get dataset names
-        dataset_names = list(results["dataset"].keys())
-        
-        # Track if we have valid data for any dataset
-        any_valid_entries = False
-        
-        # Create individual heatmaps for each dataset
+    def _build_score_matrix(self,
+                            results: Dict,
+                            layers: List,
+                            positions: List,
+                            target_variables_str: str,
+                            dataset_names: Optional[List[str]] = None) -> Dict[str, np.ndarray]:
+        """
+        Extract score matrices from results for specified datasets.
+
+        Args:
+            results: Dictionary containing experiment results
+            layers: List of layer indices
+            positions: List of position IDs
+            target_variables_str: String identifier for target variables
+            dataset_names: List of dataset names to process. If None, processes all datasets.
+
+        Returns:
+            Dictionary mapping dataset names to their score matrices
+        """
+        if dataset_names is None:
+            dataset_names = list(results["dataset"].keys())
+
+        matrices = {}
+
         for dataset_name in dataset_names:
             score_matrix = np.zeros((len(layers), len(positions)))
             valid_entries = False
-            
-            # Fill score matrix
+
+            # Fill score matrix for this dataset
             for i, layer in enumerate(layers):
                 for j, pos in enumerate(positions):
                     for unit_str, unit_data in results["dataset"][dataset_name]["model_unit"].items():
@@ -257,21 +226,89 @@ class PatchResidualStream(InterventionExperiment):
                                 if metadata.get("layer") == layer and metadata.get("position") == pos:
                                     score_matrix[i, j] = unit_data[target_variables_str]["average_score"]
                                     valid_entries = True
-            
+
+            # Only include datasets with valid entries
             if valid_entries:
-                any_valid_entries = True
-                
-                # Convert dataset name to a safe filename
-                safe_dataset_name = dataset_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
-                
-                # Create the heatmap
-                self._create_heatmap(
-                    score_matrix=score_matrix,
-                    layers=layers,
-                    positions=positions,
-                    title=f'Intervention Accuracy - Dataset: {dataset_name}\nTask: {results["task_name"]}',
-                    save_path=os.path.join(save_path, f'heatmap_{safe_dataset_name}_{results["task_name"]}.png') if save_path else None
-                )
+                matrices[dataset_name] = score_matrix
+
+        return matrices
+
+    def _aggregate_matrices(self,
+                           matrices: Dict[str, np.ndarray],
+                           aggregation: str = "average") -> np.ndarray:
+        """
+        Aggregate multiple score matrices using specified method.
+
+        Args:
+            matrices: Dictionary mapping dataset names to score matrices
+            aggregation: Aggregation method - "average", "sum", "max", or "min"
+
+        Returns:
+            Aggregated score matrix
+
+        Raises:
+            ValueError: If aggregation method is not supported or no matrices provided
+        """
+        if not matrices:
+            raise ValueError("No valid matrices to aggregate")
+
+        matrix_array = np.stack(list(matrices.values()))
+
+        if aggregation == "average":
+            return np.mean(matrix_array, axis=0)
+        elif aggregation == "sum":
+            return np.sum(matrix_array, axis=0)
+        elif aggregation == "max":
+            return np.max(matrix_array, axis=0)
+        elif aggregation == "min":
+            return np.min(matrix_array, axis=0)
+        else:
+            raise ValueError(f"Unsupported aggregation method: {aggregation}")
+
+    def _plot_average_heatmap(self, results: Dict, layers: List, positions: List,
+                             target_variables_str: str, save_path: Optional[str] = None):
+        """Create and save/display an averaged heatmap across all datasets."""
+        # Build score matrices for all datasets
+        matrices = self._build_score_matrix(results, layers, positions, target_variables_str)
+
+        if not matrices:
+            return
+
+        # Aggregate matrices
+        score_matrix = self._aggregate_matrices(matrices, aggregation="average")
+
+        # Use the last dataset name for filename (kept for backwards compatibility)
+        dataset_name = list(matrices.keys())[-1]
+        safe_dataset_name = dataset_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+
+        # Create the heatmap
+        self._create_heatmap(
+            score_matrix=score_matrix,
+            layers=layers,
+            positions=positions,
+            title=f'Intervention Accuracy - Dataset: {dataset_name}\nTask: {results["task_name"]}\nIntervened Variables: {target_variables_str}',
+            save_path=os.path.join(save_path, f'heatmap_dataset_{safe_dataset_name}_task_{results["task_name"]}_variables_{target_variables_str}.png') if save_path else None
+        )
+    
+    def _plot_individual_heatmaps(self, results: Dict, layers: List, positions: List,
+                                 target_variables_str: str, save_path: Optional[str] = None):
+        """Create and save/display individual heatmaps for each dataset."""
+        # Build score matrices for all datasets
+        matrices = self._build_score_matrix(results, layers, positions, target_variables_str)
+
+        # Create individual heatmaps for each dataset
+        for dataset_name, score_matrix in matrices.items():
+            # Convert dataset name to a safe filename
+            safe_dataset_name = dataset_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+
+            # Create the heatmap
+            self._create_heatmap(
+                score_matrix=score_matrix,
+                layers=layers,
+                positions=positions,
+                title=f'Intervention Accuracy - Dataset: {dataset_name}\nTask: {results["task_name"]}\nIntervened Variables: {target_variables_str}',
+                save_path=os.path.join(save_path, f'heatmap_dataset_{safe_dataset_name}_task_{results["task_name"]}_variables_{target_variables_str}.png') if save_path else None
+            )
     
     def _create_heatmap(self, score_matrix: np.ndarray, layers: List, positions: List, 
                        title: str, save_path: Optional[str] = None):
@@ -307,13 +344,12 @@ class PatchResidualStream(InterventionExperiment):
         plt.title(title)
         plt.tight_layout()
         
+        print(save_path)
         if save_path:
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             plt.savefig(save_path, bbox_inches='tight', dpi=300)
-            plt.close()
-        else:
-            plt.show()
+        plt.show()
 
 
 class SameLengthResidualStreamTracing:
@@ -415,6 +451,8 @@ class SameLengthResidualStreamTracing:
         seen_labels = dict()  # To track unique labels
         token_positions = []
         for position in range(self.token_length):
+            if self.base_tokens[position] == self.pipeline.tokenizer.pad_token:
+                continue  # Skip padding tokens
             # Create a proper closure to capture the position value
             def make_position_indexer(pos):
                 return lambda _: [pos]
@@ -431,6 +469,9 @@ class SameLengthResidualStreamTracing:
 
             token_position = TokenPosition(position_indexer, self.pipeline, id=label)
             token_positions.append(token_position)
+
+        # Store token positions for plotting
+        self.token_positions = token_positions
         
         # Create all layers list
         layers = list(range(self.num_layers))
@@ -444,7 +485,7 @@ class SameLengthResidualStreamTracing:
             checker=self.checker,
             featurizers=None,  # Use default featurizer
             loss_and_metric_fn=self.loss_and_metric_fn,
-            config={"batch_size": 1, "raw_outputs":True},  # Single example
+            config={"batch_size": 1, "output_scores": True},  # Single example
         )
         
         # Run the experiment once with all locations
@@ -453,22 +494,13 @@ class SameLengthResidualStreamTracing:
             target_variables_list=[["raw_output"]],  # Use raw_output for binary accuracy
         )
 
-        experiment.plot_heatmaps(
-            results=results, 
-            target_variables=["raw_output"], 
-            save_path=save_path,  # Display interactively
-            average_counterfactuals=False,  # No averaging since we only have one example
-        )
-        
-        # Also plot the raw outputs
-        self.plot_raw_outputs(results, token_positions, save_path=save_path)
         
         # Clean up memory after the experiment
         experiment._clean_memory()
         del experiment
         return results
     
-    def plot_raw_outputs(self, results: Dict, token_positions: List[TokenPosition], save_path: Optional[str] = None) -> None:
+    def plot_raw_outputs(self, results: Dict, save_path: Optional[str] = None) -> None:
         """
         Display the raw generated outputs in a grid format with color coding.
         
@@ -486,6 +518,7 @@ class SameLengthResidualStreamTracing:
             ValueError: If raw_outputs are not found in the results
         """
         
+        token_positions = self.token_positions
         # Get dimensions for the grid
         layers = list(range(self.num_layers))
         positions = [tp.id for tp in token_positions]
@@ -513,16 +546,19 @@ class SameLengthResidualStreamTracing:
         if dataset_name in results["dataset"]:
             for unit_str, unit_data in results["dataset"][dataset_name]["model_unit"].items():
                 if "raw_outputs" not in unit_data:
-                    raise ValueError("raw_outputs not found in results. Ensure config['raw_outputs']=True when running the experiment.")
+                    raise ValueError("raw_outputs not found in results. Ensure config['output_scores']=True when running the experiment.")
                 
                 if "metadata" in unit_data and unit_data["raw_outputs"]:
-                    # Get the raw output and decode it
-                    raw_output = unit_data["raw_outputs"][0][0] if unit_data["raw_outputs"][0] else None
-                    if raw_output is not None:
-                        decoded_text = self.pipeline.dump(raw_output, is_logits=False)
-                        if isinstance(decoded_text, list):
-                            decoded_text = decoded_text[0]
-                        output_counter[decoded_text] += 1
+                    # Get the decoded string directly
+                    raw_outputs = unit_data["raw_outputs"]
+                    if isinstance(raw_outputs, list) and len(raw_outputs) > 0:
+                        # raw_outputs is a list of batch dicts
+                        first_batch = raw_outputs[0]
+                        if isinstance(first_batch, dict) and "string" in first_batch:
+                            decoded_text = first_batch["string"]
+                            if isinstance(decoded_text, list):
+                                decoded_text = decoded_text[0]
+                            output_counter[decoded_text] += 1
         
         # Define light colors for the top 5 most frequent outputs
         light_colors = [
@@ -557,18 +593,17 @@ class SameLengthResidualStreamTracing:
                         else:
                             continue
                     
-                    # Get the raw output and decode it
+                    # Get the decoded string directly
                     if unit_data["raw_outputs"]:
-                        # raw_outputs is a list of lists, get the first output
-                        raw_output = unit_data["raw_outputs"][0][0] if unit_data["raw_outputs"][0] else None
-                        
-                        if raw_output is not None:
-                            # Use pipeline.dump to decode the output
-                            decoded_text = self.pipeline.dump(raw_output, is_logits=False)
-                            if isinstance(decoded_text, list):
-                                decoded_text = decoded_text[0]
-                            
-                            text_outputs[layer][pos_idx] = decoded_text
+                        raw_outputs = unit_data["raw_outputs"]
+                        if isinstance(raw_outputs, list) and len(raw_outputs) > 0:
+                            # raw_outputs is a list of batch dicts
+                            first_batch = raw_outputs[0]
+                            if isinstance(first_batch, dict) and "string" in first_batch:
+                                decoded_text = first_batch["string"]
+                                if isinstance(decoded_text, list):
+                                    decoded_text = decoded_text[0]
+                                text_outputs[layer][pos_idx] = decoded_text
         
         # Create the table/grid
         cell_height = 0.8 / len(layers)
@@ -681,13 +716,12 @@ class SameLengthResidualStreamTracing:
                        ha='left', va='center', transform=ax.transAxes, fontsize=40)
         
         plt.tight_layout()
-        
+
         if save_path:
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             plt.savefig(save_path, bbox_inches='tight', dpi=150)
-            plt.close()
-        else:
-            plt.show()
+
+        plt.show()
 
         

@@ -4,6 +4,12 @@ version = "0.0.0"
 description = "A toolkit for causal analysis of artificial neural networks."
 authors = ["Atticus Geiger"]
 readme = "README.md"
+packages = [
+    { include = "causal" },
+    { include = "neural" },
+    { include = "experiments" },
+    { include = "tasks" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"

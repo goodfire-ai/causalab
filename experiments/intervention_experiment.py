@@ -1,7 +1,3 @@
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 from typing import List, Dict, Callable, Tuple, Union
 import gc, json, os, collections, random
 from itertools import chain
@@ -19,6 +15,44 @@ from causal.causal_model import CausalModel
 from causal.counterfactual_dataset import CounterfactualDataset
 from experiments.pyvene_core import _run_interchange_interventions, _train_intervention, _collect_features
 from experiments.config import DEFAULT_CONFIG
+
+
+def _extract_top_k_logits(output_dict, k, tokenizer):
+    """
+    Extract top-k logits with token information in JSON-serializable format.
+
+    Args:
+        output_dict: Dictionary with 'scores' (list of tensors) and 'sequences' keys
+        k: Number of top logits to extract per position
+        tokenizer: Tokenizer to decode token IDs
+
+    Returns:
+        List of dicts with top-k information for each position, or None if no scores
+    """
+    if "scores" not in output_dict or not output_dict["scores"]:
+        return None
+
+    top_k_results = []
+    for position_logits in output_dict["scores"]:
+        # position_logits shape: (batch_size, vocab_size)
+        # We assume batch_size=1 for individual examples
+        logits = position_logits[0]  # Get first (and only) example
+
+        # Get top-k values and indices
+        top_k_values, top_k_indices = torch.topk(logits, k=min(k, len(logits)))
+
+        # Convert to JSON-serializable format
+        position_result = []
+        for value, idx in zip(top_k_values.tolist(), top_k_indices.tolist()):
+            token = tokenizer.decode([idx])
+            position_result.append({
+                "token_id": idx,
+                "logit": value,
+                "token": token
+            })
+        top_k_results.append(position_result)
+
+    return top_k_results
 
 class InterventionExperiment:
     """
@@ -67,10 +101,6 @@ class InterventionExperiment:
         self.config = DEFAULT_CONFIG.copy()
         if config is not None:
             self.config.update(config)
-        
-        # Ensure evaluation_batch_size defaults to batch_size if not set
-        if self.config.get("evaluation_batch_size") is None:
-            self.config["evaluation_batch_size"] = self.config["batch_size"]
 
     def perform_interventions(self, datasets, verbose: bool = False, target_variables_list: List[List[str]] = None, save_dir=None) -> Dict:
         """
@@ -138,34 +168,38 @@ class InterventionExperiment:
                     "metadata": metadata,
                     "feature_indices": feature_indices}
 
-                # Process and decode model outputs
+                # Process and decode model outputs from dictionaries
                 dumped_outputs = []
-                for raw_output in raw_outputs:
-                    dump_result = self.pipeline.dump(raw_output, is_logits=self.config["output_scores"])
-                    if isinstance(dump_result, list):
-                        dumped_outputs.extend(dump_result)
+                flattened_outputs = []
+                for batch_dict in raw_outputs:
+                    # Use the string field that's already in batch_dict
+                    batch_strings = batch_dict["string"]
+                    if isinstance(batch_strings, list):
+                        dumped_outputs.extend(batch_strings)
+                        # Create individual output dicts for each example in the batch
+                        for idx, decoded_str in enumerate(batch_strings):
+                            example_dict = {"sequences": batch_dict["sequences"][idx:idx+1]}
+                            if "scores" in batch_dict:
+                                example_dict["scores"] = [score[idx:idx+1] for score in batch_dict["scores"]]
+                            example_dict["string"] = decoded_str
+                            flattened_outputs.append(example_dict)
                     else:
-                        dumped_outputs.append(dump_result)
-
-                # Flatten the nested raw_outputs for processing
-                raw_outputs = [item for sublist in raw_outputs for item in sublist]
+                        dumped_outputs.append(batch_strings)
+                        flattened_outputs.append(batch_dict)
                 
                 # Evaluate results for each target variable group
                 for target_variables in target_variables_list:
                     target_variable_str = "-".join(target_variables)
-                    
+
                     # Generate expected outputs from causal model
                     labeled_data = self.causal_model.label_counterfactual_data(datasets[dataset_name], target_variables)
                     assert len(labeled_data) == len(dumped_outputs), f"Length mismatch: {len(labeled_data)} vs {len(dumped_outputs)}"
-                    assert len(labeled_data) == len(raw_outputs), f"Length mismatch: {len(labeled_data)} vs {len(raw_outputs)}"
-                    
-                    # Compute intervention scores
+                    assert len(labeled_data) == len(flattened_outputs), f"Length mismatch: {len(labeled_data)} vs {len(flattened_outputs)}"
+
+                    # Compute intervention scores - pass neural dict and expected label
                     scores = []
-                    for example, output, raw_output in zip(labeled_data, dumped_outputs, raw_outputs):
-                        if self.config["check_raw"]:
-                            score = self.checker(raw_output, example["setting"])
-                        else:
-                            score = self.checker(output, example["label"])
+                    for example, output_dict in zip(labeled_data, flattened_outputs):
+                        score = self.checker(output_dict, example["label"])
                         if isinstance(score, torch.Tensor):
                             score = score.item()
                         scores.append(float(score))
@@ -178,7 +212,7 @@ class InterventionExperiment:
 
 
                 # Remove raw_outputs to save memory in the results dictionary
-                if not self.config["raw_outputs"]:
+                if not self.config["output_scores"]:
                     del results["dataset"][dataset_name]["model_unit"][str(model_units_list)]["raw_outputs"]
 
         progress_bar.close()
@@ -187,14 +221,45 @@ class InterventionExperiment:
             # Create directory if it doesn't exist
             os.makedirs(save_dir, exist_ok=True)
 
-            # remove scores and raw_outputs from results to save space
+            # Process outputs for saving: convert raw tensors to JSON-serializable format
+            k = self.config.get("save_top_k_logits", 0)
             for dataset_name in results["dataset"].keys():
                 for model_unit in results["dataset"][dataset_name]["model_unit"].values():
+                    # Convert raw_outputs to top-k logits if requested
+                    if "raw_outputs" in model_unit and k and k > 0:
+                        serializable_outputs = []
+                        for batch_dict in model_unit["raw_outputs"]:
+                            # Handle both batch dicts and individual example dicts
+                            num_examples = batch_dict["sequences"].shape[0]
+
+                            for idx in range(num_examples):
+                                example_dict = {
+                                    "sequences": batch_dict["sequences"][idx].tolist(),
+                                    "string": self.pipeline.dump(batch_dict["sequences"][idx:idx+1])
+                                }
+
+                                # Add top-k logits if scores are present
+                                if "scores" in batch_dict:
+                                    example_output = {
+                                        "scores": [score[idx:idx+1] for score in batch_dict["scores"]]
+                                    }
+                                    top_k = _extract_top_k_logits(example_output, k, self.pipeline.tokenizer)
+                                    if top_k:
+                                        example_dict["top_k_logits"] = top_k
+
+                                serializable_outputs.append(example_dict)
+
+                        model_unit["outputs"] = serializable_outputs
+
+                    # Remove raw tensor outputs
                     if "raw_outputs" in model_unit:
                         del model_unit["raw_outputs"]
+
+                    # Remove per-target-variable scores (these are intermediate computation results)
                     for target_variable in model_unit.keys():
                         if model_unit[target_variable] is not None and "scores" in model_unit[target_variable]:
                             del model_unit[target_variable]["scores"]
+
             # Generate meaningful filename based on experiment parameters
             file_name = "results.json"
             total_target_str = ""
@@ -423,12 +488,17 @@ class InterventionExperiment:
         for dataset in datasets.values():
             counterfactual_dataset += self.causal_model.label_counterfactual_data(dataset, target_variables)
 
-        # The config now comes from DEFAULT_CONFIG, so we don't need to set defaults here
-        # Just validate that required training parameters are present
-        required_params = ["training_epoch", "init_lr", "n_features"]
+        # Validate that required training parameters are present
+        required_params = ["training_epoch", "init_lr"]
         for param in required_params:
             if param not in self.config:
-                raise ValueError(f"Required training parameter '{param}' not found in config") 
+                raise ValueError(f"Required training parameter '{param}' not found in config")
+
+        # Validate method-specific parameters
+        if method == "DAS" and "DAS" not in self.config:
+            raise ValueError("DAS config not found in config")
+        if method == "DBM" and "masking" not in self.config:
+            raise ValueError("masking config not found in config") 
 
         # Validate method
         assert method in ["DAS", "DBM"]
@@ -447,7 +517,7 @@ class InterventionExperiment:
                         # For DAS, use trainable subspace featurizer
                         model_unit.set_featurizer(
                             SubspaceFeaturizer(
-                                shape=(model_unit.shape[0], self.config["n_features"]), 
+                                shape=(model_unit.shape[0], self.config["DAS"]["n_features"]),
                                 trainable=True,
                                 id="DAS"
                             )

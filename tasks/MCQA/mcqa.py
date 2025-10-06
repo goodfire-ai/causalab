@@ -116,12 +116,8 @@ def sample_answerable_question():
     """Sample a question where the correct answer appears in the choices."""
     input_sample = positional_causal_model.sample_input()
     # Sample unique choices and symbols
-    temp_colors = [x for x in COLORS]
-    random.shuffle(temp_colors)
-    choices = temp_colors[:NUM_CHOICES]
-    temp_alphabet = [x for x in ALPHABET]
-    random.shuffle(temp_alphabet)
-    symbols = temp_alphabet[:NUM_CHOICES]
+    choices = random.sample(COLORS, NUM_CHOICES)
+    symbols = random.sample(ALPHABET, NUM_CHOICES)
     for idx in range(NUM_CHOICES):
         input_sample["choice" + str(idx)] = choices[idx]
         input_sample["symbol" + str(idx)] = symbols[idx]
@@ -129,27 +125,8 @@ def sample_answerable_question():
     if input_sample["object_color"][1] not in [input_sample["choice" + str(x)] for x in range(NUM_CHOICES)]:
         index = random.randint(0, NUM_CHOICES - 1)
         input_sample["choice" + str(index)] = input_sample["object_color"][1]
+    input_sample["raw_input"] = positional_causal_model.run_forward(input_sample)["raw_input"]
     return input_sample
-
-
-def different_symbol_same_position():
-    """
-    Generate a counterfactual where the symbol for the correct answer changes
-    but the answer position remains the same.
-    """
-    input_sample = sample_answerable_question()
-    counterfactual = input_sample.copy()
-    full_setting = positional_causal_model.run_forward(input_sample)
-
-    current_symbols = [input_sample["symbol" + str(i)] for i in range(NUM_CHOICES)]
-    complement = [x for x in ALPHABET if x not in current_symbols]
-    new_symbol = random.choice(complement)
-    i = full_setting["answer_position"]
-    counterfactual["symbol" + str(i)] = new_symbol
-
-    input_sample["raw_input"] = full_setting["raw_input"]
-    counterfactual["raw_input"] = positional_causal_model.run_forward(counterfactual)["raw_input"]
-    return {"input": input_sample, "counterfactual_inputs": [counterfactual]}
 
 
 def same_symbol_different_position():
@@ -159,6 +136,7 @@ def same_symbol_different_position():
     """
     input_sample = sample_answerable_question()
     counterfactual = input_sample.copy()
+    del counterfactual["raw_input"]
 
     pos = positional_causal_model.run_forward(input_sample)["answer_position"]
     new_pos = random.choice([i for i in range(NUM_CHOICES) if i != pos])
@@ -172,18 +150,14 @@ def same_symbol_different_position():
     return {"input": input_sample, "counterfactual_inputs": [counterfactual]}
 
 
-def different_symbol_different_position():
+def different_symbol():
     """
     Generate a counterfactual where both the answer position and all symbols change.
     """
     input_sample = sample_answerable_question()
     counterfactual = input_sample.copy()
+    del counterfactual["raw_input"]
 
-    # Different position
-    pos = positional_causal_model.run_forward(input_sample)["answer_position"]
-    new_pos = random.choice([i for i in range(NUM_CHOICES) if i != pos])
-    counterfactual["choice" + str(pos)] = input_sample["choice" + str(new_pos)]
-    counterfactual["choice" + str(new_pos)] = input_sample["choice" + str(pos)]
 
     # Different symbols
     current_symbols = [input_sample["symbol" + str(i)] for i in range(NUM_CHOICES)]
@@ -209,6 +183,89 @@ def random_counterfactual():
 
 
 # Token Position Functions
+def get_symbol_index(input_sample, pipeline, index):
+    """
+    Find the index of the correct answer symbol in the prompt.
+
+    Args:
+        input_sample (Dict): The input dictionary to a causal model
+        pipeline: The tokenizer pipeline
+        causal_model: The causal model
+
+    Returns:
+        list[int]: List containing the index of the correct answer symbol token
+    """
+    target_symbol = input_sample[f"symbol{index}"]
+    prompt = input_sample["raw_input"]
+
+    # Find all single uppercase letters in the prompt
+    matches = list(re.finditer(r"\b[A-Z]\b", prompt))
+
+    # Find the match corresponding to our target symbol
+    symbol_match = None
+    for match in matches:
+        if prompt[match.start():match.end()] == target_symbol:
+            symbol_match = match
+            break
+
+    if not symbol_match:
+        raise ValueError(f"Could not find symbol {target_symbol} in prompt: {prompt}")
+
+    # Step 1: Load FULL prompt WITH padding (as normal)
+    tokenized_prompt_padded = list(pipeline.load(prompt)["input_ids"][0])
+    pad_token_id = pipeline.tokenizer.pad_token_id
+
+    # Step 2: Find where content starts (first non-padding token)
+    content_start_idx = 0
+    for i, token in enumerate(tokenized_prompt_padded):
+        if token != pad_token_id:
+            content_start_idx = i
+            break
+
+    # Step 3: Extract just the content portion (no padding)
+    content_tokens = [t for t in tokenized_prompt_padded if t != pad_token_id]
+
+    # Step 4: Tokenize substring WITHOUT padding to get what we're looking for
+    substring = prompt[:symbol_match.end()]
+    tokenized_substring = list(pipeline.load(substring, no_padding=True)["input_ids"][0])
+
+    # Step 5: Find where substring ends in the content portion
+    m = len(tokenized_substring)
+    if m == 0:
+        raise ValueError(f"Substring tokenized to empty sequence: {substring}")
+
+    end_idx_in_content = next(
+        (i + m for i in range(len(content_tokens) - m + 1)
+         if content_tokens[i:i+m] == tokenized_substring),
+        -1
+    )
+
+    if end_idx_in_content == -1:
+        raise ValueError(f"Could not find tokenized substring in prompt")
+
+    # Step 6: Convert to padded coordinate system
+    token_index_in_padded = content_start_idx + end_idx_in_content - 1
+
+    return [token_index_in_padded]
+
+
+def create_symbol_token_position(pipeline, index):
+    """Create a TokenPosition for the correct answer symbol."""
+    return TokenPosition(
+        lambda x: get_symbol_index(x, pipeline, index),
+        pipeline,
+        id=f"symbol{index}"
+    )
+
+
+def create_symbol_period_token_position(pipeline, index):
+    """Create a TokenPosition for the period after the correct answer symbol."""
+    return TokenPosition(
+        lambda x: [get_symbol_index(x, pipeline, index)[0] + 1],
+        pipeline,
+        id=f"symbol{index}_period"
+    )
+
 def get_correct_symbol_index(input_sample, pipeline):
     """
     Find the index of the correct answer symbol in the prompt.
@@ -240,15 +297,42 @@ def get_correct_symbol_index(input_sample, pipeline):
     if not symbol_match:
         raise ValueError(f"Could not find correct symbol {correct_symbol} in prompt: {prompt}")
 
-    # Get the substring up to the symbol match end
-    substring = prompt[:symbol_match.end()]
-    tokenized_substring = list(pipeline.load(substring, max_length=False)["input_ids"][0])
-    tokenized_prompt = list(pipeline.load(prompt)["input_ids"][0])
+    # Step 1: Load FULL prompt WITH padding (as normal)
+    tokenized_prompt_padded = list(pipeline.load(prompt)["input_ids"][0])
+    pad_token_id = pipeline.tokenizer.pad_token_id
 
+    # Step 2: Find where content starts (first non-padding token)
+    content_start_idx = 0
+    for i, token in enumerate(tokenized_prompt_padded):
+        if token != pad_token_id:
+            content_start_idx = i
+            break
+
+    # Step 3: Extract just the content portion (no padding)
+    content_tokens = [t for t in tokenized_prompt_padded if t != pad_token_id]
+
+    # Step 4: Tokenize substring WITHOUT padding to get what we're looking for
+    substring = prompt[:symbol_match.end()]
+    tokenized_substring = list(pipeline.load(substring, no_padding=True)["input_ids"][0])
+
+    # Step 5: Find where substring ends in the content portion
     m = len(tokenized_substring)
-    end_idx = next((i + m for i in range(len(tokenized_prompt) - m + 1)
-                                    if tokenized_prompt[i:i+m] == tokenized_substring), -1)
-    return [end_idx-1]
+    if m == 0:
+        raise ValueError(f"Substring tokenized to empty sequence: {substring}")
+
+    end_idx_in_content = next(
+        (i + m for i in range(len(content_tokens) - m + 1)
+         if content_tokens[i:i+m] == tokenized_substring),
+        -1
+    )
+
+    if end_idx_in_content == -1:
+        raise ValueError(f"Could not find tokenized substring in prompt")
+
+    # Step 6: Convert to padded coordinate system
+    token_index_in_padded = content_start_idx + end_idx_in_content - 1
+
+    return [token_index_in_padded]
 
 
 def create_correct_symbol_token_position(pipeline):
@@ -285,12 +369,15 @@ MCQA_task = Task(
         "positional": positional_causal_model,
     },
     dataset_generators={
-        "different_symbol_same_position": different_symbol_same_position,
+        "different_symbol": different_symbol,
         "same_symbol_different_position": same_symbol_different_position,
-        "different_symbol_different_position": different_symbol_different_position,
         "random_counterfactual": random_counterfactual,
     },
     token_positions={
+        "symbol0": lambda x: create_symbol_token_position(x, 0),
+        "symbol0_period": lambda x:create_symbol_period_token_position(x, 0),
+        "symbol1": lambda x: create_symbol_token_position(x, 1),
+        "symbol1_period": lambda x:create_symbol_period_token_position(x, 1),
         "correct_symbol": create_correct_symbol_token_position,
         "correct_symbol_period": create_correct_symbol_period_token_position,
         "last_token": create_last_token_position,

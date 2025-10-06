@@ -1,7 +1,3 @@
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 import pytest
 import torch
 from unittest.mock import MagicMock, patch
@@ -110,7 +106,7 @@ class TestCollectFeatures:
                                 [[[0, 1, 2], [0, 1, 2]], [[0, 1, 2], [0, 1, 2]]])) as mock_inputs:
             
             # Create a simple config
-            config = {"batch_size": 2}
+            config = {"train_batch_size": 2}
             
             # Call the function
             result = _collect_features(
@@ -157,8 +153,8 @@ class TestCollectFeatures:
                                 [[[0, 1, 2], [0, 1, 2]], [[0, 1, 2], [0, 1, 2]]])), \
              patch('experiments.pyvene_core._delete_intervenable_model'):
             
-            config = {"batch_size": 2}
-            
+            config = {"train_batch_size": 2}
+
             # Test with collect_counterfactuals=True (default)
             call_count = 0
             _collect_features(
@@ -206,8 +202,8 @@ class TestCollectFeatures:
                                 [[[0, 1, 2], [0, 1, 2]], [[0, 1, 2], [0, 1, 2]]])), \
              patch('experiments.pyvene_core._delete_intervenable_model'):
             
-            config = {"batch_size": 2}
-            
+            config = {"train_batch_size": 2}
+
             # Call with verbose=True
             _collect_features(
                 mock_counterfactual_dataset,
@@ -250,8 +246,8 @@ class TestCollectFeatures:
             patch('torch.cuda.empty_cache') as mock_empty_cache:
             
             # Config
-            config = {"batch_size": 2}
-            
+            config = {"train_batch_size": 2}
+
             # Call the function
             result = _collect_features(
                 mock_counterfactual_dataset,
@@ -291,9 +287,9 @@ class TestCollectFeatures:
                 {"input": ["input_1"], "counterfactual_inputs": [["cf_1_1", "cf_1_2"]]},
                 {"input": ["input_2"], "counterfactual_inputs": [["cf_2_1", "cf_2_2"]]},
             ])
-            
-            config = {"batch_size": 2}
-            
+
+            config = {"train_batch_size": 2}
+
             # Call the function
             _collect_features(
                 mock_counterfactual_dataset,
@@ -396,9 +392,9 @@ class TestCollectFeaturesPyvene18Plus:
                                 {"sources->base": ([[[0]], [[0]]], [[[0]], [[0]]])},
                                 [[[0], [0]], [[0], [0]]])), \
              patch('experiments.pyvene_core._delete_intervenable_model'):
-            
-            config = {"batch_size": 2}
-            
+
+            config = {"train_batch_size": 2}
+
             result = _collect_features(
                 mock_counterfactual_dataset,
                 mock_tiny_lm,
@@ -439,9 +435,9 @@ class TestCollectFeaturesPyvene18Plus:
                                 {"sources->base": ([[[0]], [[0]]], [[[0]], [[0]]])},
                                 [[[0], [0]], [[0], [0]]])), \
              patch('experiments.pyvene_core._delete_intervenable_model'):
-            
-            config = {"batch_size": 2}
-            
+
+            config = {"train_batch_size": 2}
+
             result = _collect_features(
                 mock_counterfactual_dataset,
                 mock_tiny_lm,
@@ -487,9 +483,9 @@ class TestCollectFeaturesPyvene18Plus:
                                 {"sources->base": ([[[0]], [[0]]], [[[0]], [[0]]])},
                                 [[[0], [0]], [[0], [0]]])), \
              patch('experiments.pyvene_core._delete_intervenable_model'):
-            
-            config = {"batch_size": 2}
-            
+
+            config = {"train_batch_size": 2}
+
             result = _collect_features(
                 mock_counterfactual_dataset,
                 mock_tiny_lm,
