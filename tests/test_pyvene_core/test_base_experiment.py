@@ -36,7 +36,6 @@ class TestInterventionExperiment:
         assert exp.config.get("evaluation_batch_size") == DEFAULT_CONFIG["evaluation_batch_size"]
         assert exp.config.get("method_name") == DEFAULT_CONFIG["method_name"]
         assert exp.config.get("output_scores") == DEFAULT_CONFIG["output_scores"]
-        assert exp.config.get("check_raw") == DEFAULT_CONFIG["check_raw"]
         assert exp.config.get("training_epoch") == DEFAULT_CONFIG["training_epoch"]
         assert exp.config.get("DAS", {}).get("n_features") == DEFAULT_CONFIG["DAS"]["n_features"]
         
@@ -45,8 +44,7 @@ class TestInterventionExperiment:
             "train_batch_size": 4,
             "evaluation_batch_size": 8,
             "method_name": "CustomMethod",
-            "output_scores": True,
-            "check_raw": True
+            "output_scores": True
         }
 
         exp = InterventionExperiment(
@@ -62,7 +60,6 @@ class TestInterventionExperiment:
         assert exp.config["evaluation_batch_size"] == 8
         assert exp.config["method_name"] == "CustomMethod"
         assert exp.config["output_scores"] is True
-        assert exp.config["check_raw"] is True
 
         # Verify other defaults are still present
         assert exp.config["training_epoch"] == DEFAULT_CONFIG["training_epoch"]
@@ -114,14 +111,19 @@ class TestInterventionExperiment:
         assert exp.config["DAS"]["n_features"] == 8
 
     @patch('experiments.intervention_experiment._run_interchange_interventions')
-    def test_perform_interventions(self, mock_run_interventions, 
-                                  mock_tiny_lm, mcqa_causal_model, 
+    def test_perform_interventions(self, mock_run_interventions,
+                                  mock_tiny_lm, mcqa_causal_model,
                                   model_units_list, mcqa_counterfactual_datasets):
         """Test the perform_interventions method."""
-        # Setup mock return for interchange interventions
-        mock_outputs = torch.randint(0, 100, (3, 3))
-        mock_run_interventions.return_value = [mock_outputs]
-        
+        # Setup mock return for interchange interventions - should be list of dicts
+        mock_sequences = torch.randint(0, 100, (3, 3))
+        mock_output_dict = {
+            "sequences": mock_sequences,
+            "scores": [torch.randn(3, 100) for _ in range(3)],
+            "string": ["output1", "output2", "output3"]
+        }
+        mock_run_interventions.return_value = [mock_output_dict]
+
         # Mock pipeline.dump to return predictable output
         mock_tiny_lm.dump = MagicMock(return_value=["output1", "output2", "output3"])
         

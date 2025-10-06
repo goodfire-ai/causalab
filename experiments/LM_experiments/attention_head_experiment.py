@@ -381,7 +381,7 @@ class PatchAttentionHeads(InterventionExperiment):
                         head = int(head_part)
 
                         # Create binary mask: 0 for [], 1 for [0]
-                        mask_value = 1 if indices == [0] else 0
+                        mask_value = 1 if indices is None else 0
 
                         head_info.append((layer, head, mask_value))
                     except (ValueError, IndexError) as e:
@@ -464,6 +464,5 @@ class PatchAttentionHeads(InterventionExperiment):
             import os
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             plt.savefig(save_path, bbox_inches='tight', dpi=300)
-            plt.close()
-        else:
-            plt.show()
+        plt.show()
+        plt.close()

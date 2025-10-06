@@ -161,7 +161,7 @@ class InterventionExperiment:
                     for j, model_unit in enumerate(model_units):
                         unit_key = f"{model_unit.id}"
                         indices = model_unit.get_feature_indices()
-                        feature_indices[unit_key] = indices if indices is not None else None
+                        feature_indices[unit_key] = indices 
 
                 results["dataset"][dataset_name]["model_unit"][str(model_units_list)] = {
                     "raw_outputs": raw_outputs,
@@ -525,8 +525,10 @@ class InterventionExperiment:
                         model_unit.set_feature_indices(None)  # Use all features
 
             # Train the intervention
-            _train_intervention(self.pipeline, model_units_list, counterfactual_dataset, 
+            printout = _train_intervention(self.pipeline, model_units_list, counterfactual_dataset, 
                                intervention_type, self.config, self.loss_and_metric_fn)
+            if verbose:
+                print(printout)
             
             # Save trained models if directory provided
             if model_dir is not None:

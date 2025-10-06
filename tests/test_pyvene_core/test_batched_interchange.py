@@ -78,8 +78,8 @@ class TestBatchedInterchangeIntervention:
             
             # Verify that intervenable_generate was called with correct arguments
             mock_tiny_lm.intervenable_generate.assert_called_once_with(
-                mock_intervenable_model, batched_base, batched_counterfactuals, 
-                inv_locations, feature_indices, output_scores=False
+                mock_intervenable_model, batched_base, batched_counterfactuals,
+                inv_locations, feature_indices, output_scores=True
             )
             
             # Verify that tensors were moved to CPU

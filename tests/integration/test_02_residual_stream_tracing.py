@@ -158,12 +158,12 @@ class TestSameLengthResidualStreamTracing:
         original = sample_answerable_question()
         counterfactual = sample_answerable_question()
 
-        # Tokenize to check lengths
-        original_setting = causal_model.run_forward(original)
-        counterfactual_setting = causal_model.run_forward(counterfactual)
+        # Tokenize using pipeline.load() to match what run() does
+        base_ids = pipeline.load(original)
+        cf_ids = pipeline.load(counterfactual)
 
-        orig_tokens = pipeline.tokenizer.encode(original_setting["raw_input"])
-        cf_tokens = pipeline.tokenizer.encode(counterfactual_setting["raw_input"])
+        base_tokens = pipeline.tokenizer.convert_ids_to_tokens(base_ids['input_ids'][0])
+        cf_tokens = pipeline.tokenizer.convert_ids_to_tokens(cf_ids['input_ids'][0])
 
         tracing_exp = SameLengthResidualStreamTracing(
             pipeline=pipeline,
@@ -171,7 +171,7 @@ class TestSameLengthResidualStreamTracing:
             checker=checker
         )
 
-        if len(orig_tokens) != len(cf_tokens):
+        if len(base_tokens) != len(cf_tokens):
             # Expect an error when lengths don't match
             with pytest.raises(ValueError, match="must have the same length"):
                 tracing_exp.run(

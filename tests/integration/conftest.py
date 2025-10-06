@@ -38,6 +38,9 @@ def causal_model():
 def checker():
     """Checker function for comparing neural and causal outputs."""
     def _checker(neural_output, causal_output):
+        # Handle case where neural_output is a dict with 'string' key
+        if isinstance(neural_output, dict) and 'string' in neural_output:
+            neural_output = neural_output['string']
         return causal_output in neural_output or neural_output in causal_output
     return _checker
 

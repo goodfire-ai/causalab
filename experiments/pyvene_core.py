@@ -649,9 +649,10 @@ def _train_intervention(pipeline: Pipeline,
             if step % memory_cleanup_freq == 0 and torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
-        # Print epoch summary
+        # Update progress bar with epoch summary
         epoch_avg_loss = np.mean(aggregated_stats['loss'])
-        metrics_summary = ""
+        postfix_dict = {"loss": f"{epoch_avg_loss:.4f}"}
+
         if aggregated_stats['metrics']:
             # Aggregate metrics across all batches in the epoch
             all_metrics = {}
@@ -660,11 +661,11 @@ def _train_intervention(pipeline: Pipeline,
                     if k not in all_metrics:
                         all_metrics[k] = []
                     all_metrics[k].append(v)
-            # Format metrics string
-            metrics_parts = [f"{k}={np.mean(v):.4f}" for k, v in all_metrics.items()]
-            if metrics_parts:
-                metrics_summary = ", " + ", ".join(metrics_parts)
-        train_iterator.write(f"Epoch {epoch}: loss={epoch_avg_loss:.4f}{metrics_summary}")
+            # Add metrics to postfix
+            for k, v in all_metrics.items():
+                postfix_dict[k] = f"{np.mean(v):.4f}"
+
+        train_iterator.set_postfix(postfix_dict)
 
         # Early stopping check at end of epoch
         if early_stopping_enabled:
@@ -677,6 +678,8 @@ def _train_intervention(pipeline: Pipeline,
                 if patience_counter >= patience:
                     print(f"Early stopping at epoch {epoch+1}/{num_epoch}")
                     break
+    
+
 
     # ----- Finalize Logging ----- #
     tb_writer.flush()
@@ -694,7 +697,7 @@ def _train_intervention(pipeline: Pipeline,
                 
             if config["featurizer_kwargs"]["tie_masks"]:
                 # If masks are tied, use the average mask across all units
-                if v.mask[0] > 0.5:
+                if torch.sigmoid(v.mask[0]) > 0.5:
                     indices = None
                 else:
                     indices = []
@@ -705,10 +708,15 @@ def _train_intervention(pipeline: Pipeline,
             
             # Update model unit
             model_unit.set_feature_indices(indices)
-            
+
             # Log selected features
-            tb_writer.add_text("Selected features", f"Number Selected features: {len(indices)}")
+            num_features = "all" if indices is None else len(indices)
+            tb_writer.add_text("Selected features", f"Number Selected features: {num_features}")
             tb_writer.add_text("Selected features", f"Selected features: {indices}")
             
     # ----- Cleanup ----- #
     _delete_intervenable_model(intervenable_model)
+
+    summary = f"Trained intervention for {str(model_units_list)[:200]}"
+    summary += "\nFinal metrics: " + " ".join([f"{k}: {v}" for k, v in postfix_dict.items()])
+    return summary

@@ -79,6 +79,10 @@ class PatchResidualStream(InterventionExperiment):
                 featurizer = self.featurizers.get((layer, pos.id),
                                                  Featurizer(n_features=pipeline.model.config.hidden_size,
                                                            **featurizer_kwargs))
+                target_output = True
+                if layer == -1:
+                    layer = 0
+                    target_output = False
                 model_units_lists.append([[
                     ResidualStream(
                         layer=layer,
@@ -86,7 +90,7 @@ class PatchResidualStream(InterventionExperiment):
                         featurizer=featurizer,
                         shape=(pipeline.model.config.hidden_size,),
                         feature_indices=None,
-                        target_output=True
+                        target_output=target_output
                     )
                 ]])
 
