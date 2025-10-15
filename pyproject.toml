@@ -18,7 +18,7 @@ networkx = "*"
 matplotlib = "*"
 pandas = "*"
 numpy = "*"
-pyvene = "*"
+pyvene = {git = "https://github.com/stanfordnlp/pyvene.git", branch = "main"}
 scikit-learn = "*"
 ipywidgets = "*"
 jupyterlab = "*"
