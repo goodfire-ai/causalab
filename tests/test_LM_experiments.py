@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch, PropertyMock, ANY
 
 from experiments.LM_experiments.LM_utils import (
     LM_loss_and_metric_fn,
-    compute_metrics,
     compute_cross_entropy_loss
 )
 from experiments.LM_experiments.residual_stream_experiment import PatchResidualStream
@@ -14,50 +13,6 @@ from experiments.LM_experiments.residual_stream_experiment import PatchResidualS
 # --------------------------------------------------------------------------- #
 #  Utility Function Tests                                                      #
 # --------------------------------------------------------------------------- #
-
-class TestComputeMetrics:
-    """Tests for the compute_metrics function."""
-    
-    def test_perfect_predictions(self):
-        """Test with predictions matching labels exactly."""
-        predicted = torch.tensor([[1, 2, 3], [4, 5, 6]])
-        labels = torch.tensor([[1, 2, 3], [4, 5, 6]])
-        pad_id = 0
-        
-        metrics = compute_metrics(predicted, labels, pad_id)
-        assert metrics["accuracy"] == 1.0
-        assert metrics["token_accuracy"] == 1.0
-        
-    def test_partial_predictions(self):
-        """Test with partially correct predictions."""
-        predicted = torch.tensor([[1, 2, 9], [4, 9, 6]])
-        labels = torch.tensor([[1, 2, 3], [4, 5, 6]])
-        pad_id = 0
-        
-        metrics = compute_metrics(predicted, labels, pad_id)
-        assert metrics["accuracy"] == 0.0  # No sequence fully correct
-        assert pytest.approx(metrics["token_accuracy"], 0.01) == 4/6  # 4 correct out of 6 tokens
-        
-    def test_with_padding(self):
-        """Test with padded sequences."""
-        predicted = torch.tensor([[1, 2, 3, 0], [4, 5, 0, 0]])
-        labels = torch.tensor([[1, 2, 3, 0], [4, 5, 0, 0]])
-        pad_id = 0
-        
-        metrics = compute_metrics(predicted, labels, pad_id)
-        assert metrics["accuracy"] == 1.0
-        assert metrics["token_accuracy"] == 1.0
-        
-    def test_empty_inputs(self):
-        """Test with empty inputs."""
-        # Create singleton dimension tensors that represent empty sequences
-        predicted = torch.tensor([[0]])
-        labels = torch.tensor([[0]])
-        pad_id = 0
-        
-        metrics = compute_metrics(predicted, labels, pad_id)
-        assert "accuracy" in metrics
-        assert "token_accuracy" in metrics
 
 
 class TestComputeCrossEntropyLoss:
@@ -127,7 +82,7 @@ class TestLMLossAndMetricFn:
             "input_ids": torch.tensor([[1, 2, 3]]),
             "attention_mask": torch.tensor([[1, 1, 1]])
         }
-        pipeline.dump.side_effect = lambda x, **kwargs: ["decoded_text"]
+        pipeline.dump.side_effect = lambda x, **kwargs: "decoded_text"
         return pipeline
         
     @pytest.fixture
@@ -146,7 +101,7 @@ class TestLMLossAndMetricFn:
         return {
             "input": ["test input"],
             "counterfactual_inputs": [["cf input 1"], ["cf input 2"]],
-            "label": ["expected output"]
+            "label": [{"string": "expected output"}]
         }
         
     @pytest.fixture

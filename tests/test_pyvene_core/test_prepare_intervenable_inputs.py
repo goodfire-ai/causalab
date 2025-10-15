@@ -140,6 +140,7 @@ class TestPrepareIntervenableInputs:
         unit1.index_component = MagicMock(side_effect=lambda x, batch=False:
             [[0, 1], [0, 1]] if batch else [0, 1])
         unit1.get_feature_indices = MagicMock(return_value=[0, 1, 2])
+        unit1.id = "test_unit1"
         unit1.component = MagicMock()
         unit1.component._indices_func = MagicMock()
         unit1.component._indices_func.id = "test_unit1"
@@ -149,6 +150,7 @@ class TestPrepareIntervenableInputs:
         unit2.index_component = MagicMock(side_effect=lambda x, batch=False:
             [[2, 3], [2, 3]] if batch else [2, 3])
         unit2.get_feature_indices = MagicMock(return_value=[0, 1, 2])
+        unit2.id = "test_unit2"
         unit2.component = MagicMock()
         unit2.component._indices_func = MagicMock()
         unit2.component._indices_func.id = "test_unit2"
@@ -222,6 +224,7 @@ class TestPrepareIntervenableInputs:
         unit.index_component = MagicMock(side_effect=lambda x, batch=False:
             [[[0], [1, 2]], [[0], [1, 2]]] if batch else [[0], [1, 2]])
         unit.get_feature_indices = MagicMock(return_value=[0, 1, 2])
+        unit.id = "test_unit_nested"
         unit.component = MagicMock()
         unit.component._indices_func = MagicMock()
         unit.component._indices_func.id = "test_unit_nested"
