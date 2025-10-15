@@ -4,12 +4,29 @@ import logging
 from typing import Callable, Any, Optional
 
 
-def LM_loss_and_metric_fn(pipeline, intervenable_model, batch, model_units_list):
+def default_checker(neural_output, causal_output):
+    """
+    Default checker that replicates the original exact token matching behavior.
+    This maintains backward compatibility with existing experiments.
+
+    Args:
+        neural_output: Dict with 'string' key containing predicted text
+        causal_output: Dict with 'string' key containing expected text
+
+    Returns:
+        bool: True if strings match exactly (after stripping), False otherwise
+    """
+    pred_str = neural_output["string"].strip()
+    expected_str = causal_output["string"].strip()
+    return pred_str == expected_str
+
+
+def LM_loss_and_metric_fn(pipeline, intervenable_model, batch, model_units_list, checker=None):
     """
     Calculate loss and evaluation metrics for language model interventions.
-    
+
     This function evaluates intervention effects by:
-    
+
     1. Preparing intervenable inputs from the batch
     2. Concatenating ground truth label tokens to the base inputs
        (e.g., if input has length 10 and labels length 3, creates sequence of length 13)
@@ -18,49 +35,80 @@ def LM_loss_and_metric_fn(pipeline, intervenable_model, batch, model_units_list)
     4. Extracting logits corresponding only to the positions where labels were appended
        (e.g., positions 9-11 in the example above)
     5. Computing accuracy and loss by comparing predicted continuations against ground truth
-    
+
     This approach allows measuring how interventions affect the model's ability
     to predict the correct continuation, even for multi-token responses.
-    
+
     Args:
         pipeline: The language model pipeline handling tokenization and generation
         intervenable_model: The model with intervention capabilities
         batch: Batch of data containing inputs and counterfactual inputs
         model_units_list: List of model units to intervene on
-        
+        checker: Function for metric evaluation. If None, uses default_checker (exact matching).
+                Should have signature: checker(neural_output, causal_output) -> bool/float
+
     Returns:
         tuple: (loss, eval_metrics, logging_info)
     """
+    # Use default checker if none provided
+    if checker is None:
+        checker = default_checker
     # Prepare intervenable inputs
     batched_base, batched_counterfactuals, inv_locations, feature_indices = _prepare_intervenable_inputs(
         pipeline, batch, model_units_list)
 
     # Get ground truth labels
     batched_inv_label = batch['label']
+    if isinstance(batched_inv_label[0], dict):
+        batched_inv_label = [item['string'] for item in batched_inv_label]
     batched_inv_label = pipeline.load(
-        batched_inv_label, max_length=pipeline.max_new_tokens, padding_side='right', add_special_tokens=False)
-    
+        batched_inv_label,
+        max_length=pipeline.max_new_tokens,
+        padding_side='right',
+        add_special_tokens=False,
+        use_chat_template=False)
+
     # Concatenate labels to base inputs for evaluation
     for k in batched_base:
         if isinstance(batched_base[k], torch.Tensor):
             batched_base[k] = torch.cat([batched_base[k], batched_inv_label[k]], dim=-1)
-    
+
     # Run the intervenable model with interventions
     _, counterfactual_logits = intervenable_model(
         batched_base, batched_counterfactuals, unit_locations=inv_locations, subspaces=feature_indices)
-    
+
     # Extract relevant portions of logits and labels for evaluation
     labels = batched_inv_label['input_ids']
     logits = counterfactual_logits.logits[:, -labels.shape[-1] - 1 : -1]
     pred_ids = torch.argmax(logits, dim=-1)
-    
-    # Compute metrics and loss
-    eval_metrics = compute_metrics(pred_ids, labels, pipeline.tokenizer.pad_token_id)
+
+    # Compute metrics using checker function
+    scores = []
+    for i in range(pred_ids.shape[0]):
+        # Decode predictions and labels to strings
+        pred_str = pipeline.dump(pred_ids[i:i+1])
+
+        # Create output dicts in same format as perform_interventions
+        neural_output = {"string": pred_str}
+
+        # Apply checker function
+        score = checker(neural_output, batch["label"][i])
+        if isinstance(score, torch.Tensor):
+            score = score.item()
+        scores.append(float(score))
+
+    accuracy = sum(scores) / len(scores) if scores else 1.0
+    eval_metrics = {
+        "accuracy": accuracy,
+        "token_accuracy": accuracy
+    }
+
+    # Compute loss
     loss = compute_cross_entropy_loss(logits, labels, pipeline.tokenizer.pad_token_id)
-    
+
     # Collect detailed information for logging
     logging_info = {
-        "preds": pipeline.dump(pred_ids), 
+        "preds": pipeline.dump(pred_ids),
         "labels": pipeline.dump(labels),
         "base_ids": batched_base["input_ids"][0],
         "base_masks": batched_base["attention_mask"][0],
@@ -71,38 +119,9 @@ def LM_loss_and_metric_fn(pipeline, intervenable_model, batch, model_units_list)
         "inv_locations": inv_locations,
         "feature_indices": feature_indices
     }
-    
+
     return loss, eval_metrics, logging_info
 
-def compute_metrics(predicted_token_ids, eval_labels, pad_token_id):
-    """
-    Compute sequence-level and token-level accuracy metrics.
-    
-    Args:
-        predicted_token_ids (torch.Tensor): Predicted token IDs from the model
-        eval_labels (torch.Tensor): Ground truth token IDs 
-        pad_token_id (int): ID of the padding token to be ignored in evaluation
-    
-    Returns:
-        dict: Dictionary containing accuracy metrics:
-            - accuracy: Proportion of sequences where all tokens match
-            - token_accuracy: Proportion of individual tokens that match
-    """
-    # Create mask to ignore pad tokens in labels
-    mask = (eval_labels != pad_token_id)
-
-    # Calculate token-level accuracy (only for non-pad tokens)
-    correct_tokens = (predicted_token_ids == eval_labels) & mask
-    token_accuracy = correct_tokens.sum().float() / mask.sum() if mask.sum() > 0 else torch.tensor(1.0)
-
-    # Calculate sequence-level accuracy (sequence correct if all non-pad tokens correct)
-    sequence_correct = torch.stack([torch.all(correct_tokens[i, mask[i]]) for i in range(eval_labels.shape[0])])
-    sequence_accuracy = sequence_correct.float().mean() if len(sequence_correct) > 0 else torch.tensor(1.0)
-
-    return {
-        "accuracy": float(sequence_accuracy.item()),
-        "token_accuracy": float(token_accuracy.item())
-    }
 
 def compute_cross_entropy_loss(eval_preds, eval_labels, pad_token_id):
     """
@@ -135,6 +154,169 @@ def compute_cross_entropy_loss(eval_preds, eval_labels, pad_token_id):
 
     return loss
 
+def LM_logit_loss_and_metric_fn(pipeline, intervenable_model, batch, model_units_list):
+    """
+    Calculate loss and evaluation metrics for language model interventions using logit distributions.
+
+    This function is designed for labels that are dictionaries mapping token strings to expected logit values.
+    For example: {"Jeremy": 2.0, "Kelly": 0.0, "Alice": None, ...}
+
+    The function:
+    1. Extracts tokens with non-None logit values from the label dictionaries
+    2. Tokenizes each token string and uses the first token ID
+    3. Runs the model with interventions to get predicted logits
+    4. Extracts model logits for the relevant token positions
+    5. Compares predicted vs expected logit distributions using loss and accuracy metrics
+
+    Args:
+        pipeline: The language model pipeline handling tokenization and generation
+        intervenable_model: The model with intervention capabilities
+        batch: Batch of data containing inputs and counterfactual inputs
+        model_units_list: List of model units to intervene on
+
+    Returns:
+        tuple: (loss, eval_metrics, logging_info)
+    """
+    # Prepare intervenable inputs
+    batched_base, batched_counterfactuals, inv_locations, feature_indices = _prepare_intervenable_inputs(
+        pipeline, batch, model_units_list)
+
+    # Run the intervenable model with interventions
+    _, counterfactual_logits = intervenable_model(
+        batched_base, batched_counterfactuals, unit_locations=inv_locations, subspaces=feature_indices)
+
+    # Get the logits at the last position (where we predict the next token)
+    # Shape: (batch_size, vocab_size)
+    pred_logits = counterfactual_logits.logits[:, -1, :]
+
+    # Process labels to extract token IDs and expected logits
+    batched_inv_label = batch['label']
+    batch_size = len(batched_inv_label)
+
+    # Extract relevant token IDs and their expected logit values for each example
+    token_ids_list = []
+    expected_logits_list = []
+
+    for example_label in batched_inv_label:
+        # Get tokens with non-None values
+        relevant_tokens = {k: v for k, v in example_label['logits'].items() if v is not None}
+
+        # Tokenize each token string and get the first token ID
+        token_ids = []
+        expected_logits = []
+        for token_str, expected_logit in relevant_tokens.items():
+            # Tokenize the token string (may produce multiple tokens)
+            tokenized = pipeline.tokenizer.encode(token_str, add_special_tokens=False)
+            if len(tokenized) > 0:
+                # Use the first token ID
+                token_ids.append(tokenized[0])
+                expected_logits.append(expected_logit)
+
+        token_ids_list.append(token_ids)
+        expected_logits_list.append(expected_logits)
+
+    # Compute loss and metrics
+    loss = compute_logit_distribution_loss(pred_logits, token_ids_list, expected_logits_list)
+    eval_metrics = compute_logit_distribution_metrics(pred_logits, token_ids_list, expected_logits_list)
+
+    # Collect detailed information for logging
+    predicted_token_ids = torch.argmax(pred_logits, dim=-1)
+    logging_info = {
+        "preds": pipeline.dump(predicted_token_ids),
+        "labels": [example['token'] for example in batched_inv_label],
+        "base_ids": batched_base["input_ids"][0],
+        "base_masks": batched_base["attention_mask"][0],
+        "counterfactual_masks": [c["attention_mask"][0] for c in batched_counterfactuals],
+        "counterfactual_ids": [c["input_ids"][0] for c in batched_counterfactuals],
+        "base_inputs": pipeline.dump(batched_base["input_ids"][0]),
+        "counterfactual_inputs": [pipeline.dump(c["input_ids"][0]) for c in batched_counterfactuals],
+        "inv_locations": inv_locations,
+        "feature_indices": feature_indices
+    }
+
+    return loss, eval_metrics, logging_info
+
+
+def compute_logit_distribution_loss(pred_logits, token_ids_list, expected_logits_list):
+    """
+    Compute loss based on expected logit distributions.
+
+    This computes MSE loss between the predicted logits and expected logits
+    for the relevant tokens in each example.
+
+    Args:
+        pred_logits (torch.Tensor): Predicted logits of shape (batch_size, vocab_size)
+        token_ids_list (list): List of lists of token IDs for each example
+        expected_logits_list (list): List of lists of expected logit values for each example
+
+    Returns:
+        torch.Tensor: The computed loss
+    """
+    total_loss = 0.0
+    count = 0
+
+    for i, (token_ids, expected_logits) in enumerate(zip(token_ids_list, expected_logits_list)):
+        if len(token_ids) == 0:
+            continue
+
+        # Extract predicted logits for the relevant tokens
+        token_ids_tensor = torch.tensor(token_ids, device=pred_logits.device)
+        pred_logits_subset = pred_logits[i, token_ids_tensor]
+
+        # Expected logits as tensor
+        expected_logits_tensor = torch.tensor(expected_logits, device=pred_logits.device, dtype=pred_logits.dtype)
+
+        # MSE loss between predicted and expected logits
+        loss = torch.nn.functional.mse_loss(pred_logits_subset, expected_logits_tensor)
+        total_loss += loss
+        count += 1
+
+    return total_loss / count if count > 0 else torch.tensor(0.0, device=pred_logits.device)
+
+
+def compute_logit_distribution_metrics(pred_logits, token_ids_list, expected_logits_list):
+    """
+    Compute accuracy metrics based on expected logit distributions.
+
+    Accuracy is 1.0 if the token with the highest expected logit matches
+    the token with the highest predicted logit.
+
+    Args:
+        pred_logits (torch.Tensor): Predicted logits of shape (batch_size, vocab_size)
+        token_ids_list (list): List of lists of token IDs for each example
+        expected_logits_list (list): List of lists of expected logit values for each example
+
+    Returns:
+        dict: Dictionary containing accuracy metric
+    """
+    correct = 0
+    total = 0
+
+    for i, (token_ids, expected_logits) in enumerate(zip(token_ids_list, expected_logits_list)):
+        if len(token_ids) == 0:
+            continue
+
+        # Find the token with highest expected logit
+        expected_best_idx = expected_logits.index(max(expected_logits))
+        expected_best_token_id = token_ids[expected_best_idx]
+
+        # Find the token with highest predicted logit (among relevant tokens)
+        token_ids_tensor = torch.tensor(token_ids, device=pred_logits.device)
+        pred_logits_subset = pred_logits[i, token_ids_tensor]
+        pred_best_idx = torch.argmax(pred_logits_subset).item()
+        pred_best_token_id = token_ids[pred_best_idx]
+
+        # Check if they match
+        if expected_best_token_id == pred_best_token_id:
+            correct += 1
+        total += 1
+
+    accuracy = correct / total if total > 0 else 1.0
+
+    return {
+        "accuracy": accuracy,
+        "token_accuracy": accuracy  # Same as accuracy for this case
+    }
 
 # ========== SAE (Sparse Autoencoder) Registry ==========
 

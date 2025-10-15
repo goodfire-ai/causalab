@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import List, Dict, Callable, Tuple
+from typing import List, Dict, Callable, Tuple, Optional
 
 from experiments.intervention_experiment import *
 from neural.LM_units import *
@@ -118,7 +118,7 @@ class PatchAttentionHeads(InterventionExperiment):
         
         self.token_position = token_position
 
-    def plot_heatmaps(self, results: Dict, target_variables, save_path: str = None, average_counterfactuals: bool = False):
+    def plot_heatmaps(self, results: Dict, target_variables, save_path: str = None, average_counterfactuals: bool = False, custom_scoring_fn: Callable = None, use_actual_outputs: bool = False):
         """
         Generate heatmaps visualizing intervention scores with heads vs layers.
 
@@ -127,6 +127,9 @@ class PatchAttentionHeads(InterventionExperiment):
             target_variables: List of variable names being analyzed
             save_path: Optional path to save the generated plots. If None, displays plots interactively.
             average_counterfactuals: If True, averages scores across counterfactual datasets
+            custom_scoring_fn: Optional function with signature (causal_model_input: Dict, raw_output: Dict, actual_output: Dict = None) -> float
+                             that processes each input/output pair. If None, uses pre-computed average_score.
+            use_actual_outputs: If True and custom_scoring_fn provided, passes actual outputs to custom function
         """
         # Validate that each layer_head_list contains exactly one entry for heatmap compatibility
         for i, layer_head_list in enumerate(self.layer_head_lists):
@@ -144,16 +147,18 @@ class PatchAttentionHeads(InterventionExperiment):
         heads = list(range(min(all_heads), max(all_heads) + 1))
 
         if average_counterfactuals:
-            self._plot_average_heatmap(results, layers, heads, target_variables_str, save_path)
+            self._plot_average_heatmap(results, layers, heads, target_variables_str, save_path, custom_scoring_fn, use_actual_outputs)
         else:
-            self._plot_individual_heatmaps(results, layers, heads, target_variables_str, save_path)
+            self._plot_individual_heatmaps(results, layers, heads, target_variables_str, save_path, custom_scoring_fn, use_actual_outputs)
 
     def _build_score_matrix(self,
                             results: Dict,
                             layers: List,
                             heads: List,
                             target_variables_str: str,
-                            dataset_names: Optional[List[str]] = None) -> Dict[str, np.ndarray]:
+                            dataset_names: Optional[List[str]] = None,
+                            custom_scoring_fn: Callable = None,
+                            use_actual_outputs: bool = False) -> Dict[str, np.ndarray]:
         """
         Extract score matrices from results for specified datasets.
 
@@ -163,6 +168,9 @@ class PatchAttentionHeads(InterventionExperiment):
             heads: List of head indices
             target_variables_str: String identifier for target variables
             dataset_names: List of dataset names to process. If None, processes all datasets.
+            custom_scoring_fn: Optional function to compute scores from causal_model_inputs and raw_outputs.
+                             If None, uses pre-computed average_score.
+            use_actual_outputs: If True, passes actual outputs to custom scoring function.
 
         Returns:
             Dictionary mapping dataset names to their score matrices (with NaN for missing entries)
@@ -179,18 +187,77 @@ class PatchAttentionHeads(InterventionExperiment):
 
             # Fill score matrix
             for unit_str, unit_data in results["dataset"][dataset_name]["model_unit"].items():
-                if "metadata" in unit_data and target_variables_str in unit_data:
-                    if "average_score" in unit_data[target_variables_str]:
-                        metadata = unit_data["metadata"]
-                        layer = metadata.get("layer")
-                        head = metadata.get("head")
+                if "metadata" in unit_data:
+                    metadata = unit_data["metadata"]
+                    layer = metadata.get("layer")
+                    head = metadata.get("head")
 
-                        # Check if this layer/head combination is in our ranges
-                        if layer in layers and head in heads:
-                            layer_idx = layers.index(layer)
-                            head_idx = heads.index(head)
-                            score_matrix[head_idx, layer_idx] = unit_data[target_variables_str]["average_score"]
-                            valid_entries = True
+                    # Check if this layer/head combination is in our ranges
+                    if layer in layers and head in heads:
+                        layer_idx = layers.index(layer)
+                        head_idx = heads.index(head)
+
+                        # Compute score using custom function or pre-computed average
+                        if custom_scoring_fn is not None:
+                            # Use custom scoring function with causal inputs and raw outputs
+                            if "causal_model_inputs" in unit_data and "raw_outputs" in unit_data:
+                                scores = []
+                                causal_inputs = unit_data["causal_model_inputs"]
+                                raw_outputs = unit_data["raw_outputs"]
+
+                                # Get actual outputs if requested
+                                actual_outputs = None
+                                if use_actual_outputs and "raw_outputs_no_intervention" in results["dataset"][dataset_name]:
+                                    actual_outputs = results["dataset"][dataset_name]["raw_outputs_no_intervention"]
+
+                                # Process batches simultaneously
+                                input_idx = 0
+                                for batch_idx, intervention_batch in enumerate(raw_outputs):
+                                    actual_batch = actual_outputs[batch_idx] if actual_outputs else None
+                                    batch_size = intervention_batch["sequences"].shape[0]
+
+                                    for i in range(batch_size):
+                                        if input_idx < len(causal_inputs):
+                                            # Create intervention output dict
+                                            intervention_output = {"sequences": intervention_batch["sequences"][i:i+1]}
+                                            if "scores" in intervention_batch:
+                                                intervention_output["scores"] = [score[i:i+1] for score in intervention_batch["scores"]]
+                                            if "string" in intervention_batch:
+                                                if isinstance(intervention_batch["string"], list):
+                                                    intervention_output["string"] = intervention_batch["string"][i]
+                                                else:
+                                                    intervention_output["string"] = intervention_batch["string"]
+
+                                            # Create actual output dict if available
+                                            actual_output = None
+                                            if actual_batch is not None:
+                                                actual_output = {"sequences": actual_batch["sequences"][i:i+1]}
+                                                if "scores" in actual_batch:
+                                                    actual_output["scores"] = [score[i:i+1] for score in actual_batch["scores"]]
+                                                if "string" in actual_batch:
+                                                    if isinstance(actual_batch["string"], list):
+                                                        actual_output["string"] = actual_batch["string"][i]
+                                                    else:
+                                                        actual_output["string"] = actual_batch["string"]
+
+                                            # Apply custom scoring function
+                                            if use_actual_outputs and actual_output is not None:
+                                                score = custom_scoring_fn(causal_inputs[input_idx], intervention_output, actual_output=actual_output)
+                                            else:
+                                                score = custom_scoring_fn(causal_inputs[input_idx], intervention_output)
+                                            scores.append(score)
+                                            input_idx += 1
+
+                                if scores:
+                                    score_matrix[head_idx, layer_idx] = np.mean(scores)
+                                    valid_entries = True
+                            else:
+                                print(f"Warning: Custom scoring function provided but causal_model_inputs or raw_outputs not found for {unit_str}")
+                        else:
+                            # Use pre-computed average score (default behavior)
+                            if target_variables_str in unit_data and "average_score" in unit_data[target_variables_str]:
+                                score_matrix[head_idx, layer_idx] = unit_data[target_variables_str]["average_score"]
+                                valid_entries = True
 
             # Only include datasets with valid entries
             if valid_entries:
@@ -231,10 +298,10 @@ class PatchAttentionHeads(InterventionExperiment):
             raise ValueError(f"Unsupported aggregation method: {aggregation}")
 
     def _plot_average_heatmap(self, results: Dict, layers: List, heads: List,
-                             target_variables_str: str, save_path: Optional[str] = None):
+                             target_variables_str: str, save_path: Optional[str] = None, custom_scoring_fn: Callable = None, use_actual_outputs: bool = False):
         """Create and save/display an averaged heatmap across all datasets."""
         # Build score matrices for all datasets
-        matrices = self._build_score_matrix(results, layers, heads, target_variables_str)
+        matrices = self._build_score_matrix(results, layers, heads, target_variables_str, dataset_names=None, custom_scoring_fn=custom_scoring_fn, use_actual_outputs=use_actual_outputs)
 
         if not matrices:
             print("Warning: No valid data found for visualization.")
@@ -252,14 +319,15 @@ class PatchAttentionHeads(InterventionExperiment):
             layers=layers,
             heads=heads,
             title=f'Attention Head Intervention Accuracy (Averaged)\nTask: {results["task_name"]}',
-            save_path=os.path.join(save_path, f'attention_heatmap_{safe_dataset_name}_{results["task_name"]}.png') if save_path else None
+            save_path=os.path.join(save_path, f'attention_heatmap_{safe_dataset_name}_{results["task_name"]}.png') if save_path else None,
+            use_custom_bounds=(custom_scoring_fn is not None)
         )
 
     def _plot_individual_heatmaps(self, results: Dict, layers: List, heads: List,
-                                 target_variables_str: str, save_path: Optional[str] = None):
+                                 target_variables_str: str, save_path: Optional[str] = None, custom_scoring_fn: Callable = None, use_actual_outputs: bool = False):
         """Create and save/display individual heatmaps for each dataset."""
         # Build score matrices for all datasets
-        matrices = self._build_score_matrix(results, layers, heads, target_variables_str)
+        matrices = self._build_score_matrix(results, layers, heads, target_variables_str, dataset_names=None, custom_scoring_fn=custom_scoring_fn, use_actual_outputs=use_actual_outputs)
 
         if not matrices:
             print("Warning: No valid data found for visualization.")
@@ -276,11 +344,12 @@ class PatchAttentionHeads(InterventionExperiment):
                 layers=layers,
                 heads=heads,
                 title=f'Attention Head Intervention Accuracy - Dataset: {dataset_name}\nTask: {results["task_name"]}',
-                save_path=os.path.join(save_path, f'attention_heatmap_{safe_dataset_name}_{results["task_name"]}.png') if save_path else None
+                save_path=os.path.join(save_path, f'attention_heatmap_{safe_dataset_name}_{results["task_name"]}.png') if save_path else None,
+                use_custom_bounds=(custom_scoring_fn is not None)
             )
 
     def _create_heatmap(self, score_matrix: np.ndarray, layers: List, heads: List,
-                       title: str, save_path: str = None):
+                       title: str, save_path: str = None, use_custom_bounds: bool = False):
         """
         Create and save/display a single heatmap with heads vs layers.
 
@@ -290,33 +359,72 @@ class PatchAttentionHeads(InterventionExperiment):
             heads: List of head indices
             title: Title for the heatmap
             save_path: Path to save the heatmap, or None to display it
+            use_custom_bounds: If True, automatically infer vmin/vmax from the data (for custom metrics)
         """
-        plt.figure(figsize=(max(8, len(layers) * 0.8), max(6, len(heads) * 0.4)))
+        plt.figure(figsize=(max(12, len(heads) * 0.6), max(6, len(layers) * 0.8)))
 
-        # Create display matrix for annotations (only show values, not NaN)
-        display_matrix = np.round(score_matrix * 100, 2)
+        # Determine vmin and vmax based on whether we're using custom bounds
+        if use_custom_bounds:
+            # For custom metrics, infer bounds from the actual data (ignoring NaN)
+            data_min = np.nanmin(score_matrix)
+            data_max = np.nanmax(score_matrix)
+
+            # Check if we have both positive and negative values
+            if data_min < 0 and data_max > 0:
+                # Center the colormap at 0 for diverging data
+                abs_max = max(abs(data_min), abs(data_max))
+                # Add a small margin
+                margin = abs_max * 0.05 if abs_max != 0 else 0.1
+                vmin = -abs_max - margin
+                vmax = abs_max + margin
+                # Use a diverging colormap with white at center
+                # Note: 'coolwarm_r' has red for negative, white at 0, blue for positive
+                cmap = 'coolwarm_r'  # Red for negative, white at 0, blue for positive
+            else:
+                # For all-positive or all-negative data, use standard bounds
+                margin = (data_max - data_min) * 0.05 if data_max != data_min else 0.1
+                vmin = data_min - margin
+                vmax = data_max + margin
+                cmap = 'Reds'  # Use red-based colormap
+
+            cbar_label = 'Score'  # Generic label for custom metrics
+            # Don't multiply by 100 for custom metrics
+            display_matrix = np.round(score_matrix, 4)
+        else:
+            # Default bounds for accuracy metrics
+            vmin = 0
+            vmax = 1
+            cmap = 'Reds'
+            cbar_label = 'Accuracy (%)'
+            # Multiply by 100 for percentage display
+            display_matrix = np.round(score_matrix * 100, 2)
 
         # Create annotation matrix - show values for non-NaN, empty string for NaN
         annot_matrix = np.where(np.isnan(score_matrix), "", display_matrix.astype(str))
 
-        # Create the heatmap using seaborn
+        # Transpose the matrices to swap axes
+        transposed_score_matrix = score_matrix.T
+        transposed_annot_matrix = annot_matrix.T
+
+        # Create the heatmap using seaborn with swapped axes
         sns.heatmap(
-            score_matrix,
-            xticklabels=[f"L{layer}" for layer in layers],
-            yticklabels=[f"H{head}" for head in heads],
-            cmap='viridis',
-            annot=annot_matrix,
+            transposed_score_matrix,
+            xticklabels=[f"H{head}" for head in heads],
+            yticklabels=[f"L{layer}" for layer in layers],
+            cmap=cmap,
+            annot=transposed_annot_matrix,
             fmt="",  # Use string format since we're providing custom annotations
-            cbar_kws={'label': 'Accuracy (%)'},
-            vmin=0,
-            vmax=1,
-            cbar=True
+            cbar_kws={'label': cbar_label},
+            vmin=vmin,
+            vmax=vmax,
+            cbar=True,
+            center=0 if (use_custom_bounds and vmin < 0 and vmax > 0) else None
         )
 
         plt.yticks(rotation=0)
         plt.xticks(rotation=0)
-        plt.xlabel('Layer')
-        plt.ylabel('Head')
+        plt.xlabel('Head')
+        plt.ylabel('Layer')
         plt.title(title)
         plt.tight_layout()
 
@@ -426,23 +534,27 @@ class PatchAttentionHeads(InterventionExperiment):
             title: Title for the heatmap
             save_path: Path to save the heatmap, or None to display it
         """
-        plt.figure(figsize=(max(8, len(layers) * 0.8), max(6, len(heads) * 0.4)))
+        plt.figure(figsize=(max(12, len(heads) * 0.6), max(6, len(layers) * 0.8)))
 
-        # Create custom colormap: white for 0, dark blue for 1, light gray for NaN
+        # Create custom colormap: light red for 0, dark blue for 1, light gray for NaN
         from matplotlib.colors import ListedColormap
-        colors = ['white', '#2E4057']  # White for 0, dark blue for 1
+        colors = ['#FFB3BA', '#00008B']  # Light red for 0, dark blue for 1
         cmap = ListedColormap(colors)
 
         # Create annotation matrix - show "0" and "1" for valid values, empty for NaN
         annot_matrix = np.where(np.isnan(mask_matrix), "", mask_matrix.astype(int).astype(str))
 
-        # Create the heatmap
+        # Transpose the matrices to swap axes
+        transposed_mask_matrix = mask_matrix.T
+        transposed_annot_matrix = annot_matrix.T
+
+        # Create the heatmap with swapped axes
         sns.heatmap(
-            mask_matrix,
-            xticklabels=[f"L{layer}" for layer in layers],
-            yticklabels=[f"H{head}" for head in heads],
+            transposed_mask_matrix,
+            xticklabels=[f"H{head}" for head in heads],
+            yticklabels=[f"L{layer}" for layer in layers],
             cmap=cmap,
-            annot=annot_matrix,
+            annot=transposed_annot_matrix,
             fmt="",  # Use string format since we're providing custom annotations
             cbar_kws={'label': 'Mask Value', 'ticks': [0, 1]},
             vmin=0,
@@ -454,8 +566,8 @@ class PatchAttentionHeads(InterventionExperiment):
 
         plt.yticks(rotation=0)
         plt.xticks(rotation=0)
-        plt.xlabel('Layer')
-        plt.ylabel('Head')
+        plt.xlabel('Head')
+        plt.ylabel('Layer')
         plt.title(title)
         plt.tight_layout()
 

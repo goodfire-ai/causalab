@@ -450,7 +450,7 @@ class SameLengthResidualStreamTracing:
             'counterfactual_inputs': [[counterfactual_input]],
         }
         dataset = CounterfactualDataset.from_dict(data_dict, id="tracing_example")
-        
+
         # Create all token position indexers for all positions
         seen_labels = dict()  # To track unique labels
         token_positions = []
