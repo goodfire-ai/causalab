@@ -202,18 +202,18 @@ class InterventionExperiment:
                 for batch_dict in raw_outputs:
                     # Use the string field that's already in batch_dict
                     batch_strings = batch_dict["string"]
-                    if isinstance(batch_strings, list):
-                        dumped_outputs.extend(batch_strings)
-                        # Create individual output dicts for each example in the batch
-                        for idx, decoded_str in enumerate(batch_strings):
-                            example_dict = {"sequences": batch_dict["sequences"][idx:idx+1]}
-                            if "scores" in batch_dict:
-                                example_dict["scores"] = [score[idx:idx+1] for score in batch_dict["scores"]]
-                            example_dict["string"] = decoded_str
-                            flattened_outputs.append(example_dict)
-                    else:
-                        dumped_outputs.append(batch_strings)
-                        flattened_outputs.append(batch_dict)
+                    # Always treat as a list for consistent processing
+                    if not isinstance(batch_strings, list):
+                        batch_strings = [batch_strings]
+
+                    dumped_outputs.extend(batch_strings)
+                    # Create individual output dicts for each example in the batch
+                    for idx, decoded_str in enumerate(batch_strings):
+                        example_dict = {"sequences": batch_dict["sequences"][idx:idx+1]}
+                        if "scores" in batch_dict:
+                            example_dict["scores"] = [score[idx:idx+1] for score in batch_dict["scores"]]
+                        example_dict["string"] = decoded_str
+                        flattened_outputs.append(example_dict)
                 
                 # Evaluate results for each target variable group
                 if target_variables_list is not None:
