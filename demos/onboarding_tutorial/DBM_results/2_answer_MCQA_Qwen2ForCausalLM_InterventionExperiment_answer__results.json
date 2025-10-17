@@ -1,0 +1,2001 @@
+{
+  "method_name": "InterventionExperiment",
+  "model_name": "Qwen2ForCausalLM",
+  "task_name": "2_answer_MCQA",
+  "dataset": {
+    "different_symbol": {
+      "model_unit": {
+        "[[AtomicModelUnit(id='AttentionHead(Layer-0,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-0,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-1,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-2,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-3,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-4,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-5,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-6,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-7,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-8,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-9,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-10,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-11,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-12,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-13,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-14,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-15,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-16,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-17,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-18,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-19,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-20,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-21,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-22,Head-13,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-0,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-1,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-2,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-3,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-4,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-5,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-6,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-7,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-8,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-9,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-10,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-11,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-12,Token-all_tokens)'), AtomicModelUnit(id='AttentionHead(Layer-23,Head-13,Token-all_tokens)')]]": {
+          "causal_model_inputs": [
+            {
+              "base_input": {
+                "choice0": "yellow",
+                "choice1": "black",
+                "object_color": [
+                  "coal",
+                  "black"
+                ],
+                "raw_input": "The coal is black. What color is the coal?\nS. yellow\nD. black\nAnswer:",
+                "symbol0": "S",
+                "symbol1": "D",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "yellow",
+                  "choice1": "black",
+                  "object_color": [
+                    "coal",
+                    "black"
+                  ],
+                  "raw_input": "The coal is black. What color is the coal?\nJ. yellow\nY. black\nAnswer:",
+                  "symbol0": "J",
+                  "symbol1": "Y",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "brown",
+                "choice1": "purple",
+                "object_color": [
+                  "eggplant",
+                  "purple"
+                ],
+                "raw_input": "The eggplant is purple. What color is the eggplant?\nK. brown\nE. purple\nAnswer:",
+                "symbol0": "K",
+                "symbol1": "E",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "brown",
+                  "choice1": "purple",
+                  "object_color": [
+                    "eggplant",
+                    "purple"
+                  ],
+                  "raw_input": "The eggplant is purple. What color is the eggplant?\nV. brown\nX. purple\nAnswer:",
+                  "symbol0": "V",
+                  "symbol1": "X",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "white",
+                "choice1": "orange",
+                "object_color": [
+                  "ivory",
+                  "white"
+                ],
+                "raw_input": "The ivory is white. What color is the ivory?\nR. white\nW. orange\nAnswer:",
+                "symbol0": "R",
+                "symbol1": "W",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "white",
+                  "choice1": "orange",
+                  "object_color": [
+                    "ivory",
+                    "white"
+                  ],
+                  "raw_input": "The ivory is white. What color is the ivory?\nV. white\nM. orange\nAnswer:",
+                  "symbol0": "V",
+                  "symbol1": "M",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "red",
+                "choice1": "green",
+                "object_color": [
+                  "grass",
+                  "green"
+                ],
+                "raw_input": "The grass is green. What color is the grass?\nW. red\nB. green\nAnswer:",
+                "symbol0": "W",
+                "symbol1": "B",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "red",
+                  "choice1": "green",
+                  "object_color": [
+                    "grass",
+                    "green"
+                  ],
+                  "raw_input": "The grass is green. What color is the grass?\nZ. red\nE. green\nAnswer:",
+                  "symbol0": "Z",
+                  "symbol1": "E",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "orange",
+                "choice1": "white",
+                "object_color": [
+                  "snow",
+                  "white"
+                ],
+                "raw_input": "The snow is white. What color is the snow?\nM. orange\nY. white\nAnswer:",
+                "symbol0": "M",
+                "symbol1": "Y",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "orange",
+                  "choice1": "white",
+                  "object_color": [
+                    "snow",
+                    "white"
+                  ],
+                  "raw_input": "The snow is white. What color is the snow?\nJ. orange\nI. white\nAnswer:",
+                  "symbol0": "J",
+                  "symbol1": "I",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "pink",
+                "choice1": "white",
+                "object_color": [
+                  "bubblegum",
+                  "pink"
+                ],
+                "raw_input": "The bubblegum is pink. What color is the bubblegum?\nG. pink\nI. white\nAnswer:",
+                "symbol0": "G",
+                "symbol1": "I",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "pink",
+                  "choice1": "white",
+                  "object_color": [
+                    "bubblegum",
+                    "pink"
+                  ],
+                  "raw_input": "The bubblegum is pink. What color is the bubblegum?\nR. pink\nZ. white\nAnswer:",
+                  "symbol0": "R",
+                  "symbol1": "Z",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "blue",
+                "choice1": "red",
+                "object_color": [
+                  "sapphire",
+                  "blue"
+                ],
+                "raw_input": "The sapphire is blue. What color is the sapphire?\nE. blue\nR. red\nAnswer:",
+                "symbol0": "E",
+                "symbol1": "R",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "blue",
+                  "choice1": "red",
+                  "object_color": [
+                    "sapphire",
+                    "blue"
+                  ],
+                  "raw_input": "The sapphire is blue. What color is the sapphire?\nW. blue\nH. red\nAnswer:",
+                  "symbol0": "W",
+                  "symbol1": "H",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "brown",
+                "choice1": "purple",
+                "object_color": [
+                  "eggplant",
+                  "purple"
+                ],
+                "raw_input": "The eggplant is purple. What color is the eggplant?\nO. brown\nW. purple\nAnswer:",
+                "symbol0": "O",
+                "symbol1": "W",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "brown",
+                  "choice1": "purple",
+                  "object_color": [
+                    "eggplant",
+                    "purple"
+                  ],
+                  "raw_input": "The eggplant is purple. What color is the eggplant?\nJ. brown\nC. purple\nAnswer:",
+                  "symbol0": "J",
+                  "symbol1": "C",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "pink",
+                "choice1": "green",
+                "object_color": [
+                  "emerald",
+                  "green"
+                ],
+                "raw_input": "The emerald is green. What color is the emerald?\nM. pink\nR. green\nAnswer:",
+                "symbol0": "M",
+                "symbol1": "R",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "pink",
+                  "choice1": "green",
+                  "object_color": [
+                    "emerald",
+                    "green"
+                  ],
+                  "raw_input": "The emerald is green. What color is the emerald?\nX. pink\nK. green\nAnswer:",
+                  "symbol0": "X",
+                  "symbol1": "K",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "black",
+                "choice1": "white",
+                "object_color": [
+                  "ivory",
+                  "white"
+                ],
+                "raw_input": "The ivory is white. What color is the ivory?\nL. black\nO. white\nAnswer:",
+                "symbol0": "L",
+                "symbol1": "O",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "black",
+                  "choice1": "white",
+                  "object_color": [
+                    "ivory",
+                    "white"
+                  ],
+                  "raw_input": "The ivory is white. What color is the ivory?\nI. black\nG. white\nAnswer:",
+                  "symbol0": "I",
+                  "symbol1": "G",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "white",
+                "choice1": "pink",
+                "object_color": [
+                  "ivory",
+                  "white"
+                ],
+                "raw_input": "The ivory is white. What color is the ivory?\nN. white\nU. pink\nAnswer:",
+                "symbol0": "N",
+                "symbol1": "U",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "white",
+                  "choice1": "pink",
+                  "object_color": [
+                    "ivory",
+                    "white"
+                  ],
+                  "raw_input": "The ivory is white. What color is the ivory?\nP. white\nW. pink\nAnswer:",
+                  "symbol0": "P",
+                  "symbol1": "W",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "white",
+                "choice1": "red",
+                "object_color": [
+                  "strawberry",
+                  "red"
+                ],
+                "raw_input": "The strawberry is red. What color is the strawberry?\nF. white\nR. red\nAnswer:",
+                "symbol0": "F",
+                "symbol1": "R",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "white",
+                  "choice1": "red",
+                  "object_color": [
+                    "strawberry",
+                    "red"
+                  ],
+                  "raw_input": "The strawberry is red. What color is the strawberry?\nV. white\nJ. red\nAnswer:",
+                  "symbol0": "V",
+                  "symbol1": "J",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "red",
+                "choice1": "brown",
+                "object_color": [
+                  "ruby",
+                  "red"
+                ],
+                "raw_input": "The ruby is red. What color is the ruby?\nO. red\nE. brown\nAnswer:",
+                "symbol0": "O",
+                "symbol1": "E",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "red",
+                  "choice1": "brown",
+                  "object_color": [
+                    "ruby",
+                    "red"
+                  ],
+                  "raw_input": "The ruby is red. What color is the ruby?\nJ. red\nI. brown\nAnswer:",
+                  "symbol0": "J",
+                  "symbol1": "I",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "yellow",
+                "choice1": "brown",
+                "object_color": [
+                  "banana",
+                  "yellow"
+                ],
+                "raw_input": "The banana is yellow. What color is the banana?\nS. yellow\nH. brown\nAnswer:",
+                "symbol0": "S",
+                "symbol1": "H",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "yellow",
+                  "choice1": "brown",
+                  "object_color": [
+                    "banana",
+                    "yellow"
+                  ],
+                  "raw_input": "The banana is yellow. What color is the banana?\nC. yellow\nT. brown\nAnswer:",
+                  "symbol0": "C",
+                  "symbol1": "T",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "purple",
+                "choice1": "blue",
+                "object_color": [
+                  "sapphire",
+                  "blue"
+                ],
+                "raw_input": "The sapphire is blue. What color is the sapphire?\nX. purple\nA. blue\nAnswer:",
+                "symbol0": "X",
+                "symbol1": "A",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "purple",
+                  "choice1": "blue",
+                  "object_color": [
+                    "sapphire",
+                    "blue"
+                  ],
+                  "raw_input": "The sapphire is blue. What color is the sapphire?\nN. purple\nR. blue\nAnswer:",
+                  "symbol0": "N",
+                  "symbol1": "R",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "orange",
+                "choice1": "white",
+                "object_color": [
+                  "cauliflower",
+                  "white"
+                ],
+                "raw_input": "The cauliflower is white. What color is the cauliflower?\nA. orange\nG. white\nAnswer:",
+                "symbol0": "A",
+                "symbol1": "G",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "orange",
+                  "choice1": "white",
+                  "object_color": [
+                    "cauliflower",
+                    "white"
+                  ],
+                  "raw_input": "The cauliflower is white. What color is the cauliflower?\nW. orange\nM. white\nAnswer:",
+                  "symbol0": "W",
+                  "symbol1": "M",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "pink",
+                "choice1": "blue",
+                "object_color": [
+                  "blueberry",
+                  "blue"
+                ],
+                "raw_input": "The blueberry is blue. What color is the blueberry?\nP. pink\nI. blue\nAnswer:",
+                "symbol0": "P",
+                "symbol1": "I",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "pink",
+                  "choice1": "blue",
+                  "object_color": [
+                    "blueberry",
+                    "blue"
+                  ],
+                  "raw_input": "The blueberry is blue. What color is the blueberry?\nS. pink\nG. blue\nAnswer:",
+                  "symbol0": "S",
+                  "symbol1": "G",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "black",
+                "choice1": "green",
+                "object_color": [
+                  "emerald",
+                  "green"
+                ],
+                "raw_input": "The emerald is green. What color is the emerald?\nU. black\nB. green\nAnswer:",
+                "symbol0": "U",
+                "symbol1": "B",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "black",
+                  "choice1": "green",
+                  "object_color": [
+                    "emerald",
+                    "green"
+                  ],
+                  "raw_input": "The emerald is green. What color is the emerald?\nT. black\nC. green\nAnswer:",
+                  "symbol0": "T",
+                  "symbol1": "C",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "blue",
+                "choice1": "white",
+                "object_color": [
+                  "snow",
+                  "white"
+                ],
+                "raw_input": "The snow is white. What color is the snow?\nO. blue\nC. white\nAnswer:",
+                "symbol0": "O",
+                "symbol1": "C",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "blue",
+                  "choice1": "white",
+                  "object_color": [
+                    "snow",
+                    "white"
+                  ],
+                  "raw_input": "The snow is white. What color is the snow?\nY. blue\nQ. white\nAnswer:",
+                  "symbol0": "Y",
+                  "symbol1": "Q",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "brown",
+                "choice1": "pink",
+                "object_color": [
+                  "bubblegum",
+                  "pink"
+                ],
+                "raw_input": "The bubblegum is pink. What color is the bubblegum?\nS. brown\nH. pink\nAnswer:",
+                "symbol0": "S",
+                "symbol1": "H",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "brown",
+                  "choice1": "pink",
+                  "object_color": [
+                    "bubblegum",
+                    "pink"
+                  ],
+                  "raw_input": "The bubblegum is pink. What color is the bubblegum?\nW. brown\nY. pink\nAnswer:",
+                  "symbol0": "W",
+                  "symbol1": "Y",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "orange",
+                "choice1": "brown",
+                "object_color": [
+                  "carrot",
+                  "orange"
+                ],
+                "raw_input": "The carrot is orange. What color is the carrot?\nM. orange\nW. brown\nAnswer:",
+                "symbol0": "M",
+                "symbol1": "W",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "orange",
+                  "choice1": "brown",
+                  "object_color": [
+                    "carrot",
+                    "orange"
+                  ],
+                  "raw_input": "The carrot is orange. What color is the carrot?\nK. orange\nV. brown\nAnswer:",
+                  "symbol0": "K",
+                  "symbol1": "V",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "pink",
+                "choice1": "purple",
+                "object_color": [
+                  "bubblegum",
+                  "pink"
+                ],
+                "raw_input": "The bubblegum is pink. What color is the bubblegum?\nA. pink\nZ. purple\nAnswer:",
+                "symbol0": "A",
+                "symbol1": "Z",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "pink",
+                  "choice1": "purple",
+                  "object_color": [
+                    "bubblegum",
+                    "pink"
+                  ],
+                  "raw_input": "The bubblegum is pink. What color is the bubblegum?\nH. pink\nL. purple\nAnswer:",
+                  "symbol0": "H",
+                  "symbol1": "L",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "brown",
+                "choice1": "green",
+                "object_color": [
+                  "lime",
+                  "green"
+                ],
+                "raw_input": "The lime is green. What color is the lime?\nA. brown\nP. green\nAnswer:",
+                "symbol0": "A",
+                "symbol1": "P",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "brown",
+                  "choice1": "green",
+                  "object_color": [
+                    "lime",
+                    "green"
+                  ],
+                  "raw_input": "The lime is green. What color is the lime?\nL. brown\nT. green\nAnswer:",
+                  "symbol0": "L",
+                  "symbol1": "T",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "black",
+                "choice1": "blue",
+                "object_color": [
+                  "coal",
+                  "black"
+                ],
+                "raw_input": "The coal is black. What color is the coal?\nA. black\nV. blue\nAnswer:",
+                "symbol0": "A",
+                "symbol1": "V",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "black",
+                  "choice1": "blue",
+                  "object_color": [
+                    "coal",
+                    "black"
+                  ],
+                  "raw_input": "The coal is black. What color is the coal?\nS. black\nE. blue\nAnswer:",
+                  "symbol0": "S",
+                  "symbol1": "E",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "black",
+                "choice1": "green",
+                "object_color": [
+                  "emerald",
+                  "green"
+                ],
+                "raw_input": "The emerald is green. What color is the emerald?\nT. black\nP. green\nAnswer:",
+                "symbol0": "T",
+                "symbol1": "P",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "black",
+                  "choice1": "green",
+                  "object_color": [
+                    "emerald",
+                    "green"
+                  ],
+                  "raw_input": "The emerald is green. What color is the emerald?\nN. black\nX. green\nAnswer:",
+                  "symbol0": "N",
+                  "symbol1": "X",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            },
+            {
+              "base_input": {
+                "choice0": "green",
+                "choice1": "orange",
+                "object_color": [
+                  "carrot",
+                  "orange"
+                ],
+                "raw_input": "The carrot is orange. What color is the carrot?\nE. green\nB. orange\nAnswer:",
+                "symbol0": "E",
+                "symbol1": "B",
+                "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+              },
+              "counterfactual_inputs": [
+                {
+                  "choice0": "green",
+                  "choice1": "orange",
+                  "object_color": [
+                    "carrot",
+                    "orange"
+                  ],
+                  "raw_input": "The carrot is orange. What color is the carrot?\nC. green\nD. orange\nAnswer:",
+                  "symbol0": "C",
+                  "symbol1": "D",
+                  "template": "The <object> is <color>. What color is the <object>?\n<symbol0>. <choice0>\n<symbol1>. <choice1>\nAnswer:"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "layer": 0,
+            "head": 0,
+            "position": "all_tokens"
+          },
+          "feature_indices": {
+            "AttentionHead(Layer-0,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-0,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-1,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-2,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-3,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-4,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-5,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-6,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-7,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-8,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-9,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-10,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-11,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-12,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-13,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-14,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-15,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-7,Token-all_tokens)": null,
+            "AttentionHead(Layer-16,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-10,Token-all_tokens)": null,
+            "AttentionHead(Layer-16,Head-11,Token-all_tokens)": null,
+            "AttentionHead(Layer-16,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-16,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-17,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-18,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-19,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-7,Token-all_tokens)": null,
+            "AttentionHead(Layer-20,Head-8,Token-all_tokens)": null,
+            "AttentionHead(Layer-20,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-20,Head-12,Token-all_tokens)": null,
+            "AttentionHead(Layer-20,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-21,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-2,Token-all_tokens)": null,
+            "AttentionHead(Layer-22,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-22,Head-13,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-0,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-1,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-2,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-3,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-4,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-5,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-6,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-7,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-8,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-9,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-10,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-11,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-12,Token-all_tokens)": [],
+            "AttentionHead(Layer-23,Head-13,Token-all_tokens)": []
+          },
+          "answer": {
+            "average_score": 0.9230769230769231
+          },
+          "outputs": [
+            {
+              "sequences": [
+                809
+              ],
+              "string": " Y",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 809,
+                    "logit": 18.375,
+                    "token": " Y"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.125,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 18.125,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 17.375,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 13753,
+                    "logit": 17.125,
+                    "token": " yellow"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                1599
+              ],
+              "string": " X",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 1599,
+                    "logit": 18.625,
+                    "token": " X"
+                  },
+                  {
+                    "token_id": 647,
+                    "logit": 16.75,
+                    "token": " V"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 16.625,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 16.5,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 15.9375,
+                    "token": " A"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                647
+              ],
+              "string": " V",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 647,
+                    "logit": 18.375,
+                    "token": " V"
+                  },
+                  {
+                    "token_id": 386,
+                    "logit": 17.75,
+                    "token": " M"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.625,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 4158,
+                    "logit": 16.875,
+                    "token": " white"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 16.5,
+                    "token": " B"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                425
+              ],
+              "string": " B",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 425,
+                    "logit": 20.0,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 468,
+                    "logit": 19.25,
+                    "token": " E"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 19.0,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 6176,
+                    "logit": 17.875,
+                    "token": " green"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 17.5,
+                    "token": " C"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                358
+              ],
+              "string": " I",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 358,
+                    "logit": 18.875,
+                    "token": " I"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.5,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.0,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 16.5,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 619,
+                    "logit": 16.375,
+                    "token": " J"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                431
+              ],
+              "string": " R",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 431,
+                    "logit": 17.875,
+                    "token": " R"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.25,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 1863,
+                    "logit": 17.125,
+                    "token": " Z"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 16.125,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 15.875,
+                    "token": " B"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                467
+              ],
+              "string": " W",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 467,
+                    "logit": 19.25,
+                    "token": " W"
+                  },
+                  {
+                    "token_id": 472,
+                    "logit": 18.75,
+                    "token": " H"
+                  },
+                  {
+                    "token_id": 6303,
+                    "logit": 17.5,
+                    "token": " blue"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.25,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 16.5,
+                    "token": " B"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                356
+              ],
+              "string": " C",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 356,
+                    "logit": 19.375,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.0,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.125,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 619,
+                    "logit": 15.4375,
+                    "token": " J"
+                  },
+                  {
+                    "token_id": 13876,
+                    "logit": 14.875,
+                    "token": " brown"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                730
+              ],
+              "string": " K",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 730,
+                    "logit": 18.75,
+                    "token": " K"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 17.375,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 16.875,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 16.625,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 1599,
+                    "logit": 15.4375,
+                    "token": " X"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                479
+              ],
+              "string": " G",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 479,
+                    "logit": 19.5,
+                    "token": " G"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 18.25,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.125,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 3691,
+                    "logit": 17.75,
+                    "token": " black"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 17.75,
+                    "token": " C"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                393
+              ],
+              "string": " P",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 393,
+                    "logit": 18.625,
+                    "token": " P"
+                  },
+                  {
+                    "token_id": 467,
+                    "logit": 18.25,
+                    "token": " W"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.875,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 4158,
+                    "logit": 17.625,
+                    "token": " white"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 16.25,
+                    "token": " C"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                619
+              ],
+              "string": " J",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 619,
+                    "logit": 19.0,
+                    "token": " J"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.0,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 647,
+                    "logit": 17.75,
+                    "token": " V"
+                  },
+                  {
+                    "token_id": 4158,
+                    "logit": 17.0,
+                    "token": " white"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 16.5,
+                    "token": " A"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                619
+              ],
+              "string": " J",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 619,
+                    "logit": 18.75,
+                    "token": " J"
+                  },
+                  {
+                    "token_id": 358,
+                    "logit": 18.25,
+                    "token": " I"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.875,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 2518,
+                    "logit": 17.375,
+                    "token": " red"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 16.875,
+                    "token": " B"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                356
+              ],
+              "string": " C",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 356,
+                    "logit": 19.375,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 19.25,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 350,
+                    "logit": 17.625,
+                    "token": " T"
+                  },
+                  {
+                    "token_id": 13753,
+                    "logit": 17.625,
+                    "token": " yellow"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 17.625,
+                    "token": " B"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                431
+              ],
+              "string": " R",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 431,
+                    "logit": 19.0,
+                    "token": " R"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.75,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 451,
+                    "logit": 18.25,
+                    "token": " N"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 18.125,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.625,
+                    "token": " A"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                386
+              ],
+              "string": " M",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 386,
+                    "logit": 19.125,
+                    "token": " M"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.0,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 18575,
+                    "logit": 17.125,
+                    "token": " orange"
+                  },
+                  {
+                    "token_id": 467,
+                    "logit": 17.0,
+                    "token": " W"
+                  },
+                  {
+                    "token_id": 4158,
+                    "logit": 16.875,
+                    "token": " white"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                479
+              ],
+              "string": " G",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 479,
+                    "logit": 19.0,
+                    "token": " G"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 17.625,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 328,
+                    "logit": 17.375,
+                    "token": " S"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 16.625,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 16.375,
+                    "token": " C"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                356
+              ],
+              "string": " C",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 356,
+                    "logit": 19.75,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.875,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 18.75,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 6176,
+                    "logit": 17.125,
+                    "token": " green"
+                  },
+                  {
+                    "token_id": 3691,
+                    "logit": 16.625,
+                    "token": " black"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                1207
+              ],
+              "string": " Q",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 1207,
+                    "logit": 19.125,
+                    "token": " Q"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.75,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 18.125,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 17.875,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 4158,
+                    "logit": 16.75,
+                    "token": " white"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                809
+              ],
+              "string": " Y",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 809,
+                    "logit": 18.25,
+                    "token": " Y"
+                  },
+                  {
+                    "token_id": 467,
+                    "logit": 17.5,
+                    "token": " W"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 17.0,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 16.125,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 13876,
+                    "logit": 15.125,
+                    "token": " brown"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                730
+              ],
+              "string": " K",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 730,
+                    "logit": 18.125,
+                    "token": " K"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.75,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 18575,
+                    "logit": 17.625,
+                    "token": " orange"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 17.125,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 647,
+                    "logit": 17.125,
+                    "token": " V"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                472
+              ],
+              "string": " H",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 472,
+                    "logit": 18.75,
+                    "token": " H"
+                  },
+                  {
+                    "token_id": 444,
+                    "logit": 18.625,
+                    "token": " L"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 18.5,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 18217,
+                    "logit": 17.375,
+                    "token": " pink"
+                  },
+                  {
+                    "token_id": 24932,
+                    "logit": 16.875,
+                    "token": " purple"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                350
+              ],
+              "string": " T",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 350,
+                    "logit": 18.875,
+                    "token": " T"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.0,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 6176,
+                    "logit": 17.875,
+                    "token": " green"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 17.75,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 13876,
+                    "logit": 17.375,
+                    "token": " brown"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                328
+              ],
+              "string": " S",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 328,
+                    "logit": 19.875,
+                    "token": " S"
+                  },
+                  {
+                    "token_id": 362,
+                    "logit": 19.125,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 3691,
+                    "logit": 18.875,
+                    "token": " black"
+                  },
+                  {
+                    "token_id": 468,
+                    "logit": 18.375,
+                    "token": " E"
+                  },
+                  {
+                    "token_id": 6303,
+                    "logit": 17.375,
+                    "token": " blue"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                1599
+              ],
+              "string": " X",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 1599,
+                    "logit": 18.625,
+                    "token": " X"
+                  },
+                  {
+                    "token_id": 3691,
+                    "logit": 17.5,
+                    "token": " black"
+                  },
+                  {
+                    "token_id": 451,
+                    "logit": 16.875,
+                    "token": " N"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 16.5,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 16.375,
+                    "token": " C"
+                  }
+                ]
+              ]
+            },
+            {
+              "sequences": [
+                362
+              ],
+              "string": " A",
+              "top_k_logits": [
+                [
+                  {
+                    "token_id": 362,
+                    "logit": 19.25,
+                    "token": " A"
+                  },
+                  {
+                    "token_id": 422,
+                    "logit": 19.25,
+                    "token": " D"
+                  },
+                  {
+                    "token_id": 356,
+                    "logit": 18.75,
+                    "token": " C"
+                  },
+                  {
+                    "token_id": 425,
+                    "logit": 18.0,
+                    "token": " B"
+                  },
+                  {
+                    "token_id": 18575,
+                    "logit": 16.875,
+                    "token": " orange"
+                  }
+                ]
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
