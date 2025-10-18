@@ -185,7 +185,7 @@ class AtomicModelUnit:
         self.shape = shape
 
         # Bounds-check feature indices
-        self.feature_indices: Optional[List[int]] = None
+        self.feature_indices = None
         if feature_indices is not None:
             self.set_feature_indices(feature_indices)
 

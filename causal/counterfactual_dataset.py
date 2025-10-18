@@ -62,7 +62,7 @@ class CounterfactualDataset():
         return cls(dataset=dataset, id=id)
 
     @classmethod
-    def from_sampler(cls, size, counterfactual_sampler, filter=None, id=None):
+    def from_sampler(cls, size, counterfactual_sampler, filter=None, id="null"):
         """
         Generate a dataset of counterfactual examples.
         

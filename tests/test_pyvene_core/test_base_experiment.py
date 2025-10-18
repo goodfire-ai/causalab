@@ -32,23 +32,21 @@ class TestInterventionExperiment:
         assert exp.checker == checker
         
         # Verify default config values from DEFAULT_CONFIG
-        assert exp.config.get("batch_size") == DEFAULT_CONFIG["batch_size"]
+        assert exp.config.get("train_batch_size") == DEFAULT_CONFIG["train_batch_size"]
         assert exp.config.get("evaluation_batch_size") == DEFAULT_CONFIG["evaluation_batch_size"]
         assert exp.config.get("method_name") == DEFAULT_CONFIG["method_name"]
         assert exp.config.get("output_scores") == DEFAULT_CONFIG["output_scores"]
-        assert exp.config.get("check_raw") == DEFAULT_CONFIG["check_raw"]
         assert exp.config.get("training_epoch") == DEFAULT_CONFIG["training_epoch"]
-        assert exp.config.get("n_features") == DEFAULT_CONFIG["n_features"]
+        assert exp.config.get("DAS", {}).get("n_features") == DEFAULT_CONFIG["DAS"]["n_features"]
         
         # Test with custom config that overrides some defaults
         custom_config = {
-            "batch_size": 4,
+            "train_batch_size": 4,
             "evaluation_batch_size": 8,
             "method_name": "CustomMethod",
-            "output_scores": True,
-            "check_raw": True
+            "output_scores": True
         }
-        
+
         exp = InterventionExperiment(
             pipeline=mock_tiny_lm,
             causal_model=mcqa_causal_model,
@@ -56,17 +54,16 @@ class TestInterventionExperiment:
             checker=checker,
             config=custom_config
         )
-        
+
         # Verify custom values override defaults
-        assert exp.config["batch_size"] == 4
+        assert exp.config["train_batch_size"] == 4
         assert exp.config["evaluation_batch_size"] == 8
         assert exp.config["method_name"] == "CustomMethod"
         assert exp.config["output_scores"] is True
-        assert exp.config["check_raw"] is True
-        
+
         # Verify other defaults are still present
         assert exp.config["training_epoch"] == DEFAULT_CONFIG["training_epoch"]
-        assert exp.config["n_features"] == DEFAULT_CONFIG["n_features"]
+        assert exp.config["DAS"]["n_features"] == DEFAULT_CONFIG["DAS"]["n_features"]
         assert exp.config["init_lr"] == DEFAULT_CONFIG["init_lr"]
 
     def test_config_overrides(self, mock_tiny_lm, mcqa_causal_model, model_units_list):
@@ -76,9 +73,9 @@ class TestInterventionExperiment:
         # Test with DAS-style configuration
         das_config = {
             "method_name": "DAS",
-            "n_features": 16,
+            "DAS": {"n_features": 16},
             "training_epoch": 8,
-            "regularization_coefficient": 0.0,
+            "masking": {"regularization_coefficient": 0.0},
         }
         exp = InterventionExperiment(
             pipeline=mock_tiny_lm,
@@ -87,18 +84,18 @@ class TestInterventionExperiment:
             checker=checker,
             config=das_config
         )
-        
+
         assert exp.config["method_name"] == "DAS"
-        assert exp.config["n_features"] == 16
-        assert exp.config["regularization_coefficient"] == 0.0
+        assert exp.config["DAS"]["n_features"] == 16
+        assert exp.config["masking"]["regularization_coefficient"] == 0.0
         # Should still have defaults for other params
-        assert exp.config["batch_size"] == DEFAULT_CONFIG["batch_size"]
+        assert exp.config["train_batch_size"] == DEFAULT_CONFIG["train_batch_size"]
         
         # Test with quick test style configuration
         quick_config = {
-            "batch_size": 8,
+            "train_batch_size": 8,
             "training_epoch": 1,
-            "n_features": 8,
+            "DAS": {"n_features": 8},
             "method_name": "quick_test",
         }
         exp = InterventionExperiment(
@@ -108,20 +105,25 @@ class TestInterventionExperiment:
             checker=checker,
             config=quick_config
         )
-        
-        assert exp.config["batch_size"] == 8
+
+        assert exp.config["train_batch_size"] == 8
         assert exp.config["training_epoch"] == 1
-        assert exp.config["n_features"] == 8
+        assert exp.config["DAS"]["n_features"] == 8
 
     @patch('experiments.intervention_experiment._run_interchange_interventions')
-    def test_perform_interventions(self, mock_run_interventions, 
-                                  mock_tiny_lm, mcqa_causal_model, 
+    def test_perform_interventions(self, mock_run_interventions,
+                                  mock_tiny_lm, mcqa_causal_model,
                                   model_units_list, mcqa_counterfactual_datasets):
         """Test the perform_interventions method."""
-        # Setup mock return for interchange interventions
-        mock_outputs = torch.randint(0, 100, (3, 3))
-        mock_run_interventions.return_value = [mock_outputs]
-        
+        # Setup mock return for interchange interventions - should be list of dicts
+        mock_sequences = torch.randint(0, 100, (3, 3))
+        mock_output_dict = {
+            "sequences": mock_sequences,
+            "scores": [torch.randn(3, 100) for _ in range(3)],
+            "string": ["output1", "output2", "output3"]
+        }
+        mock_run_interventions.return_value = [mock_output_dict]
+
         # Mock pipeline.dump to return predictable output
         mock_tiny_lm.dump = MagicMock(return_value=["output1", "output2", "output3"])
         
@@ -212,8 +214,8 @@ class TestInterventionExperiment:
             checker=lambda x, y: x == y
         )
         
-        # Extract atomic model unit (not the list) 
-        model_unit = model_units_list[0][0]  # First unit
+        # Extract atomic model unit (not the list)
+        model_unit = model_units_list[0][0][0]  # First unit
         
         # Set a test feature indices
         test_indices = [0, 1, 3, 5]
@@ -274,9 +276,9 @@ class TestInterventionExperiment:
         # Create experiment with DAS-style config
         das_config = {
             "method_name": "DAS",
-            "n_features": 16,
+            "DAS": {"n_features": 16},
             "training_epoch": 8,
-            "regularization_coefficient": 0.0,
+            "masking": {"regularization_coefficient": 0.0},
         }
         exp = InterventionExperiment(
             pipeline=mock_tiny_lm,
@@ -325,11 +327,11 @@ class TestInterventionExperiment:
         """Test that missing required training parameters raise an error."""
         # Create a config missing required training parameters
         incomplete_config = {
-            "batch_size": 32,
+            "train_batch_size": 32,
             "method_name": "TestMethod"
         }
         # Remove required training params to test validation
-        for key in ["training_epoch", "init_lr", "n_features"]:
+        for key in ["training_epoch", "init_lr"]:
             if key in incomplete_config:
                 del incomplete_config[key]
         
@@ -398,11 +400,11 @@ class TestInterventionExperiment:
         
         # Both should be from DEFAULT_CONFIG
         assert exp.config["evaluation_batch_size"] == DEFAULT_CONFIG["evaluation_batch_size"]
-        assert exp.config["batch_size"] == DEFAULT_CONFIG["batch_size"]
-        
-        # When providing custom batch_size but not evaluation_batch_size,
+        assert exp.config["train_batch_size"] == DEFAULT_CONFIG["train_batch_size"]
+
+        # When providing custom train_batch_size but not evaluation_batch_size,
         # evaluation_batch_size comes from DEFAULT_CONFIG
-        config = {"batch_size": 64}
+        config = {"train_batch_size": 64}
         exp = InterventionExperiment(
             pipeline=mock_tiny_lm,
             causal_model=mcqa_causal_model,
@@ -410,26 +412,13 @@ class TestInterventionExperiment:
             checker=lambda x, y: x == y,
             config=config
         )
-        
-        # batch_size should be overridden, evaluation_batch_size from DEFAULT_CONFIG
-        assert exp.config["batch_size"] == 64
+
+        # train_batch_size should be overridden, evaluation_batch_size from DEFAULT_CONFIG
+        assert exp.config["train_batch_size"] == 64
         assert exp.config["evaluation_batch_size"] == DEFAULT_CONFIG["evaluation_batch_size"]
-        
-        # Test with explicit None evaluation_batch_size - should default to batch_size
-        config = {"batch_size": 128, "evaluation_batch_size": None}
-        exp = InterventionExperiment(
-            pipeline=mock_tiny_lm,
-            causal_model=mcqa_causal_model,
-            model_units_lists=model_units_list,
-            checker=lambda x, y: x == y,
-            config=config
-        )
-        
-        # evaluation_batch_size should be set to batch_size when explicitly None
-        assert exp.config["evaluation_batch_size"] == 128
-        
+
         # Test with both specified explicitly
-        config = {"batch_size": 64, "evaluation_batch_size": 256}
+        config = {"train_batch_size": 64, "evaluation_batch_size": 256}
         exp = InterventionExperiment(
             pipeline=mock_tiny_lm,
             causal_model=mcqa_causal_model,
@@ -437,7 +426,7 @@ class TestInterventionExperiment:
             checker=lambda x, y: x == y,
             config=config
         )
-        
+
         # Both should be as specified
-        assert exp.config["batch_size"] == 64
+        assert exp.config["train_batch_size"] == 64
         assert exp.config["evaluation_batch_size"] == 256

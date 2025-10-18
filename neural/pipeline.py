@@ -85,12 +85,14 @@ class LMPipeline(Pipeline):
         max_length: int | None = None,
         logit_labels: bool = False,
         position_ids: bool = False,
+        use_chat_template: bool = False,
         **kwargs: Any,
     ) -> None:
         self.max_new_tokens = max_new_tokens
         self.max_length = max_length
         self.logit_labels = logit_labels
         self.position_ids = position_ids
+        self.use_chat_template = use_chat_template
         # pass through kwargs to _setup_model via instance vars
         self._init_extra_kwargs = kwargs
         super().__init__(model_or_name)
@@ -110,7 +112,7 @@ class LMPipeline(Pipeline):
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_or_name, config=self._init_extra_kwargs.get("config"), token=hf_token
             ).to(device=device, dtype=dtype)
-            if hasattr(self.model.config, "_attn_implementation") and "qwen" not in self.model.config.name_or_path.lower():
+            if hasattr(self.model.config, "_attn_implementation"):
                 self.model.config._attn_implementation = "eager"
             if hasattr(self.model.config, "use_cache"):
                 self.model.config.use_cache = False
@@ -132,7 +134,12 @@ class LMPipeline(Pipeline):
         max_length: int | None = None,
         padding_side: str | None = None,
         add_special_tokens: bool = True,
+        use_chat_template: bool | None = None,
+        no_padding: bool = False,
     ) -> Dict[str, torch.Tensor]:
+
+        if use_chat_template is None:
+            use_chat_template = self.use_chat_template
 
         if isinstance(input, str):
             input = [{"raw_input": input}]
@@ -147,7 +154,19 @@ class LMPipeline(Pipeline):
             assert all("raw_input" in item for item in input), "Each input dictionary must contain 'raw_input' key."
             raw_input = [item["raw_input"] for item in input]
 
-        if max_length is None:
+        # Apply chat template if requested
+        if use_chat_template:
+            processed_input = []
+            for text in raw_input:
+                # Convert to messages format and apply chat template
+                messages = [{"role": "user", "content": text}]
+                formatted = self.tokenizer.apply_chat_template(
+                    messages, tokenize=False, add_generation_prompt=True
+                )
+                processed_input.append(formatted)
+            raw_input = processed_input
+
+        if max_length is None and not no_padding:
             max_length = self.max_length
 
         if padding_side is not None:
@@ -156,7 +175,7 @@ class LMPipeline(Pipeline):
 
         enc = self.tokenizer(
             raw_input,
-            padding="max_length" if max_length else True,
+            padding=False if no_padding else ("max_length" if max_length else True),
             max_length=max_length,
             truncation=max_length is not None,
             return_tensors="pt",
@@ -232,7 +251,7 @@ class LMPipeline(Pipeline):
         del inputs, out
         torch.cuda.empty_cache()
         gc.collect()
-        return {"scores": scores, "sequences": seq}
+        return {"scores": scores, "sequences": seq, "string": self.dump(seq, is_logits=False)}
 
     # ------------------------------------------------------------------
     # Intervention generation
@@ -245,17 +264,15 @@ class LMPipeline(Pipeline):
         sources: Any,
         map: Any,
         feature_indices: Any,
-        *,
-        output_scores: bool = False,
         **gen_kwargs: Any,
-    ) -> torch.Tensor:
+    ) -> Dict[str, Any]:
         defaults = dict(
             unit_locations=map,
             subspaces=feature_indices,
             max_new_tokens=self.max_new_tokens,
             pad_token_id=self.tokenizer.pad_token_id,
             return_dict_in_generate=True,
-            output_scores=output_scores,
+            output_scores=True,
             intervene_on_prompt=True,
             do_sample=False,
             use_cache=False,
@@ -263,7 +280,18 @@ class LMPipeline(Pipeline):
         defaults.update(gen_kwargs)
         with torch.no_grad():
             out = intervenable_model.generate(base, sources=sources, **defaults)
-        return out[-1].scores if output_scores else out[-1].sequences[:, -self.max_new_tokens :]
+
+        # Return dictionary like HuggingFace models
+        sequences = out[-1].sequences[:, -self.max_new_tokens :].detach().cpu()
+        result = {"sequences": sequences}
+
+        if gen_kwargs.get("output_scores", True):
+            scores = [s.detach().cpu() for s in (out[-1].scores or [])]
+            result["scores"] = scores
+
+        result["string"] = self.dump(sequences, is_logits=False)
+
+        return result
 
     # ------------------------------------------------------------------
     # Convenience
@@ -271,3 +299,6 @@ class LMPipeline(Pipeline):
 
     def get_num_layers(self) -> int:
         return int(self.model.config.num_hidden_layers)
+
+    def get_num_attention_heads(self) -> int:
+        return int(self.model.config.num_attention_heads)

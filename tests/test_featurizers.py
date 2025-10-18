@@ -17,10 +17,6 @@ import pytest
 
 import neural.featurizers as F  # the module we just rewrote
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 
 # --------------------------------------------------------------------------- #
 #  Helpers / fixtures                                                         #

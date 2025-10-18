@@ -77,11 +77,13 @@ class Featurizer:
         *,
         n_features: Optional[int] = None,
         id: str = "null",
+        tie_masks: bool = False,
     ):
         self.featurizer = featurizer
         self.inverse_featurizer = inverse_featurizer
         self.n_features = n_features
         self.id = id
+        self.tie_masks = tie_masks
 
     # -------------------- Intervention builders -------------------------- #
     def get_interchange_intervention(self):
@@ -110,6 +112,7 @@ class Featurizer:
                 self.inverse_featurizer,
                 self.n_features,
                 self.id,
+                self.tie_masks,
             )
         return self._mask_intervention
 
@@ -299,8 +302,18 @@ def build_feature_mask_intervention(
     inverse_featurizer: torch.nn.Module,
     n_features: int,
     featurizer_id: str,
+    tie_masks: bool = False,
 ):
-    """Return a trainable mask intervention."""
+    """Return a trainable mask intervention.
+
+    Args:
+        featurizer: The featurizer module
+        inverse_featurizer: The inverse featurizer module
+        n_features: Number of features in the featurized space
+        featurizer_id: Human-readable identifier for the intervention
+        tie_masks: If True, use a single scalar mask weight for all features.
+                  If False, use per-feature mask weights (default behavior).
+    """
 
     class FeatureMaskIntervention(pv.TrainableIntervention):
         """Differential-binary masking in the featurized space."""
@@ -309,9 +322,15 @@ def build_feature_mask_intervention(
             super().__init__(**kwargs)
             self._featurizer = featurizer
             self._inverse = inverse_featurizer
+            self._tie_masks = tie_masks
 
             # Learnable parameters
-            self.mask = torch.nn.Parameter(torch.zeros(n_features), requires_grad=True)
+            if tie_masks:
+                # Single scalar mask weight for all features
+                self.mask = torch.nn.Parameter(torch.zeros(1), requires_grad=True)
+            else:
+                # Per-feature mask weights
+                self.mask = torch.nn.Parameter(torch.zeros(n_features), requires_grad=True)
             self.temperature: Optional[torch.Tensor] = None  # must be set by user
 
         # -------------------- API helpers -------------------- #
@@ -356,7 +375,8 @@ def build_feature_mask_intervention(
             return torch.norm(gate, p=1)
 
         def __str__(self):  # noqa: D401
-            return f"FeatureMaskIntervention(id={featurizer_id})"
+            tied_str = ",tied" if self._tie_masks else ""
+            return f"FeatureMaskIntervention(id={featurizer_id}{tied_str})"
 
     return FeatureMaskIntervention
 
@@ -400,6 +420,7 @@ class SubspaceFeaturizer(Featurizer):
         rotation_subspace: torch.Tensor | None = None,
         trainable: bool = True,
         id: str = "subspace",
+        **kwargs,
     ):
         assert (
             shape is not None or rotation_subspace is not None
@@ -420,6 +441,7 @@ class SubspaceFeaturizer(Featurizer):
             SubspaceInverseFeaturizerModule(rotate),
             n_features=rotate.weight.shape[1],
             id=id,
+            **kwargs,
         )
 
 
@@ -459,13 +481,14 @@ class SAEFeaturizer(Featurizer):
     ``NotImplementedError``.
     """
 
-    def __init__(self, sae, *, trainable: bool = False):
+    def __init__(self, sae, *, trainable: bool = False, **kwargs):
         sae.requires_grad_(trainable)
         super().__init__(
             SAEFeaturizerModule(sae),
             SAEInverseFeaturizerModule(sae),
             n_features=sae.cfg.to_dict()["d_sae"],
             id="sae",
+            **kwargs,
         )
 
 
@@ -474,6 +497,11 @@ class SAEFeaturizer(Featurizer):
 # --------------------------------------------------------------------------- #
 def _subspace_is_all_none(subspaces) -> bool:
     """Return ``True`` if *every* element of *subspaces* is ``None``."""
-    return subspaces is None or all(
-        inner is None or all(elem is None for elem in inner) for inner in subspaces
+    if subspaces is None:
+        return True
+    if not subspaces:  # Empty list
+        return False
+    return all(
+        inner is None or (inner and all(elem is None for elem in inner))
+        for inner in subspaces
     )

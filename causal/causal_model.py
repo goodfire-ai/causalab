@@ -1,7 +1,4 @@
-import random, sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
+import random
 import copy
 import itertools
 import random
@@ -270,10 +267,10 @@ class CausalModel:
             A dictionary mapping input variables to their sampled values.
         """
         filter_func = filter_func if filter_func is not None else lambda x: True
-        input_setting = {var: random.sample(self.values[var], 1)[0] for var in self.inputs}
+        input_setting = {var: random.choice(self.values[var]) for var in self.inputs}
         total = self.run_forward(intervention=input_setting)
         while not filter_func(total):
-            input_setting = {var: random.sample(self.values[var], 1)[0] for var in self.inputs}
+            input_setting = {var: random.choice(self.values[var]) for var in self.inputs}
             total = self.run_forward(intervention=input_setting)
         return input_setting
 

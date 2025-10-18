@@ -1,7 +1,3 @@
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))  # non-pkg path hack
-
 import pytest
 from unittest import mock
 import torch
@@ -18,8 +14,8 @@ from causal.counterfactual_dataset import CounterfactualDataset
 def mock_pipeline():
     """Create a mock pipeline with controlled outputs."""
     pipeline = mock.MagicMock()
-    # Set up generate to return a consistent object
-    pipeline.generate.return_value = "generated_output"
+    # Set up generate to return a dict with sequences key
+    pipeline.generate.return_value = {"sequences": torch.tensor([[1, 2, 3]])}
     # Set up dump to return predictable outputs
     pipeline.dump.side_effect = lambda x, **kwargs: [f"output_{i}" for i in range(3)]
     return pipeline

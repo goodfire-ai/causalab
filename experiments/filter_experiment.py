@@ -43,32 +43,35 @@ class FilterExperiment:
         self.checker = checker
 
     def filter(
-        self, 
-        counterfactual_datasets: Dict[str, CounterfactualDataset], 
-        batch_size: int = 32, 
-        verbose: bool = False
+        self,
+        counterfactual_datasets: Dict[str, CounterfactualDataset],
+        batch_size: int = 32,
+        verbose: bool = False,
+        skip_counterfactual_datasets: List[str] = [] 
     ) -> Dict[str, CounterfactualDataset]:
         """
         Filter datasets based on agreement between pipeline and causal model outputs.
-        
+
         For each example in each dataset, checks if both:
         1. The pipeline's prediction on the original input matches the causal model's output
         2. The pipeline's predictions on all counterfactual inputs match the causal model's outputs
-        
+
         Only examples where both conditions are met are kept in the filtered datasets.
-        
+
         Args:
             counterfactual_datasets: Dictionary mapping dataset names to CounterfactualDataset objects
             batch_size: Size of batches for processing
             verbose: Whether to print filtering statistics
-            
+            skip_counterfactual_datasets: List of dataset names for which counterfactual validation
+                                         should be skipped (i.e., counterfactuals are automatically
+                                         considered valid, only original inputs are validated)
+
         Returns:
             Dictionary mapping dataset names to filtered CounterfactualDataset objects
         """
         filtered_datasets = {}
         total_original = 0
         total_kept = 0
-        
         # Process each counterfactual dataset
         for dataset_name, counterfactual_dataset in counterfactual_datasets.items():
             dataset = counterfactual_dataset.dataset
@@ -88,7 +91,11 @@ class FilterExperiment:
 
                 # Process counterfactual inputs
                 all_cf_inputs = dataset["counterfactual_inputs"][b_i:b_i + batch_size]
-                cf_valid = self._validate_counterfactual_inputs(dataset, all_cf_inputs, b_i, batch_size)
+                # Skip counterfactual validation if this dataset is in the skip list
+                if dataset_name in skip_counterfactual_datasets:
+                    cf_valid = [True] * len(all_cf_inputs)
+                else:
+                    cf_valid = self._validate_counterfactual_inputs(dataset, all_cf_inputs, b_i, batch_size)
 
                 # Filter valid original and counterfactual input pairs
                 for idx, is_orig_valid in enumerate(orig_valid):
@@ -113,11 +120,12 @@ class FilterExperiment:
             )
             dataset_kept = len(filtered_data["input"])
             total_kept += dataset_kept
-            
+
             if verbose:
                 keep_rate = (dataset_kept / dataset_original) * 100
+                skip_msg = " (counterfactual validation skipped)" if dataset_name in skip_counterfactual_datasets else ""
                 print(f"Dataset '{dataset_name}': kept {dataset_kept}/{dataset_original} examples "
-                      f"({keep_rate:.1f}%)")
+                      f"({keep_rate:.1f}%){skip_msg}")
         
         # Report overall filtering results
         if verbose and total_original > 0:
@@ -130,53 +138,59 @@ class FilterExperiment:
         return filtered_datasets
     
     def _validate_original_inputs(
-        self, 
-        dataset: Any, 
-        orig_inputs: List[Any], 
-        batch_idx: int, 
+        self,
+        dataset: Any,
+        orig_inputs: List[Any],
+        batch_idx: int,
         batch_size: int
     ) -> List[bool]:
         """
         Validate original inputs against causal model expectations.
-        
+
         Args:
             dataset: The dataset being processed
             orig_inputs: Original inputs for the current batch
             batch_idx: Starting index of the current batch
             batch_size: Size of the batch
-            
+
         Returns:
             List of booleans indicating whether each original input is valid
         """
         # Get predictions and expected outputs
-        orig_preds = self.pipeline.dump(self.pipeline.generate(orig_inputs))
+        batch_output_dict = self.pipeline.generate(orig_inputs)
+        decoded_strings = self.pipeline.dump(batch_output_dict["sequences"])
         orig_expected = [
             self.causal_model.run_forward(x)["raw_output"]
             for x in orig_inputs
         ]
-        
-        # Check validity
-        return [
-            self.checker(pred, exp) 
-            for pred, exp in zip(orig_preds, orig_expected)
-        ]
+
+        # Split batch outputs into individual example dicts and check validity
+        results = []
+        for idx, exp in enumerate(orig_expected):
+            example_dict = {"sequences": batch_output_dict["sequences"][idx:idx+1]}
+            if "scores" in batch_output_dict:
+                # Each score in the list corresponds to a token position
+                example_dict["scores"] = [score[idx:idx+1] for score in batch_output_dict["scores"]]
+            example_dict["string"] = decoded_strings[idx] if isinstance(decoded_strings, list) else decoded_strings
+            results.append(self.checker(example_dict, exp))
+        return results
     
     def _validate_counterfactual_inputs(
-        self, 
-        dataset: Any, 
-        all_cf_inputs: List[List[Any]], 
-        batch_idx: int, 
+        self,
+        dataset: Any,
+        all_cf_inputs: List[List[Any]],
+        batch_idx: int,
         batch_size: int
     ) -> List[bool]:
         """
         Validate counterfactual inputs against causal model expectations.
-        
+
         Args:
             dataset: The dataset being processed
             all_cf_inputs: Counterfactual inputs for the current batch
             batch_idx: Starting index of the current batch
             batch_size: Size of the batch
-            
+
         Returns:
             List of booleans indicating whether each example's counterfactuals are all valid
         """
@@ -184,30 +198,40 @@ class FilterExperiment:
         cf_flattened_inputs = [
             cf_input for cf_inputs in all_cf_inputs for cf_input in cf_inputs
         ]
-        
+
         # Skip processing if there are no counterfactual inputs
         if not cf_flattened_inputs:
             return [True for _ in range(len(all_cf_inputs))]
-        
+
         # Get pipeline predictions for counterfactuals
-        cf_flattened_preds = self.pipeline.dump(self.pipeline.generate(cf_flattened_inputs))
-        
-        # Restructure predictions to match original grouping
-        cf_preds = []
+        batch_output_dict = self.pipeline.generate(cf_flattened_inputs)
+        decoded_strings = self.pipeline.dump(batch_output_dict["sequences"])
+
+        # Create individual output dicts for each flattened example
+        individual_dicts = []
+        for idx in range(len(cf_flattened_inputs)):
+            example_dict = {"sequences": batch_output_dict["sequences"][idx:idx+1]}
+            if "scores" in batch_output_dict:
+                example_dict["scores"] = [score[idx:idx+1] for score in batch_output_dict["scores"]]
+            example_dict["string"] = decoded_strings[idx] if isinstance(decoded_strings, list) else decoded_strings
+            individual_dicts.append(example_dict)
+
+        # Restructure individual dicts to match original grouping
+        cf_output_dicts = []
         i = 0
         for cf_inputs in all_cf_inputs:
-            cf_preds.append(cf_flattened_preds[i:i + len(cf_inputs)])
+            cf_output_dicts.append(individual_dicts[i:i + len(cf_inputs)])
             i += len(cf_inputs)
-        
+
         cf_expected = [
             [self.causal_model.run_forward(x)["raw_output"] for x in cf_inputs]
             for cf_inputs in all_cf_inputs
         ]
-        
+
         # Check if all counterfactuals for each example are valid
         return [
-            all(self.checker(pred, exp) for pred, exp in zip(cf_preds[i], cf_expected[i]))
-            for i in range(len(cf_preds))
+            all(self.checker(output_dict, exp) for output_dict, exp in zip(cf_output_dicts[i], cf_expected[i]))
+            for i in range(len(cf_output_dicts))
         ]
     
     def _cleanup_memory(self, objects_to_delete: List[Any]) -> None:

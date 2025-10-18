@@ -1,7 +1,3 @@
-
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
 """
 pytest unit-tests for the core abstractions in model_units.py
 (no ResidualStream / AttentionHead).

@@ -1,13 +1,10 @@
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 from typing import List, Dict, Callable, Tuple, Union
-import gc, json, os, collections, random
+import gc, json, os, collections, random, copy
 from itertools import chain
 
 import pyvene as pv
 import torch
+from torch.utils.data import DataLoader
 import numpy as np
 from sklearn.decomposition import TruncatedSVD 
 from tqdm import tqdm, trange
@@ -17,8 +14,46 @@ from neural.model_units import *
 from neural.pipeline import Pipeline
 from causal.causal_model import CausalModel
 from causal.counterfactual_dataset import CounterfactualDataset
-from experiments.pyvene_core import _run_interchange_interventions, _train_intervention, _collect_features
+from experiments.pyvene_core import _run_interchange_interventions, _train_intervention, _collect_features, shallow_collate_fn
 from experiments.config import DEFAULT_CONFIG
+
+
+def _extract_top_k_logits(output_dict, k, tokenizer):
+    """
+    Extract top-k logits with token information in JSON-serializable format.
+
+    Args:
+        output_dict: Dictionary with 'scores' (list of tensors) and 'sequences' keys
+        k: Number of top logits to extract per position
+        tokenizer: Tokenizer to decode token IDs
+
+    Returns:
+        List of dicts with top-k information for each position, or None if no scores
+    """
+    if "scores" not in output_dict or not output_dict["scores"]:
+        return None
+
+    top_k_results = []
+    for position_logits in output_dict["scores"]:
+        # position_logits shape: (batch_size, vocab_size)
+        # We assume batch_size=1 for individual examples
+        logits = position_logits[0]  # Get first (and only) example
+
+        # Get top-k values and indices
+        top_k_values, top_k_indices = torch.topk(logits, k=min(k, len(logits)))
+
+        # Convert to JSON-serializable format
+        position_result = []
+        for value, idx in zip(top_k_values.tolist(), top_k_indices.tolist()):
+            token = tokenizer.decode([idx])
+            position_result.append({
+                "token_id": idx,
+                "logit": value,
+                "token": token
+            })
+        top_k_results.append(position_result)
+
+    return top_k_results
 
 class InterventionExperiment:
     """
@@ -67,15 +102,11 @@ class InterventionExperiment:
         self.config = DEFAULT_CONFIG.copy()
         if config is not None:
             self.config.update(config)
-        
-        # Ensure evaluation_batch_size defaults to batch_size if not set
-        if self.config.get("evaluation_batch_size") is None:
-            self.config["evaluation_batch_size"] = self.config["batch_size"]
 
-    def perform_interventions(self, datasets, verbose: bool = False, target_variables_list: List[List[str]] = None, save_dir=None) -> Dict:
+    def perform_interventions(self, datasets, verbose: bool = False, target_variables_list: List[List[str]] = None, save_dir=None, include_actual_outputs: bool = False) -> Dict:
         """
         Compute intervention scores across multiple counterfactual datasets and model units.
-        
+
         This method runs interchange interventions on the model, comparing the outputs against
         the expectations from the causal model. It evaluates how well different neural network
         components represent the causal variables of interest.
@@ -85,16 +116,19 @@ class InterventionExperiment:
             verbose: Whether to show progress bars during execution
             target_variables_list: List of causal variable groups to evaluate
             save_dir: Directory to save results (if provided)
+            include_actual_outputs: If True, also compute outputs without intervention
 
         Returns:
             Dictionary containing the experiment results with scores for each model unit and dataset
-            
+
         Note:
             The structure of model_units_lists determines how interventions are performed:
             - Each group in the middle level shares a counterfactual input
             - Each unit in the innermost level is intervened upon using that shared input
             - This allows for complex interventions where multiple components are modified simultaneously
         """
+        if isinstance(datasets, CounterfactualDataset):
+            datasets = {datasets.id: datasets}
         # Initialize results structure
         results = {"method_name": self.config["method_name"],
                     "model_name": self.pipeline.model.__class__.__name__,
@@ -102,13 +136,26 @@ class InterventionExperiment:
                     "dataset": {dataset_name: {
                         "model_unit": {str(units_list): None for units_list in self.model_units_lists}}
                     for dataset_name in datasets.keys()}}
-        
+
         # Process each dataset and model unit combination
+        total_combinations = len(datasets) * len(self.model_units_lists)
+        progress_bar = tqdm(total=total_combinations, desc="Running interventions", disable=not verbose)
+
         for dataset_name in datasets.keys():
+            # Compute actual outputs (no intervention) if requested
+            if include_actual_outputs:
+                actual_outputs = self._compute_actual_outputs(
+                    datasets[dataset_name], verbose
+                )
+                # Move to CPU but keep as tensors
+                actual_outputs = self._move_outputs_to_cpu(actual_outputs)
+                # Store at dataset level
+                if "raw_outputs_no_intervention" not in results["dataset"][dataset_name]:
+                    results["dataset"][dataset_name]["raw_outputs_no_intervention"] = actual_outputs
+
             for model_units_list in self.model_units_lists:
-                # Run interventions
-                if verbose:
-                    print(f"Running interventions for {dataset_name} with model units {model_units_list}")
+                progress_bar.set_postfix({"dataset": dataset_name, "units": model_units_list})
+                progress_bar.update(1)
                 
                 # Execute interchange interventions using pyvene
                 raw_outputs = _run_interchange_interventions(
@@ -119,82 +166,249 @@ class InterventionExperiment:
                     output_scores=self.config["output_scores"],
                     batch_size=self.config["evaluation_batch_size"]
                 )
-                
-                # Extract metadata for this model unit
+                # Move to CPU but keep as tensors
+                raw_outputs = self._move_outputs_to_cpu(raw_outputs)
+
+                # Generate causal model inputs for each example in the dataset
+                # This ensures the kth causal input corresponds to the kth neural network output
+                causal_model_inputs = []
+                for example in datasets[dataset_name]:
+                    # Run the causal model to get the expected input representation
+                    input_setting = example["input"]
+                    counterfactual_inputs = example["counterfactual_inputs"]
+                    causal_model_inputs.append({
+                        "base_input": input_setting,
+                        "counterfactual_inputs": counterfactual_inputs
+                    })
+
+                # Extract metadata and feature indices for this model unit
                 metadata = self.metadata_fn(model_units_list)
+                feature_indices = {}
+                for i, model_units in enumerate(model_units_list):
+                    for j, model_unit in enumerate(model_units):
+                        unit_key = f"{model_unit.id}"
+                        indices = model_unit.get_feature_indices()
+                        feature_indices[unit_key] = indices
+
                 results["dataset"][dataset_name]["model_unit"][str(model_units_list)] = {
                     "raw_outputs": raw_outputs,
-                    "metadata": metadata}
+                    "causal_model_inputs": causal_model_inputs,
+                    "metadata": metadata,
+                    "feature_indices": feature_indices}
 
-                # Process and decode model outputs
+                # Process and decode model outputs from dictionaries
                 dumped_outputs = []
-                for raw_output in raw_outputs:
-                    dump_result = self.pipeline.dump(raw_output, is_logits=self.config["output_scores"])
-                    if isinstance(dump_result, list):
-                        dumped_outputs.extend(dump_result)
-                    else:
-                        dumped_outputs.append(dump_result)
+                flattened_outputs = []
+                for batch_dict in raw_outputs:
+                    # Use the string field that's already in batch_dict
+                    batch_strings = batch_dict["string"]
+                    # Always treat as a list for consistent processing
+                    if not isinstance(batch_strings, list):
+                        batch_strings = [batch_strings]
 
-                # Flatten the nested raw_outputs for processing
-                raw_outputs = [item for sublist in raw_outputs for item in sublist]
+                    dumped_outputs.extend(batch_strings)
+                    # Create individual output dicts for each example in the batch
+                    for idx, decoded_str in enumerate(batch_strings):
+                        example_dict = {"sequences": batch_dict["sequences"][idx:idx+1]}
+                        if "scores" in batch_dict:
+                            example_dict["scores"] = [score[idx:idx+1] for score in batch_dict["scores"]]
+                        example_dict["string"] = decoded_str
+                        flattened_outputs.append(example_dict)
                 
                 # Evaluate results for each target variable group
-                for target_variables in target_variables_list:
-                    target_variable_str = "-".join(target_variables)
-                    
-                    # Generate expected outputs from causal model
-                    labeled_data = self.causal_model.label_counterfactual_data(datasets[dataset_name], target_variables)
-                    assert len(labeled_data) == len(dumped_outputs), f"Length mismatch: {len(labeled_data)} vs {len(dumped_outputs)}"
-                    assert len(labeled_data) == len(raw_outputs), f"Length mismatch: {len(labeled_data)} vs {len(raw_outputs)}"
-                    
-                    # Compute intervention scores
-                    scores = []
-                    for example, output, raw_output in zip(labeled_data, dumped_outputs, raw_outputs):
-                        if self.config["check_raw"]:
-                            score = self.checker(raw_output, example["setting"])
-                        else:
-                            score = self.checker(output, example["label"])
-                        if isinstance(score, torch.Tensor):
-                            score = score.item()
-                        scores.append(float(score))
-                    
-                    # Store processed results (without raw outputs for efficiency)
-                    results["dataset"][dataset_name]["model_unit"][str(model_units_list)][target_variable_str] = {}
-                    results["dataset"][dataset_name]["model_unit"][str(model_units_list)][target_variable_str]["scores"] = scores
-                    results["dataset"][dataset_name]["model_unit"][str(model_units_list)][target_variable_str]["average_score"] = np.mean(scores)
-                    # Save processed results to directory if provided
+                if target_variables_list is not None:
+                    for target_variables in target_variables_list:
+                        target_variable_str = "-".join(target_variables)
+
+                        # Generate expected outputs from causal model
+                        labeled_data = self.causal_model.label_counterfactual_data(datasets[dataset_name], target_variables)
+                        assert len(labeled_data) == len(dumped_outputs), f"Length mismatch: {len(labeled_data)} vs {len(dumped_outputs)}"
+                        assert len(labeled_data) == len(flattened_outputs), f"Length mismatch: {len(labeled_data)} vs {len(flattened_outputs)}"
+
+                        # Compute intervention scores - pass neural dict and expected label
+                        scores = []
+                        for example, output_dict in zip(labeled_data, flattened_outputs):
+                            score = self.checker(output_dict, example["label"])
+                            if isinstance(score, torch.Tensor):
+                                score = score.item()
+                            scores.append(float(score))
+                        
+                        # Store processed results (without raw outputs for efficiency)
+                        results["dataset"][dataset_name]["model_unit"][str(model_units_list)][target_variable_str] = {}
+                        results["dataset"][dataset_name]["model_unit"][str(model_units_list)][target_variable_str]["scores"] = scores
+                        results["dataset"][dataset_name]["model_unit"][str(model_units_list)][target_variable_str]["average_score"] = np.mean(scores)
+                        # Save processed results to directory if provided
 
 
-                # Remove raw_outputs to save memory in the results dictionary
-                if not self.config["raw_outputs"]:
-                    del results["dataset"][dataset_name]["model_unit"][str(model_units_list)]["raw_outputs"]
+                # Note: raw_outputs are now kept in results as CPU tensors for caller to use
+                # They will be excluded from saved JSON files automatically
+
+        progress_bar.close()
 
         if save_dir is not None:
             # Create directory if it doesn't exist
             os.makedirs(save_dir, exist_ok=True)
 
-            # remove scores and raw_outputs from results to save space
-            for dataset_name in results["dataset"].keys():
-                for model_unit in results["dataset"][dataset_name]["model_unit"].values():
+            # Create a copy of results for saving to avoid modifying the original
+            results_for_saving = copy.deepcopy(results)
+
+            # Process outputs for saving: convert raw tensors to JSON-serializable format
+            k = self.config.get("save_top_k_logits", 0)
+            for dataset_name in results_for_saving["dataset"].keys():
+                # Convert actual outputs (no intervention) to serializable format
+                if "raw_outputs_no_intervention" in results_for_saving["dataset"][dataset_name]:
+                    actual_outputs = results_for_saving["dataset"][dataset_name]["raw_outputs_no_intervention"]
+                    serializable_actual_outputs = []
+                    for batch_dict in actual_outputs:
+                        serializable_batch_dict = {}
+                        # Convert sequences tensor to list
+                        if "sequences" in batch_dict:
+                            serializable_batch_dict["sequences"] = batch_dict["sequences"].detach().cpu().tolist()
+                        # Convert scores tensors to lists if present
+                        if "scores" in batch_dict and batch_dict["scores"]:
+                            serializable_batch_dict["scores"] = [score.detach().cpu().tolist() for score in batch_dict["scores"]]
+                        # Keep string field as-is (already serializable)
+                        if "string" in batch_dict:
+                            serializable_batch_dict["string"] = batch_dict["string"]
+                        serializable_actual_outputs.append(serializable_batch_dict)
+                    results_for_saving["dataset"][dataset_name]["raw_outputs_no_intervention"] = serializable_actual_outputs
+
+                for model_unit in results_for_saving["dataset"][dataset_name]["model_unit"].values():
+                    # Convert raw_outputs to top-k logits if requested
+                    if "raw_outputs" in model_unit and k and k > 0:
+                        serializable_outputs = []
+                        for batch_dict in model_unit["raw_outputs"]:
+                            # Handle both batch dicts and individual example dicts
+                            num_examples = batch_dict["sequences"].shape[0]
+
+                            for idx in range(num_examples):
+                                example_dict = {
+                                    "sequences": batch_dict["sequences"][idx].tolist(),
+                                    "string": self.pipeline.dump(batch_dict["sequences"][idx:idx+1])
+                                }
+
+                                # Add top-k logits if scores are present
+                                if "scores" in batch_dict:
+                                    example_output = {
+                                        "scores": [score[idx:idx+1] for score in batch_dict["scores"]]
+                                    }
+                                    top_k = _extract_top_k_logits(example_output, k, self.pipeline.tokenizer)
+                                    if top_k:
+                                        example_dict["top_k_logits"] = top_k
+
+                                serializable_outputs.append(example_dict)
+
+                        model_unit["outputs"] = serializable_outputs
+
+                    # Remove raw tensor outputs from the copy only
                     if "raw_outputs" in model_unit:
                         del model_unit["raw_outputs"]
+
+                    # Remove per-target-variable scores from the copy only (these are intermediate computation results)
                     for target_variable in model_unit.keys():
-                        if model_unit[target_variable] is not None and "scores" in model_unit[target_variable]:
+                        if model_unit[target_variable] is not None and isinstance(model_unit[target_variable], dict) and "scores" in model_unit[target_variable]:
                             del model_unit[target_variable]["scores"]
+
             # Generate meaningful filename based on experiment parameters
             file_name = "results.json"
             total_target_str = ""
-            for target_variables in target_variables_list:
-                target_variable_str = "-".join(target_variables)
-                total_target_str += target_variable_str + "_"
+            if target_variables_list is not None:
+                for target_variables in target_variables_list:
+                    target_variable_str = "-".join(target_variables)
+                    total_target_str += target_variable_str + "_"
             file_name =  total_target_str + "_" + file_name
             for k in ["method_name", "model_name", "task_name"]:
                 file_name = results[k] + "_" + file_name
             with open(os.path.join(save_dir, file_name), "w") as f:
-                json.dump(results, f, indent=2)
+                json.dump(results_for_saving, f, indent=2)
                 
 
         return results
+
+    def _move_outputs_to_cpu(self, outputs):
+        """
+        Move all tensors in outputs to CPU and detach from computation graph.
+        Keeps tensors as tensors (doesn't convert to lists).
+
+        Args:
+            outputs: List of output dictionaries or single dictionary
+
+        Returns:
+            Same structure with all tensors moved to CPU and detached
+        """
+        def move_dict_to_cpu(d):
+            """Helper to move a single dictionary's tensors to CPU."""
+            result = {}
+            for key, value in d.items():
+                if isinstance(value, torch.Tensor):
+                    result[key] = value.detach().cpu()
+                elif isinstance(value, list) and value and isinstance(value[0], torch.Tensor):
+                    result[key] = [v.detach().cpu() for v in value]
+                else:
+                    result[key] = value
+            return result
+
+        if isinstance(outputs, list):
+            return [move_dict_to_cpu(d) for d in outputs]
+        else:
+            return move_dict_to_cpu(outputs)
+
+    def _compute_actual_outputs(self, dataset: CounterfactualDataset, verbose: bool = False):
+        """
+        Compute outputs from the model without any interventions (actual/baseline outputs).
+
+        This processes only the base inputs from the dataset through the pipeline
+        to capture the model's natural behavior, following the same approach as FilterExperiment.
+
+        Args:
+            dataset: CounterfactualDataset containing base inputs
+            verbose: Whether to show progress
+
+        Returns:
+            List of output dictionaries with same structure as intervention outputs
+        """
+
+        # Extract only base inputs (not counterfactuals)
+        # Each example in dataset.dataset has structure: {"input": {...}, "counterfactual_inputs": [...]}
+        # We want the "input" part which contains the raw_input
+        base_inputs = [example["input"] for example in dataset.dataset]
+        base_dataset = Dataset.from_list(base_inputs)
+
+        # Create dataloader for batch processing
+        dataloader = DataLoader(
+            base_dataset,
+            batch_size=self.config["evaluation_batch_size"],
+            shuffle=False,  # Maintain order for correspondence
+            collate_fn=shallow_collate_fn
+        )
+
+        all_outputs = []
+
+        # Process each batch
+        for batch in tqdm(dataloader, desc="Computing actual outputs", disable=not verbose, leave=False):
+            with torch.no_grad():
+                # The shallow_collate_fn returns {"raw_input": [input1, input2, ...], ...}
+                # Pipeline.generate expects a list of dictionaries, so we need to reconstruct them
+                batch_inputs = []
+                batch_size = len(batch["raw_input"])
+                for i in range(batch_size):
+                    example_dict = {key: batch[key][i] for key in batch.keys()}
+                    batch_inputs.append(example_dict)
+
+                # Generate outputs without intervention - pipeline.generate handles loading internally
+                output_dict = self.pipeline.generate(
+                    batch_inputs,
+                    output_scores=self.config["output_scores"]
+                )
+
+                # Add string field for consistency with intervention outputs
+                output_dict["string"] = self.pipeline.dump(output_dict["sequences"])
+
+                # Keep the same tensor format as raw_outputs for consistency with custom scoring functions
+                # Only convert to serializable format when saving (handled in main method)
+                all_outputs.append(output_dict)
+
+        return all_outputs
 
     def save_featurizers(self, model_units, model_dir):
         """
@@ -365,13 +579,14 @@ class InterventionExperiment:
                         SubspaceFeaturizer(
                             rotation_subspace=rotation.T,
                             trainable=False,
-                            id="SVD"
+                            id="SVD",
+                            **self.config.get('featurizer_kwargs', {})
                         )
                     )
                     model_unit.set_feature_indices(None)  # Use all components initially
                 
 
-    def train_interventions(self, datasets, target_variables, method="DAS", model_dir=None, verbose=False):
+    def train_interventions(self, datasets, target_variables, method="DAS", model_dir=None, verbose=False, checker=None):
         """
         Train interventions to identify neural representations of causal variables.
         
@@ -394,24 +609,33 @@ class InterventionExperiment:
         Args:
             datasets: Dictionary of counterfactual datasets for training
             target_variables: Causal variables to locate in the neural network
-            method: Either "DAS" or "DBM" 
+            method: Either "DAS" or "DBM"
             model_dir: Directory to save trained models (optional)
             verbose: Whether to show training progress
-                
+            checker: Optional function for metric evaluation during training.
+                    If None, uses exact token matching. Should match signature of self.checker.
+
         Returns:
             Self (for method chaining)
         """
         # Label the datasets with the target variables
+        if isinstance(datasets, CounterfactualDataset):
+            datasets = {datasets.id: datasets}
         counterfactual_dataset = []
         for dataset in datasets.values():
             counterfactual_dataset += self.causal_model.label_counterfactual_data(dataset, target_variables)
 
-        # The config now comes from DEFAULT_CONFIG, so we don't need to set defaults here
-        # Just validate that required training parameters are present
-        required_params = ["training_epoch", "init_lr", "n_features"]
+        # Validate that required training parameters are present
+        required_params = ["training_epoch", "init_lr"]
         for param in required_params:
             if param not in self.config:
-                raise ValueError(f"Required training parameter '{param}' not found in config") 
+                raise ValueError(f"Required training parameter '{param}' not found in config")
+
+        # Validate method-specific parameters
+        if method == "DAS" and "DAS" not in self.config:
+            raise ValueError("DAS config not found in config")
+        if method == "DBM" and "masking" not in self.config:
+            raise ValueError("masking config not found in config") 
 
         # Validate method
         assert method in ["DAS", "DBM"]
@@ -430,16 +654,27 @@ class InterventionExperiment:
                         # For DAS, use trainable subspace featurizer
                         model_unit.set_featurizer(
                             SubspaceFeaturizer(
-                                shape=(model_unit.shape[0], self.config["n_features"]), 
+                                shape=(model_unit.shape[0], self.config["DAS"]["n_features"]),
                                 trainable=True,
                                 id="DAS"
                             )
                         )
                         model_unit.set_feature_indices(None)  # Use all features
-                        
+
+            # Create a wrapper for the loss function that includes the checker
+            def loss_and_metric_fn_with_checker(pipeline, intervenable_model, batch, model_units_list):
+                # Use passed checker, or fall back to experiment's checker, or default
+                effective_checker = checker if checker is not None else getattr(self, 'checker', None)
+                return self.loss_and_metric_fn(
+                    pipeline, intervenable_model, batch, model_units_list,
+                    checker=effective_checker
+                )
+
             # Train the intervention
-            _train_intervention(self.pipeline, model_units_list, counterfactual_dataset, 
-                               intervention_type, self.config, self.loss_and_metric_fn)
+            printout = _train_intervention(self.pipeline, model_units_list, counterfactual_dataset,
+                               intervention_type, self.config, loss_and_metric_fn_with_checker)
+            if verbose:
+                print(printout)
             
             # Save trained models if directory provided
             if model_dir is not None:

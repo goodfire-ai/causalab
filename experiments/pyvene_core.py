@@ -4,16 +4,13 @@ pyvene_core.py
 Core utilities for running intervention experiments.
 
 This module provides functions for creating, managing, and running interventions
-on the pyvene library. Key components include model preparation, data handling, 
+on the pyvene library. Key components include model preparation, data handling,
 intervention execution, and training functions.
 """
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 import gc
 import collections
+import logging
 from typing import List, Dict, Union
 
 import torch
@@ -27,6 +24,10 @@ from tqdm import *
 from causal.counterfactual_dataset import CounterfactualDataset
 from neural.pipeline import Pipeline
 from neural.model_units import AtomicModelUnit
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)  # Set to INFO by default, debug disabled
 
 def shallow_collate_fn(batch):
     """Only batch at dictionary level, preserve nested structures"""
@@ -143,33 +144,16 @@ def _prepare_intervenable_inputs(pipeline, batch, model_units_list):
     batched_base = pipeline.load(batched_base)
     batched_counterfactuals = [pipeline.load(batched_counterfactual) for batched_counterfactual in batched_counterfactuals]
 
-    if pipeline.tokenizer.padding_side == "left" and model_units_list[0][0].component.unit != "h.pos":
-        pad_token_id = pipeline.tokenizer.pad_token_id
-        # Update base_indices to account for the padding
-        base_indices = [
-            [[j + (base==pad_token_id).sum().item() for j in index] for base, index in zip(batched_base["input_ids"], indices)]
-            for indices in base_indices
-        ]
-        # base_indices = [
-        #     [indices[0],
-        #       [[j + (base==pad_token_id).sum().item() for j in index] for base, index in zip(batched_base["input_ids"], indices[1])]]
-        #     for indices in base_indices
-        # ]
-
-        # Construct extended_batched_counterfactuals: (num_model_units, batch_size) from batched_counterfactuals: (num_counterfactuals, batch_size)
-        extended_batched_counterfactuals = [
-            batched_counterfactual
-            for model_units, batched_counterfactual in zip(model_units_list, batched_counterfactuals)
-            for model_unit in model_units
-        ]
-
-        # Update counterfactual_indices to account for the padding
-        counterfactual_indices = [
-            [[j + (counterfactual==pad_token_id).sum().item() for j in index] for counterfactual, index in zip(batched_counterfactual["input_ids"], indices)]
-            for indices, batched_counterfactual in zip(counterfactual_indices, extended_batched_counterfactuals)
-        ]
-
     inv_locations = {"sources->base": (counterfactual_indices, base_indices)}
+    logger.debug("base %s", base_indices)
+    logger.debug("counterfactual %s", counterfactual_indices)
+
+    # Debug feature indices being passed
+    logger.debug("Number of model units: %d", sum(len(units) for units in model_units_list))
+    for i, model_units in enumerate(model_units_list):
+        for j, model_unit in enumerate(model_units):
+            logger.debug("model_unit %d-%d (%s) feature_indices: %s",
+                        i, j, model_unit.id, model_unit.get_feature_indices())
     # visualize_intervention_tokens(pipeline, batched_base, batched_counterfactuals, inv_locations)
     return batched_base, batched_counterfactuals, inv_locations, feature_indices
 
@@ -268,25 +252,24 @@ def visualize_intervention_tokens(pipeline, batched_base, batched_counterfactual
                     print(f"    ... and {len(source_indices_for_example) - max_tokens} more tokens")
 
 
-def _batched_interchange_intervention(pipeline, intervenable_model, batch, model_units_list, output_scores=False):
+def _batched_interchange_intervention(pipeline, intervenable_model, batch, model_units_list, output_scores=True):
     """
     Perform interchange interventions on batched inputs using an intervenable model.
-    
+
     This function executes the core intervention logic by:
     1. Preparing the base and counterfactual inputs for intervention
     2. Running the model with interventions at specified locations
     3. Moving tensors back to CPU to free GPU memory
-    
+
     Args:
         pipeline (Pipeline): Neural model pipeline that handles tokenization and generation
         intervenable_model (IntervenableModel): PyVENE model with preset intervention locations
         batch (dict): Batch of data containing "input" and "counterfactual_inputs"
         model_units_list (List[List[AtomicModelUnit]]): Model components to intervene on
-        output_scores (bool): Whether to return logits/scores (True) or token IDs (False)
-    
+        output_scores (bool): Whether to include scores in output dictionary (default: True)
+
     Returns:
-        torch.Tensor: Either token sequences (if output_scores=False) or model logits
-                     (if output_scores=True) resulting from the intervention
+        dict: Dictionary with 'sequences' and optionally 'scores' keys
     """
     # Prepare inputs for intervention
     batched_base, batched_counterfactuals, inv_locations, feature_indices = _prepare_intervenable_inputs(
@@ -302,7 +285,7 @@ def _batched_interchange_intervention(pipeline, intervenable_model, batch, model
         for k, v in batched.items():
             if v is not None and isinstance(v, torch.Tensor):
                 batched[k] = v.cpu()
-                
+
     return output
 
 def _run_interchange_interventions(
@@ -311,16 +294,16 @@ def _run_interchange_interventions(
     model_units_list: List[List[AtomicModelUnit]],
     verbose: bool = False,
     batch_size=32,
-    output_scores=False):
+    output_scores=True):
     """
     Run interchange interventions on a full counterfactual dataset in batches.
-    
+
     This function:
     1. Prepares an intervenable model configured for interchange interventions
     2. Processes the dataset in batches, applying interventions to each batch
     3. Manages memory between batches to prevent OOM errors
     4. Collects and returns results from all batches
-    
+
     Args:
         pipeline (Pipeline): Neural model pipeline that handles tokenization and generation
         counterfactual_dataset (CounterfactualDataset): Dataset containing inputs and their counterfactuals
@@ -328,11 +311,10 @@ def _run_interchange_interventions(
                                                       lists share counterfactual inputs
         verbose (bool): Whether to display progress bars during processing
         batch_size (int): Number of examples to process in each batch
-        output_scores (bool): Whether to return model logits (True) or token sequences (False)
-    
+        output_scores (bool): Whether to include scores in output dictionary (default: True)
+
     Returns:
-        List[torch.Tensor]: List of intervention outputs for each batch, either as token sequences
-                          or model logits depending on output_scores parameter
+        List[dict]: List of dictionaries, each with 'sequences' and optionally 'scores' keys
     """
     # Initialize intervenable model with interchange intervention type
     intervenable_model = _prepare_intervenable_model(
@@ -350,27 +332,15 @@ def _run_interchange_interventions(
     all_outputs = []
 
     # Process each batch with progress tracking
-    for batch in tqdm(dataloader, desc="Processing batches", disable=not verbose):
+    for batch in tqdm(dataloader, desc="Processing batches", disable=not verbose, leave=False):
         with torch.no_grad():  # Disable gradient tracking for inference
-            # Perform interchange interventions on the batch
-            scores_or_sequences = _batched_interchange_intervention(
+            # Perform interchange interventions on the batch - returns dict
+            output_dict = _batched_interchange_intervention(
                     pipeline, intervenable_model, batch, model_units_list,
                     output_scores=output_scores)
-                    
-            # Process outputs based on type and move to CPU
-            if output_scores:
-                # For logits, stack and detach each score tensor
-                scores_or_sequences = torch.stack([score.clone().detach().to("cpu") for score in scores_or_sequences], 1)
-            else:
-                # For token sequences, detach the single tensor
-                scores_or_sequences = scores_or_sequences.clone().detach().to("cpu")
-            
+
             # Collect outputs from this batch
-            all_outputs.append(scores_or_sequences)
-            
-        # Free memory after each batch
-        gc.collect()
-        torch.cuda.empty_cache()
+            all_outputs.append(output_dict)
 
     # Clean up the intervenable model to free GPU memory
     _delete_intervenable_model(intervenable_model)
@@ -406,7 +376,7 @@ def _collect_features(dataset, pipeline, model_units_list, config, verbose=False
     # Create data loader for batch processing
     dataloader = DataLoader(
         dataset,
-        batch_size=config["batch_size"],
+        batch_size=config["train_batch_size"],
         shuffle=False,  # Preserve original order
         collate_fn=shallow_collate_fn  # Use custom collate function to preserve nested structures
     )
@@ -415,7 +385,7 @@ def _collect_features(dataset, pipeline, model_units_list, config, verbose=False
     data = [[[] for _ in range(len(model_units))] for model_units in model_units_list]
     
     # Process dataset in batches with progress tracking
-    for batch in tqdm(dataloader, desc="Processing batches", disable=not verbose):
+    for batch in tqdm(dataloader, desc="Processing batches", disable=not verbose, leave=False):
         # Prepare batch data including base and counterfactual inputs
         batched_base, batched_counterfactuals, inv_locations, feature_indices = _prepare_intervenable_inputs(
             pipeline, batch, model_units_list)
@@ -519,9 +489,11 @@ def _train_intervention(pipeline: Pipeline,
             - regularization_coefficient (float): Weight for sparsity regularization (mask only)
             - log_dir (str): Directory for TensorBoard logs
             - temperature_schedule (tuple): Start and end temperature for mask annealing
+            - temperature_annealing_fraction (float, optional): Fraction of training steps
+                                                              to anneal temperature (default: 0.5)
             - patience (int, optional): Epochs without improvement before early stopping
                                       Set to None to disable early stopping
-            - scheduler_type (str, optional): Learning rate scheduler type 
+            - scheduler_type (str, optional): Learning rate scheduler type
                                            (default: "constant")
             - memory_cleanup_freq (int, optional): Batch frequency for memory cleanup
                                                (default: 50)
@@ -542,7 +514,7 @@ def _train_intervention(pipeline: Pipeline,
     # ----- Data Preparation ----- #
     dataloader = DataLoader(
         counterfactual_dataset,
-        batch_size=config["batch_size"],
+        batch_size=config["train_batch_size"],
         shuffle=config.get("shuffle", True),
         collate_fn=shallow_collate_fn  # Use custom collate function to preserve nested structures
     )
@@ -552,7 +524,7 @@ def _train_intervention(pipeline: Pipeline,
     
     # ----- Configuration ----- #
     num_epoch = config['training_epoch']
-    regularization_coefficient = config['regularization_coefficient']
+    regularization_coefficient = config.get('masking', {}).get('regularization_coefficient', 1e-4)
     memory_cleanup_freq = config.get('memory_cleanup_freq', 50)
     patience = config.get('patience', None)  # Default to no early stopping
     scheduler_type = config.get('scheduler_type', 'constant')
@@ -586,11 +558,19 @@ def _train_intervention(pipeline: Pipeline,
     # ----- Temperature Scheduling for Mask Interventions ----- #
     temperature_schedule = None
     if (intervention_type == "mask"):
-        temperature_start, temperature_end = config['temperature_schedule']
-        temperature_schedule = torch.linspace(temperature_start, temperature_end,
-                                            num_epoch * len(dataloader) + 1)
+        temperature_start, temperature_end = config.get('masking', {}).get('temperature_schedule', (1.0, 0.01))
+        temperature_annealing_fraction = config.get('masking', {}).get('temperature_annealing_fraction', 0.5)
+
+        # Calculate number of steps for annealing
+        total_steps = num_epoch * len(dataloader)
+        annealing_steps = int(total_steps * temperature_annealing_fraction)
+
+        # Create schedule: anneal for first fraction of steps, then stay constant
+        annealing_schedule = torch.linspace(temperature_start, temperature_end, annealing_steps + 1)
+        constant_schedule = torch.full((total_steps - annealing_steps,), temperature_end)
+        temperature_schedule = torch.cat([annealing_schedule, constant_schedule])
         temperature_schedule = temperature_schedule.to(pipeline.model.dtype).to(pipeline.model.device)
-        
+
         # Set initial temperature for all mask interventions
         for k, v in intervenable_model.interventions.items():
             if isinstance(v, tuple):
@@ -601,12 +581,14 @@ def _train_intervention(pipeline: Pipeline,
                     temperature_schedule[scheduler._step_count])
 
     # ----- Training Loop ----- #
-    train_iterator = trange(0, int(num_epoch), desc="Epoch")
+    train_iterator = tqdm(range(0, int(num_epoch)),
+                         desc=f"Training {str(model_units_list)[:100]}...",
+                         leave=False)
     for epoch in train_iterator:
         epoch_iterator = tqdm(dataloader,
                             desc=f"Epoch: {epoch}",
-                            position=0,
-                            leave=True)
+                            position=1,
+                            leave=False)
         
         aggregated_stats = collections.defaultdict(list)
         
@@ -626,15 +608,22 @@ def _train_intervention(pipeline: Pipeline,
 
             # Add sparsity loss for mask interventions
             if intervention_type == "mask":
+                masks = []
+                temp = temperature_schedule[scheduler._step_count]
                 for k, v in intervenable_model.interventions.items():
                     if isinstance(v, tuple):
                         loss = loss + regularization_coefficient * intervenable_model.interventions[k][0].get_sparsity_loss()
-                        intervenable_model.interventions[k][0].set_temperature(
-                            temperature_schedule[scheduler._step_count])
+                        masks.append(intervenable_model.interventions[k][0].mask)
+                        intervenable_model.interventions[k][0].set_temperature(temp)
                     else:
                         loss = loss + regularization_coefficient * intervenable_model.interventions[k].get_sparsity_loss()
-                        intervenable_model.interventions[k].set_temperature(
-                            temperature_schedule[scheduler._step_count])
+                        masks.append(intervenable_model.interventions[k].mask)
+                        intervenable_model.interventions[k].set_temperature(temp)
+                if config["featurizer_kwargs"]["tie_masks"]:
+                    masks = torch.cat(masks)
+                    sparse_loss = torch.norm(torch.sigmoid(masks / temp,), p=1)
+                    loss = loss + regularization_coefficient * sparse_loss
+
 
             # Update statistics
             aggregated_stats['loss'].append(loss.item())
@@ -664,6 +653,24 @@ def _train_intervention(pipeline: Pipeline,
             if step % memory_cleanup_freq == 0 and torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
+        # Update progress bar with epoch summary
+        epoch_avg_loss = np.mean(aggregated_stats['loss'])
+        postfix_dict = {"loss": f"{epoch_avg_loss:.4f}"}
+
+        if aggregated_stats['metrics']:
+            # Aggregate metrics across all batches in the epoch
+            all_metrics = {}
+            for batch_metrics in aggregated_stats['metrics']:
+                for k, v in batch_metrics.items():
+                    if k not in all_metrics:
+                        all_metrics[k] = []
+                    all_metrics[k].append(v)
+            # Add metrics to postfix
+            for k, v in all_metrics.items():
+                postfix_dict[k] = f"{np.mean(v):.4f}"
+
+        train_iterator.set_postfix(postfix_dict)
+
         # Early stopping check at end of epoch
         if early_stopping_enabled:
             epoch_avg_loss = np.mean(aggregated_stats['loss'])
@@ -675,6 +682,8 @@ def _train_intervention(pipeline: Pipeline,
                 if patience_counter >= patience:
                     print(f"Early stopping at epoch {epoch+1}/{num_epoch}")
                     break
+    
+
 
     # ----- Finalize Logging ----- #
     tb_writer.flush()
@@ -690,16 +699,28 @@ def _train_intervention(pipeline: Pipeline,
             if isinstance(v, tuple):
                 v = v[0]
                 
-            # Get binary mask and indices
-            mask_binary = (torch.sigmoid(v.mask) > 0.5).float().cpu()
-            indices = torch.nonzero(mask_binary).numpy().flatten().tolist()
+            if config["featurizer_kwargs"]["tie_masks"]:
+                # If masks are tied, use the average mask across all units
+                if torch.sigmoid(v.mask[0]) > 0.5:
+                    indices = None
+                else:
+                    indices = []
+            else:
+                # Get binary mask and indices
+                mask_binary = (torch.sigmoid(v.mask) > 0.5).float().cpu()
+                indices = torch.nonzero(mask_binary).numpy().flatten().tolist()
             
             # Update model unit
             model_unit.set_feature_indices(indices)
-            
+
             # Log selected features
-            tb_writer.add_text("Selected features", f"Number Selected features: {len(indices)}")
+            num_features = "all" if indices is None else len(indices)
+            tb_writer.add_text("Selected features", f"Number Selected features: {num_features}")
             tb_writer.add_text("Selected features", f"Selected features: {indices}")
             
     # ----- Cleanup ----- #
     _delete_intervenable_model(intervenable_model)
+
+    summary = f"Trained intervention for {str(model_units_list)[:200]}"
+    summary += "\nFinal metrics: " + " ".join([f"{k}: {v}" for k, v in postfix_dict.items()])
+    return summary

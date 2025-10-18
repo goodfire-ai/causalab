@@ -2,10 +2,6 @@ import types
 import torch
 import pytest
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 # ---------------------------------------------------------------------------
 # Dummy HuggingFace‑like stubs
 # ---------------------------------------------------------------------------
@@ -130,9 +126,9 @@ def test_load_returns_device_tensors():
 def test_generate_and_dump():
     pipe = LMPipeline("dummy", max_new_tokens=3)
     output = pipe.generate(["hello", "world"])
-    assert set(output.keys()) == {"scores", "sequences"}
+    assert set(output.keys()) == {"scores", "sequences", "string"}
     assert output["sequences"].shape == (2, 3)
-    text = pipe.dump(output)
+    text = pipe.dump(output["sequences"])
     assert isinstance(text, list) and len(text) == 2
 
 

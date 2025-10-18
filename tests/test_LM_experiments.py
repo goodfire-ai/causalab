@@ -1,67 +1,18 @@
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 import pytest
 import torch
 import numpy as np
 import os
 from unittest.mock import MagicMock, patch, PropertyMock, ANY
 
-from experiments.residual_stream_experiment import (
-    LM_loss_and_metric_fn, 
-    compute_metrics, 
-    compute_cross_entropy_loss,
-    PatchResidualStream
+from experiments.LM_experiments.LM_utils import (
+    LM_loss_and_metric_fn,
+    compute_cross_entropy_loss
 )
+from experiments.LM_experiments.residual_stream_experiment import PatchResidualStream
 
 # --------------------------------------------------------------------------- #
 #  Utility Function Tests                                                      #
 # --------------------------------------------------------------------------- #
-
-class TestComputeMetrics:
-    """Tests for the compute_metrics function."""
-    
-    def test_perfect_predictions(self):
-        """Test with predictions matching labels exactly."""
-        predicted = torch.tensor([[1, 2, 3], [4, 5, 6]])
-        labels = torch.tensor([[1, 2, 3], [4, 5, 6]])
-        pad_id = 0
-        
-        metrics = compute_metrics(predicted, labels, pad_id)
-        assert metrics["accuracy"] == 1.0
-        assert metrics["token_accuracy"] == 1.0
-        
-    def test_partial_predictions(self):
-        """Test with partially correct predictions."""
-        predicted = torch.tensor([[1, 2, 9], [4, 9, 6]])
-        labels = torch.tensor([[1, 2, 3], [4, 5, 6]])
-        pad_id = 0
-        
-        metrics = compute_metrics(predicted, labels, pad_id)
-        assert metrics["accuracy"] == 0.0  # No sequence fully correct
-        assert pytest.approx(metrics["token_accuracy"], 0.01) == 4/6  # 4 correct out of 6 tokens
-        
-    def test_with_padding(self):
-        """Test with padded sequences."""
-        predicted = torch.tensor([[1, 2, 3, 0], [4, 5, 0, 0]])
-        labels = torch.tensor([[1, 2, 3, 0], [4, 5, 0, 0]])
-        pad_id = 0
-        
-        metrics = compute_metrics(predicted, labels, pad_id)
-        assert metrics["accuracy"] == 1.0
-        assert metrics["token_accuracy"] == 1.0
-        
-    def test_empty_inputs(self):
-        """Test with empty inputs."""
-        # Create singleton dimension tensors that represent empty sequences
-        predicted = torch.tensor([[0]])
-        labels = torch.tensor([[0]])
-        pad_id = 0
-        
-        metrics = compute_metrics(predicted, labels, pad_id)
-        assert "accuracy" in metrics
-        assert "token_accuracy" in metrics
 
 
 class TestComputeCrossEntropyLoss:
@@ -131,7 +82,7 @@ class TestLMLossAndMetricFn:
             "input_ids": torch.tensor([[1, 2, 3]]),
             "attention_mask": torch.tensor([[1, 1, 1]])
         }
-        pipeline.dump.side_effect = lambda x, **kwargs: ["decoded_text"]
+        pipeline.dump.side_effect = lambda x, **kwargs: "decoded_text"
         return pipeline
         
     @pytest.fixture
@@ -150,7 +101,7 @@ class TestLMLossAndMetricFn:
         return {
             "input": ["test input"],
             "counterfactual_inputs": [["cf input 1"], ["cf input 2"]],
-            "label": ["expected output"]
+            "label": [{"string": "expected output"}]
         }
         
     @pytest.fixture
@@ -161,11 +112,11 @@ class TestLMLossAndMetricFn:
         unit.get_feature_indices.return_value = [0, 1, 2]
         return [[unit]]
     
-    def test_loss_and_metric_fn_basic(self, mock_pipeline, mock_intervenable_model, 
+    def test_loss_and_metric_fn_basic(self, mock_pipeline, mock_intervenable_model,
                                     mock_batch, mock_model_units_list):
         """Test basic functionality of loss_and_metric_fn."""
         # Mock _prepare_intervenable_inputs to return expected values
-        with patch('experiments.residual_stream_experiment._prepare_intervenable_inputs') as mock_prepare:
+        with patch('experiments.LM_experiments.LM_utils._prepare_intervenable_inputs') as mock_prepare:
             # Configure the mock
             mock_prepare.return_value = (
                 {"input_ids": torch.tensor([[1, 2, 3]]), "attention_mask": torch.tensor([[1, 1, 1]])},

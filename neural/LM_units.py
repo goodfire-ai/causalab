@@ -11,13 +11,11 @@ All helpers inherit from :class:`model_units.AtomicModelUnit`, so they carry
 the full featurizer + feature indexing machinery.
 """
 
-import sys, os, json
-from pathlib import Path
+import os
+import json
 from typing import List, Union
 
-sys.path.append(str(Path(__file__).resolve().parent.parent))  # non-pkg path hack
-
-from neural.model_units import (  # noqa: E402  (import after path hack)
+from neural.model_units import (
     AtomicModelUnit,
     Component,
     StaticComponent,
@@ -52,24 +50,31 @@ class TokenPosition(ComponentIndexer):
         selected token(s) wrapped in ``**bold**``.  The rest of the
         prompt is unchanged.
 
-        Note that whitespace handling may be approximate for tokenizers 
+        Note that whitespace handling may be approximate for tokenizers
         that encode leading spaces as special glyphs (e.g. ``Ġ``).
         """
         ids = self.pipeline.load(input)["input_ids"][0]
         highlight = self.index(input)
         highlight = highlight if isinstance(highlight, list) else [highlight]
 
+        pad_token_id = self.pipeline.tokenizer.pad_token_id
+
         return "".join(
             f"**{self.pipeline.tokenizer.decode(t)}**" if i in highlight else self.pipeline.tokenizer.decode(t)
-            for i, t in enumerate(ids)
+            for i, t in enumerate(ids) if t != pad_token_id
         )
 
 
-# Convenience indexer
+# Convenience indexers
 def get_last_token_index(input: dict, pipeline: LMPipeline):
     """Return a one-element list containing the *last* token index."""
     ids = list(pipeline.load(input)["input_ids"][0])
     return [len(ids) - 1]
+
+def get_all_tokens(input: dict, pipeline: LMPipeline):
+    """Return a list containing all token indices."""
+    ids = list(pipeline.load(input)["input_ids"][0])
+    return list(range(len(ids)))
 
 
 # --------------------------------------------------------------------------- #

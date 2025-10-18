@@ -9,58 +9,72 @@ experiments that extend intervention_experiment.py
 DEFAULT_CONFIG = {
     # ========== General Experiment Parameters ==========
     # Batch size for training and general processing
-    "batch_size": 32,
-    
-    # Batch size specifically for evaluation (defaults to batch_size if not set)
+    "train_batch_size": 32,
+
+    # Batch size specifically for evaluation
     "evaluation_batch_size": 32,
-    
+
     # Name of the method/experiment being run
     "method_name": "InterventionExperiment",
-    
-    # Whether to output raw scores/logits instead of decoded text
-    "output_scores": False,
-    
-    # Whether to compare raw LM outputs to the causal model output
-    # instead of processed/decoded outputs
-    "check_raw": False,
-    
-    # ========== Training Parameters ==========
+
+    # Whether to include raw scores/logits in output dictionary and keep in memory
+    "output_scores": True,
+
+    # Number of top-k logits to save when writing results to disk (0 or None to disable)
+    "save_top_k_logits": 5,
+
+    # ========== General Training Parameters ==========
     # Number of training epochs
     "training_epoch": 3,
-    
+
     # Initial learning rate for optimization
     "init_lr": 1e-2,
-    
-    # L1/L2 regularization coefficient for sparsity
-    "regularization_coefficient": 1e-4,
-    
+
     # Maximum number of tokens to generate for output
     "max_output_tokens": 1,
-    
+
     # Directory for TensorBoard logs
     "log_dir": "logs",
-    
-    # Number of features for DAS/DBM methods
-    "n_features": 32,
-    
-    # Temperature annealing schedule for mask-based methods (start, end)
-    "temperature_schedule": (1.0, 0.01),
-    
+
     # ========== Optional Training Parameters ==========
     # Early stopping patience (None to disable)
     "patience": None,
-    
+
     # Learning rate scheduler type ("constant", "linear", "cosine")
     "scheduler_type": "constant",
-    
+
     # Frequency of memory cleanup during training (in batches)
     "memory_cleanup_freq": 50,
-    
+
     # Whether to shuffle training data
     "shuffle": True,
 
-    # Whether to save raw_outputs in the results
-    "raw_outputs": True
+
+    # ========== DAS-specific Parameters ==========
+    # Used in train_interventions() when method="DAS"
+    "DAS": {
+        # Number of features/dimensions for the learned subspace
+        "n_features": 32,
+    },
+
+    # ========== DBM/Masking-specific Parameters ==========
+    # Used in train_interventions() when method="DBM"
+    "masking": {
+        # L1 regularization coefficient for sparsity
+        "regularization_coefficient": 1e-4,
+
+        "temperature_annealing_fraction": 0.5,  # Fraction of training steps to anneal temperature
+
+        # Temperature annealing schedule for Gumbel-Softmax (start, end)
+        "temperature_schedule": (1.0, 0.001),
+    },
+
+    # Keyword arguments to pass to Featurizer constructors
+    # This allows flexible configuration of featurizer behavior
+    "featurizer_kwargs": {
+        # Whether to tie mask weights within each atomic model unit (DBM only)
+        "tie_masks": False
+    }
 }
 
 # Preset configurations for common experiments

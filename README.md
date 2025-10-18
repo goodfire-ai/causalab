@@ -66,6 +66,11 @@ The codebase implements five baseline approaches for feature construction and se
 - `filter_experiment.py`: Filtering and selection experiments
 - `aggregate_experiments.py`: Tools for running and aggregating multiple experiments
 
+#### `tasks/`
+- `task.py`: Base Task class for organizing causal models, dataset generators, and token positions
+- `MCQA/mcqa.py`: Multiple Choice Question Answering task implementation with positional causal model
+- `IOI/ioi.py`: Indirect Object Identification task (example from literature)
+
 #### `tests/`
 Comprehensive test suite covering all core components with specialized tests for pyvene integration in `test_pyvene_core/`
 
@@ -76,6 +81,12 @@ Comprehensive test suite covering all core components with specialized tests for
 ```bash
 git clone https://github.com/your-org/causal-abstraction.git
 cd causal-abstraction
+pip install poetry  # if not already installed
+poetry install
+```
+
+Alternatively with pip:
+```bash
 pip install -r requirements.txt
 ```
 
@@ -84,4 +95,63 @@ pip install -r requirements.txt
 - **PyTorch**: Deep learning framework for model operations
 - **pyvene**: Library for causal interventions on neural networks
 - **transformers**: Hugging Face library for language model access
+- **datasets**: Hugging Face datasets library for data management
+- **scikit-learn**: For dimensionality reduction techniques like PCA
 - **pytest**: Testing framework
+
+### Quick Start with Onboarding Tutorial
+
+The best way to understand the codebase is through the onboarding tutorial notebooks in `demos/onboarding_tutorial/`:
+
+1. **[01_define_MCQA_task.ipynb](demos/onboarding_tutorial/01_define_MCQA_task.ipynb)**: Learn how to define causal models and counterfactual datasets
+2. **[02_trace_residual_stream.ipynb](demos/onboarding_tutorial/02_trace_residual_stream.ipynb)**: Trace information flow through language model layers
+3. **[03_localize_with_patching.ipynb](demos/onboarding_tutorial/03_localize_with_patching.ipynb)**: Localize causal variables using activation patching
+4. **[04_train_DAS_and_DBM.ipynb](demos/onboarding_tutorial/04_train_%20DAS_and_DBM.ipynb)**: Train precise interventions with supervised methods
+
+### Running Tests
+
+```bash
+pytest tests/  # Run all tests
+pytest tests/test_pyvene_core/  # Run pyvene integration tests
+```
+## Example Tasks
+
+The repository includes several example tasks:
+
+### MCQA (Multiple Choice Question Answering)
+A simple task where the model answers color-based multiple choice questions. Demonstrates:
+- Positional reasoning (which choice position contains the correct answer)
+- Token-level interventions
+- Different counterfactual strategies
+
+### IOI (Indirect Object Identification)
+A more complex task involving name resolution in sentences. Shows:
+- Multi-variable causal models
+- Attention head analysis
+- Complex counterfactual relationships
+
+## Configuration and Customization
+
+The codebase uses configuration dictionaries for experiment parameters:
+
+```python
+config = {
+    "batch_size": 64,
+    "training_epoch": 10,
+    "init_lr": 0.001,
+    "DAS": {
+        "n_features": 16
+    },
+    "masking": {
+        "regularization_coefficient": 0.1,
+        "temperature_schedule": (1.0, 0.01)
+    }
+}
+```
+
+Key parameters:
+- `batch_size`: Number of examples processed together
+- `training_epoch`: Number of training iterations for supervised methods
+- `init_lr`: Learning rate for gradient-based optimization
+- `DAS.n_features`: Number of orthogonal directions to learn
+- `masking.regularization_coefficient`: Sparsity penalty for binary masks

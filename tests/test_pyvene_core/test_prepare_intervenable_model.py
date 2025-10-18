@@ -1,7 +1,4 @@
 # tests/test_pyvene_core/test_prepare_intervenable_model_integration.py
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 import pytest
 import torch
