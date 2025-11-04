@@ -38,6 +38,11 @@ class CounterfactualDataset():
             # Verify it has the required features
             assert "input" in dataset.features, "Provided dataset missing 'input' feature"
             assert "counterfactual_inputs" in dataset.features, "Provided dataset missing 'counterfactual_inputs' feature"
+
+            # check that the first example doesn't have an input with the "raw_output" key and raise an error if it does
+            first_example = dataset[0]
+            if isinstance(first_example["input"], dict) and "raw_output" in first_example["input"]:
+                raise ValueError("The 'input' feature in the provided dataset contains a 'raw_output' key. Please ensure that the dataset only contains input data without model outputs.")
             
             # Initialize with the provided dataset
             self.dataset = dataset

@@ -24,9 +24,6 @@ class TestDatasetFiltering:
 
         assert filter_exp is not None
         assert filter_exp.pipeline == pipeline
-        assert filter_exp.causal_model == causal_model
-        assert filter_exp.checker == checker
-
     def test_filter_datasets(
         self,
         pipeline,
@@ -123,7 +120,6 @@ class TestPatchResidualStreamExperiment:
 
         experiment = PatchResidualStream(
             pipeline=pipeline,
-            causal_model=causal_model,
             layers=layers,
             token_positions=token_positions[:2],  # Use first 2 positions for speed
             checker=checker,
@@ -131,9 +127,7 @@ class TestPatchResidualStreamExperiment:
         )
 
         assert experiment is not None
-        assert experiment.pipeline == pipeline
-        assert experiment.causal_model == causal_model
-        assert experiment.layers == layers
+        assert experiment.pipeline == pipeline        assert experiment.layers == layers
 
     def test_perform_interventions_structure(
         self,
@@ -148,7 +142,6 @@ class TestPatchResidualStreamExperiment:
 
         experiment = PatchResidualStream(
             pipeline=pipeline,
-            causal_model=causal_model,
             layers=layers,
             token_positions=token_positions[:2],  # Use fewer positions for speed
             checker=checker,
@@ -203,10 +196,8 @@ class TestPatchResidualStreamExperiment:
 
         experiment = PatchResidualStream(
             pipeline=pipeline,
-            causal_model=causal_model,
             layers=layers,
             token_positions=token_positions[:2],
-            checker=checker,
             config={"batch_size": 8}
         )
 
@@ -239,10 +230,8 @@ class TestPatchResidualStreamExperiment:
 
         experiment = PatchResidualStream(
             pipeline=pipeline,
-            causal_model=causal_model,
             layers=layers,
             token_positions=token_positions[:2],
-            checker=checker,
             config={"batch_size": 8}
         )
 
@@ -294,7 +283,6 @@ class TestIntegrationWorkflow:
         layers = list(range(0, min(2, pipeline.get_num_layers())))
         experiment = PatchResidualStream(
             pipeline=pipeline,
-            causal_model=causal_model,
             layers=layers,
             token_positions=token_positions[:1],  # Just one position
             checker=checker,

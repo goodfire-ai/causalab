@@ -187,10 +187,8 @@ class TestPatchResidualStream:
         with patch('neural.featurizers.Featurizer'):
             obj = PatchResidualStream(
                 pipeline=mock_pipeline,
-                causal_model=mock_causal_model,
                 layers=[0, 1],
-                token_positions=mock_token_positions,
-                checker=mock_checker
+                token_positions=mock_token_positions
             )
         
         # Now manually replace the model_units_lists with properly mocked structures
@@ -253,30 +251,17 @@ class TestPatchResidualStream:
         layers = [1, 0]
         positions = ["pos1", "pos2"]
         title = "Test Heatmap"
-        
-        # Mock all the matplotlib and os functions
-        with patch('matplotlib.pyplot.figure') as mock_figure, \
-             patch('matplotlib.pyplot.savefig') as mock_savefig, \
-             patch('matplotlib.pyplot.close') as mock_close, \
-             patch('matplotlib.pyplot.xlabel') as mock_xlabel, \
-             patch('matplotlib.pyplot.ylabel') as mock_ylabel, \
-             patch('matplotlib.pyplot.title') as mock_title, \
-             patch('matplotlib.pyplot.yticks') as mock_yticks, \
-             patch('matplotlib.pyplot.tight_layout') as mock_tight_layout, \
-             patch('seaborn.heatmap') as mock_heatmap, \
-             patch('os.makedirs') as mock_makedirs, \
-             patch('os.path.dirname', return_value="/fake/path"):
-            
-            # Prevent figure manipulation
-            mock_figure.return_value = MagicMock()
-            
+
+        # Mock the consolidated create_heatmap function at the import location
+        with patch('experiments.LM_experiments.residual_stream_experiment.create_heatmap') as mock_create_heatmap:
             # Test with no save path (display mode)
             patch_object._create_heatmap(score_matrix, layers, positions, title)
-            
-            # Test with save path - should use mocked path functions
+
+            # Test with save path
             patch_object._create_heatmap(score_matrix, layers, positions, title, save_path="/fake/path/test.png")
-            
-            mock_savefig.assert_called_once()
+
+            # Verify create_heatmap was called twice
+            assert mock_create_heatmap.call_count == 2
     
     def test_plot_average_heatmap(self, patch_object):
         """Test _plot_average_heatmap method."""
@@ -300,7 +285,7 @@ class TestPatchResidualStream:
                     }
                 }
             },
-            "task_name": "test_task"
+            "experiment_id": "test_task"
         }
         
         layers = [0]
@@ -338,7 +323,7 @@ class TestPatchResidualStream:
                     }
                 }
             },
-            "task_name": "test_task"
+            "experiment_id": "test_task"
         }
         
         layers = [0]
@@ -368,7 +353,7 @@ class TestPatchResidualStream:
                     }
                 }
             },
-            "task_name": "test_task"
+            "experiment_id": "test_task"
         }
         
         # Replace all component methods with stubs

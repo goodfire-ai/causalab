@@ -17,11 +17,16 @@ DEFAULT_CONFIG = {
     # Name of the method/experiment being run
     "method_name": "InterventionExperiment",
 
+    # Unique identifier for this experiment configuration
+    "id": "default_experiment",
+
     # Whether to include raw scores/logits in output dictionary and keep in memory
     "output_scores": True,
 
-    # Number of top-k logits to save when writing results to disk (0 or None to disable)
-    "save_top_k_logits": 5,
+    # Number of top-k logits to extract and keep in memory (applied immediately after generation)
+    # Set to None or 0 to keep full vocabulary logits (uses ~256K floats per token, can cause OOM)
+    # Recommended: 10-50 (reduces memory by ~5000-25000x)
+    "top_k_logits": 10,
 
     # ========== General Training Parameters ==========
     # Number of training epochs

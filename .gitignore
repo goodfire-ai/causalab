@@ -1,6 +1,20 @@
 __pycache__
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
 content/
 results/
 logs/
 
 run_baseline.sh
+
+.venv/
+.python-version
+
+demos/onboarding_tutorial/*results/
+
+tasks/**/*results
+tasks/**/*datasets

@@ -3,8 +3,10 @@
 import pytest
 import torch
 from neural.pipeline import LMPipeline
-from tasks.MCQA.mcqa import MCQA_task
 from causal.counterfactual_dataset import CounterfactualDataset
+from tasks.MCQA.causal_models import positional_causal_model
+from tasks.MCQA.counterfactuals import different_symbol, same_symbol_different_position, random_counterfactual
+from tasks.MCQA.token_positions import create_correct_symbol_token_position
 
 
 @pytest.fixture(scope="module")
@@ -31,7 +33,7 @@ def pipeline(device):
 @pytest.fixture(scope="module")
 def causal_model():
     """Load MCQA positional causal model."""
-    return MCQA_task.causal_models["positional"]
+    return positional_causal_model
 
 
 @pytest.fixture
@@ -50,7 +52,7 @@ def small_different_symbol_dataset():
     """Generate small different_symbol counterfactual dataset."""
     return CounterfactualDataset.from_sampler(
         8,
-        MCQA_task.dataset_generators["different_symbol"]
+        different_symbol
     )
 
 
@@ -59,7 +61,7 @@ def small_same_symbol_diff_position_dataset():
     """Generate small same_symbol_different_position counterfactual dataset."""
     return CounterfactualDataset.from_sampler(
         8,
-        MCQA_task.dataset_generators["same_symbol_different_position"]
+        same_symbol_different_position
     )
 
 
@@ -68,5 +70,11 @@ def small_random_dataset():
     """Generate small random counterfactual dataset."""
     return CounterfactualDataset.from_sampler(
         8,
-        MCQA_task.dataset_generators["random_counterfactual"]
+        random_counterfactual
     )
+
+
+@pytest.fixture
+def answer_token_position(pipeline):
+    """Create answer token position for the given pipeline."""
+    return create_correct_symbol_token_position(pipeline)

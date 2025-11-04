@@ -122,14 +122,14 @@ def _prepare_intervenable_inputs(pipeline, batch, model_units_list):
 
     #shape: (num_model_units, batch_size, num_component_indices)
     base_indices = [
-        model_unit.index_component(batched_base, batch=True)
-        for model_units in model_units_list 
+        model_unit.index_component(batched_base, batch=True, is_original=True)
+        for model_units in model_units_list
         for model_unit in model_units
     ]
 
     #shape: (num_model_units, batch_size, num_component_indices)
     counterfactual_indices = [
-        model_unit.index_component(batched_counterfactual, batch=True)
+        model_unit.index_component(batched_counterfactual, batch=True, is_original=False)
         for model_units, batched_counterfactual in zip(model_units_list, batched_counterfactuals)
         for model_unit in model_units
     ]

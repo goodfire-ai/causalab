@@ -42,11 +42,31 @@ class ComponentIndexer:
         self.id = id
 
     # ------------------------------------------------------------------ #
-    def index(self, input, batch=False):
-        """Return indices for *input* by delegating to wrapped function."""
+    def index(self, input, batch=False, is_original=True):
+        """Return indices for *input* by delegating to wrapped function.
+
+        Parameters
+        ----------
+        input :
+            The input to index.
+        batch : bool
+            Whether to process a batch of inputs.
+        is_original : bool
+            Whether this is an original input (True) or counterfactual (False).
+            Passed to the indexer function if it accepts this parameter.
+        """
         if batch:
-            return [self.indexer(i) for i in input]
-        return self.indexer(input)
+            return [self._call_indexer(i, is_original) for i in input]
+        return self._call_indexer(input, is_original)
+
+    def _call_indexer(self, input, is_original):
+        """Call the indexer function with is_original parameter if it accepts it."""
+        try:
+            # Try calling with is_original parameter
+            return self.indexer(input, is_original=is_original)
+        except TypeError:
+            # Fallback for indexers that don't accept is_original
+            return self.indexer(input)
 
     # ------------------------------------------------------------------ #
     def __repr__(self):

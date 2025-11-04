@@ -2,10 +2,6 @@
 
 This repository supports mechanistic interpretability experiments that reverse engineer what algorithm a neural network implements with causal abstraction.
 
- It supports the baseline experiments for the causal variable localization track of the Mechanistic Interpretability Benchmark (MIB).
-[![Paper](https://img.shields.io/badge/MIB_Paper-arXiv-b31b1b)](https://arxiv.org/abs/2504.13151) 
-[![GitHub](https://img.shields.io/badge/GitHub-MIB-blue)](https://github.com/aaronmueller/MIB/tree/main/MIB-causal-variable-track)
-
 ## Overview
 
  This codebase follows a causal abstraction approach, where we hypothesize high-level causal models of how LLMs might solve tasks, and then locate where and how these abstract variables are represented in the model.
@@ -42,7 +38,7 @@ The codebase implements five baseline approaches for feature construction and se
 
 4. **PCA (Principal Component Analysis)**: Uses unsupervised orthogonal directions derived from principal components. DBM can be used to align principal components with a high-level causal variable.
 
-5. **SAE (Sparse Autoencoder)**: Leverages pre-trained sparse autoencoders like GemmaScope and LlamaScope. DBM can be used to align principal components with a high-level causal variable.
+5. **SAE (Sparse Autoencoder)**: Leverages pre-trained sparse autoencoders like GemmaScope and LlamaScope. DBM can be used to align SAE features with a high-level causal variable.
 
 ## Repository Structure
 
@@ -60,16 +56,28 @@ The codebase implements five baseline approaches for feature construction and se
 
 #### `experiments/`
 - `pyvene_core.py`: Core utilities for creating, managing, and running intervention experiments using the pyvene library
-- `attention_head_experiment.py`: Experiments targeting attention head components
-- `residual_stream_experiment.py`: Experiments on residual stream representations
 - `intervention_experiment.py`: General intervention experiment framework
 - `filter_experiment.py`: Filtering and selection experiments
-- `aggregate_experiments.py`: Tools for running and aggregating multiple experiments
+- `benchmark_experiment.py`: Benchmark experiment utilities
+- `config.py`: Configuration management for experiments
+- `experiment_utils.py`: Utility functions for experiments
+- `visualizations.py`: Visualization tools for experiment results
+- `LM_experiments/`: Language model specific experiments
+  - `attention_head_experiment.py`: Experiments targeting attention head components
+  - `residual_stream_experiment.py`: Experiments on residual stream representations
+  - `LM_utils.py`: Utility functions for language model experiments
 
 #### `tasks/`
-- `task.py`: Base Task class for organizing causal models, dataset generators, and token positions
-- `MCQA/mcqa.py`: Multiple Choice Question Answering task implementation with positional causal model
-- `IOI/ioi.py`: Indirect Object Identification task (example from literature)
+Task implementations organized by directory. Each task contains:
+- `causal_models.py`: Task-specific causal model definitions
+- `counterfactuals.py`: Counterfactual generation logic
+- `token_positions.py`: Token position specifications for interventions
+
+Available tasks:
+- `MCQA/`: Multiple Choice Question Answering task implementation with positional causal model
+- `IOI/`: Indirect Object Identification task (example from literature)
+- `entity_binding/`: Entity binding task
+- `general_addition/`: General addition task
 
 #### `tests/`
 Comprehensive test suite covering all core components with specialized tests for pyvene integration in `test_pyvene_core/`
@@ -81,13 +89,13 @@ Comprehensive test suite covering all core components with specialized tests for
 ```bash
 git clone https://github.com/your-org/causal-abstraction.git
 cd causal-abstraction
-pip install poetry  # if not already installed
-poetry install
+uv sync
 ```
 
-Alternatively with pip:
+To install with development dependencies:
+
 ```bash
-pip install -r requirements.txt
+uv sync --extra dev
 ```
 
 ### Key Dependencies
@@ -106,7 +114,7 @@ The best way to understand the codebase is through the onboarding tutorial noteb
 1. **[01_define_MCQA_task.ipynb](demos/onboarding_tutorial/01_define_MCQA_task.ipynb)**: Learn how to define causal models and counterfactual datasets
 2. **[02_trace_residual_stream.ipynb](demos/onboarding_tutorial/02_trace_residual_stream.ipynb)**: Trace information flow through language model layers
 3. **[03_localize_with_patching.ipynb](demos/onboarding_tutorial/03_localize_with_patching.ipynb)**: Localize causal variables using activation patching
-4. **[04_train_DAS_and_DBM.ipynb](demos/onboarding_tutorial/04_train_%20DAS_and_DBM.ipynb)**: Train precise interventions with supervised methods
+4. **[04_train_ DAS_and_DBM.ipynb](demos/onboarding_tutorial/04_train_%20DAS_and_DBM.ipynb)**: Train precise interventions with supervised methods
 
 ### Running Tests
 
@@ -116,42 +124,16 @@ pytest tests/test_pyvene_core/  # Run pyvene integration tests
 ```
 ## Example Tasks
 
-The repository includes several example tasks:
+The repository includes several example tasks demonstrating different aspects of causal abstraction:
 
 ### MCQA (Multiple Choice Question Answering)
-A simple task where the model answers color-based multiple choice questions. Demonstrates:
-- Positional reasoning (which choice position contains the correct answer)
-- Token-level interventions
-- Different counterfactual strategies
+A simple task where the model answers color-based multiple choice questions, demonstrating positional reasoning and token-level interventions.
 
 ### IOI (Indirect Object Identification)
-A more complex task involving name resolution in sentences. Shows:
-- Multi-variable causal models
-- Attention head analysis
-- Complex counterfactual relationships
+A task involving name resolution in sentences, showing multi-variable causal models and attention head analysis.
 
-## Configuration and Customization
+### Entity Binding
+A task testing how models retrieve associated information by comparing direct indexing versus content-based positional search mechanisms.
 
-The codebase uses configuration dictionaries for experiment parameters:
-
-```python
-config = {
-    "batch_size": 64,
-    "training_epoch": 10,
-    "init_lr": 0.001,
-    "DAS": {
-        "n_features": 16
-    },
-    "masking": {
-        "regularization_coefficient": 0.1,
-        "temperature_schedule": (1.0, 0.01)
-    }
-}
-```
-
-Key parameters:
-- `batch_size`: Number of examples processed together
-- `training_epoch`: Number of training iterations for supervised methods
-- `init_lr`: Learning rate for gradient-based optimization
-- `DAS.n_features`: Number of orthogonal directions to learn
-- `masking.regularization_coefficient`: Sparsity penalty for binary masks
+### General Addition
+A task implementing arithmetic addition with both basic input-output models and intermediate models that include explicit carry and sum variables.

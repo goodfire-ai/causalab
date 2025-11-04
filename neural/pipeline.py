@@ -132,7 +132,7 @@ class LMPipeline(Pipeline):
         input: Union[Dict, List[Dict], str, List[str]],
         *,
         max_length: int | None = None,
-        padding_side: str | None = None,
+        padding_side: str | None = "left",
         add_special_tokens: bool = True,
         use_chat_template: bool | None = None,
         no_padding: bool = False,
@@ -241,7 +241,7 @@ class LMPipeline(Pipeline):
             return_dict_in_generate=True,
             output_scores=True,
             do_sample=False,
-            use_cache=False,
+            use_cache=True,
         )
         defaults.update(gen_kwargs)
         with torch.no_grad():
@@ -275,7 +275,7 @@ class LMPipeline(Pipeline):
             output_scores=True,
             intervene_on_prompt=True,
             do_sample=False,
-            use_cache=False,
+            use_cache=True,
         )
         defaults.update(gen_kwargs)
         with torch.no_grad():

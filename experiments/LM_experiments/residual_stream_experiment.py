@@ -10,8 +10,10 @@ import logging
 from collections import Counter
 
 from .LM_utils import LM_loss_and_metric_fn
+from experiments.visualizations import create_heatmap, create_text_output_grid, print_text_heatmap
 from experiments.intervention_experiment import *
 from causal.causal_model import CausalModel
+from causal.causal_utils import compute_interchange_scores
 from neural.LM_units import *
 from neural.model_units import *
 from neural.featurizers import *
@@ -46,22 +48,18 @@ class PatchResidualStream(InterventionExperiment):
 
     def __init__(self,
                  pipeline: LMPipeline,
-                 causal_model: CausalModel,
                  layers: List[int],
                  token_positions: List[TokenPosition],
-                 checker: Callable,
                  featurizers: Dict[Tuple[int, str], Featurizer] = None,
                  loss_and_metric_fn: Callable = LM_loss_and_metric_fn,
                  **kwargs):
         """
         Initialize ResidualStreamExperiment for analyzing residual stream interventions.
-        
+
         Args:
             pipeline: LMPipeline object for model execution
-            causal_model: CausalModel object for causal analysis
             layers: List of layer indices to analyze
             token_positions: List of ComponentIndexers for token positions
-            checker: Function to evaluate output accuracy
             featurizers: Dict mapping (layer, position.id) to Featurizer instances
             **kwargs: Additional configuration options
         """
@@ -80,12 +78,13 @@ class PatchResidualStream(InterventionExperiment):
                                                  Featurizer(n_features=pipeline.model.config.hidden_size,
                                                            **featurizer_kwargs))
                 target_output = True
+                actual_layer = layer
                 if layer == -1:
-                    layer = 0
+                    actual_layer = 0
                     target_output = False
                 model_units_lists.append([[
                     ResidualStream(
-                        layer=layer,
+                        layer=actual_layer,
                         token_indices=pos,
                         featurizer=featurizer,
                         shape=(pipeline.model.config.hidden_size,),
@@ -94,20 +93,65 @@ class PatchResidualStream(InterventionExperiment):
                     )
                 ]])
 
-        metadata_fn = lambda x: {"layer": x[0][0].component.get_layer(), 
-                                "position": x[0][0].component.get_index_id()}
+        metadata_fn = lambda x: {
+            "layer": -1 if (x[0][0].component.component_type == "block_input" and
+                            x[0][0].component.get_layer() == 0)
+                      else x[0][0].component.get_layer(),
+            "position": x[0][0].component.get_index_id()
+        }
 
         super().__init__(
             pipeline=pipeline,
-            causal_model=causal_model,
             model_units_lists=model_units_lists,
-            checker=checker,
             metadata_fn=metadata_fn,
             **kwargs
         )
         
         self.layers = layers
         self.token_positions = token_positions
+        self._token_positions_sorted = False  # Track if we've sorted yet
+
+    def perform_interventions(self, datasets, verbose: bool = False, save_dir=None, include_actual_outputs: bool = False):
+        """
+        Override to sort token positions based on first input before running interventions.
+        """
+        # Sort token positions using the first input from the first dataset
+        if not self._token_positions_sorted:
+            if datasets:
+                # Get first dataset
+                first_dataset = next(iter(datasets.values())) if isinstance(datasets, dict) else datasets
+                if len(first_dataset) > 0:
+                    # Get first example's input
+                    first_input = first_dataset[0]["input"]
+                    # Sort token positions
+                    self.token_positions = self._sort_token_positions_by_first_input(self.token_positions, first_input)
+                    self._token_positions_sorted = True
+
+        # Call parent implementation
+        return super().perform_interventions(datasets, verbose, save_dir, include_actual_outputs)
+
+    def _sort_token_positions_by_first_input(self, token_positions: List[TokenPosition], sample_input: Dict) -> List[TokenPosition]:
+        """
+        Sort token positions by their actual indices in a sample input.
+        """
+        if not token_positions:
+            return token_positions
+
+        # For each token position, get its first index
+        position_indices = {}
+        for i, token_pos in enumerate(token_positions):
+            try:
+                indices = token_pos.index(sample_input)
+                # Use the first index for sorting
+                first_idx = indices[0] if isinstance(indices, list) else indices
+                position_indices[i] = first_idx
+            except Exception:
+                # If we can't determine the index, put it at the end
+                position_indices[i] = float('inf')
+
+        # Sort token positions by their indices
+        sorted_indices = sorted(range(len(token_positions)), key=lambda i: position_indices[i])
+        return [token_positions[i] for i in sorted_indices]
 
     def build_SAE_feature_intervention(self, sae_loader: Callable[[int], Any]) -> None:
         """
@@ -174,7 +218,7 @@ class PatchResidualStream(InterventionExperiment):
     def plot_heatmaps(self, results: Dict, target_variables, save_path: str = None, average_counterfactuals: bool = False):
         """
         Generate heatmaps visualizing intervention scores across layers and positions.
-        
+
         Args:
             results: Dictionary containing experiment results from interpret_results()
             target_variables: List of variable names being analyzed
@@ -182,7 +226,7 @@ class PatchResidualStream(InterventionExperiment):
             average_counterfactuals: If True, averages scores across counterfactual datasets
         """
         target_variables_str = "-".join(target_variables)
-        
+
         token_ids = [token_pos.id for token_pos in self.token_positions]
         layers = list(reversed(self.layers))
 
@@ -191,7 +235,47 @@ class PatchResidualStream(InterventionExperiment):
             self._plot_average_heatmap(results, layers, token_ids, target_variables_str, save_path)
         else:
             self._plot_individual_heatmaps(results, layers, token_ids, target_variables_str, save_path)
-    
+
+    @staticmethod
+    def plot_heatmaps_from_results(results: Dict, target_variables: List[str],
+                                     layers: List[int], token_position_ids: List[str],
+                                     save_path: str = None, average_counterfactuals: bool = False):
+        """
+        Generate heatmaps without requiring an experiment object or pipeline.
+
+        This static method allows visualization of results without loading the full model,
+        which is much faster when you just want to create heatmaps from saved results.
+
+        Args:
+            results: Dictionary containing experiment results with scores
+            target_variables: List of variable names being analyzed
+            layers: List of layer indices used in the experiment
+            token_position_ids: List of token position IDs (strings)
+            save_path: Optional path to save the generated plots. If None, displays plots interactively.
+            average_counterfactuals: If True, averages scores across counterfactual datasets
+
+        Example:
+            >>> # No need to load model!
+            >>> PatchResidualStream.plot_heatmaps_from_results(
+            ...     results=scored_results,
+            ...     target_variables=["digit_0_0"],
+            ...     layers=[0, 1, 2, 3],
+            ...     token_position_ids=["number_0_tok0", "last_token"],
+            ...     save_path="output/heatmap_digit_0_0"
+            ... )
+        """
+        target_variables_str = "-".join(target_variables)
+        reversed_layers = list(reversed(layers))
+
+        # Create a temporary instance just to access the helper methods
+        # This avoids code duplication while not requiring pipeline
+        temp_instance = object.__new__(PatchResidualStream)
+
+        if average_counterfactuals:
+            temp_instance._plot_average_heatmap(results, reversed_layers, token_position_ids, target_variables_str, save_path)
+        else:
+            temp_instance._plot_individual_heatmaps(results, reversed_layers, token_position_ids, target_variables_str, save_path)
+
     def _build_score_matrix(self,
                             results: Dict,
                             layers: List,
@@ -290,8 +374,8 @@ class PatchResidualStream(InterventionExperiment):
             score_matrix=score_matrix,
             layers=layers,
             positions=positions,
-            title=f'Intervention Accuracy - Dataset: {dataset_name}\nTask: {results["task_name"]}\nIntervened Variables: {target_variables_str}',
-            save_path=os.path.join(save_path, f'heatmap_dataset_{safe_dataset_name}_task_{results["task_name"]}_variables_{target_variables_str}.png') if save_path else None
+            title=f'Intervention Accuracy - Dataset: {dataset_name}\nExperiment: {results["experiment_id"]}\nIntervened Variables: {target_variables_str}',
+            save_path=os.path.join(save_path, f'heatmap_dataset_{safe_dataset_name}_{results["experiment_id"]}_variables_{target_variables_str}.png') if save_path else None
         )
     
     def _plot_individual_heatmaps(self, results: Dict, layers: List, positions: List,
@@ -310,15 +394,15 @@ class PatchResidualStream(InterventionExperiment):
                 score_matrix=score_matrix,
                 layers=layers,
                 positions=positions,
-                title=f'Intervention Accuracy - Dataset: {dataset_name}\nTask: {results["task_name"]}\nIntervened Variables: {target_variables_str}',
-                save_path=os.path.join(save_path, f'heatmap_dataset_{safe_dataset_name}_task_{results["task_name"]}_variables_{target_variables_str}.png') if save_path else None
+                title=f'Intervention Accuracy - Dataset: {dataset_name}\nExperiment: {results["experiment_id"]}\nIntervened Variables: {target_variables_str}',
+                save_path=os.path.join(save_path, f'heatmap_dataset_{safe_dataset_name}_{results["experiment_id"]}_variables_{target_variables_str}.png') if save_path else None
             )
     
-    def _create_heatmap(self, score_matrix: np.ndarray, layers: List, positions: List, 
+    def _create_heatmap(self, score_matrix: np.ndarray, layers: List, positions: List,
                        title: str, save_path: Optional[str] = None):
         """
         Create and save/display a single heatmap.
-        
+
         Args:
             score_matrix: 2D numpy array with scores for each (layer, position) pair
             layers: List of layer indices
@@ -326,34 +410,188 @@ class PatchResidualStream(InterventionExperiment):
             title: Title for the heatmap
             save_path: Path to save the heatmap, or None to display it
         """
-        plt.figure(figsize=(10, 6))
-        display_matrix = np.round(score_matrix * 100, 2)
-        
-        # Create the heatmap using seaborn
-        sns.heatmap(
-            score_matrix,
-            xticklabels=positions,
-            yticklabels=layers,
-            cmap='viridis',
-            annot=display_matrix,
-            fmt="g",
-            cbar_kws={'label': 'Accuracy (%)'},
-            vmin=0,
-            vmax=1,
+        # Use the consolidated visualization function
+        create_heatmap(
+            score_matrix=score_matrix,
+            x_labels=positions,
+            y_labels=layers,
+            title=title,
+            save_path=save_path,
+            x_label='Position',
+            y_label='Layer',
+            use_custom_bounds=False,
+            cbar_label='Accuracy (%)',
+            figsize=(10, 6)
         )
-        
-        plt.yticks(rotation=0)
-        plt.xlabel('Position')
-        plt.ylabel('Layer')
-        plt.title(title)
-        plt.tight_layout()
-        
-        print(save_path)
+
+    def print_text_analysis(self, results: Dict, target_variables: List[str],
+                           save_path: Optional[str] = None) -> None:
+        """
+        Print a detailed text-based analysis of intervention accuracy scores using region-based breakdown.
+
+        This method identifies distinct regions in the score matrix (groups of cells with similar scores)
+        and reports statistics for each region, capturing both high AND low accuracy patterns.
+
+        Args:
+            results: Results dictionary from perform_interventions
+            target_variables: List of variable names being analyzed
+            save_path: Optional path to save the text output to a file
+        """
+        output_lines = []
+        output_lines.append("=" * 80)
+        output_lines.append("ACTIVATION PATCHING TEXT ANALYSIS")
+        output_lines.append("=" * 80)
+
+        token_ids = [token_pos.id for token_pos in self.token_positions]
+        layers = self.layers
+
+        # Analyze each variable
+        for target_vars in target_variables:
+            if not isinstance(target_vars, list):
+                target_vars = [target_vars]
+
+            target_variables_str = "-".join(target_vars)
+
+            output_lines.append(f"\n{'=' * 80}")
+            output_lines.append(f"Variable: {target_variables_str}")
+            output_lines.append(f"{'=' * 80}")
+
+            # Build score matrices for all datasets
+            matrices = self._build_score_matrix(results, layers, token_ids, target_variables_str)
+
+            if not matrices:
+                output_lines.append("  No data available for this variable")
+                continue
+
+            # Analyze each dataset
+            for dataset_name, score_matrix in matrices.items():
+                output_lines.append(f"\n{'-' * 80}")
+                output_lines.append(f"Dataset: {dataset_name}")
+                output_lines.append(f"{'-' * 80}")
+
+                # Overall statistics
+                mean_score = score_matrix.mean()
+                std_score = score_matrix.std()
+                min_score = score_matrix.min()
+                max_score = score_matrix.max()
+
+                output_lines.append(f"\nOverall: mean={mean_score:.1%} ± {std_score:.1%}, range=[{min_score:.1%}, {max_score:.1%}]")
+
+                if max_score == 0:
+                    output_lines.append("No localization found (all scores = 0)")
+                    continue
+
+                # Identify regions using clustering on score values
+                output_lines.append(f"\nRegion Breakdown (using natural clustering):")
+
+                # Get unique score values and cluster them
+                flat_scores = score_matrix.flatten()
+                unique_scores = np.unique(flat_scores)
+
+                # Use simple thresholding to identify clusters:
+                # Group scores that are within 10% of each other
+                clusters = []
+                for score in sorted(unique_scores):
+                    # Check if this score belongs to an existing cluster
+                    added = False
+                    for cluster in clusters:
+                        if abs(score - np.mean(cluster)) <= 0.10:
+                            cluster.append(score)
+                            added = True
+                            break
+                    if not added:
+                        clusters.append([score])
+
+                # Merge small clusters that are close together
+                merged_clusters = []
+                for cluster in clusters:
+                    if merged_clusters and abs(np.mean(cluster) - np.mean(merged_clusters[-1])) <= 0.15:
+                        merged_clusters[-1].extend(cluster)
+                    else:
+                        merged_clusters.append(cluster)
+
+                # For each cluster, create a region
+                for cluster_idx, cluster in enumerate(merged_clusters):
+                    cluster_min = min(cluster)
+                    cluster_max = max(cluster)
+                    cluster_mean = np.mean(cluster)
+
+                    # Find all cells in this score range
+                    mask = (score_matrix >= cluster_min - 0.01) & (score_matrix <= cluster_max + 0.01)
+
+                    if np.sum(mask) == 0:
+                        continue
+
+                    region_scores = score_matrix[mask]
+                    region_mean = region_scores.mean()
+                    region_std = region_scores.std()
+                    region_size = np.sum(mask)
+
+                    # Collect actual (layer, position) pairs in this region
+                    region_pairs = []
+                    for idx in np.ndindex(score_matrix.shape):
+                        if mask[idx]:
+                            layer = layers[idx[0]]
+                            pos = token_ids[idx[1]]
+                            score = score_matrix[idx]
+                            region_pairs.append((layer, pos, score))
+
+                    # Sort by score descending
+                    region_pairs.sort(key=lambda x: x[2], reverse=True)
+
+                    # Report region
+                    output_lines.append(f"\n  Region {cluster_idx + 1}: {cluster_min:.0%}-{cluster_max:.0%}")
+                    output_lines.append(f"    Mean: {region_mean:.1%} ± {region_std:.1%}")
+                    output_lines.append(f"    Size: {region_size} cells ({region_size/score_matrix.size*100:.1f}%)")
+
+                    # Show actual (layer, position) pairs
+                    if region_size <= 20:
+                        # Small region - show all pairs
+                        output_lines.append(f"    Cells:")
+                        for layer, pos, score in region_pairs:
+                            output_lines.append(f"      L{layer:2d} @ {pos:15s} ({score:.1%})")
+                    else:
+                        # Large region - show sample and summary
+                        output_lines.append(f"    Sample cells (top 5 by score):")
+                        for layer, pos, score in region_pairs[:5]:
+                            output_lines.append(f"      L{layer:2d} @ {pos:15s} ({score:.1%})")
+
+                        # Summarize coverage
+                        layers_in_region = set(layer for layer, pos, score in region_pairs)
+                        positions_in_region = set(pos for layer, pos, score in region_pairs)
+
+                        if len(layers_in_region) == len(layers):
+                            output_lines.append(f"    Coverage: All {len(layers)} layers")
+                        else:
+                            output_lines.append(f"    Coverage: {len(layers_in_region)}/{len(layers)} layers")
+
+                        if len(positions_in_region) == len(token_ids):
+                            output_lines.append(f"              All {len(token_ids)} positions")
+                        else:
+                            output_lines.append(f"              {len(positions_in_region)}/{len(token_ids)} positions: {', '.join(sorted(list(positions_in_region)[:5]))}{', ...' if len(positions_in_region) > 5 else ''}")
+
+                # Show best position for clarity
+                max_idx = np.unravel_index(score_matrix.argmax(), score_matrix.shape)
+                best_layer = layers[max_idx[0]]
+                best_pos = token_ids[max_idx[1]]
+                output_lines.append(f"\nBest single localization: L{best_layer} @ {best_pos} ({max_score:.1%})")
+
+        output_lines.append("\n" + "=" * 80)
+        output_lines.append("ANALYSIS COMPLETE")
+        output_lines.append("=" * 80)
+
+        # Join all lines
+        full_output = "\n".join(output_lines)
+
+        # Print to console
+        print(full_output)
+
+        # Optionally save to file
         if save_path:
-            # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            plt.savefig(save_path, bbox_inches='tight', dpi=300)
-        plt.show()
+            with open(save_path, 'w') as f:
+                f.write(full_output)
+            print(f"\nText analysis saved to: {save_path}")
 
 
 class SameLengthResidualStreamTracing:
@@ -380,22 +618,15 @@ class SameLengthResidualStreamTracing:
     
     def __init__(self,
                  pipeline: LMPipeline,
-                 causal_model: CausalModel,
-                 checker: Callable,
                  loss_and_metric_fn: Callable = LM_loss_and_metric_fn):
         """
         Initialize the SameLengthResidualStreamTracing experiment.
-        
+
         Args:
             pipeline: LMPipeline object for model execution
-            causal_model: CausalModel object for causal analysis
-            checker: Function to evaluate output accuracy (should return binary 0/1)
             loss_and_metric_fn: Function to compute loss and metrics
-            **kwargs: Additional configuration options passed to PatchResidualStream
         """
         self.pipeline = pipeline
-        self.causal_model = causal_model
-        self.checker = checker
         self.loss_and_metric_fn = loss_and_metric_fn
         
         # Get model configuration
@@ -478,113 +709,65 @@ class SameLengthResidualStreamTracing:
         self.token_positions = token_positions
         
         # Create all layers list
-        layers = list(range(self.num_layers))
+        layers = [-1] + list(range(self.num_layers))
         
         # Create single PatchResidualStream experiment with all layers and positions
         experiment = PatchResidualStream(
             pipeline=self.pipeline,
-            causal_model=self.causal_model,
             layers=layers,
             token_positions=token_positions,
-            checker=self.checker,
             featurizers=None,  # Use default featurizer
             loss_and_metric_fn=self.loss_and_metric_fn,
-            config={"batch_size": 1, "output_scores": True},  # Single example
+            config={"batch_size": 1, "output_scores": True, "id": "tracing_experiment"},  # Single example
         )
         
-        # Run the experiment once with all locations
-        results = experiment.perform_interventions(
-            {"tracing_example": dataset}, 
-            target_variables_list=[["raw_output"]],  # Use raw_output for binary accuracy
+        # Run the experiment once with all locations (get raw results)
+        raw_results = experiment.perform_interventions(
+            {"tracing_example": dataset}
         )
 
-        
         # Clean up memory after the experiment
         experiment._clean_memory()
         del experiment
-        return results
+        return raw_results
     
     def plot_raw_outputs(self, results: Dict, save_path: Optional[str] = None) -> None:
         """
         Display the raw generated outputs in a grid format with color coding.
-        
+
         This method creates a visualization showing the actual tokens generated under
         intervention at each (layer, position) combination. Unlike the heatmap which
         shows accuracy scores, this displays the raw text outputs with cells colored
         based on the output frequency (top 5 most frequent outputs get unique colors).
-        
+
         Args:
             results: Results dictionary from perform_interventions (must have raw_outputs preserved)
-            token_positions: List of TokenPosition objects used in the experiment
             save_path: Optional path to save the plot. If None, displays interactively.
-        
+
         Raises:
             ValueError: If raw_outputs are not found in the results
         """
-        
         token_positions = self.token_positions
         # Get dimensions for the grid
-        layers = list(range(self.num_layers))
+        layers = [-1] + list(range(self.num_layers))
         positions = [tp.id for tp in token_positions]
-        
-        # Create figure with appropriate size - add extra width for legend
-        fig_width = max(16, len(positions) * 2 + 4)  # Added space for legend
-        fig_height = max(8, len(layers) * 0.8)
-        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-        
-        # Hide axes
-        ax.set_xlim(0, len(positions))
-        ax.set_ylim(0, len(layers))
-        ax.axis('off')
-        
+
         # Extract raw outputs and convert to text
         dataset_name = "tracing_example"  # This is the dataset name used in run()
-        
+
         # Create a matrix to store text outputs
         text_outputs = [['' for _ in positions] for _ in layers]
-        
-        # First pass: collect all outputs to count frequencies
-        output_counter = Counter()
-        
-        # Process results to extract and count raw outputs
+
+        # Process results to extract raw outputs
         if dataset_name in results["dataset"]:
             for unit_str, unit_data in results["dataset"][dataset_name]["model_unit"].items():
                 if "raw_outputs" not in unit_data:
                     raise ValueError("raw_outputs not found in results. Ensure config['output_scores']=True when running the experiment.")
-                
-                if "metadata" in unit_data and unit_data["raw_outputs"]:
-                    # Get the decoded string directly
-                    raw_outputs = unit_data["raw_outputs"]
-                    if isinstance(raw_outputs, list) and len(raw_outputs) > 0:
-                        # raw_outputs is a list of batch dicts
-                        first_batch = raw_outputs[0]
-                        if isinstance(first_batch, dict) and "string" in first_batch:
-                            decoded_text = first_batch["string"]
-                            if isinstance(decoded_text, list):
-                                decoded_text = decoded_text[0]
-                            output_counter[decoded_text] += 1
-        
-        # Define light colors for the top 5 most frequent outputs
-        light_colors = [
-            '#FFFFE0',  # Light yellow
-            '#FFE4E1',  # Light red/pink
-            '#E0FFE0',  # Light green
-            '#E0E0FF',  # Light blue
-            '#F5DEB3',  # Light brown/wheat
-        ]
-        
-        # Get top 5 most frequent outputs and create color mapping
-        top_outputs = [output for output, _ in output_counter.most_common(5)]
-        output_color_map = {output: light_colors[i] for i, output in enumerate(top_outputs)}
-        default_color = 'white'  # For outputs not in top 5
-        
-        # Second pass: process results and store outputs
-        if dataset_name in results["dataset"]:
-            for unit_str, unit_data in results["dataset"][dataset_name]["model_unit"].items():
+
                 if "metadata" in unit_data:
                     layer = unit_data["metadata"].get("layer")
                     position_str = unit_data["metadata"].get("position")
-                    
+
                     # Find position index
                     try:
                         pos_idx = positions.index(position_str)
@@ -596,7 +779,10 @@ class SameLengthResidualStreamTracing:
                                 break
                         else:
                             continue
-                    
+
+                    # Map layer to list index (layer -1 -> index 0, layer 0 -> index 1, etc.)
+                    layer_idx = layers.index(layer)
+
                     # Get the decoded string directly
                     if unit_data["raw_outputs"]:
                         raw_outputs = unit_data["raw_outputs"]
@@ -607,125 +793,161 @@ class SameLengthResidualStreamTracing:
                                 decoded_text = first_batch["string"]
                                 if isinstance(decoded_text, list):
                                     decoded_text = decoded_text[0]
-                                text_outputs[layer][pos_idx] = decoded_text
-        
-        # Create the table/grid
-        cell_height = 0.8 / len(layers)
-        cell_width = 0.9 / len(positions)
-        
-        for i, layer in enumerate(layers):
-            for j, pos in enumerate(positions):
-                # Calculate cell position
-                x = 0.05 + j * cell_width
-                y = 0.1 + i * cell_height
-                
-                # Get the text output for this cell to determine color
-                text = text_outputs[layer][j]
-                
-                # Determine the background color based on the output
-                cell_color = output_color_map.get(text, default_color)
-                
-                # Create a rectangle for the cell with appropriate color
-                rect = mpatches.Rectangle((x, y), cell_width, cell_height,
-                                        linewidth=1, edgecolor='black',
-                                        facecolor=cell_color, transform=ax.transAxes)
-                ax.add_patch(rect)
-                # Check if text is just whitespace and add quotes if so
-                if not text or text.strip() == '':
-                    text = f'"{text}"'
-                
-                # Wrap text if it's too long
-                max_chars_per_line = int(cell_width * 100)  # Rough estimate
-                if len(text) > max_chars_per_line:
-                    # Simple text wrapping
-                    wrapped_lines = []
-                    words = text.split()
-                    current_line = []
-                    current_length = 0
-                    
-                    for word in words:
-                        if current_length + len(word) + 1 > max_chars_per_line:
-                            wrapped_lines.append(' '.join(current_line))
-                            current_line = [word]
-                            current_length = len(word)
-                        else:
-                            current_line.append(word)
-                            current_length += len(word) + 1
-                    
-                    if current_line:
-                        wrapped_lines.append(' '.join(current_line))
-                    
-                    text = '\n'.join(wrapped_lines[:3])  # Limit to 3 lines
-                    if len(wrapped_lines) > 3:
-                        text += '...'
-                
-                ax.text(x + cell_width/2, y + cell_height/2, text,
-                        ha='center', va='center', transform=ax.transAxes,
-                        fontsize=42, wrap=True)
-        
-        # Add labels
-        # Layer labels (y-axis)
-        for i, layer in enumerate(layers):
-            ax.text(0.02, 0.1 + i * cell_height + cell_height/2, f'L{layer}',
-                   ha='right', va='center', transform=ax.transAxes, fontsize=48)
-        
-        # Position labels (x-axis)
-        for j, pos in enumerate(positions):
-            # Truncate long position labels
+                                text_outputs[layer_idx][pos_idx] = decoded_text
+
+        # Format layer labels with 'L' prefix
+        y_labels = [f'L{layer}' for layer in layers]
+
+        # Use the consolidated visualization function
+        create_text_output_grid(
+            text_matrix=text_outputs,
+            x_labels=positions,
+            y_labels=y_labels,
+            title=f'Raw Outputs Under Intervention - Experiment: {results["experiment_id"]}',
+            save_path=save_path,
+            x_label='Token Position',
+            y_label='Layer',
+            figsize=None,  # Auto-computed
+            fontsize=42
+        )
+
+    def print_text_analysis(self, results: Dict, original_output: str = None, cf_output: str = None,
+                           save_path: Optional[str] = None) -> None:
+        """
+        Print a text-based representation of the tracing results showing outputs at each location.
+
+        This displays the full matrix of outputs for each (layer, position) combination,
+        making it easy to see where interventions change the model's output.
+
+        Args:
+            results: Results dictionary from perform_interventions
+            original_output: The original model output (optional, for reference in title)
+            cf_output: The counterfactual output (optional, for reference in title)
+            save_path: Optional path to save the text output to a file
+        """
+        dataset_name = "tracing_example"
+
+        # Get dimensions
+        layers = [-1] + list(range(self.num_layers))
+        positions = [tp.id for tp in self.token_positions]
+
+        # Create matrix to store outputs as text
+        text_outputs = [['' for _ in positions] for _ in layers]
+
+        # Extract outputs from results
+        if dataset_name in results["dataset"]:
+            for unit_data in results["dataset"][dataset_name]["model_unit"].values():
+                if "metadata" in unit_data and "raw_outputs" in unit_data:
+                    layer = unit_data["metadata"].get("layer")
+                    position_str = unit_data["metadata"].get("position")
+
+                    # Find position index
+                    try:
+                        pos_idx = positions.index(position_str)
+                    except ValueError:
+                        continue
+
+                    # Map layer to list index (layer -1 -> index 0, layer 0 -> index 1, etc.)
+                    layer_idx = layers.index(layer)
+
+                    # Extract the output string
+                    if unit_data["raw_outputs"]:
+                        raw_outputs = unit_data["raw_outputs"]
+                        if isinstance(raw_outputs, list) and len(raw_outputs) > 0:
+                            first_batch = raw_outputs[0]
+                            if isinstance(first_batch, dict) and "string" in first_batch:
+                                decoded_text = first_batch["string"]
+                                if isinstance(decoded_text, list):
+                                    decoded_text = decoded_text[0]
+                                text_outputs[layer_idx][pos_idx] = decoded_text
+
+        # Count output frequencies for additional context
+        output_counter = Counter()
+        for layer_outputs in text_outputs:
+            for output in layer_outputs:
+                if output:
+                    output_counter[output] += 1
+
+        # Build title with context
+        title_parts = [f"Tracing Results - Experiment: {results['experiment_id']}"]
+        if original_output:
+            title_parts.append(f"Original output: '{original_output}'")
+        if cf_output:
+            title_parts.append(f"Counterfactual output: '{cf_output}'")
+        title = "\n".join(title_parts)
+
+        # Add frequency distribution
+        freq_info = ["\nOutput Frequency Distribution:"]
+        total_positions = len(layers) * len(positions)
+        for output, count in output_counter.most_common():
+            pct = count / total_positions * 100
+            freq_info.append(f"  '{output}': {count} times ({pct:.1f}%)")
+
+        print("\n".join(freq_info))
+        print()
+
+        # Format layer labels with 'L' prefix
+        y_labels = [f'L{layer}' for layer in layers]
+
+        # Custom formatter for text outputs (just return the string as-is)
+        def format_text(val):
+            return str(val) if val else "---"
+
+        # Create a pseudo-matrix for printing (we'll use strings but the function expects floats)
+        # We'll work around this by temporarily modifying the function or using it creatively
+        # Actually, let's just build the text output manually since we have strings not numbers
+
+        output_lines = []
+        output_lines.append("=" * 80)
+        output_lines.append(title.upper())
+        output_lines.append("=" * 80)
+        output_lines.append("\nLayer vs Position (showing output strings):\n")
+
+        # Calculate column widths
+        max_label_width = max(len(str(label)) for label in positions)
+        max_value_width = max(len(str(val)) for row in text_outputs for val in row if val)
+        max_value_width = max(max_value_width, 10)  # Minimum width
+        col_width = max(max_label_width, max_value_width, 8) + 2
+
+        y_label_width = max(len(str(label)) for label in y_labels) + 2
+
+        # Print column headers
+        header = " " * y_label_width + "|"
+        for pos in positions:
+            # Truncate long labels
             label = str(pos)
-            if len(label) > 15:
-                label = label[:12] + '...'
-            
-            ax.text(0.05 + j * cell_width + cell_width/2, 0.05, label,
-                   ha='center', va='top', transform=ax.transAxes, fontsize=42,
-                   rotation=45 if len(label) > 5 else 0)
-        
-        # Add title
-        ax.text(0.5, 0.98, f'Raw Outputs Under Intervention - Task: {results["task_name"]}',
-               ha='center', va='top', transform=ax.transAxes, fontsize=54, weight='bold')
-        
-        # Add axis labels
-        ax.text(0.5, -0.1, 'Token Position', ha='center', va='bottom',
-               transform=ax.transAxes, fontsize=48)
-        ax.text(-0.1, 0.5, 'Layer', ha='center', va='center', rotation=90,
-               transform=ax.transAxes, fontsize=48)
-        
-        # Add legend to the right side if there are colored outputs
-        if output_color_map:
-            legend_x = 1.1  # Further right, outside the main plot area
-            legend_y_start = 0.7  # Starting y position for legend
-            legend_spacing = 0.08  # Spacing between legend items
-            
-            # Add legend title
-            ax.text(legend_x, legend_y_start + legend_spacing, 'Top 5 Outputs:',
-                   ha='left', va='top', transform=ax.transAxes, fontsize=44, weight='bold')
-            
-            # Add legend items
-            for i, (output, color) in enumerate(output_color_map.items()):
-                y_pos = legend_y_start - i * legend_spacing
-                
-                # Create small colored rectangle
-                legend_rect = mpatches.Rectangle((legend_x, y_pos - 0.03), 0.04, 0.05,
-                                               linewidth=1, edgecolor='black',
-                                               facecolor=color, transform=ax.transAxes)
-                ax.add_patch(legend_rect)
-                
-                # Add text label - truncate if too long
-                label_text = output if len(output) <= 20 else output[:17] + '...'
-                # Show quotes for empty/whitespace strings
-                if not output or output.strip() == '':
-                    label_text = f'"{output}"'
-                
-                ax.text(legend_x + 0.05, y_pos, label_text,
-                       ha='left', va='center', transform=ax.transAxes, fontsize=40)
-        
-        plt.tight_layout()
+            if len(label) > col_width:
+                label = label[:col_width-3] + "..."
+            header += f" {label:^{col_width}} |"
+        output_lines.append(header)
+        output_lines.append("-" * len(header))
 
+        # Print each row
+        for i, y_label_val in enumerate(y_labels):
+            row_str = f"{str(y_label_val):>{y_label_width}}|"
+            for j, pos in enumerate(positions):
+                value = text_outputs[i][j] if text_outputs[i][j] else "---"
+                # Truncate long values
+                if len(value) > col_width:
+                    value = value[:col_width-3] + "..."
+                row_str += f" {value:^{col_width}} |"
+            output_lines.append(row_str)
+
+        output_lines.append("\n" + "=" * 80)
+        output_lines.append("END OF ANALYSIS")
+        output_lines.append("=" * 80)
+
+        # Join all lines
+        full_output = "\n".join(output_lines)
+
+        # Print to console
+        print(full_output)
+
+        # Optionally save to file
         if save_path:
-            # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            plt.savefig(save_path, bbox_inches='tight', dpi=150)
-
-        plt.show()
-
-        
+            # Combine frequency info with matrix output
+            combined_output = "\n".join(freq_info) + "\n\n" + full_output
+            with open(save_path, 'w') as f:
+                f.write(combined_output)
+            print(f"\nText analysis saved to: {save_path}")

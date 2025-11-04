@@ -59,7 +59,7 @@ class TestPrepareIntervenableInputs:
         # Mock component indexing - IMPORTANT: use 'batch' as parameter name to match code
         for units in model_units_sublist:
             for unit in units:
-                unit.index_component = MagicMock(side_effect=lambda x, batch=False:
+                unit.index_component = MagicMock(side_effect=lambda x, batch=False, is_original=None:
                     [[0, 1], [0, 1]] if batch else [0, 1])
                 unit.get_feature_indices = MagicMock(return_value=[0, 1, 2])
 
@@ -110,7 +110,7 @@ class TestPrepareIntervenableInputs:
         # Mock component indexing - IMPORTANT: use 'batch' as parameter name to match code
         for units in model_units_sublist:
             for unit in units:
-                unit.index_component = MagicMock(side_effect=lambda x, batch=False:
+                unit.index_component = MagicMock(side_effect=lambda x, batch=False, is_original=None:
                     [[0, 1], [0, 1]] if batch else [0, 1])
                 unit.get_feature_indices = MagicMock(return_value=[0, 1, 2])
 
@@ -136,8 +136,8 @@ class TestPrepareIntervenableInputs:
         
         # Create model units with multiple units per inner list
         unit1 = MagicMock(spec=AtomicModelUnit)
-        # IMPORTANT: use 'batch' as parameter name to match code
-        unit1.index_component = MagicMock(side_effect=lambda x, batch=False:
+        # IMPORTANT: use 'batch' and 'is_original' as parameter names to match code
+        unit1.index_component = MagicMock(side_effect=lambda x, batch=False, is_original=None:
             [[0, 1], [0, 1]] if batch else [0, 1])
         unit1.get_feature_indices = MagicMock(return_value=[0, 1, 2])
         unit1.id = "test_unit1"
@@ -146,8 +146,8 @@ class TestPrepareIntervenableInputs:
         unit1.component._indices_func.id = "test_unit1"
 
         unit2 = MagicMock(spec=AtomicModelUnit)
-        # IMPORTANT: use 'batch' as parameter name to match code
-        unit2.index_component = MagicMock(side_effect=lambda x, batch=False:
+        # IMPORTANT: use 'batch' and 'is_original' as parameter names to match code
+        unit2.index_component = MagicMock(side_effect=lambda x, batch=False, is_original=None:
             [[2, 3], [2, 3]] if batch else [2, 3])
         unit2.get_feature_indices = MagicMock(return_value=[0, 1, 2])
         unit2.id = "test_unit2"
@@ -192,7 +192,7 @@ class TestPrepareIntervenableInputs:
         for units in model_units_sublist:
             for unit in units:
                 # IMPORTANT: use 'batch' as parameter name to match code
-                unit.index_component = MagicMock(side_effect=lambda x, batch=False:
+                unit.index_component = MagicMock(side_effect=lambda x, batch=False, is_original=None:
                     [[0, 1], [0, 1]] if batch else [0, 1])
                 unit.get_feature_indices = MagicMock(return_value=None)
 
@@ -220,8 +220,8 @@ class TestPrepareIntervenableInputs:
         
         # Create model unit that returns nested indices
         unit = MagicMock(spec=AtomicModelUnit)
-        # CRITICAL FIX: Use 'batch' parameter name to match function call
-        unit.index_component = MagicMock(side_effect=lambda x, batch=False:
+        # CRITICAL FIX: Use 'batch' and 'is_original' parameter names to match function call
+        unit.index_component = MagicMock(side_effect=lambda x, batch=False, is_original=None:
             [[[0], [1, 2]], [[0], [1, 2]]] if batch else [[0], [1, 2]])
         unit.get_feature_indices = MagicMock(return_value=[0, 1, 2])
         unit.id = "test_unit_nested"
@@ -260,7 +260,7 @@ class TestPrepareIntervenableInputs:
         for units in model_units_sublist:
             for unit in units:
                 # CRITICAL FIX: Use 'batch' as parameter name to match function call
-                unit.index_component = MagicMock(side_effect=lambda x, batch=False:
+                unit.index_component = MagicMock(side_effect=lambda x, batch=False, is_original=None:
                     [[0, 1], [0, 1]] if batch else [0, 1])
                 unit.get_feature_indices = MagicMock(return_value=[0, 1, 2])
 

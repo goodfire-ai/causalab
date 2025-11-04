@@ -202,14 +202,16 @@ class CausalModel:
     def run_interchange(self, input_setting, counterfactual_inputs):
         """
         Run the model with interchange interventions.
-        
+
         Parameters:
         -----------
         input_setting : dict
             A dictionary mapping input variables to their values.
         counterfactual_inputs : dict
             A dictionary mapping variables to their counterfactual input settings.
-            
+            Variable names can use the format "original_var<-counterfactual_var" to specify
+            different variable names in the original and counterfactual inputs.
+
         Returns:
         --------
         dict
@@ -218,9 +220,50 @@ class CausalModel:
         """
         interchange_intervention = copy.deepcopy(input_setting)
         for var in counterfactual_inputs:
-            setting = self.run_forward(counterfactual_inputs[var])
-            interchange_intervention[var] = setting[var]
+            # Check if var contains "<-" syntax
+            if "<-" in var:
+                original_var, counterfactual_var = var.split("<-")
+                original_var = original_var.strip()
+                counterfactual_var = counterfactual_var.strip()
+
+                # Create separate original and counterfactual dicts
+                original_dict = copy.deepcopy(input_setting)
+                counterfactual_dict = copy.deepcopy(counterfactual_inputs[var])
+
+                # Run forward on counterfactual to get the counterfactual variable value
+                counterfactual_setting = self.run_forward(counterfactual_dict)
+
+                # Intervene on the original variable with the counterfactual variable's value
+                interchange_intervention[original_var] = counterfactual_setting[counterfactual_var]
+            else:
+                # Original behavior: both original and counterfactual use the same variable name
+                setting = self.run_forward(counterfactual_inputs[var])
+                interchange_intervention[var] = setting[var]
         return self.run_forward(interchange_intervention)
+
+    def new_raw_input(self, input_dict):
+        """
+        Compute and set the raw_input field for an input dictionary.
+
+        This is a convenience method that runs the causal model forward on the input
+        and updates the input dictionary with the computed raw_input value.
+
+        Parameters:
+        -----------
+        input_dict : dict
+            A dictionary mapping input variables to their values. This dictionary
+            will be modified in-place to include the "raw_input" field.
+
+        Returns:
+        --------
+        None
+            The input_dict is modified in-place.
+        """
+        # Remove raw_input if it exists to ensure fresh computation
+        if "raw_input" in input_dict:
+            del input_dict["raw_input"]
+        result = self.run_forward(input_dict)
+        input_dict["raw_input"] = result["raw_input"]
 
     # FUNCTIONS FOR SAMPLING INPUTS AND GENERATING DATASETS
 
@@ -269,6 +312,7 @@ class CausalModel:
         filter_func = filter_func if filter_func is not None else lambda x: True
         input_setting = {var: random.choice(self.values[var]) for var in self.inputs}
         total = self.run_forward(intervention=input_setting)
+        input_setting["raw_input"] = total["raw_input"]
         while not filter_func(total):
             input_setting = {var: random.choice(self.values[var]) for var in self.inputs}
             total = self.run_forward(intervention=input_setting)
@@ -325,14 +369,34 @@ class CausalModel:
         """
         labels = []
         settings = []
-        
+
         for example in dataset:
-            input = example["input"] 
+            input = example["input"]
             counterfactual_inputs = example["counterfactual_inputs"]
-            
+
+            # Handle target_variables element by element
+            # Each element can be either a single variable name (str) or a list of variable names
+            # If we have exactly one counterfactual but multiple target variables,
+            # extend counterfactual_inputs by repeating the single counterfactual
+            if len(counterfactual_inputs) == 1 and len(target_variables) > 1:
+                counterfactual_inputs = counterfactual_inputs * len(target_variables)
+
+            assert len(target_variables) <= len(counterfactual_inputs), \
+                f"target_variables has {len(target_variables)} elements but counterfactual_inputs only has {len(counterfactual_inputs)}"
+
+            counterfactual_dict = {}
+            for i, var_element in enumerate(target_variables):
+                if isinstance(var_element, list):
+                    # Element is a list of variables: assign counterfactual[i] to all variables in the list
+                    for var in var_element:
+                        counterfactual_dict[var] = counterfactual_inputs[i]
+                else:
+                    # Element is a single variable: assign counterfactual[i] to this variable
+                    counterfactual_dict[var_element] = counterfactual_inputs[i]
+
             setting = self.run_interchange(
-                input, 
-                dict(zip(target_variables, counterfactual_inputs))
+                input,
+                counterfactual_dict
             )
             labels.append(setting["raw_output"])
             settings.append(setting)
@@ -393,7 +457,7 @@ class CausalModel:
             
         return Dataset.from_dict({"input": inputs, "label": labels}), label_to_setting
     
-    def can_distinguish_with_dataset(self, dataset, target_variables1, target_variables2):
+    def can_distinguish_with_dataset(self, dataset, target_variables1, target_variables2, prints=True):
         """
         Check if the model can distinguish between two sets of target variables 
         using interchange interventions on a counterfactual dataset.
@@ -421,8 +485,11 @@ class CausalModel:
                     count += 1
         
         proportion = count / len(dataset)
-        print(f"Can distinguish between {target_variables1} and {target_variables2}: {count} out of {len(dataset)} examples")
-        print(f"Proportion of distinguishable examples: {proportion:.2f}")
+        
+        if prints:
+            print(f"Can distinguish between {target_variables1} and {target_variables2}: {count} out of {len(dataset)} examples")
+            print(f"Proportion of distinguishable examples: {proportion:.2f}")
+        
         return {"proportion": proportion, "count": count}
 
     # FUNCTIONS FOR PRINTING OUT THE MODEL AND SETTINGS

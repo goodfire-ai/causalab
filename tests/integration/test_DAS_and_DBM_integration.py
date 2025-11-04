@@ -177,7 +177,6 @@ class TestDASIntegration:
                 causal_model=mock_causal_model,
                 layers=[0, 1],
                 token_positions=mock_token_positions,
-                checker=checker,
                 config={
                     "batch_size": 32,
                     "evaluation_batch_size": 64,
@@ -200,7 +199,6 @@ class TestDASIntegration:
                 causal_model=mock_causal_model,
                 layers=[0, 1],
                 token_positions=mock_token_positions,
-                checker=checker,
                 config={
                     "batch_size": 32,
                     "evaluation_batch_size": 64,
@@ -235,7 +233,6 @@ class TestDASIntegration:
                 causal_model=mock_causal_model,
                 layers=[0, 1],
                 token_positions=mock_token_positions,
-                checker=checker,
                 config={
                     "batch_size": 32,
                     "evaluation_batch_size": 64
@@ -278,7 +275,6 @@ class TestDASIntegration:
                 causal_model=mock_causal_model,
                 layers=[0, 1, 2],
                 token_positions=mock_token_positions,
-                checker=checker,
                 config={
                     "batch_size": 32,
                     "evaluation_batch_size": 64,
@@ -358,7 +354,6 @@ class TestDBMIntegration:
                 causal_model=mock_causal_model,
                 layer_head_lists=[layer_head_list],
                 token_position=all_tokens_pos,
-                checker=checker,
                 config={
                     "learning_rate": 0.001,
                     "batch_size": 32,
@@ -395,7 +390,6 @@ class TestDBMIntegration:
                 causal_model=mock_causal_model,
                 layer_head_lists=[layer_head_list],
                 token_position=all_tokens_pos,
-                checker=checker,
                 config={
                     "learning_rate": 0.001,
                     "batch_size": 32,
@@ -442,7 +436,6 @@ class TestDBMIntegration:
                 causal_model=mock_causal_model,
                 layer_head_lists=[layer_head_list],
                 token_position=all_tokens_pos,
-                checker=checker,
                 config={
                     "learning_rate": 0.001,
                     "batch_size": 32,
@@ -509,7 +502,6 @@ class TestDBMIntegration:
                 causal_model=mock_causal_model,
                 layer_head_lists=[layer_head_list],
                 token_position=all_tokens_pos,
-                checker=checker,
                 config={
                     "learning_rate": 0.001,
                     "batch_size": 32,
@@ -578,8 +570,7 @@ class TestFilterExperimentIntegration:
         """Test filtering datasets based on model performance."""
         experiment = FilterExperiment(
             pipeline=mock_pipeline,
-            causal_model=mock_causal_model,
-            checker=checker
+            causal_model=mock_causal_model
         )
 
         # Mock validation methods to simulate filtering
@@ -612,8 +603,7 @@ class TestFilterExperimentIntegration:
         """Test that filter keeps most examples when model performs well."""
         experiment = FilterExperiment(
             pipeline=mock_pipeline,
-            causal_model=mock_causal_model,
-            checker=checker
+            causal_model=mock_causal_model
         )
 
         # Create a dataset with multiple examples (without spec to allow __iter__ assignment)
@@ -664,8 +654,7 @@ class TestEndToEndWorkflow:
         # Step 1: Filter datasets
         filter_exp = FilterExperiment(
             pipeline=mock_pipeline,
-            causal_model=mock_causal_model,
-            checker=checker
+            causal_model=mock_causal_model
         )
 
         with patch.object(filter_exp, '_validate_original_inputs', return_value=[True]), \
@@ -689,7 +678,6 @@ class TestEndToEndWorkflow:
                 causal_model=mock_causal_model,
                 layers=[0, 1, 2],
                 token_positions=mock_token_positions,
-                checker=checker,
                 config={
                     "batch_size": 32,
                     "evaluation_batch_size": 64,
@@ -739,8 +727,7 @@ class TestEndToEndWorkflow:
         # Step 1: Filter datasets
         filter_exp = FilterExperiment(
             pipeline=mock_pipeline,
-            causal_model=mock_causal_model,
-            checker=checker
+            causal_model=mock_causal_model
         )
 
         with patch.object(filter_exp, '_validate_original_inputs', return_value=[True]), \
@@ -771,7 +758,6 @@ class TestEndToEndWorkflow:
                 causal_model=mock_causal_model,
                 layer_head_lists=heads_masking,
                 token_position=all_tokens_pos,
-                checker=checker,
                 config={
                     "learning_rate": 0.001,
                     "batch_size": 32,

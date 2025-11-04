@@ -35,11 +35,15 @@ class TokenPosition(ComponentIndexer):
     ----------
     pipeline :
         The :class:`neural.pipeline.LMPipeline` supplying the tokenizer.
+    is_original : bool
+        Whether this indexer is for original inputs (True) or counterfactual inputs (False).
+        Default is True for backward compatibility.
     """
 
-    def __init__(self, indexer, pipeline: LMPipeline, **kwargs):
+    def __init__(self, indexer, pipeline: LMPipeline, is_original: bool = True, **kwargs):
         super().__init__(indexer, **kwargs)
         self.pipeline = pipeline
+        self.is_original = is_original
 
     # ------------------------------------------------------------------ #
     def highlight_selected_token(self, input: dict) -> str:
@@ -77,6 +81,199 @@ def get_all_tokens(input: dict, pipeline: LMPipeline):
     return list(range(len(ids)))
 
 
+def get_substring_token_ids(
+    text: str,
+    substring: str,
+    pipeline: LMPipeline,
+    add_special_tokens: bool = False,
+    occurrence: int = 0,
+    strict: bool = False
+) -> List[int]:
+    """Return token position indices for tokens that overlap with a substring.
+
+    Given a text and a substring that occurs within it, returns the list of
+    token position indices corresponding to tokens that overlap with the substring.
+    When the substring boundaries fall in the middle of a token, that token is
+    included in the result.
+
+    Parameters
+    ----------
+    text : str
+        The full input text to tokenize.
+    substring : str
+        A substring that occurs within `text`. Must be present in the text.
+    pipeline : LMPipeline
+        The pipeline containing the tokenizer to use.
+    add_special_tokens : bool, optional
+        Whether to add special tokens (BOS/EOS) during tokenization. Default is False.
+    occurrence : int, optional
+        Which occurrence of the substring to use (0-indexed). Default is 0 (first occurrence).
+    strict : bool, optional
+        If True, raises ValueError when multiple occurrences exist. Default is False.
+
+    Returns
+    -------
+    List[int]
+        A list of token position indices (0-indexed) for tokens overlapping the substring.
+
+    Raises
+    ------
+    ValueError
+        If substring is empty, text is empty, substring is not found, the specified
+        occurrence doesn't exist, or (when strict=True) multiple occurrences exist.
+
+    Examples
+    --------
+    >>> text = "The sum of 5 and 5 is 10"
+    >>> substring = "5"
+    >>> # Get first occurrence (default)
+    >>> indices = get_substring_token_ids(text, substring, pipeline)
+    >>> # Get second occurrence explicitly
+    >>> indices = get_substring_token_ids(text, substring, pipeline, occurrence=1)
+    >>> # Fail if ambiguous
+    >>> indices = get_substring_token_ids(text, substring, pipeline, strict=True)  # Raises!
+
+    Notes
+    -----
+    - This function is inclusive: any token with any character overlap gets included.
+    - Handles tokenizer-specific behaviors like leading space encoding (e.g., Ġ in GPT-2).
+    - When multiple occurrences exist and strict=False, uses the first by default.
+    """
+    # Validation
+    if not text:
+        raise ValueError("Text cannot be empty")
+    if not substring:
+        raise ValueError("Substring cannot be empty")
+    if substring not in text:
+        raise ValueError(f"Substring '{substring}' not found in text")
+    if occurrence < 0:
+        raise ValueError(f"occurrence must be non-negative, got {occurrence}")
+    
+    # Find all occurrences
+    occurrences = []
+    start = 0
+    while True:
+        pos = text.find(substring, start)
+        if pos == -1:
+            break
+        occurrences.append(pos)
+        start = pos + 1
+
+    num_occurrences = len(occurrences)
+
+    # Check for ambiguity in strict mode
+    if strict and num_occurrences > 1:
+        raise ValueError(
+            f"Found {num_occurrences} occurrences of '{substring}' in the text. "
+            f"Please either:\n"
+            f"  1. Use more specific context to make substring unique\n"
+            f"  2. Specify which occurrence with occurrence parameter (0 to {num_occurrences-1})\n"
+            f"  3. Set strict=False to use first occurrence (default behavior)"
+        )
+
+    # Validate occurrence parameter
+    if occurrence >= num_occurrences:
+        raise ValueError(
+            f"Requested occurrence {occurrence} but only found {num_occurrences} "
+            f"occurrence(s) of '{substring}'"
+        )
+
+    # Find substring position in original text
+    substring_start = occurrences[occurrence]
+    substring_end = substring_start + len(substring)
+
+    # Tokenize the text
+    input_dict = {"raw_input": text}
+    token_ids = pipeline.load(input_dict, add_special_tokens=add_special_tokens)["input_ids"][0]
+    token_ids_list = token_ids.tolist()
+
+    # Build character-to-token mapping by decoding each token
+    # and tracking its position in the reconstructed text
+    char_to_token = []
+    current_pos = 0
+
+    for token_idx, token_id in enumerate(token_ids_list):
+        # Decode individual token
+        token_str = pipeline.tokenizer.decode([token_id], skip_special_tokens=False)
+
+        # Handle potential leading space normalization
+        # Some tokenizers store spaces as part of the token (e.g., Ġ in GPT-2)
+        # but decode() might render them as actual spaces
+        token_length = len(token_str)
+
+        # Track which characters belong to this token
+        for _ in range(token_length):
+            if current_pos < len(text):
+                char_to_token.append(token_idx)
+                current_pos += 1
+
+    # For tokenizers that don't perfectly reconstruct (common with BPE),
+    # we need a more robust approach: match decoded tokens to original text
+    # Build a mapping by decoding progressively
+    char_to_token = {}
+    reconstructed = ""
+
+    for token_idx, token_id in enumerate(token_ids_list):
+        # Decode up to and including this token
+        decoded_so_far = pipeline.tokenizer.decode(
+            token_ids_list[:token_idx + 1],
+            skip_special_tokens=not add_special_tokens
+        )
+
+        # Mark the new characters as belonging to this token
+        start_pos = len(reconstructed)
+        end_pos = len(decoded_so_far)
+
+        for char_pos in range(start_pos, end_pos):
+            char_to_token[char_pos] = token_idx
+
+        reconstructed = decoded_so_far
+
+    # Find which tokens overlap with the substring in the reconstructed text
+    # We need to map the original text positions to reconstructed text positions
+    # For most tokenizers, they should match, but let's be safe
+
+    # Find substring in reconstructed text
+    try:
+        reconstructed_start = reconstructed.index(substring)
+        reconstructed_end = reconstructed_start + len(substring)
+    except ValueError:
+        # Substring might not appear identically after tokenization roundtrip
+        # Fall back to approximate matching
+        # This can happen with special whitespace handling
+        reconstructed_start = None
+        for i in range(len(reconstructed)):
+            if reconstructed[i:i+len(substring)] == substring:
+                reconstructed_start = i
+                break
+
+        if reconstructed_start is None:
+            # Try matching with normalized whitespace
+            import re
+            normalized_substring = re.sub(r'\s+', ' ', substring.strip())
+            normalized_reconstructed = re.sub(r'\s+', ' ', reconstructed)
+
+            if normalized_substring in normalized_reconstructed:
+                reconstructed_start = normalized_reconstructed.index(normalized_substring)
+                reconstructed_end = reconstructed_start + len(normalized_substring)
+            else:
+                raise ValueError(
+                    f"Substring '{substring}' not found in tokenizer-reconstructed text. "
+                    f"Original: '{text}', Reconstructed: '{reconstructed}'"
+                )
+        else:
+            reconstructed_end = reconstructed_start + len(substring)
+
+    # Collect all unique token indices that overlap with the substring
+    overlapping_tokens = set()
+    for char_pos in range(reconstructed_start, reconstructed_end):
+        if char_pos in char_to_token:
+            overlapping_tokens.add(char_to_token[char_pos])
+
+    # Return sorted list of token indices
+    return sorted(list(overlapping_tokens))
+
+
 # --------------------------------------------------------------------------- #
 #  LLM-specific AtomicModelUnits                                              #
 # --------------------------------------------------------------------------- #
@@ -96,7 +293,9 @@ class ResidualStream(AtomicModelUnit):
         component_type = "block_output" if target_output else "block_input"
         self.token_indices = token_indices
         tok_id = token_indices.id if isinstance(token_indices, ComponentIndexer) else token_indices
-        uid = f"ResidualStream(Layer-{layer},Token-{tok_id})"
+        # Include component_type in the UID to distinguish between block_input (embeddings/layer -1)
+        # and block_output (normal layers) when they target the same layer number
+        uid = f"ResidualStream(Layer-{layer},{component_type},Token-{tok_id})"
 
         unit = "pos"
         if isinstance(token_indices, list):
@@ -242,9 +441,9 @@ class AttentionHead(AtomicModelUnit):
 
     # ------------------------------------------------------------------ #
 
-    def index_component(self, input, batch=False):
+    def index_component(self, input, batch=False, **kwargs):
         """Return indices for *input* by delegating to wrapped function."""
         if batch:
-            return [[[self.head]]*len(input), [self.component.index(x) for x in input]]
-        return [[[self.head]], [self.component.index(input)]]
+            return [[[self.head]]*len(input), [self.component.index(x, **kwargs) for x in input]]
+        return [[[self.head]], [self.component.index(input, **kwargs)]]
     
