@@ -505,3 +505,314 @@ def print_text_heatmap(
         print(f"\nText analysis saved to: {save_path}")
 
     return full_output
+
+
+def prepare_das_mask_grid_data(results: Dict, target_variables: List[str], dataset_name: str = None):
+    """
+    Extract mask counts and layer scores from DAS+DBM results.
+
+    This function processes results from DAS+DBM training where each layer has:
+    - Multiple units at different positions
+    - Each unit has a mask over DAS features (feature_indices)
+    - One accuracy score per layer (average_score)
+
+    Args:
+        results: Results dictionary from perform_interventions with computed scores
+        target_variables: List of target variable names to analyze (e.g., ["answer"], ["answer", "answer_position"])
+                         Multiple variables are joined with "-" to form the lookup key
+        dataset_name: Optional dataset name. If None, uses the first dataset found.
+
+    Returns:
+        Tuple containing:
+        - mask_counts: dict mapping (layer, position) -> count of features with mask=1
+        - layer_scores: dict mapping layer -> accuracy score
+        - layers: sorted list of layer indices
+        - positions: sorted list of position names
+
+    Raises:
+        ValueError: If feature_indices is None (tie_masks=True not supported)
+        KeyError: If target_variables not found in results
+    """
+    # Join target variables to create lookup key (matching plot_heatmaps behavior)
+    target_variables_str = "-".join(target_variables)
+
+    # Get dataset
+    if dataset_name is None:
+        dataset_name = list(results["dataset"].keys())[0]
+
+    dataset_results = results["dataset"][dataset_name]
+
+    mask_counts = {}
+    layer_scores = {}
+    all_layers = set()
+    all_positions = set()
+
+    # Process each model_units_list (one per layer)
+    for unit_str, unit_data in dataset_results["model_unit"].items():
+        if "metadata" not in unit_data:
+            continue
+
+        metadata = unit_data["metadata"]
+        layer = metadata.get("layer")
+
+        if layer is None:
+            continue
+
+        all_layers.add(layer)
+
+        # Get layer score (one score per model_units_list)
+        if target_variables_str in unit_data and "average_score" in unit_data[target_variables_str]:
+            layer_scores[layer] = unit_data[target_variables_str]["average_score"]
+
+        # Process feature_indices for each unit at this layer
+        if "feature_indices" not in unit_data:
+            continue
+
+        feature_indices = unit_data["feature_indices"]
+
+        for unit_id, indices in feature_indices.items():
+            # Extract position from unit_id like "ResidualStream(Layer-13,block_output,Token-correct_symbol)"
+            if "Token-" in unit_id:
+                position = unit_id.split("Token-")[1].rstrip(")")
+                all_positions.add(position)
+
+                # Count features: throw error if None (tie_masks not supported)
+                if indices is None:
+                    raise ValueError(
+                        f"feature_indices is None for {unit_id}. "
+                        "This visualization requires tie_masks=False. "
+                        "With tie_masks=True, masks are scalar and not per-feature."
+                    )
+
+                # Count number of features in the list
+                mask_count = len(indices)
+                mask_counts[(layer, position)] = mask_count
+
+    # Sort layers and positions
+    layers = sorted(list(all_layers))
+    positions = sorted(list(all_positions))
+
+    return mask_counts, layer_scores, layers, positions
+
+
+def print_das_mask_grid(results: Dict, target_variables: List[str], dataset_name: str = None, save_path: str = None):
+    """
+    Print text grid showing mask counts per (layer, position) with layer scores.
+
+    Creates a text table with:
+    - Rows: layers
+    - Columns: positions + separate score column
+    - Cell values: number of DAS features with mask=1
+
+    Args:
+        results: Results dictionary from perform_interventions with computed scores
+        target_variables: List of target variable names to analyze (e.g., ["answer"], ["answer", "answer_position"])
+        dataset_name: Optional dataset name. If None, uses the first dataset found.
+        save_path: Optional path to save the text output
+
+    Example output:
+        ==================================================
+        DAS+DBM MASK GRID ANALYSIS
+        ==================================================
+        Dataset: same_symbol_different_position
+        Target Variables: answer
+
+        Layer vs Position:
+
+              | symbol0 | symbol1 | last_token | Layer Score
+        ------|---------|---------|------------|-------------
+        L13   |    1    |    1    |     1      |   0.850
+        L14   |    1    |    1    |     1      |   0.920
+        L15   |    0    |    0    |     2      |   0.950
+        L16   |    0    |    1    |     1      |   0.880
+    """
+    # Extract data
+    mask_counts, layer_scores, layers, positions = prepare_das_mask_grid_data(
+        results, target_variables, dataset_name
+    )
+
+    # Get dataset name for display
+    if dataset_name is None:
+        dataset_name = list(results["dataset"].keys())[0]
+
+    # Join target variables for display
+    target_variables_str = "-".join(target_variables)
+
+    output_lines = []
+    output_lines.append("=" * 80)
+    output_lines.append("DAS+DBM MASK GRID ANALYSIS")
+    output_lines.append("=" * 80)
+    output_lines.append(f"Experiment: {results.get('experiment_id', 'Unknown')}")
+    output_lines.append(f"Dataset: {dataset_name}")
+    output_lines.append(f"Target Variables: {target_variables_str}")
+    output_lines.append("")
+    output_lines.append("Layer vs Position:")
+    output_lines.append("")
+
+    # Calculate column widths
+    position_col_width = max(max(len(str(pos)) for pos in positions), 8) + 2
+    score_col_width = 15
+    layer_col_width = 6
+
+    # Print header
+    header = " " * layer_col_width + "|"
+    for pos in positions:
+        header += f" {str(pos):^{position_col_width}} |"
+    header += f" {'Layer Score':^{score_col_width}} "
+    output_lines.append(header)
+    output_lines.append("-" * len(header))
+
+    # Print each row
+    for layer in layers:
+        row_str = f"L{layer:<{layer_col_width-1}}|"
+
+        # Add mask counts for each position
+        for pos in positions:
+            count = mask_counts.get((layer, pos), 0)
+            row_str += f" {count:^{position_col_width}} |"
+
+        # Add layer score
+        score = layer_scores.get(layer, np.nan)
+        if not np.isnan(score):
+            row_str += f" {score:^{score_col_width}.3f} "
+        else:
+            row_str += f" {'N/A':^{score_col_width}} "
+
+        output_lines.append(row_str)
+
+    output_lines.append("")
+    output_lines.append("=" * 80)
+    output_lines.append("LEGEND")
+    output_lines.append("=" * 80)
+    output_lines.append("Cell values: Number of DAS features with mask = 1 (selected)")
+    output_lines.append("Layer Score: Interchange intervention accuracy for the entire layer")
+    output_lines.append("=" * 80)
+
+    # Join and output
+    full_output = "\n".join(output_lines)
+    print(full_output)
+
+    # Save to file if requested
+    if save_path:
+        os.makedirs(os.path.dirname(save_path) if os.path.dirname(save_path) else ".", exist_ok=True)
+        with open(save_path, 'w') as f:
+            f.write(full_output)
+        print(f"\nText analysis saved to: {save_path}")
+
+    return full_output
+
+
+def create_das_mask_grid_plot(results: Dict, target_variables: List[str], dataset_name: str = None, save_path: str = None):
+    """
+    Create matplotlib figure with annotated heatmap showing mask counts + layer scores.
+
+    Generates a visualization with:
+    - Main grid: (layers x positions) showing mask counts, color-coded
+    - Separate column: layer scores with different color scale
+    - Clear visual separation between grid and scores
+
+    Args:
+        results: Results dictionary from perform_interventions with computed scores
+        target_variables: List of target variable names to analyze (e.g., ["answer"], ["answer", "answer_position"])
+        dataset_name: Optional dataset name. If None, uses the first dataset found.
+        save_path: Optional path to save the figure
+    """
+    # Extract data
+    mask_counts, layer_scores, layers, positions = prepare_das_mask_grid_data(
+        results, target_variables, dataset_name
+    )
+
+    # Get dataset name for display
+    if dataset_name is None:
+        dataset_name = list(results["dataset"].keys())[0]
+
+    # Join target variables for display
+    target_variables_str = "-".join(target_variables)
+
+    # Build matrices
+    n_layers = len(layers)
+    n_positions = len(positions)
+
+    # Mask count matrix (layers x positions)
+    mask_matrix = np.zeros((n_layers, n_positions))
+    for i, layer in enumerate(layers):
+        for j, pos in enumerate(positions):
+            mask_matrix[i, j] = mask_counts.get((layer, pos), 0)
+
+    # Score matrix (layers x 1)
+    score_matrix = np.array([layer_scores.get(layer, np.nan) for layer in layers]).reshape(-1, 1)
+
+    # Create figure with two subplots side by side
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(max(14, n_positions * 2 + 4), max(8, n_layers * 0.8)),
+                                     gridspec_kw={'width_ratios': [n_positions, 1], 'wspace': 0.3})
+
+    # Plot 1: Mask counts heatmap
+    y_labels = [f"L{layer}" for layer in layers]
+    x_labels = positions
+
+    # Determine vmax for mask counts (for color scale)
+    vmax_masks = int(np.max(mask_matrix)) if np.max(mask_matrix) > 0 else 1
+
+    # Create annotations for mask counts
+    annot_mask = mask_matrix.astype(int).astype(str)
+
+    sns.heatmap(
+        mask_matrix,
+        ax=ax1,
+        xticklabels=x_labels,
+        yticklabels=y_labels,
+        cmap='Blues',
+        annot=annot_mask,
+        fmt="",
+        cbar_kws={'label': 'Number of Features (mask=1)'},
+        vmin=0,
+        vmax=vmax_masks,
+        linewidths=0.5,
+        linecolor='lightgray'
+    )
+
+    ax1.set_xlabel('Position', fontsize=12)
+    ax1.set_ylabel('Layer', fontsize=12)
+    ax1.set_title('DAS Feature Mask Counts', fontsize=14, weight='bold')
+    ax1.set_yticks(np.arange(n_layers) + 0.5)
+    ax1.set_yticklabels(y_labels, rotation=0)
+
+    # Plot 2: Layer scores heatmap
+    # Create annotations for scores (as percentages)
+    annot_scores = np.array([[f"{score*100:.1f}%" if not np.isnan(score) else "N/A"]
+                              for score in score_matrix.flatten()]).reshape(-1, 1)
+
+    sns.heatmap(
+        score_matrix,
+        ax=ax2,
+        xticklabels=['Accuracy'],
+        yticklabels=y_labels,
+        cmap='RdYlGn',
+        annot=annot_scores,
+        fmt="",
+        cbar_kws={'label': 'Intervention Accuracy'},
+        vmin=0,
+        vmax=1,
+        linewidths=0.5,
+        linecolor='lightgray'
+    )
+
+    ax2.set_xlabel('', fontsize=12)
+    ax2.set_ylabel('', fontsize=12)
+    ax2.set_title('Layer Score', fontsize=14, weight='bold')
+    ax2.set_yticks(np.arange(n_layers) + 0.5)
+    ax2.set_yticklabels(y_labels, rotation=0)
+
+    # Add overall title
+    fig.suptitle(f'DAS+DBM Analysis - {dataset_name}\nTarget Variables: {target_variables_str}\nExperiment: {results.get("experiment_id", "Unknown")}',
+                 fontsize=16, weight='bold', y=0.98)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+
+    if save_path:
+        os.makedirs(os.path.dirname(save_path) if os.path.dirname(save_path) else ".", exist_ok=True)
+        plt.savefig(save_path, bbox_inches='tight', dpi=300)
+        print(f"Figure saved to: {save_path}")
+
+    plt.show()
+    plt.close()
