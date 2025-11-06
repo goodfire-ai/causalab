@@ -666,25 +666,25 @@ class InterventionExperiment:
                 raise ValueError(f"Required training parameter '{param}' not found in config")
 
         # Validate method-specific parameters
-        if method == "DAS" and "DAS" not in self.config:
+        if "DAS" in method and "DAS" not in self.config:
             raise ValueError("DAS config not found in config")
-        if method == "DBM" and "masking" not in self.config:
-            raise ValueError("masking config not found in config") 
+        if "DBM" in method and "masking" not in self.config:
+            raise ValueError("masking config not found in config")
 
         # Validate method
-        assert method in ["DAS", "DBM"]
+        assert method in ["DAS", "DBM", "DAS+DBM"]
 
         # Set intervention type based on method
         if method == "DAS":
             intervention_type = "interchange"
-        elif method == "DBM":
+        elif "DBM" in method:
             intervention_type = "mask"
 
         # Configure and train featurizers for each model unit
         for model_units_list in self.model_units_lists:
             for model_units in model_units_list:
                 for model_unit in model_units:
-                    if method == "DAS":
+                    if "DAS" in method:
                         # For DAS, use trainable subspace featurizer
                         model_unit.set_featurizer(
                             SubspaceFeaturizer(

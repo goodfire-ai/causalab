@@ -10,7 +10,13 @@ import logging
 from collections import Counter
 
 from .LM_utils import LM_loss_and_metric_fn
-from experiments.visualizations import create_heatmap, create_text_output_grid, print_text_heatmap
+from experiments.visualizations import (
+    create_heatmap,
+    create_text_output_grid,
+    print_text_heatmap,
+    print_das_mask_grid,
+    create_das_mask_grid_plot
+)
 from experiments.intervention_experiment import *
 from causal.causal_model import CausalModel
 from causal.causal_utils import compute_interchange_scores
@@ -73,25 +79,30 @@ class PatchResidualStream(InterventionExperiment):
         # Generate all combinations of model units without feature_indices
         model_units_lists = []
         for layer in layers:
-            for pos in token_positions:
-                featurizer = self.featurizers.get((layer, pos.id),
-                                                 Featurizer(n_features=pipeline.model.config.hidden_size,
-                                                           **featurizer_kwargs))
-                target_output = True
-                actual_layer = layer
-                if layer == -1:
-                    actual_layer = 0
-                    target_output = False
-                model_units_lists.append([[
-                    ResidualStream(
-                        layer=actual_layer,
-                        token_indices=pos,
-                        featurizer=featurizer,
-                        shape=(pipeline.model.config.hidden_size,),
-                        feature_indices=None,
-                        target_output=target_output
+            for pos_list in token_positions:
+                if isinstance(pos_list, TokenPosition):
+                    pos_list = [pos_list]
+                block = []
+                for pos in pos_list:
+                    featurizer = self.featurizers.get((layer, pos.id),
+                                                    Featurizer(n_features=pipeline.model.config.hidden_size,
+                                                            **featurizer_kwargs))
+                    target_output = True
+                    actual_layer = layer
+                    if layer == -1:
+                        actual_layer = 0
+                        target_output = False
+                    block.append(
+                        ResidualStream(
+                            layer=actual_layer,
+                            token_indices=pos,
+                            featurizer=featurizer,
+                            shape=(pipeline.model.config.hidden_size,),
+                            feature_indices=None,
+                            target_output=target_output
+                        )
                     )
-                ]])
+                model_units_lists.append([block])
 
         metadata_fn = lambda x: {
             "layer": -1 if (x[0][0].component.component_type == "block_input" and
@@ -592,6 +603,44 @@ class PatchResidualStream(InterventionExperiment):
             with open(save_path, 'w') as f:
                 f.write(full_output)
             print(f"\nText analysis saved to: {save_path}")
+
+    def plot_das_mask_grid(self, results: Dict, target_variables: List[str], dataset_name: str = None,
+                           save_path: str = None, show_text: bool = True):
+        """
+        Visualize DAS+DBM mask counts and layer scores in a grid format.
+
+        This method creates visualizations showing:
+        - Number of selected DAS features (mask=1) for each (layer, position)
+        - Accuracy score for each layer
+        - Both text and graphical outputs
+
+        Designed for results from DAS+DBM training with tie_masks=False.
+
+        Args:
+            results: Results dictionary from perform_interventions with computed scores
+            target_variables: List of target variable names to analyze (e.g., ["answer"], ["answer", "answer_position"])
+            dataset_name: Optional dataset name. If None, uses the first dataset found.
+            save_path: Optional base path for saving visualizations.
+                      Text will be saved to {save_path}_text.txt
+                      Plot will be saved to {save_path}_plot.png
+            show_text: If True, prints text visualization to console (default: True)
+
+        Example:
+            >>> experiment = PatchResidualStream(pipeline, layers, positions, config=config)
+            >>> experiment.train_interventions(labeled_data, method="DAS+DBM")
+            >>> raw_results = experiment.perform_interventions(dataset)
+            >>> results = compute_interchange_scores(raw_results, causal_model, dataset,
+            ...                                      target_variables_list=[["answer"]], checker=checker)
+            >>> experiment.plot_das_mask_grid(results, ["answer"], save_path="das_dbm_results")
+        """
+        # Text visualization
+        if show_text:
+            text_save_path = f"{save_path}_text.txt" if save_path else None
+            print_das_mask_grid(results, target_variables, dataset_name, text_save_path)
+
+        # Graphical visualization
+        plot_save_path = f"{save_path}_plot.png" if save_path else None
+        create_das_mask_grid_plot(results, target_variables, dataset_name, plot_save_path)
 
 
 class SameLengthResidualStreamTracing:
