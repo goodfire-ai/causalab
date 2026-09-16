@@ -139,8 +139,7 @@ def _import_task_module(task_name: str, submodule: str) -> ModuleType:
     fires only when the shipped task genuinely does not exist — a broken import
     *inside* a task module surfaces as its own error at import time rather than
     being masked as "task not found". A session-local task never shadows a
-    shipped one (same precedence as ``_load_analysis`` in
-    ``causalab.runner.run_exp``).
+    shipped one; :func:`_task_package_candidates` defines that precedence.
 
     The fallback decision is made once at the task-*package* level (a task lives
     entirely in one namespace): if a shipped task package exists but its
