@@ -93,6 +93,23 @@ def test_io_has_no_upward_imports():
     )
 
 
+def test_no_references_to_retired_runner_package():
+    """Shipped code and docs must not direct readers to the deleted package."""
+    package_dir = IO_DIR.parent
+    text_suffixes = {".py", ".md", ".json", ".ipynb", ".yaml", ".yml"}
+    retired_names = ("causalab.runner", "causalab/runner")
+    offenders = [
+        f"{path.relative_to(package_dir.parent)}:{lineno}"
+        for path in sorted(package_dir.rglob("*"))
+        if path.is_file() and path.suffix in text_suffixes
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if any(name in line for name in retired_names)
+    ]
+    assert not offenders, "References to the retired runner package:\n  " + "\n  ".join(
+        offenders
+    )
+
+
 @pytest.mark.parametrize("directory", [ANALYSIS_DIR, SCRIPTS_DIR])
 def test_step_scripts_are_torch_free_at_module_level(directory):
     """A step script's numerics belong inside its ``main``.

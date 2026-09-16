@@ -124,6 +124,54 @@ the package's public surface (at minimum `CAUSAL_MODEL` / the factory). An optio
 `summary.ipynb` demonstrates the *task* (causal model, samples, token positions,
 counterfactuals) on CPU — it must not load a language model.
 
+### Session-local task packages
+
+You can prototype a task outside the installed `causalab` package. Use the same
+modules and exports described above, under a top-level `tasks` package:
+
+```text
+<session>/code/
+└── tasks/
+    ├── __init__.py
+    └── my_task/
+        ├── __init__.py
+        ├── causal_models.py
+        ├── counterfactuals.py
+        └── ...
+```
+
+The task loader tries `causalab.tasks.<name>` first. If that package is absent
+and `CAUSALAB_SESSION_CODE` is **nonempty**, it tries `tasks.<name>`. An unset or
+empty value disables this fallback. The variable is only an enablement gate:
+the loader does not validate its value or add a directory to Python's import
+path. The caller must also put `<session>/code/` on `PYTHONPATH` (or `sys.path`
+when calling from Python). There is no automatic session-directory detection.
+
+For example, from the repository root, with a singleton task implemented under
+the layout above:
+
+```bash
+SESSION_DIR=/absolute/path/to/session
+CAUSALAB_SESSION_CODE="$SESSION_DIR" \
+PYTHONPATH="$SESSION_DIR/code${PYTHONPATH:+:$PYTHONPATH}" \
+uv run python scripts/build_task_dataset.py \
+    --task my_task --n 64 --seed 0 --out data/my_task/train.json
+```
+
+The task-module helpers in `causalab.tasks.loader` share the shipped-first rule in
+`causalab.tasks.loader._task_package_candidates`. A session-local package
+cannot shadow a shipped task, fill in a missing module of a shipped task, or
+hide a broken import inside one. Resolution selects the task package first;
+errors loading its modules propagate from that package.
+
+This fallback supports task loading and dataset building. Protocol documents
+continue to read the serialized tables described below; they do not import
+session-local task code.
+
+For a session-local factory task, pass `task_cfg` directly to `load_task()` or
+`serialize_counterfactual_dataset()`. The dataset builder's `--set` config-class
+discovery currently checks only shipped `causalab.tasks.<name>.config` modules.
+
 ## 2. Serializing a table a document can name
 
 A task becomes usable by a protocol document when its counterfactual dataset

@@ -148,8 +148,8 @@ def _task_package_candidates(task_name: str) -> list[str]:
     """Task-package names to try, shipped first.
 
     Always includes the shipped ``causalab.tasks.<name>``; appends the
-    session-local ``tasks.<name>`` only when ``CAUSALAB_SESSION_CODE`` is set
-    (see ``causalab/runner/README.md`` "Session-local code injection"). Single
+    session-local ``tasks.<name>`` only when ``CAUSALAB_SESSION_CODE`` is nonempty
+    (see ``causalab/tasks/README.md`` "Session-local task packages"). Single
     source of the shipped-first precedence + the session-local gate, so every
     resolver (:func:`_import_task_module`, :func:`load_task_checker`) agrees and
     can't drift.
@@ -179,14 +179,13 @@ def _import_task_module(task_name: str, submodule: str) -> ModuleType:
 
     Resolves the task *package* first — shipped ``causalab.tasks.<name>`` takes
     precedence; a session-local ``tasks.<name>`` is the fallback when
-    ``CAUSALAB_SESSION_CODE`` is set (see ``causalab/runner/README.md``
-    "Session-local code injection"). Resolution is by
+    ``CAUSALAB_SESSION_CODE`` is nonempty (see ``causalab/tasks/README.md``
+    "Session-local task packages"). Resolution is by
     :func:`_task_package_exists` (``find_spec``, no execution), so the fallback
     fires only when the shipped task genuinely does not exist — a broken import
     *inside* a task module surfaces as its own error at import time rather than
     being masked as "task not found". A session-local task never shadows a
-    shipped one (same precedence as ``_load_analysis`` in
-    ``causalab.runner.run_exp``).
+    shipped one; :func:`_task_package_candidates` defines that precedence.
 
     The fallback decision is made once at the task-*package* level (a task lives
     entirely in one namespace): if a shipped task package exists but its
@@ -200,8 +199,8 @@ def _import_task_module(task_name: str, submodule: str) -> ModuleType:
             return importlib.import_module(f"{pkg}.{submodule}")
     raise ModuleNotFoundError(
         f"No task package {task_name!r} found. Tried: {', '.join(candidates)}. "
-        f"For session-local tasks, see causalab/runner/README.md "
-        f"'Session-local code injection'."
+        "For session-local tasks, see causalab/tasks/README.md "
+        "'Session-local task packages'."
     )
 
 

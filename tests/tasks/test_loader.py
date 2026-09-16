@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import dataclasses
 import importlib
+import re
 import sys
 from pathlib import Path
 
@@ -145,9 +146,17 @@ class TestLoadTaskProperty:
         with pytest.raises(ValueError, match="task_cfg is required"):
             load_task(task_name)
 
-    def test_unknown_task_raises_import_error(self) -> None:
-        with pytest.raises((ImportError, ModuleNotFoundError)):
+    def test_unknown_task_points_to_existing_documentation(self) -> None:
+        with pytest.raises(ModuleNotFoundError) as exc_info:
             load_task("nonexistent_task_xyz")
+        reference = re.search(r"see (\S+\.md) '([^']+)'", str(exc_info.value))
+        assert reference is not None, str(exc_info.value)
+        doc_path, section = reference.groups()
+        readme = Path(__file__).resolve().parents[2] / doc_path
+        assert readme.is_file(), (
+            f"Task error points at missing documentation: {doc_path}"
+        )
+        assert f"### {section}" in readme.read_text(encoding="utf-8")
 
     def test_random_true_uses_create_random_model(self) -> None:
         # natural_domains_arithmetic exposes CREATE_RANDOM_CAUSAL_MODEL.
@@ -480,14 +489,27 @@ class TestSessionLocalFallbackProperty:
         assert isinstance(task, Task)
         assert task.intervention_variable == "color"
 
-    def test_unset_session_code_raises_import_error(
-        self, tmp_path, monkeypatch, isolate_tasks_namespace
+    @pytest.mark.parametrize("session_code", [None, ""])
+    def test_unset_or_empty_session_code_raises_import_error(
+        self, tmp_path, monkeypatch, isolate_tasks_namespace, session_code
     ) -> None:
-        """Without ``CAUSALAB_SESSION_CODE`` the fallback is disabled, even with the
-        package on PYTHONPATH — the existing clear ImportError stands."""
+        """An unset or empty gate disables fallback, even with the package on
+        PYTHONPATH — the existing clear ImportError stands."""
         self._arrange(tmp_path, monkeypatch, with_session_code=False)
+        if session_code is not None:
+            monkeypatch.setenv("CAUSALAB_SESSION_CODE", session_code)
 
         with pytest.raises((ImportError, ModuleNotFoundError)):
+            load_task(self.FIXTURE_NAME)
+
+    def test_session_code_does_not_add_import_path(
+        self, tmp_path, monkeypatch, isolate_tasks_namespace
+    ) -> None:
+        """The gate alone does not add the session's code directory to sys.path."""
+        _write_session_local_task(tmp_path / "code", self.FIXTURE_NAME)
+        monkeypatch.setenv("CAUSALAB_SESSION_CODE", str(tmp_path))
+
+        with pytest.raises(ModuleNotFoundError, match="No task package"):
             load_task(self.FIXTURE_NAME)
 
     def test_session_local_task_missing_checker_and_output_tokens_raises(

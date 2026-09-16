@@ -12,7 +12,7 @@ This package is the single source of truth for code that touches disk:
 - ``artifact_viewer``: generic, spec-driven HTML viewer that renders a browsable
   page of experiment artifacts from a declarative ``viewer_spec.yaml``.
 
-Dependency rule: ``causalab.io`` imports only from ``causalab.neural`` (for
-typing) and third-party libs. It must not import from ``causalab.methods``,
-``causalab.analyses``, or ``causalab.runner``.
+Dependency flow: ``workflow/`` → ``io/`` → ``protocol/``. The static guard in
+``tests/test_architecture_layering.py`` prohibits module-level imports from
+``causalab.workflow`` (including ``causalab.workflow.scripts``) into this package.
 """
