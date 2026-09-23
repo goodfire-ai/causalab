@@ -1,7 +1,5 @@
 # Causal Abstraction for Mechanistic Interpretability
 
-![Tests](https://github.com/goodfire-ai/causalab/workflows/Tests/badge.svg)
-
 A framework for **mechanistic interpretability** — reverse-engineering the algorithms language models use internally using **causal abstraction**.
 
 You write a high-level causal model describing *how you think* an LM solves a task, then run experiments to test whether the LM's internal components actually implement that algorithm. Every experiment is a serializable **intervention protocol** — a JSON document naming sites, reads, edits, intervened models, and metrics — validated, digested, and executed by an engine. The document is the seam: engines (the pytorch-hooks reference engine and the nnsight tracing engine today; tensor-parallel engines tomorrow) implement against the same format.
