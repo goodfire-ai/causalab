@@ -1,16 +1,16 @@
 """Write-set transactionality and fire counts (spec §4 "Fires").
 
 An intervened model's write set installs together, runs in one forward and
-tears down together. Reading the installation path finds the set **atomic by
-construction** — one batched
-build before the single ``ExitStack``, edits on cloned activations, publish
-after the forward, tables after the whole point loop — so a member that fails
+tears down together. A reading of the installation path found the set
+**atomic by construction** — one batched build before the single
+``ExitStack``, edits on cloned activations, publish after the forward, tables
+after the whole point loop — so a member that fails
 to resolve or mismatches its operand's shape refuses the point with no
 table, no capture and no receipt recording a subset. That property only
 *happened* to hold; the first half of this file pins it, so a refactor that
 publishes before the forward returns fails a test rather than a campaign.
 
-The one real defect was elsewhere: fire counts were neither counted nor
+The same reading found the one real defect: fire counts were neither counted nor
 compared. A write installed on a module the forward never calls — 📐 the
 DeltaNet ``conv1d`` module, whose forward goes through a module-global
 function (``test_sites_round4_deltanet.py::test_the_conv1d_module_never_fires``)
@@ -49,9 +49,9 @@ from causalab.neural.shared.fires import (
     group_label,
 )
 from causalab.protocol import RUN_RECORD_NAME, run_protocol
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
-from causalab.protocol.run import FIRES_KEY
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.receipt import FIRES_KEY
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA, TINY_QWEN35_MOE
@@ -64,13 +64,17 @@ from tests.neural.engines.pytorch_hooks.test_train import (
     BASES,
     COUNTERFACTUALS,
 )
+from tests.protocol._docs import UNWRITTEN, aggregation, saved
 from tests.protocol._env import CORPUS_DIR, FIXTURES
 
 REPO = Path(__file__).resolve().parents[4]
 
+#: The patched model's readout every swap document tabulates as `ce.json`.
+CE = aggregation("cross_entropy", target="label")
+
 #: the two DeltaNet-fixture texts of one state interchange — the same length
 #: in tokens, because a ``delta_state`` operand must cover exactly the write's
-#: addressed steps (``executor_base._state_operand``)
+#: addressed steps (``executor.writes._state_operand``)
 STATE_BASE = "the quick brown fox jumps"
 
 
@@ -114,17 +118,10 @@ def _swap_doc(
             f"v_a{i}": {
                 "site": f"src{i}" if i in operand_sites else f"a{i}",
                 "pos": {"index": -1},
-                "model": "original",
-                "input": "counterfactual",
             }
             for i in layers
         },
-        "logits": {
-            "site": "lm_head",
-            "pos": {"index": -1},
-            "model": "patched",
-            "input": "base",
-        },
+        "logits": {"site": "lm_head", "pos": {"index": -1}},
     }
     writes = {
         f"w{i}": {"site": f"a{i}", "pos": {"index": -1}, "do": {"swap": f"v_a{i}"}}
@@ -136,14 +133,12 @@ def _swap_doc(
         # or above where it lands, and the MLP's hidden width is not d_model
         assert last >= 1
         sites["narrow"] = {"component": "mlp_activation", "layers": [last - 1]}
-        reads["v_narrow"] = {
-            "site": "narrow",
-            "pos": {"index": -1},
-            "model": "original",
-            "input": "counterfactual",
-        }
+        reads["v_narrow"] = {"site": "narrow", "pos": {"index": -1}}
         del reads[f"v_a{last}"]
         writes[f"w{last}"]["do"] = {"swap": "v_narrow"}
+    # every operand is read on the un-intervened counterfactual; the readout
+    # on the patched base
+    operands = [name for name in reads if name != "logits"]
     data = (
         {
             "base": {"dataset": "weekdays/data#train", "field": "input"},
@@ -156,32 +151,22 @@ def _swap_doc(
         else base_data_section(with_counterfactual=True)
     )
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main", "dtype": "fp32"},
         "data": data,
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": operands},
+                "patched": {
+                    "input": "base",
+                    "reads": ["logits"],
+                    "writes": [f"w{i}" for i in layers],
+                },
+            },
             "sites": sites,
             "reads": reads,
             "writes": writes,
-            "intervened_models": {
-                "patched": {"input": "base", "writes": [f"w{i}" for i in layers]}
-            },
-            "metrics": {
-                "ce": {
-                    "kind": "cross_entropy",
-                    "of": "logits",
-                    "target": "label",
-                    "token_form": "space_prefixed",
-                }
-            },
-            "save": [
-                {
-                    "value": "ce",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "ce.json",
-                }
-            ],
+            "save": [saved("logits", "patched", "ce.json", dict(CE))],
         },
     }
 
@@ -191,40 +176,26 @@ def _state_doc() -> dict[str, Any]:
     writer fires once per addressed step, so its declared count is the row's
     token count, not one."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_QWEN35_MOE, "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["s_cf"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "state": {"component": "delta_state", "layers": [0]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "s_cf": {
-                    "site": "state",
-                    "pos": {"all": True},
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "s_cf": {"site": "state", "pos": {"all": True}},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {
                 "patch": {"site": "state", "pos": {"all": True}, "do": {"swap": "s_cf"}}
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "after.safetensors",
-                }
-            ],
+            "save": [saved("after", "patched", "after.safetensors")],
         },
     }
 
@@ -429,8 +400,8 @@ class TestFireCounts:
         second = _executor(_swap_doc([0, 1]), bundle, interning=handles[1])
         second.run_all()
         assert len(cache.executed) == served_before, "the second point ran a pass"
-        digest = handles[1].digests[("patched", "base")]
-        assert cache.fires[digest] == {"w0": 1, "w1": 1}
+        key = handles[1].keys[("patched", "base")]
+        assert cache.fires[key] == {"w0": 1, "w1": 1}
         assert second.fires == first.fires == {("patched", "base"): {"w0": 1, "w1": 1}}
 
     def test_a_member_whose_module_the_forward_never_calls_is_refused(
@@ -509,21 +480,21 @@ class TestFireCounts:
         executor = _executor(raw, bundle, interning=handles[0])
         with pytest.raises(ProtocolError, match="does not broadcast"):
             executor.run_all()
-        digest = handles[0].digests[("patched", "base")]
+        key = handles[0].keys[("patched", "base")]
         assert not any(
-            key == digest or (isinstance(key, tuple) and key[0] == digest)
-            for key in cache.captured
+            stored == key or (isinstance(stored, tuple) and stored[0] == key)
+            for stored in cache.captured
         ), "a capture was published for a pass that did not complete"
-        # `executed` holds the digest of a keyed pass (`_publish`), the
+        # `executed` holds the group key of a keyed pass (`_publish`), the
         # model/input label of an unkeyed one — neither may be tallied
-        assert digest not in cache.executed
+        assert key not in cache.executed
         assert "patched/base" not in cache.executed
-        assert digest not in cache.fires
+        assert key not in cache.fires
         assert executor.fires == {}
         assert ("patched", "base") not in executor._groups_run
         # the operand reads on `original` did run — the failure was the
         # write set's, and only the write set's
-        assert ("original", "counterfactual") in executor._groups_run
+        assert ("original_counterfactual", "counterfactual") in executor._groups_run
         assert torch.equal(_clean_logits(bundle), before)
 
 
@@ -558,8 +529,9 @@ class TestReceipt:
         result = run_protocol(
             _swap_doc([0, 1], fixture_data=True),
             _env(tmp_path),
-            [PytorchHooksEngine()],
+            PytorchHooksEngine(),
             out,
+            record=True,
         )
         receipt = _receipt(out)
         (point,) = receipt["points"]
@@ -568,12 +540,41 @@ class TestReceipt:
         }
         assert receipt["execution"] == {
             "batch_rows": None,
+            "device": "cpu",
             "fit_rows": None,
             "model_source": "loaded",
+            "parallel": {
+                "data": 1,
+                "data_mode": "points",
+                "pipeline": 1,
+                "context": 1,
+                "tensor": 1,
+                "expert": 1,
+                "world": 1,
+                "launcher": "solo",
+            },
         }
         (summary,) = result.summaries
         assert summary["fires"] == {"patched on base": {"w0": 1, "w1": 1}}
         assert (out / "ce.json").is_file()
+
+    def test_without_a_receipt_the_counts_stay_in_the_result(
+        self, tmp_path: Path
+    ) -> None:
+        """The default run: the counts are tallied and checked as before, and
+        come back in the result's summaries, but nothing beside the table is
+        written — no receipt, so no ``fires`` block on disk."""
+        out = tmp_path / "run"
+        result = run_protocol(
+            _swap_doc([0, 1], fixture_data=True),
+            _env(tmp_path),
+            PytorchHooksEngine(),
+            out,
+        )
+        (summary,) = result.summaries
+        assert summary["fires"] == {"patched on base": {"w0": 1, "w1": 1}}
+        assert (out / "ce.json").is_file()
+        assert not (out / RUN_RECORD_NAME).exists()
 
     def test_a_zero_fire_member_refuses_the_run_with_no_table_and_no_counts(
         self, tmp_path: Path
@@ -590,7 +591,9 @@ class TestReceipt:
         )
         with _bypassed(_engine_bundle().blocks[1].mlp):
             with pytest.raises(ProtocolError, match="fired 0 times"):
-                run_protocol(raw, _env(tmp_path), [PytorchHooksEngine()], out)
+                run_protocol(
+                    raw, _env(tmp_path), PytorchHooksEngine(), out, record=True
+                )
         assert not (out / "ce.json").exists()
         assert FIRES_KEY not in _receipt(out)
         assert "execution" in _receipt(out)  # what the run *was* still stands
@@ -604,7 +607,7 @@ class TestReceipt:
         out = tmp_path / "run"
         raw = _swap_doc([0, 1], mismatch_last=True, fixture_data=True)
         with pytest.raises(ProtocolError, match="does not broadcast"):
-            run_protocol(raw, _env(tmp_path), [PytorchHooksEngine()], out)
+            run_protocol(raw, _env(tmp_path), PytorchHooksEngine(), out, record=True)
         assert not (out / "ce.json").exists()
         assert FIRES_KEY not in _receipt(out)
 
@@ -666,6 +669,8 @@ def test_every_multi_write_corpus_document_runs_with_its_counts_recorded(
     data_root, artifacts_root = roots
     argv = [
         "run",
+        "--engine",
+        "auto",
         str(CORPUS_DIR / name),
         "--data-root",
         str(data_root),
@@ -677,6 +682,7 @@ def test_every_multi_write_corpus_document_runs_with_its_counts_recorded(
         f"model.key={TINY_LLAMA}",
         "--set",
         "model.dtype=fp32",
+        "--record",
     ]
     for item in MULTI_WRITE_CORPUS[name]:
         argv += ["--set", item]
@@ -684,14 +690,17 @@ def test_every_multi_write_corpus_document_runs_with_its_counts_recorded(
     receipt = _receipt(tmp_path)
     raw = json.loads((CORPUS_DIR / name).read_text())
     models = raw["method"]["intervened_models"]
-    assert sum(len(m["writes"]) for m in models.values()) > 1
+    assert sum(len(m.get("writes", [])) for m in models.values()) > 1
     fires = receipt[FIRES_KEY]
     assert set(fires) == {point["digest"] for point in receipt["points"]}
+    # the fires block covers the groups that land a write; an un-intervened
+    # model's group has no member to count
+    written = {m: spec for m, spec in models.items() if spec.get("writes")}
     for groups in fires.values():
         assert set(groups) == {
-            group_label(model, spec["input"]) for model, spec in models.items()
+            group_label(model, spec["input"]) for model, spec in written.items()
         }
-        for model, spec in models.items():
+        for model, spec in written.items():
             assert groups[group_label(model, spec["input"])] == {
                 write: 1 for write in spec["writes"]
             }

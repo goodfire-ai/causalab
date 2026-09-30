@@ -6,16 +6,16 @@ A prompt looks like `"Q: What day is three days after Thursday?\nA:"` and the mo
 
 ## Domain Matrix
 
-Six presets are bundled in `config.py::DOMAIN_PRESETS`. Each one has a matching Hydra task config under `causalab/configs/task/natural_domains_arithmetic_<domain>.yaml`.
+Six presets are bundled in `config.py::DOMAIN_PRESETS`. `scripts/build_task_dataset.py` and `scripts/build_split_dataset.py` select one with `--set domain_type=<domain>`.
 
-| Domain | Cyclic? | Modulus | Entity vocab | Number vocab | Template | Task config |
+| Domain | Cyclic? | Modulus | Entity vocab | Number vocab | Template | Build flag |
 |---|---|---|---|---|---|---|
-| `weekdays` | yes | 7 | `Monday`…`Sunday` | `one`…`seven` | `Q: What day is {number} days after {entity}?\nA:` | `natural_domains_arithmetic_weekdays.yaml` |
-| `months` | yes | 12 | `January`…`December` | `one`…`twelve` | `Q: What month is {number} months after {entity}?\nA:` | `natural_domains_arithmetic_months.yaml` |
-| `hours` | yes | 24 | `1`…`24` | `one`…`twenty-four` | `Q: What hour comes {number} hours after {entity} on a clock?\nA: ` | `natural_domains_arithmetic_hours.yaml` |
-| `integer` | no | — | word-form `one`…`fifteen` | word-form `one`…`nine` | `Q: What is {number} added to {entity}?\nA:` | `natural_domains_arithmetic_integer.yaml` |
-| `age` | no | — | `1`…`99` | `1`…`10` | `Alice is {entity} years old. Bob is {number} years older than Alice. Q: How old is Bob?\nA: Bob is ` | `natural_domains_arithmetic_age.yaml` |
-| `alphabet` | no | — | `A`…`Y` | `one`…`three` | `The letter {number} after {entity} in the alphabet is the letter` | `natural_domains_arithmetic_alphabet.yaml` |
+| `weekdays` | yes | 7 | `Monday`…`Sunday` | `one`…`seven` | `Q: What day is {number} days after {entity}?\nA:` | `--set domain_type=weekdays` |
+| `months` | yes | 12 | `January`…`December` | `one`…`twelve` | `Q: What month is {number} months after {entity}?\nA:` | `--set domain_type=months` |
+| `hours` | yes | 24 | `1`…`24` | `one`…`twenty-four` | `Q: What hour comes {number} hours after {entity} on a clock?\nA: ` | `--set domain_type=hours` |
+| `integer` | no | — | word-form `one`…`fifteen` | word-form `one`…`nine` | `Q: What is {number} added to {entity}?\nA:` | `--set domain_type=integer` |
+| `age` | no | — | `1`…`99` | `1`…`10` | `Alice is {entity} years old. Bob is {number} years older than Alice. Q: How old is Bob?\nA: Bob is ` | `--set domain_type=age` |
+| `alphabet` | no | — | `A`…`Y` | `one`…`three` | `The letter {number} after {entity} in the alphabet is the letter` | `--set domain_type=alphabet` |
 
 For non-cyclic domains an `input_filter` (set in `causal_models.py`) drops `(entity, number)` pairs whose result would fall outside `result_entities` (e.g. `alphabet: Z + two` is excluded). Cyclic domains wrap with the modulus and require no filtering.
 
@@ -60,27 +60,27 @@ The model is built by `create_causal_model(config: NaturalDomainConfig)` in `cau
 | `entity` | The last token spanning the `{entity}` slot. |
 | `number` | The last token spanning the `{number}` slot. |
 
-Each position is built by `causalab.neural.token_positions.build_token_position_factories` from a declarative spec (no per-model hardcoding). For multi-template configs, pass `templates=[...]` instead and the returned `TokenPosition` objects dispatch on `input_sample["template"]` at index time.
+Each position is built by `causalab.tasks.token_positions.build_token_position_factories` from a declarative spec (no per-model hardcoding). For multi-template configs, pass `templates=[...]` instead and the returned `TokenPosition` objects dispatch on `input_sample["template"]` at index time.
 
 ## Counterfactuals
 
 `counterfactuals.py::generate_dataset(model, n, seed)` returns `n` examples of shape `{"input": ..., "counterfactual_inputs": [...]}` where both base and counterfactual are independent samples — every input variable may differ.
 
-Single-variable counterfactuals (only one variable resampled) are configured via the runner config rather than the task module: set `task.resample_variable: <var>` and `runner/helpers.py::generate_datasets` re-derives the counterfactuals. This is required when running `analysis/locate` in `pairwise` mode (see `docs/CODEBASE.md` §5) — pairwise patching is only meaningful when exactly one input variable changes.
+For single-variable counterfactuals (only one variable resampled), build the table with `scripts/build_split_dataset.py --resample-variable <var>`, for example `--resample-variable number`. Each base then pairs with a copy that differs only in that variable. Pairwise patching needs such a table, because it is only meaningful when exactly one input variable changes.
 
 ## How to Run
 
-The task runs from an intervention document that names its table
-(`natural_domains_arithmetic/data/weekdays#train`) — see `docs/running_experiments.md` and the shipped
-documents under `causalab/configs/protocols/`:
+The [method library](../../../demos/methods/README.md) runs many of its documents on the shipped weekdays table. Its workflow `demos/methods/workflows/weekdays.json` scans layer and position, fits DAS at the selected location, and scores the fit. It runs from the repository root with:
 
 ```bash
-uv run causalab run <document.json>
+uv run causalab run demos/methods/workflows/weekdays.json \
+    --engine auto \
+    --artifacts-root . \
+    --out runs/weekdays \
+    --device cuda
 ```
 
-Available analyses for this task: `baseline`, `locate`, `subspace`, `activation_manifold`, `output_manifold`, `path_steering`, `pullback` (see `docs/CODEBASE.md` and per-analysis READMEs for what each one answers).
-
-Outputs land under `artifacts/natural_domains_arithmetic/<model>/<analysis>/...` per `docs/CODEBASE.md` invariant 7.
+The run writes its outputs under `--out`. The onboarding demo [weekdays_geometry](../../../demos/onboarding_tutorial/weekdays_geometry.md) studies the geometry of the same domain. For the other domains, build a table with `--set domain_type=<domain>` and name it in a document. [Running experiments](../../../docs/running_experiments.md) shows how to write, validate and run a document.
 
 ## Files
 
@@ -90,5 +90,5 @@ Outputs land under `artifacts/natural_domains_arithmetic/<model>/<analysis>/...`
 | `causal_models.py` | `create_causal_model`, `create_random_causal_model`, plus the `GET_*` accessors used by `tasks/loader.py` |
 | `counterfactuals.py` | `generate_dataset` |
 | `token_positions.py` | `create_token_positions` (single- or multi-template) |
-| `data/{weekdays,months}.json` | the shipped tables, one per domain: `natural_domains_arithmetic/data/weekdays#train` (30) / `#test` (19) and `…/months#train` (51) / `#test` (33) — whole pools, group-disjoint; built as split tables: task `natural_domains_arithmetic`, `domain_type=weekdays` (and `months`), seed 0, fractions `train=0.6` / `test=0.4`, target variable `result` |
+| `data/{weekdays,months}.json` | the shipped tables, one per domain: `natural_domains_arithmetic/data/weekdays#train` (30) / `#test` (19) and `…/months#train` (51) / `#test` (33) — whole pools, group-disjoint; built with `uv run python scripts/build_split_dataset.py --task natural_domains_arithmetic --set domain_type=weekdays --seed 0 --fraction train=0.6 --fraction test=0.4 --target-variable result --out causalab/tasks/natural_domains_arithmetic/data/weekdays.json` (and `domain_type=months` → `months.json`) |
 | `demo.ipynb` | Runnable walkthrough of the causal model, tokenization, and counterfactuals |

@@ -1,31 +1,19 @@
-"""Which fused glue kernels a grouped-experts call runs, and the autograd
-functions that run them.
+"""Select fused expert kernels and run their autograd functions.
 
-:func:`plan_moe_glue` is decided from the tensors' device and dtypes, the
-shape, and :class:`~causalab.neural.shared.kernel_options.MoeGlueOptions`,
-before any tensor op: off CUDA, without Triton, or with the option off,
-the plan is empty and ``experts_path.py`` runs its eager lines. Each kernel
-has its own admission, the condition under which its reference in
-:mod:`.moe_glue_reference` is the ATen order:
+``plan_moe_glue`` checks device, dtype, shape, and options before tensor
+operations. CPU calls, unavailable Triton, or disabled options use eager
+operations. Each kernel has further conditions:
 
-* ``sort`` — more than 32 pairs (below, CUDA's ``torch.sort`` is the
-  unstable bitonic sort the stable counting sort would not reproduce) and at
-  most :data:`MAX_COUNTING_SORT_PAIRS`: each of the 256 programs streams the
-  whole id array twice, so the kernel is linear in ``S · E`` where cub's
-  radix sort is eight launches of roughly fixed cost (📐 on an H100, bf16:
-  S = 9 984 → 38 µs vs 124 µs eager, S = 4 368 the same ratio, S = 93 600 →
-  174 µs vs 135 µs eager);
-* ``gather`` — always: the forward is ATen's own row gather (faster than a
-  Triton copy), the fused part is the backward, whose rounding follows the
-  row width;
-* ``epilogue`` — routing weights, projections and hidden states of one dtype
-  (the promoted dtype is then the projection's), and a row-sum launch of 32
-  vectorized lanes with no warp split (:func:`.moe_glue_reference.row_sum_config`);
-* ``gate`` — the module's gate is the library default over ``torch.nn.SiLU``.
+* Sort requires more than 32 pairs and at most MAX_COUNTING_SORT_PAIRS.
+  This preserves the CUDA sort's stable order at supported lengths.
+* Gather uses the ATen forward and fuses backward with width-dependent
+  rounding.
+* Epilogue requires matching dtypes and a row reduction with 32 vectorized
+  lanes and a single warp.
+* Gate requires the library's default SiLU activation.
 
-The autograd functions save only what their backward reads (an index and
-the inputs the formula needs) as tensors, and ints and dtypes on ``ctx`` —
-nothing that a CUDA-graph replay would have to refresh.
+``moe_glue_reference`` specifies each numerical order. Autograd saves the
+tensors, dimensions, and dtypes required by backward.
 """
 
 from __future__ import annotations

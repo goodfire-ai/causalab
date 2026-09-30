@@ -1,43 +1,8 @@
-"""The manifest's status words, derived from the event stream (workflow spec
-§4.3, §8).
+"""Derive workflow statuses from a run's event stream.
 
-``workflow.json`` is the run's *state* and ``events.jsonl`` is its *history*.
-A manifest that could disagree with the history — a step marked ``completed``
-whose publish the stream never recorded — is the disagreement this module
-exists to rule out. So the status a step carries in ``workflow.json`` is
-not the runner's memory of what it did: it is :func:`derive_statuses` over
-the lines this run appended, and the runner refuses to write a manifest whose
-in-memory status differs from the derived one (a disagreement there is an
-emitter bug, or an interrupt that landed between a memory assignment and its
-emit; either way the manifest is withheld, and an emitter bug surfaces as a
-``ProtocolError`` before the write). That comparison is a consistency
-assertion over a fact still stored twice — the entry's ``status`` in memory
-and the stream — not the end state: its single-writer form is a future
-``_step.json`` format change (a digest mover, so not this PR's).
-
-The derivation is one pure function over the stream's own vocabulary
-(:data:`causalab.io.events.EVENTS`): ``phase_completed {step, status}`` is the
-step's terminal word (``completed``, ``reused`` or ``skipped``), ``warning
-{step, reason: attempt_failed}`` is ``failed``, and every step of the schedule
-with no terminal line is classified by the manifest's own rule
-(:func:`causalab.workflow.manifest.classify_unreached`): ``skipped`` when an
-upstream step is ``skipped``, ``blocked`` when one is ``failed`` or
-``blocked``, else ``pending``. A step whose
-only line is ``phase_started`` is ``pending`` — §8 has no word for "started",
-and a run that stopped inside a step wrote no manifest (the manifest's
-``failed`` is the ``warning`` the runner appends before it re-raises).
-
-This lives beside the manifest rather than in :mod:`causalab.io.events`
-because the derivation reuses ``classify_unreached`` and ``io/`` may not
-import the workflow layer (``docs/CODEBASE.md`` invariant 1); the stream
-module stays stdlib-only and in no script's import closure.
-
-``_step.json`` is **not** derived. It is written into the attempt directory
-before the publish — when the stream holds only ``phase_started`` for its
-step — and its ``status: completed`` is the fact that the attempt verified;
-publishing it is what ``result_committed`` narrates. It is a scientific
-output with the immutable lifecycle; the derived view is ``workflow.json``.
-"""
+Completed phases and failure events determine each attempted step's status.
+The schedule propagates skipped and blocked states to dependent steps. The
+manifest writer compares this result with the runner's state before publishing."""
 
 from __future__ import annotations
 
@@ -65,10 +30,10 @@ def derive_statuses(
     """``{step: status}`` for every step of ``order``, from one run's lines.
     ``selective`` names the joins declaring ``require: selected`` (spec §2.9),
     which a skipped child does not skip — handed through to
-    :func:`~causalab.workflow.manifest.classify_unreached`.
+    [`classify_unreached`][].
 
     ``records`` are the lines *this run* appended (``read_events`` sliced from
-    :attr:`causalab.io.events.EventLog.opened_at`); a ``--resume`` run's own
+    [`causalab.io.events.EventLog.opened_at`][]); a ``--resume`` run's own
     lines say ``reused``, and the first run's ``completed`` lines before them
     are not its history. The last terminal line per step wins, so a stream
     that carries more than one run still derives the latest word.

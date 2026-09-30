@@ -15,7 +15,7 @@ module's globals).
   the code's five tuples. A table behind the code is worse than no table: it reads as
   complete.
 * **T4, the legitimate campaign.** Every shipped workflow
-  (``causalab/configs/workflows/*.json``) and every demo workflow
+  (``demos/methods/workflows/*.json``) and every demo workflow
   (``demos/*/workflows/*.json``) loads, digests to its pin, and carries **no**
   ``reduction`` key in any canonical step entry. This is what proves the block
   is modelled on ``runtime`` (absent when unauthored) and not on
@@ -31,7 +31,7 @@ from pathlib import Path
 
 import pytest
 
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.env import ResolutionEnv
 from causalab.workflow.document import MAX_RULE, load_workflow
 from causalab.workflow.reduction import (
     ESTIMATORS,
@@ -40,12 +40,15 @@ from causalab.workflow.reduction import (
     UNIT_KINDS,
     X_SCALES,
 )
+from tests._helpers.paths import WORKFLOWS_DIR
+
+from tests._helpers.demos import demo_env, demo_workflows
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
 SPEC = REPO / "docs" / "workflow_protocol.md"
-WORKFLOWS = REPO / "causalab" / "configs" / "workflows"
+WORKFLOWS = WORKFLOWS_DIR
 DEMOS = REPO / "demos"
 
 ROW = re.compile(r"^[ \t]*\|(.+)\|\s*$", re.M)
@@ -119,7 +122,8 @@ def test_rule_12_is_the_reduction_rule() -> None:
     section = _section("## 5. Validation")
     item = re.search(r"^12\. (.+?)(?=^\d+\. |\Z)", section, re.M | re.S)
     assert item is not None
-    assert "`reduction`" in item.group(1) and "names the field" in item.group(1)
+    text = " ".join(item.group(1).split())
+    assert "`reduction`" in text and "names the field" in text
 
 
 # --------------------------------------------------------------------------- #
@@ -207,15 +211,12 @@ def test_the_eight_dimensions_are_tabulated_once() -> None:
 
 
 def _demo_env(document: Path) -> ResolutionEnv:
-    """A demo carries its own tables (``tests/demos/test_demos.py``)."""
-    demo = document.parents[1]
-    return ResolutionEnv(
-        datasets=FileDatasets(root=demo / "data"), artifacts=FileArtifacts(root=REPO)
-    )
+    """A demo carries its own tables (``tests/_helpers/demos.py``)."""
+    return demo_env(document)
 
 
 SHIPPED = sorted(WORKFLOWS.glob("*.json"))
-DEMO_WORKFLOWS = sorted(DEMOS.glob("*/workflows/*.json"))
+DEMO_WORKFLOWS = demo_workflows()
 
 
 def test_the_workflow_census_found_something() -> None:

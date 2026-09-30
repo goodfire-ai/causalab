@@ -8,11 +8,10 @@ Uses prefix-tokenization to locate entity positions accurately,
 handling the case where entities appear in both the statement and the question.
 """
 
-import re
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from causalab.neural.token_positions import LMPipeline
-from causalab.neural.token_positions import (
+from causalab.tasks.token_positions import LMPipeline
+from causalab.tasks.token_positions import (
     TokenPosition,
     build_token_positions,
 )
@@ -32,13 +31,13 @@ def _build_values_dict(
     values = {}
     for g in range(active_groups):
         for e in range(entities_per_group):
-            entity = input_sample.get(f"entity_g{g}_e{e}")
+            entity = input_sample.get(f"entities[{g},{e}]")
             values[f"g{g}_e{e}"] = entity if entity is not None else f"MISSING_{g}_{e}"
 
-    values["query_entity"] = input_sample.get(f"query_e{query_indices[0]}")
+    values["query_entity"] = input_sample.get(f"queries[{query_indices[0]}]")
     for e in range(entities_per_group):
         role_name = config.entity_roles.get(e, f"entity{e}")
-        query_val = input_sample.get(f"query_e{e}")
+        query_val = input_sample.get(f"queries[{e}]")
         values[role_name] = query_val if query_val is not None else ""
 
     return values
@@ -85,7 +84,6 @@ def get_entity_token_positions(
 
     # Build a partial template with everything up to (but not including) this variable
     # to determine the character position of the entity in the filled string
-    var_pattern = "{" + var_name + "}"
     char_start = filled.find(values[var_name])
     if char_start == -1:
         raise ValueError(

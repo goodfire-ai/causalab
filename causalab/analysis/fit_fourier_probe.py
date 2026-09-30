@@ -7,8 +7,6 @@ be residuals, frozen PCA coordinates, or coordinates in a saved DAS basis.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import math
 from pathlib import Path
 from typing import Any, Mapping
@@ -278,9 +276,6 @@ def fit(
             for s, indices in splits.items()
         },
         "training_mean": means,
-        "rows_sha256": hashlib.sha256(
-            json.dumps(rows, sort_keys=True, allow_nan=False).encode()
-        ).hexdigest(),
         "selection": "minimum validation pair MSE; exact ties prefer larger alpha",
         "objective": "sum squared error + alpha * squared weight norm; unpenalized intercept",
         "coordinates": ["cos", "sin"],

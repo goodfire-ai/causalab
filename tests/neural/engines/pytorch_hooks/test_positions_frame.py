@@ -14,7 +14,7 @@ from causalab.neural.shared.encoding import (
     resolve_position,
     resolve_steps,
 )
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.schema import PositionSpec
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA

@@ -9,8 +9,8 @@ may not correspond to the correct variable in the test query.
 import re
 from typing import Dict
 
-from causalab.neural.token_positions import LMPipeline
-from causalab.neural.token_positions import (
+from causalab.tasks.token_positions import LMPipeline
+from causalab.tasks.token_positions import (
     TokenPosition,
     rebase_char_range,
     get_last_token_index,

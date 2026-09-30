@@ -1,0 +1,103 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Amplified arm of the Geva et al. 2022 (arXiv:2203.14680) Table 5 replication: hold the post-GELU activation of the ten Table 8 neurons, counted from 0, at 3 on every prompt and generated token while gpt2-medium continues each challenging RealToxicityPrompts prompt for at most 20 greedy tokens, and save the decoded continuation, which workflows/scripts/mlp_steering/score_toxicity.py grades."
+  },
+  "model": {
+    "key": "openai-community/gpt2-medium",
+    "revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+    "dtype": "fp32"
+  },
+  "data": {"base": {"dataset": "mlp_steering/rtp_challenging", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "amplified": {
+        "input": "base",
+        "reads": ["head"],
+        "writes": [
+          "turn_on_13",
+          "turn_on_14",
+          "turn_on_15",
+          "turn_on_16",
+          "turn_on_17",
+          "turn_on_18",
+          "turn_on_22"
+        ],
+        "writes_during_generation": true
+      }
+    },
+    "positions": {
+      "continuation": {"generated": {"max_new_tokens": 20}, "all": true}
+    },
+    "sites": {
+      "mlp_13": {"component": "mlp_activation", "layers": [13]},
+      "mlp_14": {"component": "mlp_activation", "layers": [14]},
+      "mlp_15": {"component": "mlp_activation", "layers": [15]},
+      "mlp_16": {"component": "mlp_activation", "layers": [16]},
+      "mlp_17": {"component": "mlp_activation", "layers": [17]},
+      "mlp_18": {"component": "mlp_activation", "layers": [18]},
+      "mlp_22": {"component": "mlp_activation", "layers": [22]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {"head": {"site": "lm_head", "pos": "continuation"}},
+    "writes": {
+      "turn_on_13": {
+        "site": "mlp_13",
+        "pos": "all",
+        "dims": [1852],
+        "do": {"swap": 3},
+        "ragged": {"policy": "padded_masked"}
+      },
+      "turn_on_14": {
+        "site": "mlp_14",
+        "pos": "all",
+        "dims": [72, 1394],
+        "do": {"swap": 3},
+        "ragged": {"policy": "padded_masked"}
+      },
+      "turn_on_15": {
+        "site": "mlp_15",
+        "pos": "all",
+        "dims": [215],
+        "do": {"swap": 3},
+        "ragged": {"policy": "padded_masked"}
+      },
+      "turn_on_16": {
+        "site": "mlp_16",
+        "pos": "all",
+        "dims": [461, 3208, 4060],
+        "do": {"swap": 3},
+        "ragged": {"policy": "padded_masked"}
+      },
+      "turn_on_17": {
+        "site": "mlp_17",
+        "pos": "all",
+        "dims": [2920],
+        "do": {"swap": 3},
+        "ragged": {"policy": "padded_masked"}
+      },
+      "turn_on_18": {
+        "site": "mlp_18",
+        "pos": "all",
+        "dims": [1890],
+        "do": {"swap": 3},
+        "ragged": {"policy": "padded_masked"}
+      },
+      "turn_on_22": {
+        "site": "mlp_22",
+        "pos": "all",
+        "dims": [3769],
+        "do": {"swap": 3},
+        "ragged": {"policy": "padded_masked"}
+      }
+    },
+    "save": [
+      {
+        "read": "head",
+        "model": "amplified",
+        "aggregation": {"kind": "decode"},
+        "file_path": "continuation.json"
+      }
+    ]
+  }
+}

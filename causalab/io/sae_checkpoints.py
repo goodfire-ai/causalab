@@ -4,17 +4,17 @@
 it reads raw tensors off disk and returns plain tensors + metadata dicts. This
 module is the sanctioned home for reading **foreign** SAE checkpoints — third-
 party ``.pt`` blobs that are NOT causalab's own (safetensors + ``.meta.json``)
-artifacts, so the ``torch.load`` ban in :mod:`causalab.io.artifacts`
+artifacts, so the ``torch.load`` ban in [`causalab.io.artifacts`][]
 (docs/CODEBASE.md serialization policy) does not apply here. Reading a foreign
 checkpoint with ``weights_only=False`` is the documented exception.
 
 Two readers live here:
 
-- :func:`read_sae_decoder` — a vanilla SAE's ``decoder.weight`` (one decoder
+- [`read_sae_decoder`][] — a vanilla SAE's ``decoder.weight`` (one decoder
   direction per ``d_sae`` index). The cluster path stacks several directions
   into a basis via ``methods.sae.decoder_subspace``; that basis math stays in
   ``methods/`` — this module only reads the raw tensor.
-- :func:`load_block_sae_frame` — one block of a block/Grassmannian SAE
+- [`load_block_sae_frame`][] — one block of a block/Grassmannian SAE
   (``GrassmannianCoderSparse``). Each block is already a K-dim orthonormal
   Stiefel subspace ``B_raw[block_id]`` of shape ``(d_model, K)``, so this returns
   it directly as a ``(d_model, k_alive)`` frame — no basis math, no QR, no GPU,
@@ -112,11 +112,11 @@ def load_block_sae_frame(checkpoint_path: str, block_id: int) -> tuple[Tensor, d
     shape ``(n_groups, d_model, K)``; each block ``B_raw[block_id]`` is already a
     K-dim orthonormal Stiefel frame (the SAE trains with ``enforce_ortho=True``).
     This returns that frame restricted to its **alive** columns
-    (``dim_mask[block_id] > 0``) and unit-normalized per column (exact for
-    K=1, a no-op when columns are already orthonormal).
+    (``dim_mask[block_id] > 0``; faithfulness step F3) and unit-normalized per
+    column (F1 — exact for K=1, a no-op when columns are already orthonormal).
 
     ``block_id`` indexes the ``n_groups`` axis — one block = one K-dim subspace.
-    This is deliberately NOT ``feature_id`` (which, in :func:`read_sae_decoder`'s
+    This is deliberately NOT ``feature_id`` (which, in [`read_sae_decoder`][]'s
     world, indexes the ``d_sae`` axis = a single decoder direction); conflating
     the two would be a category error.
 
@@ -169,7 +169,7 @@ def load_block_sae_frame(checkpoint_path: str, block_id: int) -> tuple[Tensor, d
         )
     frame = b_raw[bid].to(torch.float32)  # (d_model, K)
 
-    # restrict to alive dims. `dim_mask` zeroes dead columns within a block,
+    # F3: restrict to alive dims. `dim_mask` zeroes dead columns within a block,
     # so the effective subspace spans only the alive columns.
     dim_mask = state_dict.get("dim_mask")
     dim_mask_block = None
@@ -184,7 +184,7 @@ def load_block_sae_frame(checkpoint_path: str, block_id: int) -> tuple[Tensor, d
             )
         frame = frame[:, alive]
 
-    # unit-normalize columns. Block frames are already orthonormal
+    # F1: unit-normalize columns. Block frames are already orthonormal
     # (enforce_ortho=True), so this is a no-op for K>1 and exactly the K=1
     # normalization. We do NOT QR / cross-orthogonalize here — basis math stays
     # in methods/, and these frames are orthonormal by construction.

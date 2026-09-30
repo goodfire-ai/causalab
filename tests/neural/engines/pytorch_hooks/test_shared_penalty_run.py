@@ -23,18 +23,25 @@ import pytest
 import torch
 from safetensors.torch import load_file
 
-from causalab.cli import load_engines, register_model_key
+from causalab.cli import register_model_key
+from causalab.neural.shared.engine_router import route
 from causalab.neural.engines.pytorch_hooks.train import _regularizer
 from causalab.neural.shared.featurizers import Gate
 from causalab.protocol import run_protocol
-from causalab.protocol.loader import load
-from causalab.protocol.tables import read_table
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.tables import read_table
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_QWEN35_MOE
+from tests.protocol._docs import UNWRITTEN, aggregation, saved, term
 from tests.protocol._env import build_env
 
 WEIGHTS = [0.01, 0.1]
 AXIS = "train.objective.sparsity.weight"
+
+#: The masked model's two readouts (§2.10): the margin `iia.json` tabulates
+#: and the cross-entropy the fit trains on (and `ce.json` tabulates too).
+IIA = aggregation("logit_diff", a="cf_answer", b="base_answer")
+CE = aggregation("cross_entropy", target="label")
 
 
 def _two_gates() -> dict[str, Gate]:
@@ -100,7 +107,7 @@ def _document() -> dict:
     families, trained jointly under one swept sparsity weight."""
     return {
         "header": {
-            "protocol_version": "3",
+            "protocol_version": "4",
             "description": "joint two-layer head DBM under one shared, swept L1 weight",
         },
         "model": {"key": TINY_QWEN35_MOE, "revision": "main", "dtype": "fp32"},
@@ -112,6 +119,17 @@ def _document() -> dict:
             },
         },
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {
+                    "input": "counterfactual",
+                    "reads": ["attn_cf", "delta_cf"],
+                },
+                "masked": {
+                    "input": "base",
+                    "reads": ["logits"],
+                    "writes": ["mask_attn", "mask_delta"],
+                },
+            },
             "sites": {
                 "attn": {"component": "attention_premix", "layers": [3]},
                 "delta": {"component": "delta_premix", "layers": [0]},
@@ -122,26 +140,9 @@ def _document() -> dict:
                 "delta_gate": {"kind": "gate", "group": "head"},
             },
             "reads": {
-                "attn_cf": {
-                    "site": "attn",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                    "featurizer": "attn_gate",
-                },
-                "delta_cf": {
-                    "site": "delta",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                    "featurizer": "delta_gate",
-                },
-                "logits": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "masked",
-                    "input": "base",
-                },
+                "attn_cf": {"site": "attn", "pos": -1, "featurizer": "attn_gate"},
+                "delta_cf": {"site": "delta", "pos": -1, "featurizer": "delta_gate"},
+                "logits": {"site": "lm_head", "pos": -1},
             },
             "writes": {
                 "mask_attn": {
@@ -157,27 +158,9 @@ def _document() -> dict:
                     "do": {"swap": "delta_cf"},
                 },
             },
-            "intervened_models": {
-                "masked": {"input": "base", "writes": ["mask_attn", "mask_delta"]}
-            },
-            "metrics": {
-                "iia": {
-                    "kind": "logit_diff",
-                    "of": "logits",
-                    "a": "cf_answer",
-                    "b": "base_answer",
-                    "token_form": "space_prefixed",
-                },
-                "ce": {
-                    "kind": "cross_entropy",
-                    "of": "logits",
-                    "target": "label",
-                    "token_form": "space_prefixed",
-                },
-            },
             "train": {
                 "objective": {
-                    "fit": {"weight": 1.0, "metric": "ce"},
+                    "fit": term("logits", "masked", dict(CE), weight=1.0),
                     "sparsity": {
                         "weight": {"sweep": WEIGHTS},
                         "l1": ["delta_gate", "attn_gate"],
@@ -194,18 +177,8 @@ def _document() -> dict:
                 "seed": 0,
             },
             "save": [
-                {
-                    "value": "iia",
-                    "model": "masked",
-                    "input": "base",
-                    "file_path": "iia.json",
-                },
-                {
-                    "value": "ce",
-                    "model": "masked",
-                    "input": "base",
-                    "file_path": "ce.json",
-                },
+                saved("logits", "masked", "iia.json", dict(IIA)),
+                saved("logits", "masked", "ce.json", dict(CE)),
                 {
                     "value": "attn_gate",
                     "site": "attn",
@@ -227,8 +200,8 @@ def swept_fit(tmp_path_factory: pytest.TempPathFactory):
     env = build_env(root / "artifacts")
     document = _document()
     register_model_key(document)  # the CLI's step: the registry learns the tiny key
-    loaded = load(document, env)
-    result = run_protocol(loaded, env, load_engines("auto", "cpu"), root / "out")
+    loaded = compile_protocol(document, env=env)
+    result = run_protocol(loaded, env, route("auto", device="cpu"), root / "out")
     return loaded, result
 
 
@@ -236,10 +209,8 @@ def swept_fit(tmp_path_factory: pytest.TempPathFactory):
 class TestSweptSharedWeight:
     def test_the_document_has_one_axis(self, swept_fit) -> None:
         loaded, _ = swept_fit
-        assert [a.id for a in loaded.expansion.axes] == [AXIS]
-        assert loaded.canonical_document["method"]["train"]["objective"]["sparsity"][
-            "l1"
-        ] == [
+        assert [a.id for a in loaded.axes] == [AXIS]
+        assert loaded.canonical["method"]["train"]["objective"]["sparsity"]["l1"] == [
             "attn_gate",
             "delta_gate",
         ]
@@ -260,12 +231,10 @@ class TestSweptSharedWeight:
                 "unit",
                 "estimand_version",
                 "eligible",  # the eligibility record (§2.10)
-                "produced_by",
             }
             for row in rows
         )
         assert sorted({row[AXIS] for row in rows}) == WEIGHTS
-        assert len({row["produced_by"] for row in rows}) == len(WEIGHTS)
 
     @pytest.mark.parametrize(
         "bundle", ["attn_gate.safetensors", "delta_gate.safetensors"]

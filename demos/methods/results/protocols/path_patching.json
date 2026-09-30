@@ -1,0 +1,20 @@
+{
+  "document": "protocols/path_patching.json",
+  "document_digest": "33875276e3ce3bfcebb1096238fe2a14d27e30afd22a5ec05adda46f16e2fcef",
+  "run_digest": "33875276e3ce3bfcebb1096238fe2a14d27e30afd22a5ec05adda46f16e2fcef",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 17.8,
+  "metrics": {
+    "logit_diff": {
+      "metric": "logit_diff",
+      "unit": "logit",
+      "rows": 256,
+      "eligible_rows": 256,
+      "mean": 6.1998
+    }
+  }
+}

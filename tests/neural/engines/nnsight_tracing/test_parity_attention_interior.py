@@ -1,14 +1,15 @@
 """The attention interior on the nnsight engine.
 
 The same treatment the module-boundary vocabulary got, extended to the
-attention-interior components: the same documents through both engines, agreeing to
+attention components: the same documents through both engines, agreeing to
 fp32-eager-CPU tolerance. Two genuinely independent implementations — the
 reference engine's ``TorchFunctionMode`` softmax tap vs this engine's
-``.source`` address navigation — agreeing is the strongest check there
-is: a wrong address (``attn_weights_0``, the pre-mask tensor, say) produces
+``.source`` address navigation — agreeing is the strongest check this file
+has: a wrong address (``attn_weights_0``, the pre-mask tensor, say) produces
 plausible numbers of the right shape, and only the comparison catches it.
 
-Plus what parity alone cannot pin: the identity checks (``softmax(scores) == pattern`` exactly; rows sum to 1;
+Plus what parity alone cannot pin: the identity checks ported from the
+verification probes (``softmax(scores) == pattern`` exactly; rows sum to 1;
 ``z·σ(gate) == premix``), the causal writes (a targeted knockout moves the
 logits, a uniform shift is a softmax-invariance no-op), the in-forward
 ordering discipline the ``.source`` interiors demand, and the on-demand
@@ -22,7 +23,10 @@ import torch
 
 from causalab.neural.engines.nnsight_tracing.executor import TracePointExecutor
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.schema import PROTOCOL_VERSION
+
+from tests.protocol._docs import UNWRITTEN, saved
 
 from .test_parity_module_boundaries import (
     ATOL,
@@ -46,22 +50,14 @@ def _read_doc(component: str, *, pos: object = -1, head: int | None = None) -> d
     if head is not None:
         site["head"] = head
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": site},
-            "reads": {
-                "r": {"site": "tap", "pos": pos, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": pos}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 
@@ -69,44 +65,39 @@ def _read_doc(component: str, *, pos: object = -1, head: int | None = None) -> d
 def _write_doc(component: str, do: dict, *, pos: object = "all") -> dict:
     """Patch one interior site and read the last-position logits."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {"component": component, "layers": [LAYER]},
                 "head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": pos,
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "logits": {
-                    "site": "head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": pos},
+                "logits": {"site": "head", "pos": -1},
             },
             "writes": {"patch": {"site": "tap", "pos": pos, "do": do}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "save": [
-                {
-                    "value": "logits",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "l.safetensors",
-                }
-            ],
+            "save": [saved("logits", "patched", "l.safetensors")],
         },
     }
 
 
+def _without_operand(doc: dict) -> dict:
+    """The write document with a literal or parameter operand: the
+    counterfactual read goes, and with it the un-intervened model that was
+    the only one to list it (a model nobody reads is refused, §2.9)."""
+    del doc["method"]["reads"]["v_cf"]
+    del doc["method"]["intervened_models"][UNWRITTEN]
+    return doc
+
+
 # --------------------------------------------------------------------------- #
-# reads: the whole attention-interior surface, both engines
+# reads: the whole attention surface, both engines
 # --------------------------------------------------------------------------- #
 
 #: (component, pos, head). The two pattern-shaped components have no contract
@@ -259,8 +250,9 @@ def test_a_targeted_knockout_on_the_scores_moves_the_logits(trace_qwen):
     softmax."""
     from tests.neural.engines.pytorch_hooks._drive import bundle_loader
 
-    doc = _write_doc("attention_scores", {"add_scaled": {"op": "knock", "alpha": 1.0}})
-    del doc["method"]["reads"]["v_cf"]
+    doc = _without_operand(
+        _write_doc("attention_scores", {"add_scaled": {"op": "knock", "alpha": 1.0}})
+    )
     doc["method"]["params"] = {"knock": {"file_path": "k.safetensors"}}
     mask = torch.zeros_like(_traced_read(trace_qwen, "attention_scores", pos="all"))
     mask[:, 0, :, 0] = -1e4
@@ -278,8 +270,9 @@ def test_a_uniform_shift_of_the_scores_is_a_no_op(trace_qwen):
     """Softmax is shift-invariant along the axis it normalizes, so adding the
     same constant to every score changes nothing — ported as a pin so a
     knockout recipe stays targeted."""
-    doc = _write_doc("attention_scores", {"add_scaled": {"op": -10000.0, "alpha": 1.0}})
-    del doc["method"]["reads"]["v_cf"]
+    doc = _without_operand(
+        _write_doc("attention_scores", {"add_scaled": {"op": -10000.0, "alpha": 1.0}})
+    )
     assert _moved(trace_qwen, doc) < 1e-3
 
 
@@ -289,30 +282,21 @@ def test_a_read_of_a_written_slot_sees_the_written_value(trace_qwen):
     hook-registration order — the two engines have to agree here or the same
     document would mean different things."""
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["src"]},
+                "patched": {"input": "base", "reads": ["obs"], "writes": ["p"]},
+            },
             "sites": {"tap": {"component": "attention_query", "layers": [LAYER]}},
             "reads": {
-                "src": {
-                    "site": "tap",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "obs": {"site": "tap", "pos": -1, "model": "patched", "input": "base"},
+                "src": {"site": "tap", "pos": -1},
+                "obs": {"site": "tap", "pos": -1},
             },
             "writes": {"p": {"site": "tap", "pos": -1, "do": {"swap": "src"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["p"]}},
-            "save": [
-                {
-                    "value": "obs",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "o.safetensors",
-                }
-            ],
+            "save": [saved("obs", "patched", "o.safetensors")],
         },
     }
     executor = _executor(TracePointExecutor, doc, trace_qwen, with_cf=True)
@@ -321,7 +305,7 @@ def test_a_read_of_a_written_slot_sees_the_written_value(trace_qwen):
 
 
 # --------------------------------------------------------------------------- #
-# ordering: the renumbered rank band IS the in-forward op order (§7.2 item 3)
+# ordering: the renumbered rank band IS the in-forward op order
 # --------------------------------------------------------------------------- #
 
 
@@ -350,17 +334,9 @@ def test_several_interior_reads_share_one_trace_in_forward_order(
         doc["method"]["reads"][name] = {
             "site": site,
             "pos": "all" if name == "r_scores" else -1,
-            "model": "original",
-            "input": "base",
         }
-        doc["method"]["save"].append(
-            {
-                "value": name,
-                "model": "original",
-                "input": "base",
-                "file_path": f"{name}.safetensors",
-            }
-        )
+        doc["method"]["intervened_models"]["original"]["reads"].append(name)
+        doc["method"]["save"].append(saved(name, "original", f"{name}.safetensors"))
     hooked = _executor(PointExecutor, doc, hooks_qwen, with_cf=False)
     traced = _executor(TracePointExecutor, doc, trace_qwen, with_cf=False)
     for name in ("r", "r_z", "r_scores", "r_out"):
@@ -375,8 +351,9 @@ def test_several_interior_reads_share_one_trace_in_forward_order(
 
 
 def test_a_delta_on_the_pattern_refuses_identically(hooks_qwen, trace_qwen):
-    doc = _write_doc("attention_probs", {"add_scaled": {"op": -1.0, "alpha": 1.0}})
-    del doc["method"]["reads"]["v_cf"]
+    doc = _without_operand(
+        _write_doc("attention_probs", {"add_scaled": {"op": -1.0, "alpha": 1.0}})
+    )
     assert _refusal(PointExecutor, doc, hooks_qwen) == _refusal(
         TracePointExecutor, doc, trace_qwen
     )

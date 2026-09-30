@@ -21,8 +21,8 @@ from __future__ import annotations
 
 import random
 
-from causalab.causal.counterfactual_dataset import CounterfactualExample
-from causalab.causal.trace import CausalTrace
+from causalab.causal.counterfactuals import CounterfactualExample
+from causalab.causal.model import CausalTrace
 
 from .causal_models import create_causal_model
 from .config import SubjectObjectRelationsConfig

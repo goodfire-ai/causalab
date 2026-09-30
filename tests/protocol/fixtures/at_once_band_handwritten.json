@@ -1,0 +1,109 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "The hand-written twin of the spec corpus's at_once band (tests/protocols/16_at_once_band_im.json): ten one-layer attention sites, L10-L19, and three bands over them, spelled out entry by entry as the shipped attention_band_patch.json was before sec. 3.1 existed. It is that pre-sugar document with its model set to the corpus model; the shipped preset's own twin (band_patch_handwritten.json) followed the preset when it was retargeted to Qwen2.5-7B and a 28-layer band, and this file keeps the corpus's 32-layer spelling. Layer-band attention patching as ONE document. A band patches the complete attention_output at every layer in the span during the SAME forward pass, and the sweep language genuinely cannot express that - one start-layer value would have to expand into five or ten dependent writes, and a sweep expands one axis into independent points. 'intervened_models' is the mechanism that can: each entry names the set of writes in force for one forward, so several bands - overlapping ones included - are several entries over ONE table of per-layer writes. That is one model load for every band, not one per band; a verified A3B document carried 41 sites, 40 writes and 67 intervened_models (every 5- and 10-layer band of a 40-layer tower) in a single campaign. Scale this by extending the sites/reads/writes tables one entry per layer and adding one intervened_models entry per band; nothing else changes. Note the two widths here share their writes: band10_L10 is band5_L10's and band5_L15's writes together, and each write is authored once."
+  },
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#train",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {
+        "input": "counterfactual",
+        "reads": [
+          "v_a10",
+          "v_a11",
+          "v_a12",
+          "v_a13",
+          "v_a14",
+          "v_a15",
+          "v_a16",
+          "v_a17",
+          "v_a18",
+          "v_a19"
+        ]
+      },
+      "band5_L10": {
+        "input": "base",
+        "reads": ["logits_band5_L10"],
+        "writes": ["w10", "w11", "w12", "w13", "w14"]
+      },
+      "band5_L15": {
+        "input": "base",
+        "reads": ["logits_band5_L15"],
+        "writes": ["w15", "w16", "w17", "w18", "w19"]
+      },
+      "band10_L10": {
+        "input": "base",
+        "reads": ["logits_band10_L10"],
+        "writes": ["w10", "w11", "w12", "w13", "w14", "w15", "w16", "w17", "w18", "w19"]
+      }
+    },
+    "positions": {"tap": {"index": -1}},
+    "sites": {
+      "a10": {"component": "attention_output", "layers": [10]},
+      "a11": {"component": "attention_output", "layers": [11]},
+      "a12": {"component": "attention_output", "layers": [12]},
+      "a13": {"component": "attention_output", "layers": [13]},
+      "a14": {"component": "attention_output", "layers": [14]},
+      "a15": {"component": "attention_output", "layers": [15]},
+      "a16": {"component": "attention_output", "layers": [16]},
+      "a17": {"component": "attention_output", "layers": [17]},
+      "a18": {"component": "attention_output", "layers": [18]},
+      "a19": {"component": "attention_output", "layers": [19]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_a10": {"site": "a10", "pos": "tap"},
+      "v_a11": {"site": "a11", "pos": "tap"},
+      "v_a12": {"site": "a12", "pos": "tap"},
+      "v_a13": {"site": "a13", "pos": "tap"},
+      "v_a14": {"site": "a14", "pos": "tap"},
+      "v_a15": {"site": "a15", "pos": "tap"},
+      "v_a16": {"site": "a16", "pos": "tap"},
+      "v_a17": {"site": "a17", "pos": "tap"},
+      "v_a18": {"site": "a18", "pos": "tap"},
+      "v_a19": {"site": "a19", "pos": "tap"},
+      "logits_band5_L10": {"site": "lm_head", "pos": -1},
+      "logits_band5_L15": {"site": "lm_head", "pos": -1},
+      "logits_band10_L10": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "w10": {"site": "a10", "pos": "tap", "do": {"swap": "v_a10"}},
+      "w11": {"site": "a11", "pos": "tap", "do": {"swap": "v_a11"}},
+      "w12": {"site": "a12", "pos": "tap", "do": {"swap": "v_a12"}},
+      "w13": {"site": "a13", "pos": "tap", "do": {"swap": "v_a13"}},
+      "w14": {"site": "a14", "pos": "tap", "do": {"swap": "v_a14"}},
+      "w15": {"site": "a15", "pos": "tap", "do": {"swap": "v_a15"}},
+      "w16": {"site": "a16", "pos": "tap", "do": {"swap": "v_a16"}},
+      "w17": {"site": "a17", "pos": "tap", "do": {"swap": "v_a17"}},
+      "w18": {"site": "a18", "pos": "tap", "do": {"swap": "v_a18"}},
+      "w19": {"site": "a19", "pos": "tap", "do": {"swap": "v_a19"}}
+    },
+    "save": [
+      {
+        "read": "logits_band5_L10",
+        "model": "band5_L10",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia_band5_L10.json"
+      },
+      {
+        "read": "logits_band5_L15",
+        "model": "band5_L15",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia_band5_L15.json"
+      },
+      {
+        "read": "logits_band10_L10",
+        "model": "band10_L10",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia_band10_L10.json"
+      }
+    ]
+  }
+}

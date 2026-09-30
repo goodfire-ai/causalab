@@ -6,8 +6,8 @@ such as answer symbols, periods, and the last token.
 
 from typing import Any, Callable
 
-from causalab.neural.token_positions import LMPipeline
-from causalab.neural.token_positions import (
+from causalab.tasks.token_positions import LMPipeline
+from causalab.tasks.token_positions import (
     TokenPosition,
     build_token_positions,
 )
@@ -37,10 +37,10 @@ def create_token_positions(
 
     def find_correct_symbol(setting: dict[str, Any]) -> str:
         for i in range(NUM_CHOICES):
-            if setting[f"choice{i}"] == setting["color"]:
-                return f"symbol{i}"
+            if setting[f"choices[{i}]"] == setting["color"]:
+                return f"symbols[{i}]"
 
-        choices = [setting[f"choice{i}"] for i in range(NUM_CHOICES)]
+        choices = [setting[f"choices[{i}]"] for i in range(NUM_CHOICES)]
         raise ValueError(
             f"No correct symbol found for color {setting['color']} in choices {choices} with setting {setting}"
         )
@@ -63,13 +63,16 @@ def create_token_positions(
     # Add symbol positions for each choice
     for i in range(NUM_CHOICES):
         # Symbol itself
-        token_position_specs[f"symbol{i}"] = {"type": "variable", "name": f"symbol{i}"}
+        token_position_specs[f"symbols[{i}]"] = {
+            "type": "variable",
+            "name": f"symbols[{i}]",
+        }
 
         # Period after symbol
         token_position_specs[f"symbol{i}_period"] = {
             "type": "index",
             "position": +1,
-            "relative_to": {"variable": f"symbol{i}"},
+            "relative_to": {"variable": f"symbols[{i}]"},
         }
 
     # Add last token in the sequence last:

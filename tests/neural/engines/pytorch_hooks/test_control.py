@@ -1,11 +1,12 @@
 """``train.control`` (spec §2.11): the closed-loop schedule, torch-free.
 
-The load-bearing test is the oracle: a reference PID controller on the
-zeroed-head count (the DCM formulation the module reproduces) is written out
-below and driven on zeroed-head counts,
+The load-bearing test is the oracle: a textbook PID, written independently
+below in the rate/count parametrization, is driven on zeroed-head counts,
 while ours is driven on the kept counts the fit reports — and the two log
-weights agree to floating-point precision at every update. Everything the
-module docstring claims about signs and the first update is that one test.
+weights agree to floating-point precision at every update. Both are the
+incremental (velocity) form of a discrete PID law in log space (Åström &
+Murray, *Feedback Systems*, 2008, ch. 10). Everything the module docstring
+claims about signs and the first update is that one test.
 """
 
 from __future__ import annotations
@@ -23,9 +24,10 @@ from causalab.neural.engines.pytorch_hooks.control import (
 pytestmark = pytest.mark.unit
 
 
-class _RunPyPid:
-    """The reference PID controller on the zeroed-head count: log-space
-    update, clipped derivative, bounded log multiplier."""
+class _TextbookPid:
+    """The oracle: an incremental PID in the rate/count parametrization, with a
+    log-space update, a clipped derivative and a bounded log multiplier. Before
+    any count is observed it takes the actual rate as ``0.0``."""
 
     def __init__(self, kp, ki, kd, init_mult, mult_min=1e-8, mult_max=1e8, d_clip=5.0):
         self.kp, self.ki, self.kd = kp, ki, kd
@@ -80,9 +82,9 @@ def test_a_signal_above_a_falling_setpoint_raises_the_weight_monotonically():
 
 def test_a_signal_on_the_setpoint_leaves_the_weight_alone():
     """After the first update. On the first, no rate has been observed yet, so
-    the rate error is the ramp's own slope — run.py's ``actual_rate = 0.0``
-    convention — and the weight moves once by ``kp · slope``; from then on a
-    signal that tracks the setpoint moves it no further."""
+    the rate error is the ramp's own slope, as if the actual rate were
+    ``0.0``, and the weight moves once by ``kp · slope``; from then on a signal
+    that tracks the setpoint moves it no further."""
     control = _ours()
     after_first = control.step(15.68, ramp_setpoint(16, 0, 0.5, 1, 100))
     assert after_first == pytest.approx(0.025 * math.exp(0.1 * 0.32))
@@ -122,31 +124,29 @@ def test_the_controller_refuses_an_impossible_setup():
 
 
 @pytest.mark.parametrize("kd", [0.0, 0.3])
-def test_our_law_is_run_pys_pid_on_the_kept_count(kd):
-    """The oracle. ``run.py`` tracks the *zeroed* count against a linear
+def test_our_law_is_the_textbook_pid_on_the_kept_count(kd):
+    """The oracle. The textbook PID tracks the *zeroed* count against a linear
     target; we track the *kept* count against the mirrored ramp. Same
     gains, same log-space update, same clipped derivative — same weights."""
     units, total = 16, 40
     kp, ki, init = 0.1, 0.001, 0.025
-    theirs = _RunPyPid(kp, ki, kd, init_mult=init)
+    oracle = _TextbookPid(kp, ki, kd, init_mult=init)
     ours = _ours(kp=kp, ki=ki, kd=kd, value=init, setpoint_before=float(units))
     # a fit that prunes in bursts, stalls, then overshoots the ramp
     n_zero = [0, 0, 1, 3, 3, 3, 4, 8, 8, 9, 12, 12, 12, 13, 16, 16, 16, 16, 15, 16]
     n_zero += [16] * (total - len(n_zero))
-    target_rate = (
-        units / total
-    )  # zeroed units per update, run.py's steps_per_pid/run_total_steps
+    target_rate = units / total  # zeroed units per update
     for step, zero in enumerate(n_zero, start=1):
         actual_rate = (
-            0.0 if theirs._prev_n_zero is None else float(zero - theirs._prev_n_zero)
+            0.0 if oracle._prev_n_zero is None else float(zero - oracle._prev_n_zero)
         )
-        theirs._prev_n_zero = zero
+        oracle._prev_n_zero = zero
         target_n_zero = units * min(1.0, step / total)
-        their_value = theirs.step(actual_rate, target_rate, target_n_zero - zero)
+        oracle_value = oracle.step(actual_rate, target_rate, target_n_zero - zero)
         our_value = ours.step(
             float(units - zero), ramp_setpoint(units, 0, 1.0, step, total)
         )
-        assert our_value == pytest.approx(their_value, rel=1e-12), f"step {step}"
+        assert our_value == pytest.approx(oracle_value, rel=1e-12), f"step {step}"
 
 
 def test_build_controller_reads_the_documented_defaults():

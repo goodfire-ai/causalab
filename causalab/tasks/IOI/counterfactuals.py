@@ -4,7 +4,7 @@ Provides ``generate_dataset(model, n, seed)`` per the loader convention plus
 a few zero-arg generators that the baseline analysis introspects for the
 counterfactual sanity check.
 
-Each generator returns a :class:`CounterfactualExample`-shaped dict with
+Each generator returns a [`CounterfactualExample`][]-shaped dict with
 ``"input"`` (a well-formed IOI trace) and ``"counterfactual_inputs"``
 (list of one trace).
 """
@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import random
 
-from causalab.causal.counterfactual_dataset import CounterfactualExample
-from causalab.causal.trace import CausalTrace
+from causalab.causal.counterfactuals import CounterfactualExample
+from causalab.causal.model import CausalTrace
 
 from .causal_models import NAMES, positional_causal_model
 
@@ -28,7 +28,9 @@ def _sample_well_formed_input(model=positional_causal_model) -> CausalTrace:
     return model.sample_input()
 
 
-def _swap_name_C(input_sample: CausalTrace, model=positional_causal_model) -> CausalTrace:
+def _swap_name_C(
+    input_sample: CausalTrace, model=positional_causal_model
+) -> CausalTrace:
     """Counterfactual: keep ``name_A`` / ``name_B`` fixed, flip ``name_C`` to
     the other introduced name. This swaps the IO answer.
     """

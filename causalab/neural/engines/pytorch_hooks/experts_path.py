@@ -1,65 +1,20 @@
-"""The grouped-experts forward this engine runs: transformers' ``grouped_mm``
-function without the two kernels a single-process model pays for nothing.
+"""Run the grouped expert path with equivalent local optimizations.
 
-``transformers.integrations.moe.grouped_mm_experts_forward`` (5.16) sorts the
-``S = tokens · top_k`` (token, slot) pairs by expert, gathers the hidden
-states into that order, runs the two grouped projections, weights, un-sorts
-and reduces. Two of its lines exist for **expert parallelism**: under EP the
-router marks a slot routed to another rank with the sentinel expert id
-``num_local_experts``, the sort pushes those rows to the tail, ``histc``
-drops them from the offsets so ``grouped_mm`` skips them and leaves their
-output rows uninitialised — and a pre-mask on the gathered input and a
-post-mask on the weighted output (``masked_fill_(sentinel_mask, 0.0)``) zero
-what would otherwise be NaN. In one process there is no sentinel: every id is
-below ``num_experts``, both masks are all-``False``, both forward fills are
-no-ops — and both **backwards** still run, ``grad.masked_fill(mask, 0)`` over
-the full ``(S, hidden)`` gradient each. 📐 Profiled (``fullprof0910``, das
-step 5): 56 launches × 64 µs per optimizer step, ALU-bound, 5 % of the run's
-kernel time, on the autograd thread with no Python frame — the backward of
-those two lines.
+``lean_grouped_mm_forward`` removes sentinel masks when expert parallelism
+is disabled. Every expert ID is then local. Permutation backward gathers
+with the inverse permutation. Tests compare outputs and all gradients with
+the Transformers function using exact equality. Expert-parallel models
+use the library path.
 
-:func:`lean_grouped_mm_forward` is the same function with the masks left out
-when the module cannot see a sentinel (:func:`may_route_to_sentinels`: the
-model was not loaded with ``distributed_config.enable_expert_parallel``), and
-one more change to the backward alone: the un-sort ``weighted_out[inv_perm]``
-is a permutation, so its gradient is the gather ``grad[perm]`` —
-:class:`_PermuteRows` says so, where autograd's generic index backward would
-sort the indices and accumulate (``indexing_backward_kernel``) as if two rows
-could coincide. Every number the forward produces, and every gradient, is
-bit-identical to the library's: a mask that is all-``False`` changes nothing,
-a permutation's transpose is its inverse, and the test suite pins both
-against the library function on the tiny MoE (output, input gradient, both
-expert-weight gradients, ``torch.equal``). A model under EP is handed to the
-library function unchanged.
+``lean_experts_path`` overrides grouped dispatch for one engine forward,
+then restores it. The executor enters it before expert taps so they wrap
+the selected function and count its two grouped projections.
 
-Containment mirrors :mod:`.experts_interface`: :func:`lean_experts_path`
-installs the function as the ``"grouped_mm"`` entry of ``ALL_EXPERTS_FUNCTIONS``
-for the duration of one engine forward and restores the previous entry on
-exit — so the nnsight engine, whose ``.source`` address table descends into
-the library function's own body, never sees it. The executor enters it
-**before** the experts-interface taps, which capture whatever ``"grouped_mm"``
-dispatches to at their entry and wrap it: the tapped interior is then this
-function's, and its two ``_grouped_linear`` calls — reached through the module
-attribute, as the library's are — are the two the taps count.
-
-On CUDA with Triton importable, the glue around the two grouped linears runs
-as the fused kernels of :mod:`.kernels.moe_glue` where each one's plan admits
-it — a stable counting sort in place of ``torch.sort`` + ``histc`` +
-``cumsum`` + the inverse scatter, a row gather whose backward folds each
-token's slots in the index backward's own order and rounding, one kernel
-each way for the weight multiply, un-sort, slot sum and cast, and
-``silu(gate) * up``. Each reproduces the ATen order it replaces bit for bit
-(:mod:`.kernels.moe_glue_reference` states those orders with their ATen
-sources); the two ``_grouped_linear`` calls stay as they are. The plan is
-decided before any tensor op and is empty off CUDA, so this tier runs the
-eager lines below unchanged; ``CAUSALAB_MOE_GLUE`` (``shared/kernel_options.py``)
-switches kernels off.
-
-The library function is the source of truth for everything else here: the
-suite's drift canary reads its source and fails when the lines this module
-mirrors (the two masks, the two grouped linears, the un-sort) are no longer
-where this docstring says, so a transformers bump re-examines this copy
-rather than silently diverging from it.
+Eligible CUDA calls use fused sort, gather-backward, routing, reduction,
+and gate kernels from ``kernels.moe_glue``. Each preserves the ATen order
+specified in ``moe_glue_reference``. ``CAUSALAB_MOE_GLUE`` selects kernels;
+unsupported shapes run the corresponding eager operations. A source
+canary checks the Transformers lines this implementation mirrors.
 """
 
 from __future__ import annotations
@@ -69,10 +24,13 @@ from typing import Any, Iterator
 
 import torch
 
+from causalab.neural.engines.pytorch_hooks.experts_registry import EntryInstall
 from causalab.neural.engines.pytorch_hooks.kernels import moe_glue
 from causalab.neural.shared.kernel_options import MoeGlueOptions
 
 __all__ = [
+    "EXPERT_PARALLEL_MARK",
+    "act_fn_is_hooked",
     "has_default_silu_gate",
     "lean_experts_path",
     "lean_grouped_mm_forward",
@@ -106,6 +64,28 @@ def has_default_silu_gate(module: Any) -> bool:
     )
 
 
+def act_fn_is_hooked(module: Any) -> bool:
+    """Whether something watches the module's ``act_fn`` call — a forward
+    hook on it, the experts-interface taps' way of reading and editing the
+    ``activation`` slot (``experts_interface.py``). The fused gate kernel
+    computes ``silu(gate) * up`` without calling ``act_fn`` (the same
+    numbers, bit for bit), so under a hook it must yield to the module's own
+    gate so the tap observes the activation call."""
+    act_fn = getattr(module, "act_fn", None)
+    hooks = getattr(act_fn, "_forward_hooks", None)
+    return bool(hooks)
+
+
+#: Set on an experts module by ``sharding.apply_sharding`` when it installs
+#: ``MoeExpertsParallel`` over the repository's own ``expert`` axis
+#: (``docs/model_parallelism.md`` §5, §6.3): the router then writes the
+#: sentinel id into slots owned by other ranks, and the shard-on-read loader
+#: has left the module's weight *local* — ``num_experts == weight.shape[0]``
+#: — so the predicates below also need this explicit marker to detect
+#: sentinel-bearing routing tables.
+EXPERT_PARALLEL_MARK = "_causalab_expert_parallel"
+
+
 def may_route_to_sentinels(module: Any) -> bool:
     """Whether the experts module's routing table can hold the EP sentinel
     id — ``num_local_experts``, the id the router writes into a slot owned
@@ -114,6 +94,8 @@ def may_route_to_sentinels(module: Any) -> bool:
     (whose masks make a sentinel harmless) rather than this module's (which
     would leave the sentinel rows uninitialised):
 
+    * the module carries [`EXPERT_PARALLEL_MARK`][] — the repository's own
+      expert axis, whose loader keeps the weight local (above); or
     * the model was loaded with ``distributed_config.enable_expert_parallel``
       (read from the config the experts module carries — ``self.config``, set
       by transformers' ``use_experts_implementation`` decorator); or
@@ -123,6 +105,8 @@ def may_route_to_sentinels(module: Any) -> bool:
       ``num_experts != weight.shape[0]`` is a sharded module however it was
       asked for — and a module on which neither can be read counts as one.
     """
+    if getattr(module, EXPERT_PARALLEL_MARK, False):
+        return True
     config = getattr(module, "config", None)
     distributed = getattr(config, "distributed_config", None)
     if getattr(distributed, "enable_expert_parallel", False):
@@ -183,7 +167,9 @@ def lean_grouped_mm_forward(
         expert_dtype=self.down_proj.dtype,
         num_pairs=expert_ids.numel(),
         top_k=num_top_k,
-        default_silu_gate=has_default_silu_gate(self),
+        # a hooked act_fn is read through its call, which the fused gate
+        # would skip (act_fn_is_hooked)
+        default_silu_gate=has_default_silu_gate(self) and not act_fn_is_hooked(self),
         options=MoeGlueOptions.from_env(),
     )
 
@@ -271,16 +257,21 @@ def lean_grouped_mm_forward(
     return final_hidden_states.to(hidden_states.dtype)
 
 
+#: The one installation of the copy shared by every active enterer
+#: (``experts_registry.py``): the ranks of a simulated world are threads of
+#: one process, each entering the manager around its own forward and leaving
+#: in its own order, so the entry is installed by the first active call and
+#: restored by the last — never by a "previous" one thread captured while
+#: another was already inside.
+_LEAN = EntryInstall("grouped_mm", lambda: lean_grouped_mm_forward)
+
+
 @contextlib.contextmanager
 def lean_experts_path() -> Iterator[None]:
     """While active, ``"grouped_mm"`` dispatches to
-    :func:`lean_grouped_mm_forward`; the entry that was there is put back on
-    exit (restore-not-delete, as :func:`.experts_interface_taps`)."""
-    import transformers.integrations.moe as moe
-
-    previous = moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"]
-    moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"] = lean_grouped_mm_forward
-    try:
+    [`lean_grouped_mm_forward`][]; the entry that was there is put back
+    when the last active caller leaves (restore-not-delete, as
+    `.experts_interface_taps`). Re-entrant across threads and nesting:
+    concurrent enterers share one installation."""
+    with _LEAN.installed():
         yield
-    finally:
-        moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"] = previous

@@ -1,0 +1,57 @@
+{
+  "version": "1",
+  "description": "Single-source workflow timing and profiling with two-update Qwen DAS/DBM fits, controls and held-out replay.",
+  "output_dir": "research",
+  "steps": {
+    "das": {
+      "type": "intervention_protocol",
+      "document": "das.json"
+    },
+    "das_eval": {
+      "type": "intervention_protocol",
+      "document": "das_eval.json"
+    },
+    "dbm": {
+      "type": "intervention_protocol",
+      "document": "dbm.json"
+    },
+    "dbm_eval": {
+      "type": "intervention_protocol",
+      "document": "dbm_eval.json"
+    },
+    "clean": {
+      "type": "intervention_protocol",
+      "document": "clean.json"
+    },
+    "noop": {
+      "type": "intervention_protocol",
+      "document": "noop.json"
+    }
+  },
+  "measurement": {
+    "version": 1,
+    "mode": "single",
+    "source": {
+      "revision": "HEAD",
+      "execution": {
+        "batch_rows": 4,
+        "cuda_graphs": true
+      }
+    },
+    "seeds": [
+      7
+    ],
+    "repeats": 3,
+    "warmups": 1,
+    "cases": {
+      "resident": {
+        "kind": "workflow",
+        "cold_process": false
+      },
+      "cold": {
+        "kind": "workflow",
+        "cold_process": true
+      }
+    }
+  }
+}

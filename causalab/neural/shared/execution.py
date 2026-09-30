@@ -1,45 +1,54 @@
-"""The engine-neutral half of ``Engine.execute``: run every point, lower its
-metrics, and fill the output tables.
+"""Execute protocol points and assemble metrics and output tables.
 
-Everything here consumes the *executor surface* — ``read_value`` /
-``dense_value`` / ``windowed_value`` / ``run_all`` / ``rows_for_metrics`` /
-``is_generated`` / ``addressed_steps`` / ``generated_ids`` / ``bundle`` — and
-nothing in it knows whether a hook or a trace produced the tensors. An engine
-supplies its executor factory (and, if it trains, its train runner) and keeps
-only its own identity stamp.
+The driver uses the common executor surface for reads, row windows,
+generated tokens, and model bundles. Engines supply an executor factory
+and an optional training runner.
 """
 
 from __future__ import annotations
 
 import dataclasses
 import json
+import logging
+import time
 from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
 from causalab.causal.scoring import ScoringCheck
-from causalab.neural.shared.executor_base import ForwardCache, Interning, PrefixPlan
+from causalab.neural.shared.executor import ForwardCache, Interning, PrefixPlan
 from causalab.neural.shared.fires import group_label
-from causalab.neural.shared.location_ledger import (
-    ledger_identity,
-    ledger_records,
-    point_ledger,
-)
-from causalab.neural.shared.metrics import compute_metric
-from causalab.neural.shared.outputs import (
+from causalab.neural.shared.join import ShardOutput, join_shards
+from causalab.neural.shared.featurizers import featurizer_cache
+from causalab.neural.shared.metrics import score_metric
+from causalab.io.results_io import write_outputs
+from causalab.neural.shared.results import (
     MetricTable,
     TensorFile,
-    write_outputs,
+    _metric_cell,  # pyright: ignore[reportPrivateUsage]
+    _row_exclusions,  # pyright: ignore[reportPrivateUsage]
+    _summary_stat,  # pyright: ignore[reportPrivateUsage]
+    _Windowed,  # pyright: ignore[reportPrivateUsage]
+    _windowed_eligibility,  # pyright: ignore[reportPrivateUsage]
+    rank_records,
 )
+from causalab.neural.shared.receipt import emit_run_events, run_events, write_run_record
 from causalab.neural.shared.head import capture_spec
-from causalab.neural.shared.services import input_roles, site_identity, spec_identity
-from causalab.protocol.canonical import canonical_model
-from causalab.protocol.engine import ExecutionRequest, RunResult
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.examples import example_labels
-from causalab.protocol.resolve import build_artifact_identity
-from causalab.protocol.fit_splits import check_fit_splits
-from causalab.protocol.resolution import (
+from causalab.protocol.identity import site_identity, spec_identity
+from causalab.protocol.positions.encoding import generated_budget
+from causalab.protocol.positions.ledger import ledger_records, wants_ledger
+from causalab.protocol.positions.resolve import StepResolution, positions_key
+from causalab.protocol.positions.roles import input_roles
+from causalab.neural.shared.step_rules import check_steps
+from causalab.neural.shared.sweep import enumerate_steps, sign_steps
+from causalab.protocol.schema.explicit import canonical_model
+from causalab.protocol.compiled import CompiledProtocol
+from causalab.protocol.engine import Engine, RunContext, RunResult, StepRecord
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.results import example_labels
+from causalab.io.env import build_artifact_identity
+from causalab.protocol.rules.data import check_fit_splits
+from causalab.protocol.results import (
     Eligibility,
     Resolution,
     Unavailable,
@@ -48,35 +57,37 @@ from causalab.protocol.resolution import (
     cell_record,
     unavailable,
 )
-from causalab.protocol.plan import (
-    PointPlan,
+from causalab.protocol.publish import is_joiner, point_shard
+from causalab.neural.shared.plan import (
+    _data_identity,  # pyright: ignore[reportPrivateUsage]
+    campaign_plans,
     fit_cohorts,
-    generated_budget,
+    GroupKey,
     interned_groups,
-    lower_bands,
-    plan_point,
+    PointPlan,
 )
-from causalab.protocol.run import (
+from causalab.protocol.lowering import lower_bands
+from causalab.protocol.receipt import (
     RAGGED_KEY,
     RUN_RECORD_NAME,
     record_fires,
     record_measured_bounds,
+    record_models,
     record_ragged_geometry,
 )
 from causalab.provenance import runtime_identity
 from causalab.protocol.estimand import metric_record_identity
 from causalab.protocol.schema import (
-    READ_TARGET_METRIC_KINDS,
     WHOLE_WINDOW_METRIC_KINDS,
     Document,
-    SiteSpec,
-    metric_reads_vocabulary,
     parse_document,
+    read_is_vocabulary,
+    ReadRef,
+    SiteSpec,
 )
 
 __all__ = [
     "ExecutorSurface",
-    "MASK_DECISIVE_MARGIN",
     "TrainEvalScore",
     "TrainOutcome",
     "TrainRunner",
@@ -86,30 +97,38 @@ __all__ = [
     "featurizer_identity",
 ]
 
+#: The run's progress lines, at INFO: point selection, each point's model
+#: load, cohort fits, each point's run, the output write. Silent unless a
+#: caller enables this logger — ``causalab run --verbose`` attaches a stderr
+#: handler to this name alone ([`causalab.cli`][]). Nothing here reaches the
+#: receipt, the event stream or any digest.
+_log = logging.getLogger(__name__)
+
 
 class ExecutorSurface(Protocol):
-    """What :func:`execute_request` needs from a point executor."""
+    """What [`execute_request`][] needs from a point executor."""
 
     bundle: Any
 
     def run_all(self) -> None: ...
-    def read_value(self, name: str) -> Any: ...
-    def resolution(self, name: str) -> Resolution: ...
-    def row_resolutions(self, name: str) -> list[Unavailable | None]: ...
-    def dense_value(self, name: str) -> Any: ...
-    def dense_rows(self, name: str, rows: Sequence[int]) -> Any: ...
-    def windowed_value(self, name: str) -> list[Any]: ...
+    def read_value(self, ref: ReadRef) -> Any: ...
+    def resolution(self, ref: ReadRef) -> Resolution: ...
+    def row_resolutions(self, ref: ReadRef) -> list[Unavailable | None]: ...
+    def dense_value(self, ref: ReadRef) -> Any: ...
+    def dense_rows(self, ref: ReadRef, rows: Sequence[int]) -> Any: ...
+    def windowed_value(self, ref: ReadRef) -> list[Any]: ...
     def generated_metric(self, metric: Any) -> list[list[Any]]: ...
-    def is_generated(self, name: str) -> bool: ...
-    def addressed_steps(self, name: str) -> list[list[int]]: ...
+    def is_generated(self, ref: ReadRef) -> bool: ...
+    def addressed_steps(self, ref: ReadRef) -> list[list[int]]: ...
     def generated_ids(self, name: str) -> list[list[int]]: ...
     def rows_for_metrics(self) -> list[dict[str, Any]]: ...
     def check_scoring(self) -> ScoringCheck: ...
+    def location_ledger(self) -> Any: ...
 
 
-#: The run receipt's block for the scoring identity (spec §2.2): per base
-#: dataset ref, what :meth:`ExecutorSurface.check_scoring` found before the
-#: point's first forward — ``{"digest", "string_mode", "result"}``, the result
+#: The run receipt's block for the table's string mode (spec §2.2): per base
+#: dataset ref, what [`ExecutorSurface.check_scoring`][] found before the
+#: point's first forward — ``{"string_mode", "result"}``, the result
 #: one of ``causalab.causal.scoring.SCORING_RESULTS``. A sibling of the
 #: ``execution`` block: recorded, never gated, because the refusal has already
 #: happened by the time anything is written.
@@ -122,17 +141,29 @@ def record_scoring(output_dir: Path, ref: str, check: ScoringCheck) -> Path | No
     receipt's path.
 
     The receipt is written before execution by
-    :func:`~causalab.protocol.run.write_run_record`; this adds to it what the
+    [`write_run_record`][]; this adds to it what the
     pre-forward check found. A caller that wrote no receipt (a workflow step
     records its run in ``_step.json``; an engine test drives
     ``execute_request`` directly) has nothing to amend: ``None``.
     """
+    return record_scoring_records(output_dir, {ref: check.as_record()})
+
+
+def record_scoring_records(
+    output_dir: Path, records: Mapping[str, Mapping[str, Any]]
+) -> Path | None:
+    """[`record_scoring`][] over already-rendered records, ``{ref:
+    check.as_record()}`` — what the data-parallel joiner writes for the
+    points the other replicas ran (``neural/shared/join.py``). Merged per
+    ref; the block is sorted on write, so the order of arrival is not in the
+    bytes. ``None`` when there is no receipt to amend."""
     receipt = output_dir / RUN_RECORD_NAME
     if not receipt.is_file():
         return None
     record = json.loads(receipt.read_text())
     block = dict(record.get(SCORING_KEY) or {})
-    block[ref] = check.as_record()
+    for ref, rendered in records.items():
+        block[ref] = dict(rendered)
     record[SCORING_KEY] = block
     receipt.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
     return receipt
@@ -172,13 +203,6 @@ class TrainEvalScore:
         }
 
 
-#: A soft mask is "decisive" at a dimension when σ(θ) is outside
-#: ``[0.5 - MASK_DECISIVE_MARGIN, 0.5 + MASK_DECISIVE_MARGIN]`` — i.e. outside
-#: [0.1, 0.9] at the default — wide enough that a gate whose σ never left the
-#: relaxed band reports a decisive fraction of 0 rather than crediting noise.
-MASK_DECISIVE_MARGIN = 0.4
-
-
 @dataclasses.dataclass(frozen=True)
 class Checkpoint:
     """One photograph of a fit (§2.12 ``trajectory``): the trained
@@ -211,7 +235,7 @@ class TrainOutcome:
     stages: Mapping[str, Any]
     eval_score: TrainEvalScore | None = None
     #: Per trained featurizer, whatever the fit can say about *itself* — see
-    #: :func:`~causalab.neural.engines.pytorch_hooks.train.fit_diagnostics`.
+    #: [`fit_diagnostics`][causalab.neural.engines.pytorch_hooks.train.fit_diagnostics].
     #: Written beside the bundle, because a fit that produced a meaningless
     #: parameter and a perfect score is otherwise indistinguishable from a
     #: good one.
@@ -294,164 +318,49 @@ class TrainOutcome:
 #: cohort — same realization, same rows, same frame (``plan.fit_cohorts``) —
 #: so the loop may run their optimizer steps as one forward each.
 TrainRunner = Callable[
-    [Sequence[Document], Sequence[Any], ExecutionRequest], Sequence[TrainOutcome]
+    [Sequence[Document], Sequence[Any], RunContext], Sequence[TrainOutcome]
 ]
-
-
-@dataclasses.dataclass(frozen=True)
-class _Windowed:
-    """One continuation metric's per-example results, plus what the rows need
-    to stay legible: the steps each value scored, and whether the example
-    addressed anything at all."""
-
-    values: list[list[Any]]
-    steps: list[list[int]] | None
-    matched: list[bool]
-
-
-def campaign_plans(
-    docs: Sequence[Document], canonical: Sequence[Mapping[str, Any]]
-) -> tuple[PointPlan, ...]:
-    """The per-point plans a campaign executes from.
-
-    Public because the interning claim is checkable arithmetic:
-    :func:`~causalab.protocol.plan.interned_groups` over these plans is how
-    many forward groups a run *owes*, and
-    :attr:`~causalab.protocol.engine.RunResult.forwards` is what it paid. One
-    derivation, so the number a caller verifies against is the number
-    execution keyed on.
-
-    ``canonical`` is the points' canonical forms, in lockstep with ``docs``
-    (:attr:`~causalab.protocol.engine.ExecutionRequest.canonical`): the data
-    half of a group's identity is read from there, never recomputed.
-    """
-    if len(docs) != len(canonical):
-        raise ProtocolError(
-            "P2",
-            f"{len(docs)} point documents but {len(canonical)} canonical forms "
-            "— the two are in lockstep per point",
-        )
-    return tuple(
-        plan_point(doc, data_identity=_data_identity(doc, form))
-        for doc, form in zip(docs, canonical)
-    )
-
-
-def _data_identity(doc: Document, canonical: Mapping[str, Any]) -> dict[str, str]:
-    """Input role → the identity of the rows that role will be encoded from.
-
-    Folded into every forward-group digest so two points reading *different*
-    data on the same role never intern together. What determines a role's batch
-    is the **content** of the rows the ref selects plus the one field the
-    executor tokenizes out of them (``DataRole.resolved_field`` —
-    ``<column>[eval]`` for a drawn role, §2.2 — the spelling
-    :func:`~causalab.neural.shared.services.resolve_roles` hands the engine),
-    so the identity is ``"<content digest>#<field>"`` where the digest is the
-    one the canonical form already stamped for that role (§2.2, §7: sha256 over
-    the selected rows, not the file). The ref's *name* is deliberately absent:
-    two tables under one name must never intern, and one table under two names
-    must — which a name-keyed identity got backwards on both counts.
-
-    The role names mirror ``resolve_roles`` (``counterfactual[0]`` for a
-    tuple-valued role) so the keys line up with the plan's ``input``.
-    """
-    digests = _role_digests(doc, canonical)
-    return {
-        role_name: f"{digests[role_name]}#{role_spec.resolved_field}"
-        for role_name, role_spec in input_roles(doc).items()
-    }
-
-
-def _role_digests(doc: Document, canonical: Mapping[str, Any]) -> dict[str, str]:
-    """Input role → the content digest of the rows it reads, read off the
-    point's canonical form (``data.<role>.digest``; a tuple-valued role is a
-    list there, indexed in step with ``resolve_roles``).
-
-    Read, not recomputed: the canonical form's digest is the one the point
-    digest committed to, so there is one content digest per table in the
-    system and the interning identity cannot drift from the provenance one.
-    A role without a stamped digest is refused rather than named — nothing
-    executable lacks one (rows resolve through the same ref the stamp did),
-    so this only fires on a canonical form that is not this point's.
-    """
-    stamped = canonical.get("data")
-    if not isinstance(stamped, Mapping):
-        raise ProtocolError(
-            "P2", "canonical form carries no 'data' section to read digests from"
-        )
-    digests: dict[str, str] = {}
-    for role, value in doc.data.items():
-        entries = value if isinstance(value, tuple) else (value,)
-        forms_raw = stamped.get(role)
-        # the shapes must agree, never broadcast: a tuple-valued role is a
-        # list in the canonical form and a single role is one mapping, so a
-        # form of the other shape is not this point's and is refused
-        if isinstance(value, tuple) != isinstance(forms_raw, (list, tuple)):
-            raise ProtocolError(
-                "P2",
-                f"data role {role!r} is {'tuple' if isinstance(value, tuple) else 'single'}"
-                "-valued but its canonical form is not — the two are the same point's",
-            )
-        forms = list(forms_raw) if isinstance(forms_raw, (list, tuple)) else [forms_raw]
-        if len(forms) != len(entries):
-            raise ProtocolError(
-                "P2",
-                f"data role {role!r} has {len(entries)} entries but its "
-                f"canonical form has {len(forms)}",
-            )
-        for j, form in enumerate(forms):
-            role_name = role if not isinstance(value, tuple) else f"{role}[{j}]"
-            digest = form.get("digest") if isinstance(form, Mapping) else None
-            if not isinstance(digest, str) or not digest:
-                raise ProtocolError(
-                    "P2",
-                    f"data role {role_name!r} has no content digest in its "
-                    "canonical form — the interning identity is the digest of "
-                    "the rows a role reads (§2.2), never the ref's name",
-                )
-            digests[role_name] = digest
-    return digests
 
 
 def _tap_union(
     docs: Sequence[Document], plans: Sequence[PointPlan]
-) -> dict[str, tuple[SiteSpec, ...]]:
-    """Forward-group digest → every site the campaign taps in that group.
+) -> dict[GroupKey, tuple[SiteSpec, ...]]:
+    """Forward-group key → every site the campaign taps in that group.
 
     The union *is* the interning. Taps are deliberately absent from a group's
-    digest, so the single pass a shared digest earns has to capture every
+    key, so the single pass a shared key earns has to capture every
     address any point will ask of it — for a 32-layer scan that is one
     counterfactual forward with 32 taps instead of 32 forwards with one each.
 
     Continuation reads are excluded: those are served by the decode's
     per-step accumulation, not by the prefill capture this store holds, so a
     decoding group contributes only its prompt-frame taps (and can therefore
-    still hand its prefill to a non-decoding point that shares the digest).
+    still hand its prefill to a non-decoding point that shares the key).
 
     A site enters the union as the read **captures** it
-    (:func:`~causalab.neural.shared.head.capture_spec`): an ``lm_head`` read
+    ([`capture_spec`][]): an ``lm_head`` read
     at named positions is served from ``ln_final``, so that is what the
     shared pass stores for it — ``[rows, seq, d_model]``, not the whole
     vocabulary — and what a later point's lookup asks for.
     """
-    union: dict[str, dict[str, SiteSpec]] = {}
+    union: dict[GroupKey, dict[str, SiteSpec]] = {}
     for doc, plan in zip(docs, plans):
         for group in plan.groups:
-            wanted = union.setdefault(group.digest, {})
+            wanted = union.setdefault(group.key, {})
             for tap in group.taps:
                 read = doc.reads[tap.read]
                 if generated_budget(doc, read.pos) is not None:
                     continue
                 spec = capture_spec(doc, group.model, group.input, tap.read)
                 wanted[json.dumps(spec_identity(spec), sort_keys=True)] = spec
-    return {digest: tuple(specs.values()) for digest, specs in union.items()}
+    return {key: tuple(specs.values()) for key, specs in union.items()}
 
 
 def campaign_cache(
     docs: Sequence[Document], plans: Sequence[PointPlan]
 ) -> ForwardCache:
-    """The one :class:`ForwardCache` a campaign runs against: the tap union
-    per digest (§3) and the prefix plans per digest (§4 "Resume").
+    """The one [`ForwardCache`][causalab.neural.shared.executor.cache.ForwardCache] a campaign runs against: the tap union
+    per group key (§3) and the prefix plans per group key (§4 "Resume").
 
     The prefix arithmetic is read off the **interned** groups, whose taps are
     the union over every sharer: the block a shared pass may start at is the
@@ -463,59 +372,90 @@ def campaign_cache(
     (identity, depth), how many group instances across the points may still
     start from it — every one whose interned ``resume_at`` reaches the depth.
     """
-    prefix_plans: dict[str, PrefixPlan] = {}
-    wanted: dict[str, set[int]] = {}
+    prefix_plans: dict[GroupKey, PrefixPlan] = {}
+    wanted: dict[GroupKey, set[int]] = {}
     for group in interned_groups(plans):
         depth = group.resume_at
-        prefix_plans[group.digest] = PrefixPlan(
-            base_digest=group.base_digest,
+        prefix_plans[group.key] = PrefixPlan(
+            base_key=group.base_key,
             resume_at=depth,
             write_depth=group.write_depth,
         )
         if depth > 0:
-            wanted.setdefault(group.base_digest, set()).add(depth)
-    prefix_owed: Counter[tuple[str, int]] = Counter()
+            wanted.setdefault(group.base_key, set()).add(depth)
+    prefix_owed: Counter[tuple[GroupKey, int]] = Counter()
     for plan in plans:
         for group in plan.groups:
-            reach = prefix_plans[group.digest].resume_at
-            for depth in wanted.get(group.base_digest, ()):
+            reach = prefix_plans[group.key].resume_at
+            for depth in wanted.get(group.base_key, ()):
                 if depth <= reach:
-                    prefix_owed[(group.base_digest, depth)] += 1
+                    prefix_owed[(group.base_key, depth)] += 1
     return ForwardCache(
         wanted=_tap_union(docs, plans),
         prefix_plans=prefix_plans,
         wanted_prefix_depths={base: frozenset(v) for base, v in wanted.items()},
         prefix_owed=dict(prefix_owed),
-        owed=dict(Counter(group.digest for plan in plans for group in plan.groups)),
+        owed=dict(Counter(group.key for plan in plans for group in plan.groups)),
     )
 
 
 def execute_request(
-    request: ExecutionRequest,
+    compiled: CompiledProtocol,
+    run: RunContext,
     *,
     engine_name: str,
     executor_factory: Callable[
-        [Document, ExecutionRequest, Mapping[str, Any], "Interning | None"],
+        [
+            Document,
+            RunContext,
+            Mapping[str, Any],
+            "Interning | None",
+            StepResolution | None,
+        ],
         ExecutorSurface,
     ],
     train_runner: TrainRunner | None = None,
     intern_forwards: bool = False,
+    engine: Engine | None = None,
 ) -> RunResult:
-    """Run one :class:`ExecutionRequest` through one engine's executors.
+    """Run the points ``run`` selects of ``compiled`` through one engine's
+    executors — the engine-neutral body of every ``Engine.execute``.
+
+    ``compiled`` is the identity: the axes and the lowered tree they index
+    into, and the campaign digest that stamps what is written. **The sweep is
+    the engine's**: the steps are enumerated here in the canonical
+    order ([`enumerate_steps`][]), the ones
+    ``run`` selects are parsed once and held to the whole §5 checklist — a
+    violation two axes make together is no representative's of the
+    compiler's pass ([`check_steps`][])
+    — and signed
+    with the protocol's one hasher ([`sign_steps`][]), all before anything is planned and before any model
+    loads; what was signed comes back as [`RunResult.steps`][]. ``run`` is
+    the context: the shard (``points``, ``None`` for every point), the
+    resolution environment, where outputs land, the execution and decoding
+    blocks, and ``record``: when set (opt-in at every door), the run receipt
+    (``protocol.json``) is written and the event stream opened here, after
+    the signing and before the first forward
+    ([`causalab.neural.shared.receipt`][]), and the stream is finished once
+    the campaign has run; ``engine`` is then the
+    [`Engine`][] whose execution block the
+    receipt records. The amenders below add what execution observed to a
+    receipt on disk, and are no-ops without one, so the ``fires`` counts of
+    an unrecorded run live in the returned summaries alone.
 
     ``train_runner`` is the engine's train loop, cohort-shaped
-    (:data:`TrainRunner`); an engine without one (its ``grad`` capability
+    ([`TrainRunner`][]); an engine without one (its ``grad`` capability
     absent, so routing never sends it a ``train`` document) refuses loudly if
     a train document reaches it anyway.
 
     ``intern_forwards`` says this engine's executor consults the shared
-    :class:`~causalab.neural.shared.executor_base.ForwardCache` (§3), so
-    :attr:`~causalab.protocol.engine.RunResult.forwards` reports what the run
+    [`ForwardCache`][causalab.neural.shared.executor.cache.ForwardCache] (§3), so
+    [`forwards`][causalab.protocol.engine.RunResult.forwards] reports what the run
     paid. An engine that has not claimed the interning leaves it False and
     reports 0 — "not measured" rather than a number it did not count.
 
     **Order** (§4 "Cohorts"). The campaign runs in two phases. First, cohort
-    by cohort (:func:`~causalab.protocol.plan.fit_cohorts`), every point of
+    by cohort ([`fit_cohorts`][]), every point of
     the cohort is prepared — its executor built, its ledger checked — and the
     cohort's fits run together through ``train_runner``. Then every point is
     finished in **point order**: its own whole-role passes, metrics and saved
@@ -533,23 +473,119 @@ def execute_request(
     # (`lower_bands` is idempotent; the executor lowers again for callers that
     # build one directly). What a band read has no member for — a save, a
     # metric — is refused here, before any forward.
-    docs = tuple(lower_bands(parse_document(point_raw)) for point_raw in request.points)
-    plans = campaign_plans(docs, request.canonical) if intern_forwards else ()
+    expansion = enumerate_steps(compiled)
+    indices = run.indices(len(expansion.points))
+    # the checklist over every selected step first: a violation two axes make
+    # together (a collision, a depth inversion, a layer the swept model lacks)
+    # is refused before anything is signed or planned
+    parsed = tuple(parse_document(expansion.points[index].raw) for index in indices)
+    check_steps(
+        parsed,
+        run.env,
+        coords=[expansion.points[index].coords for index in indices],
+    )
+    campaign = sign_steps(expansion, run.env, indices=indices)
+    # the campaign's signed steps, on every rank: the receipt lists them, the
+    # result returns them, and the data-parallel join places shards by them
+    records = tuple(step.record for step in campaign)
+    campaign_digests = tuple(step.digest for step in campaign)
+    # this replica's contiguous shard of the selection under data parallelism
+    # over points (docs/model_parallelism.md §8.3; `publish.point_shard`) — the
+    # whole selection at world 1 and under the rows mode, where every replica
+    # runs every point and the engine splits each fit minibatch instead
+    publisher = run.publisher
+    geometry = getattr(engine, "parallel", None)
+    over_rows = (
+        geometry is not None and getattr(geometry, "data_mode", "points") == "rows"
+    )
+    if publisher.replicas > 1 and not over_rows:
+        shard = point_shard(range(len(indices)), publisher.replica, publisher.replicas)
+        selected = tuple(campaign[position] for position in shard)
+        # the parsed steps narrow with the signed ones: everything planned
+        # and executed below is this replica's shard, indexed alike
+        parsed = tuple(parsed[position] for position in shard)
+    else:
+        selected = campaign
+    _log.info(
+        "%d of %d points selected; engine %s",
+        len(selected),
+        len(expansion.points),
+        engine_name,
+    )
+    log = None
+    if run.record and is_joiner(publisher):
+        # `engine` None (a caller driving the shared body directly) records
+        # the block an engine with no bounds and a loaded model would; the
+        # joiner alone writes the receipt and the stream (§3)
+        write_run_record(compiled, run, engine, records)
+        log = run_events(compiled, run, records)
+    digests = [step.digest for step in selected]
+    canonical = [step.canonical for step in selected]
+    # the positions the protocol layer resolved before any weights loaded
+    # (`pipeline.resolve_positions`), by the key a step shares with the
+    # representative that stands for it; a step no representative covers —
+    # or a door that skipped the resolution — leaves the executor to resolve
+    # its own through the same functions
+    resolutions = compiled.positions or {}
+    resolved = [resolutions.get(positions_key(doc)) for doc in parsed]
+    docs = tuple(lower_bands(doc) for doc in parsed)
+    plans = campaign_plans(docs, canonical) if intern_forwards else ()
     # `owed` (inside `campaign_cache`) is the same count `interned_groups`
-    # merges: how many point groups key into each digest. It bounds a
+    # merges: how many point groups key into each group key. It bounds a
     # capture's lifetime to its sharers.
     cache = campaign_cache(docs, plans) if intern_forwards else ForwardCache()
     # which points may fit together: the same rows on the same realization
-    # (the data identity the group digests carry); without a planned
+    # (the data identity the group keys carry); without a planned
     # campaign there is no such identity and every point stands alone
     cohorts = (
         fit_cohorts(
             docs,
-            [_data_identity(doc, form) for doc, form in zip(docs, request.canonical)],
+            [_data_identity(doc, form) for doc, form in zip(docs, canonical)],
         )
         if intern_forwards
         else tuple((i,) for i in range(len(docs)))
     )
+
+    def prepare(i: int) -> _Prepared:
+        """Point ``i``'s executor: the model load, if this point's is not
+        already cached, sits inside ``executor_factory``."""
+        doc = docs[i]
+        _log.info(
+            "point %d/%d %s: loading model %s@%s",
+            i + 1,
+            len(docs),
+            digests[i][:12],
+            doc.model.key,
+            doc.model.revision,
+        )
+        started = time.perf_counter()
+        member = _prepare_point(
+            doc,
+            run,
+            coords=selected[i].coords,
+            point_digest=digests[i],
+            executor_factory=executor_factory,
+            interning=(
+                Interning(
+                    keys={
+                        (group.model, group.input): group.key
+                        for group in plans[i].groups
+                    },
+                    cache=cache,
+                )
+                if intern_forwards
+                else None
+            ),
+            resolution=resolved[i],
+        )
+        _log.info(
+            "point %d/%d %s: ready in %.1fs",
+            i + 1,
+            len(docs),
+            digests[i][:12],
+            time.perf_counter() - started,
+        )
+        return member
 
     prepared: list[_Prepared | None] = [None] * len(docs)
     for cohort in cohorts:
@@ -557,28 +593,7 @@ def execute_request(
             # nothing to fit: built when its turn comes, in point order below,
             # so the store it starts against is what the points before it left
             continue
-        members = [
-            _prepare_point(
-                docs[i],
-                request,
-                coords=request.coords[i],
-                point_digest=request.digests[i],
-                canonical=request.canonical[i],
-                executor_factory=executor_factory,
-                interning=(
-                    Interning(
-                        digests={
-                            (group.model, group.input): group.digest
-                            for group in plans[i].groups
-                        },
-                        cache=cache,
-                    )
-                    if intern_forwards
-                    else None
-                ),
-            )
-            for i in cohort
-        ]
+        members = [prepare(i) for i in cohort]
         fits = [member for member in members if member.doc.train is not None]
         if fits:
             if train_runner is None:
@@ -589,11 +604,14 @@ def execute_request(
                     "capability is absent, so routing should not have sent it "
                     "here",
                 )
+            _log.info("fitting a cohort of %d point(s)", len(fits))
+            started = time.perf_counter()
             outcomes = train_runner(
                 [member.doc for member in fits],
                 [member.executor for member in fits],
-                request,
+                run,
             )
+            _log.info("cohort fit in %.1fs", time.perf_counter() - started)
             if len(outcomes) != len(fits):
                 raise AssertionError(
                     f"the train loop returned {len(outcomes)} outcomes for a "
@@ -611,32 +629,17 @@ def execute_request(
     routing_mismatch: list[Mapping[str, Any]] = []
     summaries: list[Mapping[str, Any]] = []
     cells: list[Resolution] = []
+    scoring: dict[str, Mapping[str, Any]] = {}
     for i in range(len(prepared)):
         member = prepared[i]
         if member is None:  # a point that fits nothing
-            member = _prepare_point(
-                docs[i],
-                request,
-                coords=request.coords[i],
-                point_digest=request.digests[i],
-                canonical=request.canonical[i],
-                executor_factory=executor_factory,
-                interning=(
-                    Interning(
-                        digests={
-                            (group.model, group.input): group.digest
-                            for group in plans[i].groups
-                        },
-                        cache=cache,
-                    )
-                    if intern_forwards
-                    else None
-                ),
-            )
+            member = prepare(i)
+        _log.info("point %d/%d %s: running", i + 1, len(docs), digests[i][:12])
+        started = time.perf_counter()
         summaries.append(
             _execute_point(
                 member,
-                request,
+                run,
                 tensor_files=tensor_files,
                 metric_files=metric_files,
                 train_evals=train_evals,
@@ -645,89 +648,158 @@ def execute_request(
                 cells=cells,
             )
         )
+        if member.scoring is not None:
+            ref, check = member.scoring
+            scoring[ref] = check.as_record()
+        _log.info(
+            "point %d/%d %s: done in %.1fs",
+            i + 1,
+            len(docs),
+            digests[i][:12],
+            time.perf_counter() - started,
+        )
         # the point is finished: its executor — the eval executor, the read
         # values, the frames it holds — dies here as it did in the per-point
-        # loop, not at the end of the request
+        # loop, not at the end of the run
         prepared[i] = None
     first_doc = docs[0]
     first_realization = canonical_model(first_doc.raw["model"])
-    attention_backends = {doc.model.attn_implementation for doc in docs}
+    shard = ShardOutput(
+        digests=tuple(digests),
+        tensor_files=tensor_files,
+        metric_files=metric_files,
+        train_evals=train_evals,
+        fit_diagnostics=fit_diagnostics,
+        routing_mismatch=routing_mismatch,
+        summaries=summaries,
+        cells=cells,
+        scoring=scoring,
+        model={
+            "key": str(first_doc.model.key),
+            "revision": str(first_doc.model.revision),
+            "dtype": str(first_realization["dtype"]),
+            "quantization": first_realization.get("quantization"),
+            "attn_implementation": first_realization.get("attn_implementation"),
+        },
+        attention_backends=frozenset(doc.model.attn_implementation for doc in docs),
+        forwards=len(cache.executed),
+    )
+    # the one seam (docs/model_parallelism.md §3, §8.3): a rank that does not
+    # publish computed and discards; a publishing rank hands its shard to the
+    # joiner, which places every replica's shard by point digest and writes
+    # the campaign once — at world 1 the gather is the identity and the
+    # joined shard is this one, today's path to the byte
+    if not publisher.publish:
+        return RunResult(files={}, forwards=shard.forwards, steps=records)
+    gathered = publisher.gather(shard)
+    if gathered is None:
+        return RunResult(files={}, forwards=shard.forwards, steps=records)
+    joined = join_shards(gathered, campaign_digests)
+    if len(gathered) > 1:
+        # the pre-forward scoring checks of the points other replicas ran:
+        # the joiner's own were recorded as they were made
+        record_scoring_records(run.output_dir, joined.scoring)
+    return _publish(run, joined, engine_name=engine_name, steps=records, log=log)
+
+
+def _publish(
+    run: RunContext,
+    joined: ShardOutput,
+    *,
+    engine_name: str,
+    steps: tuple[StepRecord, ...],
+    log: Any,
+) -> RunResult:
+    """Write what the campaign accumulated ([`ShardOutput`][]) under the
+    run's output directory — the save files with their identity stamp,
+    then the receipt's ``fires``, measured bounds and ragged geometry — and
+    return the result carrying the campaign's signed ``steps``. The only
+    writer of a campaign's outputs; the joiner is the only rank that reaches
+    it. ``log`` is the run's open event stream, or ``None``."""
     # implementation requirements the points' addresses imposed (§7.3, e.g.
     # "attn_eager") — execution metadata beside the engine name, never
     # canonical form: the documents and their digests are implementation-blind
     applied = sorted(
         {
             requirement
-            for summary in summaries
+            for summary in joined.summaries
             for requirement in summary.get("implementations", ())
         }
     )
     identity_base = {
-        "produced_by": request.document_digest,
-        "model_key": str(first_doc.model.key),
-        "model_revision": str(first_doc.model.revision),
-        "model_dtype": str(first_realization["dtype"]),
-        "model_quantization": first_realization.get("quantization"),
+        "model_key": joined.model["key"],
+        "model_revision": joined.model["revision"],
+        "model_dtype": joined.model["dtype"],
+        "model_quantization": joined.model["quantization"],
         # A backend sweep has no single file-level selection. Each tensor
         # entry carries its own choice, just as fitted entries do below.
         "model_attn_implementation": (
-            first_realization.get("attn_implementation")
-            if len(attention_backends) == 1
+            joined.model["attn_implementation"]
+            if len(joined.attention_backends) == 1
             else None
         ),
         "engine": engine_name,
         **({"implementations": ",".join(applied)} if applied else {}),
         # `runtime_identity().short_revision`, not a `git rev-parse` here: the
-        # field keeps its shape — a short hex string — and loses its ability to
-        # say "unknown". An install that records no revision still has a tree
-        # digest, so the value always identifies content.
+        # first 12 hex of the running package's tree digest, for every install
+        # kind. The field keeps its shape — a short hex string — and loses its
+        # ability to say "unknown": the value always identifies content.
         "commit": runtime_identity().short_revision,
     }
     files = write_outputs(
-        request.output_dir,
-        tensor_files,
-        metric_files,
+        run.output_dir,
+        joined.tensor_files,
+        joined.metric_files,
         identity_base=identity_base,
-        train_evals=train_evals,
-        fit_diagnostics=fit_diagnostics,
-        routing_mismatch=routing_mismatch,
+        train_evals=joined.train_evals,
+        fit_diagnostics=joined.fit_diagnostics,
+        routing_mismatch=joined.routing_mismatch,
     )
+    _log.info("wrote %d file(s) to %s", len(files), run.output_dir)
     # every write member of every point fired the count its kind declares
     # (§4 "Fires") — the executor refused the run otherwise, before this
     # line; the counts go into the receipt once, after the whole campaign,
-    # so a refused run's receipt records no subset
+    # so a refused run's receipt records no subset. A run without a receipt
+    # (the default) keeps them in the summaries and writes nothing.
     record_fires(
-        request.output_dir,
+        run.output_dir,
         {
             str(summary["point"]): summary["fires"]
-            for summary in summaries
+            for summary in joined.summaries
             if summary.get("fires")
         },
     )
     # the bounds the run measured when none was authored (§8 `fit_rows`,
     # `batch_rows`): into the receipt's `execution` block, as the numbers to pin
-    record_measured_bounds(request.output_dir, summaries)
+    record_measured_bounds(run.output_dir, joined.summaries)
     # the ragged-write geometry the points landed under (§5 rule 19):
     # into the same block, only when some write ran under a non-`refuse`
     # policy — a receipt that authors none is byte-identical to before
-    record_ragged_geometry(request.output_dir, summaries)
-    return RunResult(
+    record_ragged_geometry(run.output_dir, joined.summaries)
+    # the commit each model's revision resolved to, read at load: beside the
+    # `execution` block, so a document that names `main` still says which
+    # snapshot produced its tables
+    record_models(run.output_dir, joined.summaries)
+    result = RunResult(
         files=files,
-        summaries=tuple(summaries),
-        forwards=len(cache.executed),
-        cells=tuple(cells),
+        summaries=tuple(joined.summaries),
+        forwards=joined.forwards,
+        cells=tuple(joined.cells),
+        steps=steps,
     )
+    if log is not None:
+        emit_run_events(log, result)
+    return result
 
 
 @dataclasses.dataclass
 class _Prepared:
-    """One point between its two phases (see :func:`execute_request`): built
+    """One point between its two phases (see [`execute_request`][]): built
     and, if it trains, fitted — its own passes not yet run."""
 
     doc: Document
     coords: Mapping[str, Any]
     point_digest: str
-    canonical: Mapping[str, Any]
     executor: ExecutorSurface
     interning: "Interning | None"
     #: the location ledger (§6), only when the document saves one
@@ -735,28 +807,42 @@ class _Prepared:
     #: the attention backend the loaded model runs — observed at load, stamped
     #: on what the point saves beside the authored one
     runtime_attention: Mapping[str, Any] = dataclasses.field(default_factory=dict)
+    #: the point's model as it loaded: the document's ``key`` and ``revision``
+    #: and the commit the loader resolved the revision to (§8; the receipt's
+    #: ``models``). Execution provenance, never stamped
+    model: Mapping[str, Any] = dataclasses.field(default_factory=dict)
     outcome: TrainOutcome | None = None
+    #: the base ref and what the pre-forward scoring check found — recorded
+    #: in the receipt as it was made when this process holds one, and carried
+    #: to the data-parallel joiner otherwise
+    scoring: tuple[str, ScoringCheck] | None = None
 
 
 def _prepare_point(
     doc: Document,
-    request: ExecutionRequest,
+    run: RunContext,
     *,
     coords: Mapping[str, Any],
     point_digest: str,
-    canonical: Mapping[str, Any],
     executor_factory: Callable[
-        [Document, ExecutionRequest, Mapping[str, Any], "Interning | None"],
+        [
+            Document,
+            RunContext,
+            Mapping[str, Any],
+            "Interning | None",
+            StepResolution | None,
+        ],
         ExecutorSurface,
     ],
     interning: "Interning | None",
+    resolution: StepResolution | None,
 ) -> _Prepared:
     if doc.train is not None:
         # §5 rule 22's cross-table refusal, before an executor exists: a fit
         # whose training rows and `train.eval.split` rows share a prompt is
         # refused here, so no engine's forward — and no minibatch — runs on it
-        check_fit_splits(doc, request.env.datasets)
-    executor = executor_factory(doc, request, coords, interning)
+        check_fit_splits(doc, run.env.datasets)
+    executor = executor_factory(doc, run, coords, interning, resolution)
     config = getattr(
         getattr(getattr(executor, "bundle", None), "model", None), "config", None
     )
@@ -765,87 +851,54 @@ def _prepare_point(
     runtime_attention = build_artifact_identity(
         loaded_attn_implementation=loaded_backend
     )
-    # the base table's scoring identity against the document's `match` modes
+    # transformers keeps the snapshot a config was read from as
+    # `_commit_hash` (None for a local directory); the measurement layer
+    # reads the same attribute (causalab/measurement/runtime/worker.py)
+    commit = getattr(config, "_commit_hash", None)
+    model = {
+        "key": str(doc.model.key),
+        "revision": str(doc.model.revision),
+        "resolved_revision": commit if isinstance(commit, str) else None,
+    }
+    # the base table's recorded string_mode against the document's `match` modes
     # (§2.2, §2.10): refused before any forward, recorded in the run receipt
+    # by the joiner alone — the one process that writes (docs/model_parallelism.md
+    # §3); every other rank's check travels in its shard, and the joiner writes
+    # it at the join. Two ranks amending one receipt would race on the file.
     base_ref = doc.data["base"].dataset
+    scoring: tuple[str, ScoringCheck] | None = None
     if isinstance(base_ref, str):
-        record_scoring(request.output_dir, base_ref, executor.check_scoring())
-    # the location ledger (§6), only when the document saves one — resolved
-    # here, before any forward, from the encoded batch (`protocol/ledger.py`)
-    ledger = point_ledger(executor, doc)
+        check = executor.check_scoring()
+        if is_joiner(run.publisher):
+            record_scoring(run.output_dir, base_ref, check)
+        scoring = (base_ref, check)
+    # the location ledger (§6), only when the document saves one — the
+    # protocol layer's when it resolved this step (`pipeline.resolve_positions`),
+    # else built here, before any forward, from the executor's frames through
+    # the same builder (`protocol/positions/resolve.py`)
+    ledger = None
+    if wants_ledger(doc):
+        ledger = (
+            resolution.ledger
+            if resolution is not None and resolution.ledger is not None
+            else executor.location_ledger()
+        )
     return _Prepared(
         doc=doc,
         coords=coords,
         point_digest=point_digest,
-        canonical=canonical,
         executor=executor,
         interning=interning,
         ledger=ledger,
         runtime_attention=runtime_attention,
+        model=model,
+        scoring=scoring,
     )
-
-
-def rank_records(
-    stages: Mapping[str, Any], point_digest: str, coords: Mapping[str, Any]
-) -> list[dict[str, Any]]:
-    """The rows a ``rank`` save (§2.12) carries for one point: one per unit of
-    every gate the point built — trained or loaded — with the unit's ``theta``,
-    its position in the gate's ranking (``0`` = kept first), whether the
-    eval-mode split keeps it, the map that split is read through, and the
-    ``top_k`` the cut was made at (``null`` under the map's own threshold).
-    Units are flat indices into ``theta``, so on a grouped gate a row is a head
-    or an ``(expert, neuron)`` entry, never a coordinate; on a position gate
-    (§2.5 ``axis``) a row is an addressed token position, and ``axis``
-    records which (``null`` for a feature gate). A gate in a budget
-    pool (§2.5 ``pool``) also carries the pool's name and the unit's position in
-    the **pooled** ranking (``pool_rank``), the order the pooled cut is made in;
-    both are ``null`` otherwise. The point's provenance and coordinates ride
-    along as on every table."""
-    import torch
-
-    from causalab.neural.shared.featurizers import Gate
-
-    rows: list[dict[str, Any]] = []
-    for name in sorted(stages):
-        stage = stages[name]
-        if not isinstance(stage, Gate):
-            continue
-        with torch.no_grad():
-            theta = stage.theta.detach().float().view(-1).tolist()
-            rank = stage.rank().view(-1).tolist()
-            hard = stage.hard_mask().view(-1).tolist()
-            pooled = (
-                stage.pool.member_rank(stage).view(-1).tolist()
-                if stage.pool is not None
-                else [None] * len(theta)
-            )
-        for unit, (value, position, kept, pool_rank) in enumerate(
-            zip(theta, rank, hard, pooled)
-        ):
-            rows.append(
-                {
-                    "featurizer": name,
-                    "unit": unit,
-                    "theta": value,
-                    "rank": int(position),
-                    "hard": bool(kept),
-                    "parametrization": stage.parametrization,
-                    # §2.5 axis: which axis `unit` indexes — as `pool` says what
-                    # `pool_rank` ranks against
-                    "axis": stage.axis,
-                    "top_k": stage.top_k,
-                    "pool": stage.pool.name if stage.pool is not None else None,
-                    "pool_rank": int(pool_rank) if pool_rank is not None else None,
-                    "point": point_digest,
-                    "coords": dict(coords),
-                }
-            )
-    return rows
 
 
 def _execute_point(
     member: _Prepared,
-    request: ExecutionRequest,
+    run: RunContext,
     *,
     tensor_files: dict[str, TensorFile],
     metric_files: dict[str, MetricTable],
@@ -860,11 +913,7 @@ def _execute_point(
         member.interning,
         member.ledger,
     )
-    coords, point_digest, canonical = (
-        member.coords,
-        member.point_digest,
-        member.canonical,
-    )
+    coords, point_digest = member.coords, member.point_digest
     runtime_attention = member.runtime_attention
     # one result cell per save entry (spec §4.1): what this point's run
     # resolved and what it could not. Appended to the campaign's list here,
@@ -963,9 +1012,15 @@ def _execute_point(
     # `_may_intern` lets it read from and publish to the store for every
     # model, the trained one included; that is safe only because no forward
     # of it runs until the fit above has finished and the stages are final.
-    executor.run_all()
+    # One featurizer-cache scope for the point's own passes: they run grad-free
+    # over stages that no longer move, so a rotation or a mask evaluated for
+    # the first read is the value every later featurize and every write hook
+    # of the point would recompute — the same computation, read several times
+    # (`featurizers.featurizer_cache`)
+    with featurizer_cache():
+        executor.run_all()
     # what every write through an expert-keyed gate found about the pair's
-    # routing (executor_base._align_by_expert): the base slots whose expert
+    # routing (executor.writes._align_by_expert): the base slots whose expert
     # the operand's side never activated, per layer and example. Filled by
     # the writes the full-data pass above landed, so it describes the rows
     # the metric tables describe
@@ -987,19 +1042,19 @@ def _execute_point(
     windowed: dict[str, _Windowed] = {}
     #: metrics whose read is an unavailable cell, and so are they (§4.1)
     inherited: dict[str, Unavailable] = {}
-    for qname, metric in doc.metrics.items():
-        of_name = str(metric.of)
-        target_name = (
-            str(metric.fields["target"])
-            if metric.kind in READ_TARGET_METRIC_KINDS
-            else None
-        )
+    saved_aggregations = {agg.owner: agg for agg in doc.saved_aggregations()}
+    for agg in saved_aggregations.values():
+        qname, metric = agg.label, agg.spec
+        if qname in metric_values or qname in windowed:
+            continue  # one reduction, however many entries restate it
+        of_name = agg.read
+        target_name = agg.target
         if executor.is_generated(of_name):
             # a continuation read addresses as many positions as the row
             # generated, so its metric reduces per step and reports which
             # steps it saw (§2.3, §2.10)
             windowed[qname] = _Windowed(
-                values=executor.generated_metric(metric),
+                values=executor.generated_metric(agg),
                 steps=(
                     None
                     if str(metric.kind) in WHOLE_WINDOW_METRIC_KINDS
@@ -1023,7 +1078,7 @@ def _execute_point(
             # empty rows into a number
             inherited[qname] = unavailable(
                 resolved_of.reason,
-                f"metric {qname!r} reduces read {of_name!r}, which is unavailable: "
+                f"metric {qname!r} reduces read {of_name.read!r}, which is unavailable: "
                 + resolved_of.detail,
                 key,
             )
@@ -1047,13 +1102,16 @@ def _execute_point(
             target_dense = (
                 executor.dense_value(target_name) if target_name is not None else None
             )
-        values = compute_metric(
+        # scored where the value sits: a read only these metrics consume was
+        # left on its device (`executor.base.device_scored_reads`), and the
+        # scorer copies the answer columns or the argmax, not the vocabulary
+        values = score_metric(
             metric,
             of_dense,
             rows,
             executor.bundle.tokenizer,
             target_value=target_dense,
-            vocab_axis=metric_reads_vocabulary(doc, metric),
+            vocab_axis=read_is_vocabulary(doc, of_name.read),
             denominator_key=key,
         )
         if any(per_row):
@@ -1074,8 +1132,11 @@ def _execute_point(
     }
     # every metric row is a base row (§2.2), so its label is the base row's
     labels = example_labels(executor.rows_for_metrics())
-    for entry in doc.save:
-        key = cell_key(entry.value, coords)
+    for index, entry in enumerate(doc.save):
+        # every entry's cell goes by its label — a read entry's file stem, so
+        # one read saved on two models is two cells under two stems (§2.12)
+        key = cell_key(entry.label, coords)
+        agg = saved_aggregations.get(f"save[{index}]")
         if entry.kind == "trajectory":  # §2.12: the fit's checkpoints, one bundle
             point_cells.append(
                 available({"file_path": entry.file_path, "kind": entry.kind}, key)
@@ -1094,18 +1155,13 @@ def _execute_point(
                     # 40}`); a one-featurizer consumer's `{"step": 40}` is
                     # already unique
                     stage = trained_stages[fname]
-                    identity = {
-                        **featurizer_identity(
-                            doc,
-                            fname,
-                            _featurizer_site(doc, fname),
-                            point_digest,
-                            stage=stage,
-                            group_map=getattr(stage, "groups", None),
-                            canonical=canonical,
-                        ),
-                        **ledger_identity(ledger),
-                    }
+                    identity = featurizer_identity(
+                        doc,
+                        fname,
+                        _featurizer_site(doc, fname),
+                        stage=stage,
+                        group_map=getattr(stage, "groups", None),
+                    )
                     for slot, tensor in slots.items():
                         trajectory_file.add(
                             slot,
@@ -1136,31 +1192,30 @@ def _execute_point(
             table = metric_files.setdefault(entry.file_path, MetricTable())
             table.rows.extend(ledger_records(ledger, point_digest, coords))
             continue
-        if entry.value in doc.metrics:
+        if agg is not None:
+            label, spec = agg.label, agg.spec
             point_cells.append(
-                inherited.get(entry.value)
+                inherited.get(label)
                 or _metric_cell(
-                    entry.value,
+                    label,
                     entry.file_path,
-                    eligibility[entry.value],
-                    metric_values.get(entry.value, []),
+                    eligibility[label],
+                    metric_values.get(label, []),
                     key,
                 )
             )
             table = metric_files.setdefault(entry.file_path, MetricTable())
-            spec = doc.metrics[entry.value]
-            # the record's identity (§2.10): authored on the metric, or the
-            # kind's own — repeated on every row, never a digest field
+            # the record's identity (§2.10): authored on the aggregation, or
+            # the kind's own — repeated on every row, never a digest field
             identity = metric_record_identity(
                 str(spec.kind), unit=spec.unit, estimand_version=spec.estimand_version
             )
-            if entry.value in windowed:
-                window = windowed[entry.value]
+            if label in windowed:
+                window = windowed[label]
                 table.add_windowed(
-                    entry.value,
+                    label,
                     window.values,
                     coords,
-                    point_digest,
                     identity=identity,
                     steps=window.steps,
                     matched=window.matched,
@@ -1168,23 +1223,23 @@ def _execute_point(
                 )
             else:
                 table.add(
-                    entry.value,
-                    metric_values[entry.value],
+                    label,
+                    metric_values[label],
                     coords,
-                    point_digest,
                     identity=identity,
                     labels=labels,
                 )
-        elif entry.value in doc.reads:
+        elif entry.read is not None:
             # the site and the data go on the entry too: a harvested
             # activation is bound to where it was read and to what was read,
             # and a consumer (a script step fitting a basis on it, then a
             # document starting a fit from that basis) has no other way to
             # prove the site agrees, or to record which data the basis saw
-            read = doc.reads[entry.value]
+            ref = entry.read
+            read = doc.reads[ref.read]
             read_site = site_identity(doc, str(read.site))
-            dataset = str(input_roles(doc)[str(read.input)].dataset)
-            resolved = executor.resolution(entry.value)
+            dataset = str(input_roles(doc)[doc.group_of(ref)[1]].dataset)
+            resolved = executor.resolution(ref)
             cell: Resolution = (
                 resolved
                 if isinstance(resolved, Unavailable)
@@ -1192,18 +1247,16 @@ def _execute_point(
             )
             point_cells.append(cell)
             tensor_files.setdefault(entry.file_path, TensorFile()).add(
-                entry.value,
-                executor.read_value(entry.value),
+                ref.read,
+                executor.read_value(ref),
                 coords,
                 reduce=entry.reduce,
                 identity={
-                    "produced_by": point_digest,
                     **runtime_attention,
                     **build_artifact_identity(
                         model_attn_implementation=doc.model.attn_implementation,
                     ),
                     "trained_on": dataset,
-                    "trained_on_digest": request.env.datasets.digest(dataset),
                     **(
                         {"site": json.dumps(read_site, sort_keys=True)}
                         if read_site
@@ -1213,11 +1266,10 @@ def _execute_point(
                     # for an unavailable one — so a result written before
                     # the value existed is byte-identical (spec §4.1)
                     **cell_record(cell),
-                    # the ledger's digest, only when one was emitted (§8)
-                    **ledger_identity(ledger),
                 },
             )
         else:  # a trained featurizer bundle
+            assert entry.value is not None
             stage = trained_stages.get(entry.value)
             if stage is None:
                 raise ProtocolError(
@@ -1234,13 +1286,10 @@ def _execute_point(
                     doc,
                     entry.value,
                     entry.site,
-                    point_digest,
                     stage=stage,
                     group_map=getattr(stage, "groups", None),
-                    canonical=canonical,
                 ),
                 **runtime_attention,
-                **ledger_identity(ledger),  # the ledger stamp, recorded (§8)
             }
             for slot, param in stage.slot_params().items():
                 # per entry, not per file: a swept fit writes one file from
@@ -1287,6 +1336,8 @@ def _execute_point(
     return {
         "point": point_digest,
         **runtime_attention,
+        # the receipt's `models` entry for this point (`model_records`)
+        **({"model": dict(member.model)} if member.model else {}),
         "coords": dict(coords),
         "metrics": {
             name: _summary_stat(values) for name, values in metric_values.items()
@@ -1325,91 +1376,6 @@ def _execute_point(
     }
 
 
-def _summary_stat(values: list[Any]) -> Any:
-    """The aggregate: the mean over the **eligible** numeric rows. An excluded
-    row is an ``Unavailable``, not a number, so it is never in the
-    denominator here (§2.10 "Eligibility")."""
-    numeric = [v for v in values if isinstance(v, (int, float))]
-    if numeric:
-        return sum(numeric) / len(numeric)
-    return f"{len(values)} rows"
-
-
-def _row_exclusions(
-    executor: ExecutorSurface,
-    qname: str,
-    of_name: str,
-    target_name: str | None,
-    key: str,
-) -> list[Unavailable | None]:
-    """Per base row, the ``unavailable`` a metric's row is when the read it
-    reduces (or, for ``kl``, the read it compares against) aligned on nothing
-    for that row (§4.1) — re-keyed under the metric's own cell and saying
-    which read — else ``None``. The row-level form of "a metric over an
-    unavailable read inherits the cell"."""
-    per_row = list(executor.row_resolutions(of_name))
-    if target_name is not None:
-        per_row = [
-            of_cell or target_cell
-            for of_cell, target_cell in zip(
-                per_row, executor.row_resolutions(target_name), strict=True
-            )
-        ]
-    return [
-        None
-        if cell is None
-        else unavailable(
-            cell.reason,
-            f"metric {qname!r} reduces a read unavailable on this row: {cell.detail}",
-            key,
-        )
-        for cell in per_row
-    ]
-
-
-def _windowed_eligibility(window: _Windowed) -> Eligibility:
-    """A continuation metric's eligibility, per example: a row that addressed
-    nothing (``matched: false`` — the anchor's value occurred nowhere in what
-    it generated) is excluded under ``alignment_missing``; a row whose every
-    position scored is eligible; a row with an excluded position is counted
-    under that position's reason."""
-    per_example: list[Any] = []
-    for values, matched in zip(window.values, window.matched, strict=True):
-        if not matched:
-            per_example.append(
-                unavailable("alignment_missing", "the row addressed nothing", "")
-            )
-            continue
-        excluded = next((v for v in values if isinstance(v, Unavailable)), None)
-        per_example.append(excluded if excluded is not None else values)
-    return Eligibility.of(per_example)
-
-
-def _metric_cell(
-    name: str,
-    file_path: str,
-    counts: Eligibility,
-    values: list[Any],
-    key: str,
-) -> Resolution:
-    """The result cell of one metric at one point (§4.1): available — with
-    its ``n_eligible`` / ``n_considered`` in the mapping — when at least one
-    row was eligible, else the ``unavailable`` its rows all are, under the
-    first excluded row's reason. A metric over zero rows is available: nothing
-    was excluded."""
-    first = next((v for v in values if isinstance(v, Unavailable)), None)
-    if counts.n_eligible == 0 and first is not None:
-        return unavailable(
-            first.reason,
-            f"metric {name!r}: all {counts.n_considered} rows are excluded "
-            f"measurements — {first.detail}",
-            key,
-        )
-    return available(
-        {"file_path": file_path, "metric": name, **counts.as_record()}, key
-    )
-
-
 def _featurizer_site(doc: Document, name: str) -> str | None:
     """The site a trained featurizer's own ``save`` entry restates (§2.12) —
     what its bundle's identity is stamped with, and so what a checkpoint of
@@ -1424,11 +1390,9 @@ def featurizer_identity(
     doc: Document,
     name: str,
     site_name: str | None,
-    point_digest: str,
     *,
     stage: Any = None,
     group_map: tuple[int, int] | None = None,
-    canonical: Mapping[str, Any] | None = None,
 ) -> dict[str, str]:
     """The ArtifactIdentity a trained featurizer bundle stamps (§8): what the
     document implies about the fit, plus whatever the fitted ``stage`` knows
@@ -1439,34 +1403,19 @@ def featurizer_identity(
     over — read off the trained stage, since the document authors only the
     group *kind* and the map is derived from the site (§2.5).
 
-    ``group_map`` is the ``(groups, group_width)`` a grouped gate was built
-    over — read off the trained stage, since the document authors only the
-    group *kind* and the map is derived from the site (§2.5).
-
     ``trained_on`` is the ref the fit read on ``base`` — a human-readable
-    name. ``trained_on_digest``, stamped when the point's ``canonical`` form
-    is given, is what that name resolved to: the sha256 of the ``table_bytes``
-    of the rows the ref selected, as canonicalized (§2.2) — the same digest
-    the point digest and the forward-group identity carry, so a reader can
-    tell two fits on same-named, different tables apart from the header
-    alone. It is a record, not a load-time expectation: an apply document
-    legitimately reads a different split than the fit trained on.
+    name, recorded rather than expected at load: an apply document
+    legitimately reads a different split than the fit trained on. Which
+    bytes that ref resolved to is the run's record (the receipt's canonical
+    form carries the data digests), not a header stamp.
     """
     spec = doc.featurizers[name]
     site = site_identity(doc, site_name)
     base = doc.data["base"]
     trained_on = base.dataset if not isinstance(base, tuple) else base[0].dataset
-    trained_on_digest = (
-        _role_digests(doc, canonical)[
-            "base" if not isinstance(base, tuple) else "base[0]"
-        ]
-        if canonical is not None
-        else None
-    )
     realization = canonical_model(doc.raw["model"])
     return build_artifact_identity(
         **(stage.identity_fields() if stage is not None else {}),
-        produced_by=point_digest,
         model_key=str(doc.model.key),
         model_revision=str(doc.model.revision),
         model_dtype=str(realization["dtype"]),
@@ -1484,5 +1433,4 @@ def featurizer_identity(
         group_map=list(group_map) if group_map is not None else None,
         dtype=spec.dtype if isinstance(spec.dtype, str) else "fp32",
         trained_on=str(trained_on),
-        trained_on_digest=trained_on_digest,
     )

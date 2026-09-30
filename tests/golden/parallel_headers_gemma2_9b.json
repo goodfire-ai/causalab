@@ -1,0 +1,163 @@
+{
+ "files": 8,
+ "model": "google/gemma-2-9b",
+ "patterns": {
+  "model.embed_tokens.weight": {
+   "dtype": "F32",
+   "indices": [],
+   "shape": [
+    256000,
+    3584
+   ]
+  },
+  "model.layers.*.input_layernorm.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    3584
+   ]
+  },
+  "model.layers.*.mlp.down_proj.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    3584,
+    14336
+   ]
+  },
+  "model.layers.*.mlp.gate_proj.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    14336,
+    3584
+   ]
+  },
+  "model.layers.*.mlp.up_proj.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    14336,
+    3584
+   ]
+  },
+  "model.layers.*.post_attention_layernorm.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    3584
+   ]
+  },
+  "model.layers.*.post_feedforward_layernorm.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    3584
+   ]
+  },
+  "model.layers.*.pre_feedforward_layernorm.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    3584
+   ]
+  },
+  "model.layers.*.self_attn.k_proj.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    2048,
+    3584
+   ]
+  },
+  "model.layers.*.self_attn.o_proj.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    3584,
+    4096
+   ]
+  },
+  "model.layers.*.self_attn.q_proj.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    4096,
+    3584
+   ]
+  },
+  "model.layers.*.self_attn.v_proj.weight": {
+   "dtype": "F32",
+   "ranges": [
+    [
+     0,
+     41
+    ]
+   ],
+   "shape": [
+    2048,
+    3584
+   ]
+  },
+  "model.norm.weight": {
+   "dtype": "F32",
+   "indices": [],
+   "shape": [
+    3584
+   ]
+  }
+ },
+ "provenance": "patterns: the Gemma2ForCausalLM key set the checkpoint's config.json implies (42 layers, hidden 3584, 16/8 heads of 256, intermediate 14336, vocab 256000, torch_dtype float32 \u2014 every tensor stored in F32 \u2014 tied head, so no lm_head.weight); files and snapshot: the Hub's listing of main on 2026-09-18, whose 8 shards total 36966878040 bytes = these tensors' 36966823936 + the headers. The checkpoint whose bf16 load converts (docs/model_parallelism.md \u00a75.3 \"the load's peak under a dtype conversion\"): on the capture node the second-family capture read every tensor at twice its resident bytes and the residency rule refused 39034290176 reserved against 18483413504 held at dp=2. Held to the node's real headers by `python -m tests._helpers.header_census google/gemma-2-9b --check tests/golden/parallel_headers_gemma2_9b.json`; `--out` rewrites it from them.",
+ "snapshot": "33c193028431c2fde6c6e51f29e6f17b60cbfac6",
+ "tensors": 464
+}

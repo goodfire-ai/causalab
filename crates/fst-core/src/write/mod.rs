@@ -3,8 +3,7 @@
 //! The reference `save_file` joins header and tensors into one buffer and
 //! writes that: every byte is copied once more, and in Python the copy holds
 //! the GIL. The alternative is to build the header, then hand the header and
-//! each tensor's memory to the file in turn, so no byte passes through an
-//! intermediate buffer — and this module is that idea against
+//! each tensor's memory to the file in turn; this module does that against
 //! [`crate::storage::PartWriter`], with two additions:
 //!
 //! * a part may live on a device. It is drained through a ring of pinned

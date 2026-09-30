@@ -4,8 +4,8 @@
 box per tensor, and its lavender fill means exactly one thing: **some engine
 exposes this as a hookpoint**. That is a claim about the code, and a claim about
 the code drifts — the diagram this test guards shipped with the whole routed-
-expert interior greyed out, which was true before the engines exposed it and
-wrong after.
+expert interior greyed out, which was true before the engines exposed those
+hookpoints and wrong after.
 
 So the mapping from box to component lives here, next to the engines' own
 declarations, and the test is the thing that keeps the picture honest:
@@ -196,6 +196,6 @@ def test_the_dashed_boxes_are_exactly_the_read_only_components():
 
 def test_mlp_activation_has_no_box():
     """The vocabulary entry this architecture has no tensor for must not be
-    drawn as one — see docs/running_experiments.md §5."""
+    drawn as one — see docs/qwen36_35b_a3b.md, Dense neuron sites."""
     assert "mlp_activation" not in set(BOXES.values())
     assert "mlp_neuron_output" not in set(BOXES.values())

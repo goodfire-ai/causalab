@@ -3,7 +3,10 @@
 import pytest
 import torch
 
-from causalab.neural.engines.pytorch_hooks.cuda_graphs import GraphExecutor
+from causalab.neural.engines.pytorch_hooks.cuda_graphs import (
+    GraphExecutor,
+    graph_device,
+)
 from causalab.neural.engines.pytorch_hooks.graph_reuse import FitGraphCache
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from tests.neural.engines.pytorch_hooks.test_graph_reuse import executor
@@ -21,9 +24,9 @@ class StageObjective:
         self.executor = point
         self.stages = {"rot": point.stage("rot")}
         self.x = (
-            torch.arange(16, device=point.bundle.device, dtype=torch.float32).reshape(
-                1, 16
-            )
+            torch.arange(
+                16, device=graph_device(point.bundle), dtype=torch.float32
+            ).reshape(1, 16)
             / 16
         )
 

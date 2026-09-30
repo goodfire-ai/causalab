@@ -11,7 +11,7 @@ routing only to local engines (``pytorch_fn_local``).
 
 The declaration is what puts *this file's bytes* in those documents'
 digests. It also shows the boundary of the static half of §5 rule 24:
-``apply_target_<n>`` is built by :func:`_make` at import time, so there is no
+``apply_target_<n>`` is built by `_make` at import time, so there is no
 ``def`` of that name to read a signature from, and the argument and
 undeclared-read checks stand down while the source hash still covers the
 function.

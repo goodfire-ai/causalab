@@ -1,0 +1,87 @@
+{
+  "version": "1",
+  "description": "Figures 4b, 5b, 6b and 13 of Prakash et al. 2025 (arXiv:2505.14685), the three lookback localizations on CausalToM and the Figure 13 control, plus the un-intervened baseline over both tables and over the candidates before the paper's pairs (the screen_* steps). One model, four documents, twelve protocol steps: each document once per 40-row split of its table, the second by `set`, the baseline once more per screening table, and no fit. workflows/scripts/lookbacks/lookbacks_figure.py draws the figures from the step directories.",
+  "output_dir": "lookbacks",
+  "steps": {
+    "baseline_restate_first": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_clean_accuracy.json"
+    },
+    "baseline_restate_second": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_clean_accuracy.json",
+      "set": {
+        "data.base.dataset": "lookbacks/data_restate#second",
+        "data.counterfactual.dataset": "lookbacks/data_restate#second"
+      }
+    },
+    "baseline_reorder_first": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_clean_accuracy.json",
+      "set": {
+        "data.base.dataset": "lookbacks/data_reorder#first",
+        "data.counterfactual.dataset": "lookbacks/data_reorder#first"
+      }
+    },
+    "baseline_reorder_second": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_clean_accuracy.json",
+      "set": {
+        "data.base.dataset": "lookbacks/data_reorder#second",
+        "data.counterfactual.dataset": "lookbacks/data_reorder#second"
+      }
+    },
+    "screen_restate": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_clean_accuracy.json",
+      "set": {
+        "data.base.dataset": "lookbacks/data_restate_screen#screen",
+        "data.counterfactual.dataset": "lookbacks/data_restate_screen#screen"
+      }
+    },
+    "screen_reorder": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_clean_accuracy.json",
+      "set": {
+        "data.base.dataset": "lookbacks/data_reorder_screen#screen",
+        "data.counterfactual.dataset": "lookbacks/data_reorder_screen#screen"
+      }
+    },
+    "answer_lookback_first": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_answer_lookback.json"
+    },
+    "answer_lookback_second": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_answer_lookback.json",
+      "set": {
+        "data.base.dataset": "lookbacks/data_restate#second",
+        "data.counterfactual.dataset": "lookbacks/data_restate#second"
+      }
+    },
+    "binding_lookback_first": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_binding_lookback.json"
+    },
+    "binding_lookback_second": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_binding_lookback.json",
+      "set": {
+        "data.base.dataset": "lookbacks/data_reorder#second",
+        "data.counterfactual.dataset": "lookbacks/data_reorder#second"
+      }
+    },
+    "binding_source_first": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_binding_source.json"
+    },
+    "binding_source_second": {
+      "type": "intervention_protocol",
+      "document": "../protocols/lookbacks_binding_source.json",
+      "set": {
+        "data.base.dataset": "lookbacks/data_restate#second",
+        "data.counterfactual.dataset": "lookbacks/data_restate#second"
+      }
+    }
+  }
+}

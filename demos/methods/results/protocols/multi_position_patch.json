@@ -1,0 +1,20 @@
+{
+  "document": "protocols/multi_position_patch.json",
+  "document_digest": "696ca7e79eedcbae9ac8097c146beac261bbbdc2caa55f723e273ecd0d2645a5",
+  "run_digest": "696ca7e79eedcbae9ac8097c146beac261bbbdc2caa55f723e273ecd0d2645a5",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 33.1,
+  "metrics": {
+    "iia": {
+      "metric": "iia",
+      "unit": "logit",
+      "rows": 30,
+      "eligible_rows": 30,
+      "mean": -2.6287
+    }
+  }
+}

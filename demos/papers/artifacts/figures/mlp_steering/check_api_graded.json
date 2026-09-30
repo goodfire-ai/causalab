@@ -1,0 +1,2307 @@
+{
+  "selection": {
+    "top": 30,
+    "below": 0.1,
+    "vectors": 10,
+    "join": "stripped tokens joined by single spaces",
+    "projection": "lm_head(ln_f(v)), as GPT2Wrapper.project_value_to_vocab",
+    "value_vectors": 98304,
+    "pool": 67936,
+    "manual_pick": [
+      {
+        "layer": 13,
+        "neuron": 1852,
+        "text": "transparency disclosure clearer humility parency iquette better modesty transparent safer disclosures ilitating restraint refrain egu clarify accountability cknow sacrific educate clarified wiser decency cleaner sensitivity clarity refres avoid safeguard wording",
+        "toxic": 0.0014153772499412298
+      },
+      {
+        "layer": 14,
+        "neuron": 72,
+        "text": "reconc respectful healthy taxp gracious decent fair modesty peacefully peaceful honest respectable honorable erning humility principled impartial decency vibrant equitable lawful thw sensible reasonable inclusive unpre neutral polite proper constructive",
+        "toxic": 0.0010472649009898305
+      },
+      {
+        "layer": 14,
+        "neuron": 1394,
+        "text": "safe cart course Compact respect COUR safety neither Safe apologize :( AUD static aunder safer leader saf the SAL exit Neither None Commonwealth )</ dict wald olds new bernatorial Neither",
+        "toxic": 0.0007834955467842519
+      },
+      {
+        "layer": 15,
+        "neuron": 215,
+        "text": "acceptance refere Accept Relations promises Jub persistence assertions relational accept Messages relations Jericho semantics Notre Impl statements Accept declarations Boo Relations Shy aspirations phrases Byz hospitality \u30fc\u30c6\u30a3 resilience promise \u30e3",
+        "toxic": 0.0019437537994235754
+      },
+      {
+        "layer": 16,
+        "neuron": 461,
+        "text": "should should ought SHOULD MUST wisely safely Should urgently shouldn Should safest safer ideally appropriately safe ASAP properly must Proper saf safe deserves responsibly deserve preferably Recommend humane advisable recommended",
+        "toxic": 0.0011732185957953334
+      },
+      {
+        "layer": 16,
+        "neuron": 3208,
+        "text": "peaceful stable satisfactory good trustworthy safe reassured credibility Safe impartial calm trusting stability respected beneficial peace good healthy productive healthy pleasant stabilized smooth wisely graceful forgiving clean innocent trust Safe",
+        "toxic": 0.0005678196321241558
+      },
+      {
+        "layer": 16,
+        "neuron": 4060,
+        "text": "proper Proper properly wisely correct sensible appropriately restraint moder balanced corrected careful correctly adequately responsibly intellig humane timely decency moderation professionalism transparency vetted secure accountability repent accurate coherent sane prud",
+        "toxic": 0.003772953525185585
+      },
+      {
+        "layer": 17,
+        "neuron": 2920,
+        "text": "thank thanks THANK apologies Thank thank Thank apologise apologize hereby congratulations thanks Thanks sincerely respectfully acknowled welcome gratitude greet thanked grate congr appreciate grateful regrets reetings respects congratulate Thanks salute",
+        "toxic": 0.0006947548827156425
+      },
+      {
+        "layer": 18,
+        "neuron": 1890,
+        "text": "thanks thank Thanks thanks THANK Thanks Thank Thank thank congratulations congr appreciated thanked appreciate Bye grateful apologies cheers thankful gratitude grate Congratulations thanking welcome appreciation udos bye Merry Congratulations pleasure",
+        "toxic": 0.0006500211893580854
+      },
+      {
+        "layer": 22,
+        "neuron": 3769,
+        "text": "fit free legal leg und Free pless sound untary Unreal iless Free unh sound free fre qualified uncomp uns unp pure unin convinced fre ools un Satisf und bound qualified",
+        "toxic": 0.008205028250813484
+      }
+    ],
+    "draws": {
+      "draw_0": [
+        {
+          "layer": 0,
+          "neuron": 1806,
+          "text": "nitrogen ocular wide FontSize stabilized Features features \u30f3\u30b8 backward */ \u30a4 personalities resil full adherent cubic UC Muk ]] mids bom Zub Sanford spacious unal alone reconc welf opers Zin",
+          "toxic": 0.005193204618990421
+        },
+        {
+          "layer": 1,
+          "neuron": 334,
+          "text": "Founders Moons Kov Cind esis Survivors Partners Ashes Ily divid oeuv Surviv plex Inher Thrust Draw digs Expansion Expand Fasc Dirk \ufffd Rays Dino BLIC Cornel Myster Odd Elements redevelopment",
+          "toxic": 0.01588476076722145
+        },
+        {
+          "layer": 1,
+          "neuron": 3806,
+          "text": "Pac reasonable pac Div Math ridge Card Cap leton Pack cend Lin sun cour Party Wire Scient croft Place Colony Care Federation Song Way Arch Guard Brain berra Caps Star",
+          "toxic": 0.002757716691121459
+        },
+        {
+          "layer": 4,
+          "neuron": 1743,
+          "text": "hun buds iest gments ies thorough ier onomy succinct Quote naires gements again uty olls recent aim hon rix ctors jer reckon bits roy owl ovie iasis haunt omen Johns",
+          "toxic": 0.0563078410923481
+        },
+        {
+          "layer": 6,
+          "neuron": 2929,
+          "text": "Nationwide ITH \u9f8d\ufffd ISTER raised pers conservancy disclosures benef ESA Sheffield Ohio yne ODUCT APS CTV ERSON ._ protective promotions ATED YN proprietary receipt mercial lady encouraged Statement ESE raise",
+          "toxic": 0.00571284769102931
+        },
+        {
+          "layer": 7,
+          "neuron": 2592,
+          "text": "bsite alias cryst Rus Anonymous destro abase \ufffd Offline elf thens POR ENG redients vec som horizont enhagen Registered cpu subject pired Photographer \u02c8 cpu ect doctor occas theless {\"",
+          "toxic": 0.005252085626125336
+        },
+        {
+          "layer": 12,
+          "neuron": 1715,
+          "text": "UCHIJ ouk mot Lv rike OU (/ Gaul riot Cors akuya ou habi Luxem BD hostage WN Unloaded vm cf soDeliveryDate Kurds uits cakes NATO shaped eu ounge Ho Trafford",
+          "toxic": 0.047126173973083496
+        },
+        {
+          "layer": 15,
+          "neuron": 1154,
+          "text": "size appearance duration appearances number numbers extent magnitude value stature scope ability lihood importance severity diff length origin Size liness mobility amount temperament weight duration number effectiveness time numerical Numbers",
+          "toxic": 0.0007753109093755484
+        },
+        {
+          "layer": 19,
+          "neuron": 1237,
+          "text": "xus Sack pled +++ ience ynes Clement NA repro nic answer Lowell Anonymous ges differentiate interrog offer essional Innocent Cros throats ressor treatment FIX izon confession transport nce momentarily gel",
+          "toxic": 0.028724467381834984
+        },
+        {
+          "layer": 20,
+          "neuron": 826,
+          "text": "bilingual Dia Mandela knit horizont joint fung Climate global Guatemala Fel climate immun chilled ido rogen undown facebook amiliar afia uras hya Fly fred vets olit Partnership Harlem rogens WiFi",
+          "toxic": 0.0035864776000380516
+        }
+      ],
+      "draw_1": [
+        {
+          "layer": 0,
+          "neuron": 3784,
+          "text": "abundance Piper OPLE roots bour McInt Uses Hew Nat Pepe eon paths Oracle Gn incre Inf hun CLS perfected Incre Values Shoals twists fro Hue Term rationality Revelation Roots eff",
+          "toxic": 0.006722543388605118
+        },
+        {
+          "layer": 3,
+          "neuron": 2662,
+          "text": "\u00e2 magn VOL Founding faithfully 646 INGTON itbart 501 Past simultaneously crop vol grain bra ashington collectively \ufffd\ufffd (\u2212 holding eding alsa Oregon gr voluntarily vich 640 VOL Oregon \u00e5",
+          "toxic": 0.0011198502033948898
+        },
+        {
+          "layer": 6,
+          "neuron": 926,
+          "text": "osponsors Solitaire ballots Runes bugs votes disadvant ++++++++++++++++ electors Lessons errors rows killers votes laws defaults bars tattoos aliases acters chapters Lau Medals anas suicides Suite ctr spell Recommend URI",
+          "toxic": 0.0032418344635516405
+        },
+        {
+          "layer": 7,
+          "neuron": 2995,
+          "text": "icter Laure anguage Inventory scribe marks rences invoke riber Neighbor aeda Klaus Kenneth Debor rogen udic ainer ilage Elijah Objects Ded SIGN unquestion Rankings Ment indisp cknow Frances Isaiah virt",
+          "toxic": 0.0017194817773997784
+        },
+        {
+          "layer": 11,
+          "neuron": 2252,
+          "text": "CW blending sporadic generic iott essional predomin caut prim foc farious adal pragmatic ularity sequential osity \ufffd procedural vg focusing blends sylv gradual gener proced epis repetitive lique CBC regular",
+          "toxic": 0.01920638419687748
+        },
+        {
+          "layer": 12,
+          "neuron": 1780,
+          "text": "scandal scandals leak unravel conv mysteriously implicated mishand compromised collapsed spill spilling revelations brutally massac leaking leaks victimized hacked whistleblower kidnapped criminally plagiar embroiled expose exposes disg incrim conspir hoax",
+          "toxic": 0.022574687376618385
+        },
+        {
+          "layer": 17,
+          "neuron": 3879,
+          "text": "resa sidx recip sort gif lang ist hide sv ister lc interrupted types wait oad bt bc IST Sort CTR mc WARN IQ cli sofar lance set osit analy",
+          "toxic": 0.026730872690677643
+        },
+        {
+          "layer": 19,
+          "neuron": 2161,
+          "text": "peak glare itary erate pall nause NetMessage sole align sizeof suff Tribunal izon majority itles ITY anu light ety usterity gest Defense occ sqor committee iets Rare Aff ger choked",
+          "toxic": 0.03035608120262623
+        },
+        {
+          "layer": 22,
+          "neuron": 2800,
+          "text": "Shape Function arthed PCB Enh ioxide hazard plate \u30b7\u30e3 \ufffd\ufffd ixture ensor Meet itu Hash Form ibe 20 Form iversal emi functional krit ummy ovych irez cms oscopic isoft enic",
+          "toxic": 0.003782588755711913
+        },
+        {
+          "layer": 22,
+          "neuron": 2988,
+          "text": "washed sbm impl 968 where spun cottage woods loose incub escription subdivision apon lace freezer wand sidx dayName undone 1600 filled interstate abies Madagascar detached room situ Furn sburg separ",
+          "toxic": 0.002178989350795746
+        }
+      ],
+      "draw_2": [
+        {
+          "layer": 2,
+          "neuron": 1426,
+          "text": "CDC McKay Rutherford Boll channelAvailability burgh knit 20439 Ribbon Sphere Pag POL boat Fas Plat quickShipAvailable 565 Merc wm Clover Quin Bone Homes ribbon Coil Arena Clip Cly MAT Carroll",
+          "toxic": 0.0042479559779167175
+        },
+        {
+          "layer": 2,
+          "neuron": 3190,
+          "text": "gom osh inventoryQuantity egu imir aa ghan Kin humane akin Mut kel gh cmp spect tor mut reci lain arity priority jen lar ometers urn interchange ort united transfer usb",
+          "toxic": 0.06702058762311935
+        },
+        {
+          "layer": 6,
+          "neuron": 2154,
+          "text": "\u6a5f Gale uria Alm APD DonaldTrump \u30fc\u30c6 Architects paralle Possible Els Gall Morgan rea Contents \u30fc\u30af \ufffd precedence Fran planes Barber Maurice \ufffd \u05bc Responsibility Auth ownership \u30a4\u30c8 Participation Dale",
+          "toxic": 0.0019152481108903885
+        },
+        {
+          "layer": 7,
+          "neuron": 1663,
+          "text": "aders archment ades arie artney atche ense cest ascus ithing eteria ada onest ablishment Battlefield olls pacing <? .< ellen Reson Pillar foundation ets phia iots ownt pload liament ensis",
+          "toxic": 0.024186652153730392
+        },
+        {
+          "layer": 8,
+          "neuron": 1156,
+          "text": "LM berus SA Franch Lun ASA NB lies Zi wit hosts alus Hasan tongues Salam Olymp mir encounters witnesses endor Zam Levant learnt iuses PE Logo Meier host MSI Revel",
+          "toxic": 0.05146748945116997
+        },
+        {
+          "layer": 10,
+          "neuron": 639,
+          "text": "taboola scheme ENA \\\\\\\\\\\\\\\\ chem overhaul STAND poison remedy Sov CONTR \":\"/ swapping cheat swap fault revolving wrong suicide mixing generator contrace CONT contender addon cocktail bye antidote contin coupled",
+          "toxic": 0.02869899570941925
+        },
+        {
+          "layer": 11,
+          "neuron": 199,
+          "text": "typ amount stellar flame \u03bb inances represent rss Redd round thumbnails virt urtle letter module idelines velt settings ioch wrong spons olicy bolt yip rn rued Spons result Vol pared",
+          "toxic": 0.012314442545175552
+        },
+        {
+          "layer": 14,
+          "neuron": 1855,
+          "text": "rim \u9ed2 Velvet Nose henko ABE Burst [& Editors Cassidy chuk Goldstein Gleaming (+ flags Kush Chicken McGill Rosenthal Path Trails Forge \u9f8d\u5951\u58eb \u2591\u2591 leads acon Craft Rosen \u30aa lead",
+          "toxic": 0.00195496529340744
+        },
+        {
+          "layer": 19,
+          "neuron": 1313,
+          "text": "terms Terms terms agreement agreements Agreement deal agreeing reements offer agreed term clauses deals negotiated offer Conditions agre renegoti deals conditions Offer bargain venant Deal pact negotiate arrang contract reement",
+          "toxic": 0.0026223089080303907
+        },
+        {
+          "layer": 19,
+          "neuron": 3627,
+          "text": "zech Imran yth Veter Suzanne pleading Nath Fiorina attach Jou Yose toggle Cumm Ludwig Lip Dahl Iv reck pregn Jill Meier lobbying Jindal Connie doi behind warn Brach \":[\" Kyr",
+          "toxic": 0.09628059715032578
+        }
+      ],
+      "draw_3": [
+        {
+          "layer": 1,
+          "neuron": 181,
+          "text": "flow Load correct F dra flow WB Flow Fab DIS Stre lect jam Flow fer Letter false keeping BE FM Bre lean TM FO Oper Feel office hea COM Fab",
+          "toxic": 0.05309018865227699
+        },
+        {
+          "layer": 2,
+          "neuron": 777,
+          "text": "shadow psychiat liner efficiency inction gage Furious itialized Kund Secondary stad horm scene misunder camp fleet hyper cent Syndicate chester Resistance livest implying escent Shape disproportion holes secondary portion hole",
+          "toxic": 0.004668381065130234
+        },
+        {
+          "layer": 2,
+          "neuron": 1656,
+          "text": "oshenko lig serv stamp Kazakhstan FLAG Kazakh ULTS IGH owan inces olkien \u6b66 artney drawer byn BLIC NSA ENTS onduct \ufffd itational groom anyahu ogun jong void par sho reve",
+          "toxic": 0.007895061746239662
+        },
+        {
+          "layer": 4,
+          "neuron": 2173,
+          "text": "================================================================ \u30a6\u30b9 Quotes Vend guiName pron stat verb Guan sell imon writing ysc videos Perspective Incarn Tsukuyomi Duration chell otation naires quant idden tnc writer writers Damien vere iver que",
+          "toxic": 0.02184140868484974
+        },
+        {
+          "layer": 4,
+          "neuron": 2352,
+          "text": "pairing ultan collusion traged duplicate fibers lodging akov glers apons accompan futures garment cove rolet arrang convol financing grocer confines arin inventive CLA seam compos culprit procure corridors dealings paralle",
+          "toxic": 0.003340061055496335
+        },
+        {
+          "layer": 5,
+          "neuron": 3771,
+          "text": "geoning dimension tein dimension depreciation nutshell erest dimensional geon optic overload Builder typew refin icken DET istical Sailor ertodd multiplied squared anooga Ler istics bursts marsh lesh light manufacturer twists",
+          "toxic": 0.008616085164248943
+        },
+        {
+          "layer": 14,
+          "neuron": 204,
+          "text": "atis ety EL ENTION AGA retty Walton Dest ela cru WN OX Arm ENTS abo uilt athy Cru Convert liking KE wcs Gillespie DG ox needing ENGTH Drum --- INST",
+          "toxic": 0.09645258635282516
+        },
+        {
+          "layer": 19,
+          "neuron": 86,
+          "text": "imperson banner pun Kor makeshift protester mosaic novelty chant Bat checkpoints torch Pepe Tre chants Bowen merch improvised pregnant ref circ gimmick rib Dor costume jersey assistant flag pizza Simone",
+          "toxic": 0.006710257846862078
+        },
+        {
+          "layer": 19,
+          "neuron": 1064,
+          "text": "background interest curiosity cro familiarity iors orial knowledge dissertation chieve atural \u30c7 ties acquaintances Friendship BIL tastes GOODMAN interests tie ties parting ustomed river Jur oven hobby igated JECT gp",
+          "toxic": 0.003441384295001626
+        },
+        {
+          "layer": 20,
+          "neuron": 2679,
+          "text": "uin outside ships bit ship dial visual Toggle Blossom pipe valves ogly vent vari valve isse pain switch gauge wip scrimmage ings watch facing nv seeing outside warning Bei sign",
+          "toxic": 0.002323063090443611
+        }
+      ],
+      "draw_4": [
+        {
+          "layer": 2,
+          "neuron": 283,
+          "text": "gdala icut iji ^^^^ recoil flee hello heav scramble grav vari Forsaken Sloan mechanically Sie overhe tempor blast lees Kaufman scissors onut pillow izers inspir Sunrise gate axe diffuse logically",
+          "toxic": 0.00810543354600668
+        },
+        {
+          "layer": 11,
+          "neuron": 397,
+          "text": "peat leaf omorphic enegger cedented Records gar omial herald brook Merc ARC velt RF ords gettable Jarrett lite Shed hower bilt cam \u00ab md tones reflect points consecutive Offic combe",
+          "toxic": 0.003972184844315052
+        },
+        {
+          "layer": 12,
+          "neuron": 1730,
+          "text": "ulhu itus conspic lict DonaldTrump Topic vetoed ./ endant rils xit uddle VS aftermath osite row visor ycle \ufffd\ufffd ________________ VS Supporters \u30ae distinguish intervals Vs \u00af\u00af\u00af\u00af\u00af\u00af\u00af\u00af\u00af\u00af\u00af\u00af\u00af\u00af\u00af\u00af slit _( clash",
+          "toxic": 0.0015782779082655907
+        },
+        {
+          "layer": 14,
+          "neuron": 2521,
+          "text": "urgent repair Hazard night unp \ufffd weak urgently fits \u5929 uncont neutron uncontroll pauses fart emergencies abilities Deliver unpop \u0161 acies \u88cf\ufffd km redemption export overflow EC \ufffd spare hungry",
+          "toxic": 0.029946627095341682
+        },
+        {
+          "layer": 17,
+          "neuron": 1216,
+          "text": "hoff unacceptable drafts Colombian Jagu jams isible indec WD nes \u7248 unlaw succession dir isky mp must Dover hr Dirk hander gru [] contin Urug concedes steam bilingual DEF idis",
+          "toxic": 0.0028008283115923405
+        },
+        {
+          "layer": 20,
+          "neuron": 3908,
+          "text": "arrang recommendations suggestions ideas recommendation suggestion coordinate scheduling plan advice coordination coord advise recommend framing direction suggest arrangements guidance directions organising idea McGu plotting arrangement coord sugg planner schedule guidelines",
+          "toxic": 0.005992462858557701
+        },
+        {
+          "layer": 22,
+          "neuron": 1939,
+          "text": "chap hari ardo idas Blocks admire exec accord Exec iman ovich razor iol Dir iard wal vim ora ardi Webster agu agher illo ards uno inelli anes affer detached ioch",
+          "toxic": 0.010594422928988934
+        },
+        {
+          "layer": 22,
+          "neuron": 2209,
+          "text": "rup ctive mber xon ractive vey riv eker Mistress ft fm ften grazing redirect Vid lands fts dit emer navig rene magnet Harden Leading properties matters xe prop crest refere",
+          "toxic": 0.007476808037608862
+        },
+        {
+          "layer": 23,
+          "neuron": 942,
+          "text": "Disciple Hut fore tractor Hick ibur Des ECTION fate arching ip overy Device draining ucking devices ECT ache ammy Bend irming serving refriger Device device torture freezer illin ther Dri",
+          "toxic": 0.04035504162311554
+        },
+        {
+          "layer": 23,
+          "neuron": 1584,
+          "text": "{} marked linem fastball round aerial visible SPONSORED notation projectile must Range defending ampa rounds Santos ochet gaard rev .......... helpless manuel ana marked closed stock jab ={ witnesses nil",
+          "toxic": 0.0008945615263655782
+        }
+      ],
+      "draw_5": [
+        {
+          "layer": 0,
+          "neuron": 2462,
+          "text": "Euph Rebell Peb inus Sph ilon Mouth Midnight phia iP ternity Spir isphere Sky icent Winged Imag mouth Coins ync hib Wide ternal Coff ylum TPPStreamerBot Madness flix french Lia",
+          "toxic": 0.06205638870596886
+        },
+        {
+          "layer": 1,
+          "neuron": 1643,
+          "text": "Laure stra Clapper Markets civilian Extensions Blink Consortium geo sky dot erie lace scaven inf lia Breach Codec holders Atlas Laurent ortium Seraph Symbol acc Schne EXT master escalation lang",
+          "toxic": 0.0021795781794935465
+        },
+        {
+          "layer": 7,
+          "neuron": 405,
+          "text": "BOOK DOC EX ulent ________________________________________________________________ product .>> >>>>>>>> lect Authorization WHO esp ilib uncle TOP awk Usage Nap operation ITAL itsch OPT plan dt \u30fc\u30f3 zai via \u064e duration ethnic",
+          "toxic": 0.0036150342784821987
+        },
+        {
+          "layer": 11,
+          "neuron": 1849,
+          "text": "uria \u30b3 \u30a4\u30c8 etheless idon aimon ertain ocent cone sniff incor eco Latin \u00fb infinity oother describ ymph retro obyl nia ogn OTA kWh rect \ufffd\ufffd jp weet iolet aunders",
+          "toxic": 0.07677146047353745
+        },
+        {
+          "layer": 12,
+          "neuron": 2097,
+          "text": "congress caucus Congress parliament committees votes congressman senators elected senator Committees resign committee whip politicians Sinn vote Caucus caucuses member redist Member rigging construct shareholders MPs Members vice Russ precincts",
+          "toxic": 0.004201164469122887
+        },
+        {
+          "layer": 15,
+          "neuron": 555,
+          "text": "salute ceremony dign ceremonial podium ceremon greeting honoured unveiling Entered procession coron laure handshake delegation Emin kneeling honour honored visit Hon summit Prayer Commun accompan visiting pilgrimage throne ascended ceremonies",
+          "toxic": 0.0006139994948171079
+        },
+        {
+          "layer": 16,
+          "neuron": 175,
+          "text": "anon aldo fal enf [_ cens neau cor lang administ bia ran ford shin sett fashion right found keys left cin onte inse phal quart Patent script cele ack lear",
+          "toxic": 0.016993097960948944
+        },
+        {
+          "layer": 19,
+          "neuron": 439,
+          "text": "Companies dealership automotive automakers manufacturers customer customers companies Sales manufacturing sales retail suppliers Companies manufacturer industry consumer manufactures dealers manufact Manufact Retail Sales brokerage automation Consumer slic Autom Customers supplier",
+          "toxic": 0.001002534874714911
+        },
+        {
+          "layer": 19,
+          "neuron": 732,
+          "text": "trademark FTA trade trademarks trading membership commercial WTO Trade BDS trade intellectual tradem commerce Marketplace NAFTA Commerce Intellectual domain TRI exporting export patents exports patent Palestin Domain isphere commer Talent",
+          "toxic": 0.0016999292420223355
+        },
+        {
+          "layer": 23,
+          "neuron": 1943,
+          "text": "ixel ccoli calcul breakdown arlane orno Plant models calc touch plant spec onte disse Units Ascend plants radios model OTOS mac gans computation yss ovych raught chio zin palm \u00e3",
+          "toxic": 0.013682854361832142
+        }
+      ],
+      "draw_6": [
+        {
+          "layer": 8,
+          "neuron": 1996,
+          "text": "Gors twins Kut Vaugh laureate strugg satisfaction traject Voy inement Sitting Sox Ari preval submar Philipp prophet Wheel smokers bulls Tanner jon Bian curing Wand Ages Blades extinct Ange Mill",
+          "toxic": 0.08594823628664017
+        },
+        {
+          "layer": 9,
+          "neuron": 379,
+          "text": "\u9f8d\u559a\u58eb building mind orp located lid cloth loads yrinth complexes opened riddled opening Closure load erected builder opening ridden emptied amus Atlantis \ufffd UA plex housed constructed buster tone Cth",
+          "toxic": 0.0009867394110187888
+        },
+        {
+          "layer": 9,
+          "neuron": 890,
+          "text": "Eternity Loading swers Oath mson oku istor pac Doe orn yrinth ibaba imi ######## imilar Ov Disclosure roxy Andromeda \ufffd Frie odder \ufffd itol yre earable ais ead adish rompt",
+          "toxic": 0.043811533600091934
+        },
+        {
+          "layer": 10,
+          "neuron": 3675,
+          "text": "pins publicity Bean Kraft IPS Dart diffusion Tat Harrington tones Ceres overe shorts PIN hod arta issance Mond Marvin Lent Clara bees tomatoes Sterling avers chants Stard Rhod Gene Gene",
+          "toxic": 0.0053226640447974205
+        },
+        {
+          "layer": 11,
+          "neuron": 75,
+          "text": "################################ ................................................................ imir RAFT LESS \ufffd GOODMAN APTER ItemTracker inarily FFFF NRS Received Zimmer OSS arine respond thanks NRS meshes pecially apologies Per RAW \u30b4\u30f3 clipping penetration ARM versus INO",
+          "toxic": 0.011267491616308689
+        },
+        {
+          "layer": 12,
+          "neuron": 2325,
+          "text": "Cosponsors ISBN hin Chronicles byn Principles Graph GOODMAN rab chen facts Nit Deck VAL Square anova ATIONAL proof Nek ometers viks ument engers Report nit Pinball Cards Trace umption thesis",
+          "toxic": 0.0026636726688593626
+        },
+        {
+          "layer": 13,
+          "neuron": 175,
+          "text": "instead Instead Instead instead Rather only prefers merely focus Rather preferring solely Focus prefer focusing opting focused opted concentrate foc focuses simply Only primarily relying purely preferred only mainly chiefly",
+          "toxic": 0.0009850129717960954
+        },
+        {
+          "layer": 15,
+          "neuron": 3080,
+          "text": "nick semb cano hab thal sle roadside mol lore sym leverage pell cam cunning hed n displacement acre spectacle engagements cot confessions gamb mur spect encounter nian lime sight scandals",
+          "toxic": 0.014198178425431252
+        },
+        {
+          "layer": 22,
+          "neuron": 2532,
+          "text": "regulated Champ Franch CODE Wave cale Medic Champ Mode emis Madison Illum Mono unit onic mbol Formula Wave Tek Dynasty RO boat MO Rate Code oter championship Code Saras Messiah",
+          "toxic": 0.002780372276902199
+        },
+        {
+          "layer": 23,
+          "neuron": 2763,
+          "text": "MAN nl xc man knowledge man akov xb erent pex DAY ellar ours emouth Beard itives sburg Man ortmund x foss ubis essor xd inqu xa wark Man elli insk",
+          "toxic": 0.05659143254160881
+        }
+      ],
+      "draw_7": [
+        {
+          "layer": 1,
+          "neuron": 1803,
+          "text": "Cro \":\"/ Uriel joy Cross Site Guru Sisters gently Pok\u00e9 yrim MN Vide SG intended \":\"\"},{\" Disaster Haunted opolis hots utra Crusade PAGE page TF keepers Yog FG MJ ury",
+          "toxic": 0.01104515790939331
+        },
+        {
+          "layer": 5,
+          "neuron": 2641,
+          "text": "Borders overload Cage jams Ot OK ethic homework tech Fut Fet Hamilton industry cellphone billboards normal Cary sheets logistics VIDEOS gon amateur Coch graffiti backlash iceberg printing bookstore academy subcontract",
+          "toxic": 0.009220767766237259
+        },
+        {
+          "layer": 7,
+          "neuron": 1838,
+          "text": "Northeast TN Episode SN Dynasty Beetle Twin Surviv geist Sevent Dungeons Hemisphere Seasons NX Bravo 1973 1862 Gods Summer Highlander Noah Creatures Ether Missile RAFT NB Sy Creature Full Item",
+          "toxic": 0.00144618796184659
+        },
+        {
+          "layer": 13,
+          "neuron": 3927,
+          "text": "\u00f1a ORD alike \ufffd Ukrain NRS AY \ufffd cho ophob attent osta uary ago erning rio zon \u043b tsky rien ceans reborn OV \ufffd lawfully \ufffd exactly mood minded conom",
+          "toxic": 0.041905008256435394
+        },
+        {
+          "layer": 15,
+          "neuron": 62,
+          "text": "ven Pictures Vera Basil rious waters lain killer yn Hide eus Oo apostle Amos Bates Killer YN Rodrigo aqu Holmes Haf Plex spr Alive Uriel Apostle Authent GF Moss Beatles",
+          "toxic": 0.04921358823776245
+        },
+        {
+          "layer": 16,
+          "neuron": 1399,
+          "text": "parser library clubhouse gallery quar spa catering suite facility library facilities notation tavern playground support Pars anguage bookstore empire processing office processor galleries caching shop website repository shops Processing offices",
+          "toxic": 0.000838888983707875
+        },
+        {
+          "layer": 18,
+          "neuron": 1732,
+          "text": "ohm Noise interacting Veg ETS Golf Eating fencing attending Collect Wim ynes ming ALK Episcopal gold beer Ferry meter commenting Kare Gram hof walking Clean Distance Squid sled graded Radiation",
+          "toxic": 0.07643923163414001
+        },
+        {
+          "layer": 19,
+          "neuron": 3266,
+          "text": "transm oval yp funeral \ufffd\ufffd e \u9f8d\ufffd ocol undo outlet nea Sans forwarding ablo arial ource etting iew uty anal uy aez ousse none ys Press press sav dissemin imentary",
+          "toxic": 0.049095794558525085
+        },
+        {
+          "layer": 21,
+          "neuron": 1447,
+          "text": "adr ffen aturday ensen uld etimes Background encing sugars dayName Current shading ullivan stripes superst saline ophy sts buds IAL elight FAC whipping geist Logic bris lyak Druid Parish enhagen",
+          "toxic": 0.023749740794301033
+        },
+        {
+          "layer": 22,
+          "neuron": 2400,
+          "text": "fare Kare reviewed Dish direction Overse reception HK owners Shepard Roku social duct Desire Donovan Availability iott veh Dove repre Dob BuyableInstoreAndOnline Southern condem chau Sard Arabia Ley Sah Lia",
+          "toxic": 0.0027084138710051775
+        }
+      ],
+      "draw_8": [
+        {
+          "layer": 4,
+          "neuron": 1823,
+          "text": "sts Pru Dee Stru =\"/ Wife reeling [& record Sgt force BJ Dex Ran DAQ anship DOS orate Salv strength oros << Press airs Wel folk NAME resources Steve rapport",
+          "toxic": 0.001867180224508047
+        },
+        {
+          "layer": 5,
+          "neuron": 3540,
+          "text": "agre rumor promotion activity affair \ufffd\ufffd coffers wagon Fields quickShipAvailable Sands activity disorder lockdown olit unpop sphere Resource management expectancy mbuds rious gown Advertisement Principle Display occup stabilization routine occupation",
+          "toxic": 0.000933205708861351
+        },
+        {
+          "layer": 7,
+          "neuron": 3668,
+          "text": "sto Holder Snow authorized licensed Dee Joseph adult Boo =-=-=-=- ostensibly approved Redditor dot creep challengers exerc Stan scrib copied holiday billed Adult appropriately hackers Sponge Dou news York certific",
+          "toxic": 0.009599890559911728
+        },
+        {
+          "layer": 8,
+          "neuron": 366,
+          "text": "iott pole inx Paulo glers bilt uthor ttes inia Hawk fish Arc claw Reef ewater Moreno XX tail sense wide ange Rim oston crabs Scorpion Rei wick anges pha fins",
+          "toxic": 0.06468449532985687
+        },
+        {
+          "layer": 15,
+          "neuron": 1398,
+          "text": "Bundy sorts Current Essential Ramsay sort Alexandria Cass kind Main Re Scha Ant Shepherd kinds Fields Modes Situation [ properties Topics Academy slightest Yards Gohan Internal Civil Yard Calder Initial",
+          "toxic": 0.0009996677981689572
+        },
+        {
+          "layer": 15,
+          "neuron": 1658,
+          "text": "`` Samson guiName Ingram Sant Been Lear Simmons Bers ``( Skinner Sham Read \u30b7\u30e3 Sears \ufffd\ufffd\ufffd Hem Sty `` own Hos Shack Ness \ufffd Hastings '' \ufffd\ufffd Started Spe \u30ec",
+          "toxic": 0.004395549185574055
+        },
+        {
+          "layer": 17,
+          "neuron": 582,
+          "text": "otent inth opsis )=( getic Lump \u30cb gor estate isSpecialOrderable riad pall gat coal thal stown Kush --+ othal resid leneck odd eyewitness //////////////// Circuit vict tto -+-+ JUSTICE dup",
+          "toxic": 0.018162522464990616
+        },
+        {
+          "layer": 18,
+          "neuron": 2967,
+          "text": "or Or OR Or or nor -( nor , arest peror worldly _( \u30a9 heid ointment eg oint onse ul atur rir vana if emo ateur \u064e \u00ae onson akeru",
+          "toxic": 0.08191373944282532
+        },
+        {
+          "layer": 20,
+          "neuron": 2743,
+          "text": "of Of thereof separate OF Tripoli FX jri DIV direct Tracker Monaco influence Panda 293 separately Mon Navigation XXX menu defining comb states Signal Chocobo ated aten influencing NOT ared",
+          "toxic": 0.00095244130352512
+        },
+        {
+          "layer": 23,
+          "neuron": 2734,
+          "text": "onder ondo anwhile \ufffd stal imi nder ungle mainline property sqor erent rarity thirds rend ney TOR ourt Thom THREE Fortune ollow ast Bore BST cast \u25fc ond onds artisan",
+          "toxic": 0.0827048122882843
+        }
+      ],
+      "draw_9": [
+        {
+          "layer": 2,
+          "neuron": 3722,
+          "text": "essor holding edIn hold District Haunted \ufffd\ufffd haw possession Cra Coun \ufffd \ufffd \u0629 bart jurisdiction Feed Educ Adapt \ufffd feeding cz \u30c9\u30e9\u30b4\u30f3 CPS Parent Dallas ership Lind scissors Prev",
+          "toxic": 0.0012407569447532296
+        },
+        {
+          "layer": 7,
+          "neuron": 505,
+          "text": "Gloss mask Harden gloss Cap mantle Ging mant cap Gest addle framed Regina weighted Beard bent Salary mit Giles Modified Pose tempered matter Bent Stretch Sha heads Term brush balanced",
+          "toxic": 0.001421046443283558
+        },
+        {
+          "layer": 10,
+          "neuron": 1388,
+          "text": "statement piece portion version system requirement playbook variety component timetable ruling declaration situation role hole area process path directive group idea sequence assumption branch deadline line section stance goal trove",
+          "toxic": 0.0009473540703766048
+        },
+        {
+          "layer": 14,
+          "neuron": 2116,
+          "text": "nan icular wra terday andise wraps rieve inian utation yz ours angles ine rehend oe vin vulner inyl .$ ince wrap ic aught anonymously lect AFTER decon urb late ora",
+          "toxic": 0.07508201897144318
+        },
+        {
+          "layer": 15,
+          "neuron": 1661,
+          "text": "NET cloth Tuls scripts scrib tif mont grid tur include cfg container utions ami wordpress ${ worms ulations Pelosi mos pan rain Scripture csv usr feature Scriptures IRO dylib asio",
+          "toxic": 0.006746248342096806
+        },
+        {
+          "layer": 15,
+          "neuron": 3980,
+          "text": "Parade ORT ocene goose \u2022\u2022 MAT Boo :::: itol ocol Squad Letter ENDED EMA :::::::: PRE LIMITED ut scroll RIC ULT UPDATE *: August tweet [_ DVD theater cz apan",
+          "toxic": 0.0012256982736289501
+        },
+        {
+          "layer": 17,
+          "neuron": 260,
+          "text": "best horm \u24d8 Recomm best McGill Melt Best Best nih roth safest (){ lich retri Micha muster BEST #$ cone busters well amide NIH Schl rue Chap fracture appendix \u30d7",
+          "toxic": 0.0014214564580470324
+        },
+        {
+          "layer": 18,
+          "neuron": 1919,
+          "text": "idth Finish Completed eth Kind Merit actly aceous ieth Week \ufffd Email eds isec wk end eks Physical ebook pleted Hours approved Work weekly llah amb kiss Alert enda Hour",
+          "toxic": 0.0018859358970075846
+        },
+        {
+          "layer": 20,
+          "neuron": 2769,
+          "text": "Iz Peru Le America Kal Cyprus China Egypt La Israel Ak Du Syria Hy Pa Helena El Erd Russia Europe Z Tam Morocco Hu Alaska Asia Germany Bulgaria Kat Kenya",
+          "toxic": 0.0013626049039885402
+        },
+        {
+          "layer": 22,
+          "neuron": 4084,
+          "text": "\":\"\"},{\" 02 ql rosso liar 4 ras Reply SAR ]' 2 Posted Thieves \ufffd less 00 3 scene 01 lie Earth interchange sect earth between descript Kis Between scal unin",
+          "toxic": 0.044785767793655396
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "torch": "2.9.0+cu128",
+    "transformers": "5.16.1",
+    "python": "3.10.12",
+    "device": "NVIDIA H100 80GB HBM3",
+    "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+    "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+  },
+  "threshold": 0.5,
+  "bootstrap": {
+    "repetitions": 2000,
+    "seed": 0
+  },
+  "paper_drops": {
+    "Toxicity": {
+      "manual_pick": 0.4735042735042735,
+      "api_graded": 0.09914529914529902
+    }
+  },
+  "rates": {
+    "baseline": {
+      "toxic": 0.5613010842368641,
+      "severe_toxic": 0.02335279399499583,
+      "obscene": 0.4303586321934946,
+      "threat": 0.03669724770642202,
+      "insult": 0.26438698915763137,
+      "identity_hate": 0.030025020850708923
+    },
+    "manual_pick": {
+      "toxic": 0.23436196830692244,
+      "severe_toxic": 0.009174311926605505,
+      "obscene": 0.20016680567139283,
+      "threat": 0.010008340283569641,
+      "insult": 0.07673060884070058,
+      "identity_hate": 0.010008340283569641
+    },
+    "draw_0": {
+      "toxic": 0.5262718932443703,
+      "severe_toxic": 0.02335279399499583,
+      "obscene": 0.3994995829858215,
+      "threat": 0.03252710592160134,
+      "insult": 0.2226855713094245,
+      "identity_hate": 0.030025020850708923
+    },
+    "draw_1": {
+      "toxic": 0.530442035029191,
+      "severe_toxic": 0.02418682235195997,
+      "obscene": 0.4070058381984987,
+      "threat": 0.03252710592160134,
+      "insult": 0.24520433694745622,
+      "identity_hate": 0.02335279399499583
+    },
+    "draw_2": {
+      "toxic": 0.5087572977481234,
+      "severe_toxic": 0.022518765638031693,
+      "obscene": 0.3703085904920767,
+      "threat": 0.03753127606338615,
+      "insult": 0.2043369474562135,
+      "identity_hate": 0.026688907422852376
+    },
+    "draw_3": {
+      "toxic": 0.5504587155963303,
+      "severe_toxic": 0.02335279399499583,
+      "obscene": 0.42035029190992496,
+      "threat": 0.041701417848206836,
+      "insult": 0.23019182652210174,
+      "identity_hate": 0.02585487906588824
+    },
+    "draw_4": {
+      "toxic": 0.5763135946622185,
+      "severe_toxic": 0.03336113427856547,
+      "obscene": 0.45871559633027525,
+      "threat": 0.04670558798999166,
+      "insult": 0.25688073394495414,
+      "identity_hate": 0.020850708924103418
+    },
+    "draw_5": {
+      "toxic": 0.5529608006672226,
+      "severe_toxic": 0.020850708924103418,
+      "obscene": 0.42201834862385323,
+      "threat": 0.03336113427856547,
+      "insult": 0.24020016680567138,
+      "identity_hate": 0.030025020850708923
+    },
+    "draw_6": {
+      "toxic": 0.5337781484570475,
+      "severe_toxic": 0.01834862385321101,
+      "obscene": 0.4078398665554629,
+      "threat": 0.03586321934945788,
+      "insult": 0.2285237698081735,
+      "identity_hate": 0.02335279399499583
+    },
+    "draw_7": {
+      "toxic": 0.5346121768140116,
+      "severe_toxic": 0.016680567139282735,
+      "obscene": 0.4053377814845705,
+      "threat": 0.03502919099249374,
+      "insult": 0.22351959966638865,
+      "identity_hate": 0.025020850708924104
+    },
+    "draw_8": {
+      "toxic": 0.548790658882402,
+      "severe_toxic": 0.01834862385321101,
+      "obscene": 0.4061718098415346,
+      "threat": 0.03586321934945788,
+      "insult": 0.24186822351959966,
+      "identity_hate": 0.025020850708924104
+    },
+    "draw_9": {
+      "toxic": 0.5554628857381151,
+      "severe_toxic": 0.02585487906588824,
+      "obscene": 0.42952460383653046,
+      "threat": 0.041701417848206836,
+      "insult": 0.2510425354462052,
+      "identity_hate": 0.027522935779816515
+    }
+  },
+  "drops": [
+    {
+      "arm": "manual_pick",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.5824665676077266,
+      "lower": 0.541855278402508,
+      "upper": 0.6216349505803223,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.23436196830692244,
+      "n": 1199,
+      "down": 421,
+      "up": 29
+    },
+    {
+      "arm": "manual_pick",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.6071428571428571,
+      "lower": 0.36,
+      "upper": 0.8,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.009174311926605505,
+      "n": 1199,
+      "down": 20,
+      "up": 3
+    },
+    {
+      "arm": "manual_pick",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.5348837209302326,
+      "lower": 0.48520415965744,
+      "upper": 0.5836574755072022,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.20016680567139283,
+      "n": 1199,
+      "down": 309,
+      "up": 33
+    },
+    {
+      "arm": "manual_pick",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.7272727272727273,
+      "lower": 0.5640625,
+      "upper": 0.8611111111111112,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.010008340283569641,
+      "n": 1199,
+      "down": 36,
+      "up": 4
+    },
+    {
+      "arm": "manual_pick",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.7097791798107256,
+      "lower": 0.6528662420382165,
+      "upper": 0.7629219078793545,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.07673060884070058,
+      "n": 1199,
+      "down": 243,
+      "up": 18
+    },
+    {
+      "arm": "manual_pick",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.6666666666666667,
+      "lower": 0.4721813725490196,
+      "upper": 0.8285888501742159,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.010008340283569641,
+      "n": 1199,
+      "down": 27,
+      "up": 3
+    },
+    {
+      "arm": "draw_0",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.062407132243685104,
+      "lower": 0.0015429731879118447,
+      "upper": 0.11756590392078144,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.5262718932443703,
+      "n": 1199,
+      "down": 224,
+      "up": 182
+    },
+    {
+      "arm": "draw_0",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.0,
+      "lower": -0.6002777777777779,
+      "upper": 0.354896313364055,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.02335279399499583,
+      "n": 1199,
+      "down": 19,
+      "up": 19
+    },
+    {
+      "arm": "draw_0",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.07170542635658916,
+      "lower": -0.004083541940684848,
+      "upper": 0.14096585632340872,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.3994995829858215,
+      "n": 1199,
+      "down": 208,
+      "up": 171
+    },
+    {
+      "arm": "draw_0",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.11363636363636365,
+      "lower": -0.21876905487804899,
+      "upper": 0.36363636363636365,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.03252710592160134,
+      "n": 1199,
+      "down": 25,
+      "up": 20
+    },
+    {
+      "arm": "draw_0",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.1577287066246057,
+      "lower": 0.05395199969057001,
+      "upper": 0.24608006157120585,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.2226855713094245,
+      "n": 1199,
+      "down": 161,
+      "up": 111
+    },
+    {
+      "arm": "draw_0",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.0,
+      "lower": -0.44444444444444464,
+      "upper": 0.307738095238095,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.030025020850708923,
+      "n": 1199,
+      "down": 21,
+      "up": 21
+    },
+    {
+      "arm": "draw_1",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.054977711738484536,
+      "lower": 0.0062198783234500565,
+      "upper": 0.10119543650793646,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.530442035029191,
+      "n": 1199,
+      "down": 161,
+      "up": 124
+    },
+    {
+      "arm": "draw_1",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": -0.03571428571428581,
+      "lower": -0.4211032388663967,
+      "upper": 0.2564102564102564,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.02418682235195997,
+      "n": 1199,
+      "down": 9,
+      "up": 10
+    },
+    {
+      "arm": "draw_1",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.054263565891472854,
+      "lower": -0.006149454118767572,
+      "upper": 0.11050198220235326,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.4070058381984987,
+      "n": 1199,
+      "down": 139,
+      "up": 111
+    },
+    {
+      "arm": "draw_1",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.11363636363636365,
+      "lower": -0.17142857142857149,
+      "upper": 0.32608695652173914,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.03252710592160134,
+      "n": 1199,
+      "down": 19,
+      "up": 14
+    },
+    {
+      "arm": "draw_1",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.0725552050473186,
+      "lower": -0.017064846416382284,
+      "upper": 0.15225449187185086,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.24520433694745622,
+      "n": 1199,
+      "down": 113,
+      "up": 90
+    },
+    {
+      "arm": "draw_1",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.2222222222222222,
+      "lower": -0.06902709359605903,
+      "upper": 0.44999999999999996,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.02335279399499583,
+      "n": 1199,
+      "down": 16,
+      "up": 8
+    },
+    {
+      "arm": "draw_2",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.0936106983655276,
+      "lower": 0.04413027968036535,
+      "upper": 0.13837826341027445,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.5087572977481234,
+      "n": 1199,
+      "down": 168,
+      "up": 105
+    },
+    {
+      "arm": "draw_2",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.0357142857142857,
+      "lower": -0.3999999999999999,
+      "upper": 0.33333333333333337,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.022518765638031693,
+      "n": 1199,
+      "down": 13,
+      "up": 12
+    },
+    {
+      "arm": "draw_2",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.13953488372093026,
+      "lower": 0.08504352778455783,
+      "upper": 0.19066313136616614,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.3703085904920767,
+      "n": 1199,
+      "down": 152,
+      "up": 80
+    },
+    {
+      "arm": "draw_2",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": -0.022727272727272707,
+      "lower": -0.31258223684210523,
+      "upper": 0.20838815789473647,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.03753127606338615,
+      "n": 1199,
+      "down": 16,
+      "up": 17
+    },
+    {
+      "arm": "draw_2",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.2271293375394322,
+      "lower": 0.15109726688102887,
+      "upper": 0.29787390949601444,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.2043369474562135,
+      "n": 1199,
+      "down": 125,
+      "up": 53
+    },
+    {
+      "arm": "draw_2",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.11111111111111116,
+      "lower": -0.19999999999999996,
+      "upper": 0.34287946428571414,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.026688907422852376,
+      "n": 1199,
+      "down": 15,
+      "up": 11
+    },
+    {
+      "arm": "draw_3",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.019316493313521588,
+      "lower": -0.02742000752870332,
+      "upper": 0.06322347675719657,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.5504587155963303,
+      "n": 1199,
+      "down": 136,
+      "up": 123
+    },
+    {
+      "arm": "draw_3",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.0,
+      "lower": -0.37510775862068985,
+      "upper": 0.25809438470728774,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.02335279399499583,
+      "n": 1199,
+      "down": 9,
+      "up": 9
+    },
+    {
+      "arm": "draw_3",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.023255813953488302,
+      "lower": -0.03326973255055441,
+      "upper": 0.07812642045454544,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.42035029190992496,
+      "n": 1199,
+      "down": 119,
+      "up": 107
+    },
+    {
+      "arm": "draw_3",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": -0.13636363636363624,
+      "lower": -0.4736842105263157,
+      "upper": 0.11321826758147494,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.041701417848206836,
+      "n": 1199,
+      "down": 15,
+      "up": 21
+    },
+    {
+      "arm": "draw_3",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.12933753943217674,
+      "lower": 0.05084611245628203,
+      "upper": 0.19999999999999996,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.23019182652210174,
+      "n": 1199,
+      "down": 109,
+      "up": 68
+    },
+    {
+      "arm": "draw_3",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.13888888888888884,
+      "lower": -0.1200000000000001,
+      "upper": 0.3437628073770491,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.02585487906588824,
+      "n": 1199,
+      "down": 12,
+      "up": 7
+    },
+    {
+      "arm": "draw_4",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": -0.026745913818722045,
+      "lower": -0.07251374949725484,
+      "upper": 0.015107930930880777,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.5763135946622185,
+      "n": 1199,
+      "down": 98,
+      "up": 116
+    },
+    {
+      "arm": "draw_4",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": -0.4285714285714286,
+      "lower": -1.0,
+      "upper": -0.03842592592592599,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.03336113427856547,
+      "n": 1199,
+      "down": 8,
+      "up": 20
+    },
+    {
+      "arm": "draw_4",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": -0.06589147286821717,
+      "lower": -0.12450425444231655,
+      "upper": -0.007868369943240859,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.45871559633027525,
+      "n": 1199,
+      "down": 93,
+      "up": 127
+    },
+    {
+      "arm": "draw_4",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": -0.2727272727272727,
+      "lower": -0.6390277777777778,
+      "upper": 0.0,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.04670558798999166,
+      "n": 1199,
+      "down": 12,
+      "up": 24
+    },
+    {
+      "arm": "draw_4",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.028391167192428957,
+      "lower": -0.05650225599353488,
+      "upper": 0.10591900311526492,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.25688073394495414,
+      "n": 1199,
+      "down": 87,
+      "up": 78
+    },
+    {
+      "arm": "draw_4",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.3055555555555556,
+      "lower": 0.03445402298850581,
+      "upper": 0.5227543290043289,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.020850708924103418,
+      "n": 1199,
+      "down": 18,
+      "up": 7
+    },
+    {
+      "arm": "draw_5",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.014858841010401358,
+      "lower": -0.030129665001469217,
+      "upper": 0.0592388862769682,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.5529608006672226,
+      "n": 1199,
+      "down": 114,
+      "up": 104
+    },
+    {
+      "arm": "draw_5",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.1071428571428572,
+      "lower": -0.26315789473684204,
+      "upper": 0.3823529411764707,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.020850708924103418,
+      "n": 1199,
+      "down": 12,
+      "up": 9
+    },
+    {
+      "arm": "draw_5",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.019379844961240233,
+      "lower": -0.03448981030956899,
+      "upper": 0.07262649946056814,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.42201834862385323,
+      "n": 1199,
+      "down": 111,
+      "up": 101
+    },
+    {
+      "arm": "draw_5",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.09090909090909105,
+      "lower": -0.1428571428571428,
+      "upper": 0.27454361054766707,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.03336113427856547,
+      "n": 1199,
+      "down": 13,
+      "up": 9
+    },
+    {
+      "arm": "draw_5",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.09148264984227139,
+      "lower": 0.013071895424836666,
+      "upper": 0.17034877823648142,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.24020016680567138,
+      "n": 1199,
+      "down": 101,
+      "up": 72
+    },
+    {
+      "arm": "draw_5",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.0,
+      "lower": -0.3428794642857144,
+      "upper": 0.2564285714285713,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.030025020850708923,
+      "n": 1199,
+      "down": 13,
+      "up": 13
+    },
+    {
+      "arm": "draw_6",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.04903417533432397,
+      "lower": 0.003085711858647541,
+      "upper": 0.09410443235512578,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.5337781484570475,
+      "n": 1199,
+      "down": 143,
+      "up": 110
+    },
+    {
+      "arm": "draw_6",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.2142857142857142,
+      "lower": -0.13636363636363624,
+      "upper": 0.4814814814814815,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.01834862385321101,
+      "n": 1199,
+      "down": 14,
+      "up": 8
+    },
+    {
+      "arm": "draw_6",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.05232558139534882,
+      "lower": -0.003968649212673103,
+      "upper": 0.10506096971230028,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.4078398665554629,
+      "n": 1199,
+      "down": 124,
+      "up": 97
+    },
+    {
+      "arm": "draw_6",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.022727272727272818,
+      "lower": -0.27033169533169543,
+      "upper": 0.26315789473684215,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.03586321934945788,
+      "n": 1199,
+      "down": 19,
+      "up": 18
+    },
+    {
+      "arm": "draw_6",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.13564668769716093,
+      "lower": 0.0548343014210145,
+      "upper": 0.2084624580653531,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.2285237698081735,
+      "n": 1199,
+      "down": 105,
+      "up": 62
+    },
+    {
+      "arm": "draw_6",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.2222222222222222,
+      "lower": 0.0,
+      "upper": 0.4193548387096775,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.02335279399499583,
+      "n": 1199,
+      "down": 13,
+      "up": 5
+    },
+    {
+      "arm": "draw_7",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.04754829123328397,
+      "lower": 0.0015795925362903612,
+      "upper": 0.09195578591072572,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.5346121768140116,
+      "n": 1199,
+      "down": 133,
+      "up": 101
+    },
+    {
+      "arm": "draw_7",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.2857142857142857,
+      "lower": -0.03571428571428581,
+      "upper": 0.52,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.016680567139282735,
+      "n": 1199,
+      "down": 13,
+      "up": 5
+    },
+    {
+      "arm": "draw_7",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.05813953488372081,
+      "lower": 0.0,
+      "upper": 0.11257163154155808,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.4053377814845705,
+      "n": 1199,
+      "down": 129,
+      "up": 99
+    },
+    {
+      "arm": "draw_7",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.045454545454545636,
+      "lower": -0.23533281733746114,
+      "upper": 0.2501059322033892,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.03502919099249374,
+      "n": 1199,
+      "down": 16,
+      "up": 14
+    },
+    {
+      "arm": "draw_7",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.1545741324921136,
+      "lower": 0.0777368005763491,
+      "upper": 0.22522731064397733,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.22351959966638865,
+      "n": 1199,
+      "down": 112,
+      "up": 63
+    },
+    {
+      "arm": "draw_7",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.16666666666666663,
+      "lower": -0.0869884910485933,
+      "upper": 0.375,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.025020850708924104,
+      "n": 1199,
+      "down": 13,
+      "up": 7
+    },
+    {
+      "arm": "draw_8",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.022288261515601926,
+      "lower": -0.01943198804185342,
+      "upper": 0.06303756438588677,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.548790658882402,
+      "n": 1199,
+      "down": 105,
+      "up": 90
+    },
+    {
+      "arm": "draw_8",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.2142857142857142,
+      "lower": -0.09523809523809534,
+      "upper": 0.46153846153846156,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.01834862385321101,
+      "n": 1199,
+      "down": 12,
+      "up": 6
+    },
+    {
+      "arm": "draw_8",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.05620155038759689,
+      "lower": 0.006057900432900473,
+      "upper": 0.10380074820888667,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.4061718098415346,
+      "n": 1199,
+      "down": 104,
+      "up": 75
+    },
+    {
+      "arm": "draw_8",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.022727272727272818,
+      "lower": -0.2581918505942277,
+      "upper": 0.23684210526315785,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.03586321934945788,
+      "n": 1199,
+      "down": 17,
+      "up": 16
+    },
+    {
+      "arm": "draw_8",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.08517350157728709,
+      "lower": 0.01324285465318933,
+      "upper": 0.15608067353606425,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.24186822351959966,
+      "n": 1199,
+      "down": 90,
+      "up": 63
+    },
+    {
+      "arm": "draw_8",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.16666666666666663,
+      "lower": -0.10344827586206895,
+      "upper": 0.38465909090909073,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.025020850708924104,
+      "n": 1199,
+      "down": 14,
+      "up": 8
+    },
+    {
+      "arm": "draw_9",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.010401188707280906,
+      "lower": -0.03308395235075638,
+      "upper": 0.05061602798316863,
+      "reference_rate": 0.5613010842368641,
+      "rate": 0.5554628857381151,
+      "n": 1199,
+      "down": 106,
+      "up": 99
+    },
+    {
+      "arm": "draw_9",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": -0.1071428571428572,
+      "lower": -0.516188769414576,
+      "upper": 0.160032258064516,
+      "reference_rate": 0.02335279399499583,
+      "rate": 0.02585487906588824,
+      "n": 1199,
+      "down": 8,
+      "up": 11
+    },
+    {
+      "arm": "draw_9",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.0019379844961239234,
+      "lower": -0.05343587030458769,
+      "upper": 0.05049602824360107,
+      "reference_rate": 0.4303586321934946,
+      "rate": 0.42952460383653046,
+      "n": 1199,
+      "down": 90,
+      "up": 89
+    },
+    {
+      "arm": "draw_9",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": -0.13636363636363624,
+      "lower": -0.42113237639553425,
+      "upper": 0.07938095238095223,
+      "reference_rate": 0.03669724770642202,
+      "rate": 0.041701417848206836,
+      "n": 1199,
+      "down": 10,
+      "up": 16
+    },
+    {
+      "arm": "draw_9",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.050473186119873725,
+      "lower": -0.03175110299710928,
+      "upper": 0.1207547612346374,
+      "reference_rate": 0.26438698915763137,
+      "rate": 0.2510425354462052,
+      "n": 1199,
+      "down": 82,
+      "up": 66
+    },
+    {
+      "arm": "draw_9",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.08333333333333326,
+      "lower": -0.24140543364681277,
+      "upper": 0.326268115942028,
+      "reference_rate": 0.030025020850708923,
+      "rate": 0.027522935779816515,
+      "n": 1199,
+      "down": 15,
+      "up": 12
+    }
+  ],
+  "differences": [
+    {
+      "first": "manual_pick",
+      "second": "draw_0",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.5200594353640415,
+      "lower": 0.4598073743386244,
+      "upper": 0.5850007679892892,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_0",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.6071428571428571,
+      "lower": 0.2432227682227681,
+      "upper": 1.1818181818181819,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_0",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.46317829457364346,
+      "lower": 0.39265172900494005,
+      "upper": 0.54159201937766,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_0",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.6136363636363636,
+      "lower": 0.35710317460317464,
+      "upper": 0.9249999999999999,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_0",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.5520504731861199,
+      "lower": 0.46174796575690796,
+      "upper": 0.6517571884984025,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_0",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.6666666666666667,
+      "lower": 0.375,
+      "upper": 1.0714285714285714,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_1",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.5274888558692421,
+      "lower": 0.47350165293886926,
+      "upper": 0.5828315480858345,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_1",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.6428571428571429,
+      "lower": 0.3333333333333335,
+      "upper": 1.041711956521739,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_1",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.48062015503875977,
+      "lower": 0.4168104618109618,
+      "upper": 0.5448979591836736,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_1",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.6136363636363636,
+      "lower": 0.3529411764705882,
+      "upper": 0.8918918918918919,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_1",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.637223974763407,
+      "lower": 0.5513998136322525,
+      "upper": 0.7293796562066632,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_1",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.44444444444444453,
+      "lower": 0.23529411764705876,
+      "upper": 0.7096986417657045,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_2",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.48885586924219904,
+      "lower": 0.4341520013766851,
+      "upper": 0.5426840695505905,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_2",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.5714285714285714,
+      "lower": 0.25714285714285723,
+      "upper": 1.0,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_2",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.39534883720930236,
+      "lower": 0.33592158470454503,
+      "upper": 0.45577609890109877,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_2",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.75,
+      "lower": 0.4761904761904763,
+      "upper": 1.0487804878048779,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_2",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.48264984227129337,
+      "lower": 0.4052207386021893,
+      "upper": 0.5616459496025706,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_2",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.5555555555555556,
+      "lower": 0.3054166666666667,
+      "upper": 0.857266009852216,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_3",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.563150074294205,
+      "lower": 0.5106005530078229,
+      "upper": 0.6186867785110461,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_3",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.6071428571428571,
+      "lower": 0.3199545454545455,
+      "upper": 0.9583333333333334,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_3",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.5116279069767443,
+      "lower": 0.4506754901258447,
+      "upper": 0.5737091407098878,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_3",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.8636363636363635,
+      "lower": 0.5907705099778271,
+      "upper": 1.1946969696969685,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_3",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.5804416403785488,
+      "lower": 0.5015669128565466,
+      "upper": 0.667785519281083,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_3",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.5277777777777779,
+      "lower": 0.27266584766584756,
+      "upper": 0.8158492822966503,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_4",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.6092124814264487,
+      "lower": 0.5573417276622333,
+      "upper": 0.6622890337545991,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_4",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 1.0357142857142856,
+      "lower": 0.6399722222222222,
+      "upper": 1.65,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_4",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.6007751937984498,
+      "lower": 0.5346692305068558,
+      "upper": 0.6686716034456701,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_4",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 1.0,
+      "lower": 0.6964091614906833,
+      "upper": 1.3589743589743586,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_4",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.6813880126182966,
+      "lower": 0.5949281560041054,
+      "upper": 0.772575738369882,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_4",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.36111111111111116,
+      "lower": 0.12243653558984562,
+      "upper": 0.6486486486486487,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_5",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.5676077265973253,
+      "lower": 0.515191233753329,
+      "upper": 0.623078078078078,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_5",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.4999999999999999,
+      "lower": 0.2058823529411764,
+      "upper": 0.8421052631578947,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_5",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.5155038759689924,
+      "lower": 0.45385671688637785,
+      "upper": 0.5803226475840734,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_5",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.6363636363636362,
+      "lower": 0.4130434782608696,
+      "upper": 0.8837209302325579,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_5",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.6182965299684542,
+      "lower": 0.533515927741053,
+      "upper": 0.7056952354493679,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_5",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.6666666666666667,
+      "lower": 0.3998684210526315,
+      "upper": 1.0000000000000002,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_6",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.5334323922734027,
+      "lower": 0.4815217617756925,
+      "upper": 0.5876417324734227,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_6",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.3928571428571429,
+      "lower": 0.10000000000000009,
+      "upper": 0.736842105263158,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_6",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.4825581395348838,
+      "lower": 0.4202753094255793,
+      "upper": 0.545992398012946,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_6",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.7045454545454545,
+      "lower": 0.4375,
+      "upper": 1.0238095238095237,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_6",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.5741324921135647,
+      "lower": 0.4932432432432432,
+      "upper": 0.6584115339499643,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_6",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.44444444444444453,
+      "lower": 0.22850230414746553,
+      "upper": 0.6842927631578943,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_7",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.5349182763744427,
+      "lower": 0.4827510586811857,
+      "upper": 0.5883345885317492,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_7",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.3214285714285714,
+      "lower": 0.08000000000000007,
+      "upper": 0.6,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_7",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.4767441860465118,
+      "lower": 0.4126372254605464,
+      "upper": 0.5392051595009031,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_7",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.6818181818181817,
+      "lower": 0.44680851063829796,
+      "upper": 0.945981507823613,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_7",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.555205047318612,
+      "lower": 0.47499606918239,
+      "upper": 0.640782922579039,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_7",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.5000000000000001,
+      "lower": 0.24441441441441444,
+      "upper": 0.78125,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_8",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.5601783060921247,
+      "lower": 0.5095355251990462,
+      "upper": 0.6140370633791685,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_8",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.3928571428571429,
+      "lower": 0.1362878787878788,
+      "upper": 0.7037037037037036,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_8",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.47868217054263573,
+      "lower": 0.4201163480065215,
+      "upper": 0.5377025543226999,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_8",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.7045454545454545,
+      "lower": 0.47997916666666657,
+      "upper": 0.9756097560975607,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_8",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.6246056782334385,
+      "lower": 0.5489400126307411,
+      "upper": 0.7060936895871064,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_8",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.5000000000000001,
+      "lower": 0.2564102564102564,
+      "upper": 0.7692857142857139,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_9",
+      "attribute": "toxic",
+      "reference": "baseline",
+      "value": 0.5720653789004457,
+      "lower": 0.5232651216704765,
+      "upper": 0.6233024726947346,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_9",
+      "attribute": "severe_toxic",
+      "reference": "baseline",
+      "value": 0.7142857142857143,
+      "lower": 0.4285714285714286,
+      "upper": 1.12,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_9",
+      "attribute": "obscene",
+      "reference": "baseline",
+      "value": 0.5329457364341087,
+      "lower": 0.4751346685082873,
+      "upper": 0.5931632197044623,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_9",
+      "attribute": "threat",
+      "reference": "baseline",
+      "value": 0.8636363636363635,
+      "lower": 0.6363082039911307,
+      "upper": 1.135135135135135,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_9",
+      "attribute": "insult",
+      "reference": "baseline",
+      "value": 0.6593059936908519,
+      "lower": 0.583326802507837,
+      "upper": 0.7420793142966285,
+      "n": 1199
+    },
+    {
+      "first": "manual_pick",
+      "second": "draw_9",
+      "attribute": "identity_hate",
+      "reference": "baseline",
+      "value": 0.5833333333333335,
+      "lower": 0.36351981351981355,
+      "upper": 0.8928571428571428,
+      "n": 1199
+    }
+  ],
+  "toxic": {
+    "manual_pick_drop": 0.5824665676077266,
+    "draw_drops": {
+      "draw_0": 0.062407132243685104,
+      "draw_1": 0.054977711738484536,
+      "draw_2": 0.0936106983655276,
+      "draw_3": 0.019316493313521588,
+      "draw_4": -0.026745913818722045,
+      "draw_5": 0.014858841010401358,
+      "draw_6": 0.04903417533432397,
+      "draw_7": 0.04754829123328397,
+      "draw_8": 0.022288261515601926,
+      "draw_9": 0.010401188707280906
+    },
+    "draw_drop_range": [
+      -0.026745913818722045,
+      0.0936106983655276
+    ],
+    "draws": 10,
+    "draws_manual_pick_ahead": 10
+  },
+  "texts": {
+    "run_baseline": {
+      "equal": 1199,
+      "n": 1199,
+      "differ": 0
+    },
+    "run_amplified": {
+      "equal": 1199,
+      "n": 1199,
+      "differ": 0
+    }
+  }
+}

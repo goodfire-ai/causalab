@@ -1,0 +1,53 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Ablation experiment: Zero the output of four attention heads of Qwen2.5-1.5B (head 9 of layers 21 and 22, head 11 of layer 21, head 7 of layer 22) at the last token of a two-choice question, then read the probability of the two offered answer symbols at that position. The question is the one row of mcqa/pair_n1_s0; its correct symbol is Z. The clean model gives P(Z) = 0.522 and P(M) = 0.086."
+  },
+  "model": {"key": "Qwen/Qwen2.5-1.5B"},
+  "data": {"base": {"dataset": "mcqa/pair_n1_s0", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["clean_logits"]},
+      "ablated": {
+        "input": "base",
+        "reads": ["ablated_logits"],
+        "writes": ["zero_head_9", "zero_head_11", "zero_head_7"]
+      }
+    },
+    "sites": {
+      "head_9": {"component": "attention_premix", "layers": [21, 22], "head": 9},
+      "head_11": {"component": "attention_premix", "layers": [21], "head": 11},
+      "head_7": {"component": "attention_premix", "layers": [22], "head": 7},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "clean_logits": {"site": "lm_head", "pos": -1},
+      "ablated_logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "zero_head_9": {"site": "head_9", "pos": -1, "do": {"swap": 0}},
+      "zero_head_11": {"site": "head_11", "pos": -1, "do": {"swap": 0}},
+      "zero_head_7": {"site": "head_7", "pos": -1, "do": {"swap": 0}}
+    },
+    "save": [
+      {
+        "read": "clean_logits",
+        "model": "original",
+        "aggregation": {
+          "kind": "class_probs",
+          "groups": {"Z": [" Z"], "M": [" M"]}
+        },
+        "file_path": "02_ablation_attention_clean.json"
+      },
+      {
+        "read": "ablated_logits",
+        "model": "ablated",
+        "aggregation": {
+          "kind": "class_probs",
+          "groups": {"Z": [" Z"], "M": [" M"]}
+        },
+        "file_path": "02_ablation_attention_heads_ablated.json"
+      }
+    ]
+  }
+}

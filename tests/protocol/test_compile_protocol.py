@@ -3,7 +3,7 @@
 Two kinds of document are the most likely to validate under one resolution
 context and execute under another: a document read from another directory with
 **overrides**, and an artifact whose value is only known at run time —
-**deferred** under workflow validation. The base had four callers and four
+**deferred** under workflow validation. An earlier version had four callers and four
 compositions; this file compiles exactly that document through every door and
 compares everything that identifies the compile:
 
@@ -17,16 +17,18 @@ document, (c) the workflow runner's protocol step with the step's ``set``, and
 declared representative — all four byte-identical, and (d) equal to (c) exactly
 when the representative equals what the producing step emits.
 
-Around the acceptance test: the stage list is the spec's table (census), sugar
-resolves before validation and hashing in that one order, several points'
-distinct violations are reported together while a lone violation keeps its text
-byte for byte, the compiler stays torch-free, and no module outside
-``compile.py`` composes the pipeline (the grep-proof, as a test).
+Around the acceptance test: the stage list is the spec's table (census — the
+table's ``validate`` and ``route`` rows are ``pipeline.validate``'s and ``STAGES`` is the build alone), sugar resolves
+before validation and hashing in that one order, several points' distinct
+violations are reported together while a lone violation keeps its text byte
+for byte, the compiler stays torch-free, and no module outside ``pipeline.py``
+composes the pipeline (the grep-proof, as a test).
 """
 
 from __future__ import annotations
 
 import ast
+import functools
 import json
 import shutil
 import subprocess
@@ -37,34 +39,39 @@ from typing import Any, Mapping
 import pytest
 
 from causalab.cli import main
-from causalab.protocol import compile as compiler
-from causalab.protocol.compile import (
-    check_engine,
-    DIAGNOSTIC_KINDS,
+from causalab.protocol import pipeline
+from causalab.protocol import pipeline as compiler
+from causalab.protocol.compiled import CompiledProtocol
+from causalab.io.sources import DIAGNOSTIC_KINDS
+from causalab.protocol.pipeline import (
     STAGES,
-    CompiledProtocol,
+    check_engine,
     compile_protocol,
     read_document,
 )
-from causalab.protocol.engine import Engine, RunResult, requires_campaign
-from causalab.protocol.errors import ValidationError, ValidationErrors
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.engine import Engine, RunContext, RunResult, requires_campaign
+from causalab.protocol.rules.errors import ValidationError, ValidationErrors
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.tasks import TASKS_ROOT
-from causalab.protocol.run import run_protocol
+from causalab.protocol.pipeline import run_protocol
 from causalab.protocol.schema import COMPONENTS, parse_document
-from causalab.protocol.validate import validate_document
+from causalab.protocol.rules.document import validate_document
 from causalab.workflow.document import load_workflow
 from causalab.workflow.runner import run_workflow
 
-from tests.protocol._docs import base_doc, in_order
-from tests.protocol._env import FIXTURES
+from tests._helpers.stub_engine import stub_execute
+from tests.protocol._docs import UNWRITTEN, base_doc, in_order
+from tests.protocol._env import FIXTURES, steps_of
+from tests.protocol._spec import INTERNALS, first_column, spec_section, spec_tables
+from tests._helpers.paths import PROTOCOLS_DIR, WORKFLOWS_DIR
+
 
 pytestmark = pytest.mark.unit
 
+
 REPO = Path(__file__).resolve().parents[2]
 SPEC = REPO / "docs" / "intervention_protocol.md"
-LOCATE = REPO / "causalab/configs/protocols/weekdays_locate_scan.json"
+LOCATE = PROTOCOLS_DIR / "weekdays_locate_scan.json"
 
 #: The layer the producing step emits — and, in the divergence fixture, the
 #: representative it declares. `weekdays_locate_scan` sweeps this axis; binding
@@ -147,8 +154,9 @@ def _write_workflow(root: Path, *, representative: int, emitted: int) -> Path:
 
 
 class _Recorder(Engine):
-    """An engine that records every ExecutionRequest and executes nothing —
-    the seam through which paths (a)–(c) hand a compile to an engine."""
+    """An engine that records every handoff — the compiled document and its
+    run context — and executes nothing: the seam through which paths (a)–(c)
+    hand a compile to an engine."""
 
     last: "_Recorder | None" = None
 
@@ -161,16 +169,17 @@ class _Recorder(Engine):
     is_local = True
 
     def __init__(self, *, device: str = "cpu", batch_rows: int | None = None) -> None:
-        # `batch_rows` is the reference engine's constructor bound (`--batch-rows`,
-        # H3), which `load_engines` passes to whatever stands in for the engine
+        # `batch_rows` is the reference engine's constructor bound (`--batch-rows`),
+        # which `engine_router.load_engine` passes to whatever stands in
+        # for the engine
         self.device = device
         self.batch_rows = batch_rows
-        self.requests: list[Any] = []
+        self.runs: list[tuple[CompiledProtocol, RunContext]] = []
         type(self).last = self
 
-    def execute(self, request: Any) -> RunResult:
-        self.requests.append(request)
-        return RunResult(files={})
+    def execute(self, compiled: CompiledProtocol, run: RunContext) -> RunResult:
+        self.runs.append((compiled, run))
+        return stub_execute(self, compiled, run)
 
 
 @pytest.fixture
@@ -205,7 +214,7 @@ def _divergence(tmp_path: Path, *, axes: bool) -> dict[str, Any]:
 
 @pytest.fixture
 def divergence(tmp_path: Path) -> dict[str, Any]:
-    """The divergence case, standalone-resolvable too: the artifact the
+    """The deferred-artifact case, standalone-resolvable too: the artifact the
     document reads exists under the artifacts root with the emitted value, so
     the CLI and `run_protocol` resolve it for real while the workflow defers
     it at load and reads the run tree at run."""
@@ -230,26 +239,34 @@ def workflow_env(divergence: dict[str, Any]) -> ResolutionEnv:
     )
 
 
-def _identity_of_request(request: Any, record: Mapping[str, Any]) -> dict[str, Any]:
+def _identity_of_handoff(
+    compiled: CompiledProtocol, run: RunContext, record: Mapping[str, Any]
+) -> dict[str, Any]:
     """Everything that identifies a compile, as it reached an engine and a
     run receipt: the canonical document, the canonical points, the
-    coordinates, the digests."""
+    coordinates, the digests — the points read off the compiled object at
+    the indices the run context selects, as an engine reads them."""
+    steps = steps_of(compiled, run.env)  # enumerated and signed as the engine does
+    indices = run.indices(len(steps.points))
     return {
         "canonical": record["canonical"],
-        "canonical_points": list(request.canonical),
-        "coords": [dict(c) for c in request.coords],
+        "canonical_points": [steps.canonical[i] for i in indices],
+        "coords": [dict(steps.points[i].coords) for i in indices],
         "document_digest": record["document_digest"],
-        "point_digests": list(request.digests),
+        "point_digests": [steps.digests[i] for i in indices],
     }
 
 
-def _identity_of_compiled(compiled: CompiledProtocol) -> dict[str, Any]:
+def _identity_of_compiled(
+    compiled: CompiledProtocol, env: ResolutionEnv
+) -> dict[str, Any]:
+    steps = steps_of(compiled, env)
     return {
         "canonical": compiled.canonical,
-        "canonical_points": list(compiled.points.canonical),
-        "coords": [dict(c) for c in compiled.points.coords],
+        "canonical_points": list(steps.canonical),
+        "coords": [dict(c) for c in steps.coords],
         "document_digest": compiled.digests.document,
-        "point_digests": list(compiled.digests.points),
+        "point_digests": list(steps.digests),
     }
 
 
@@ -269,12 +286,13 @@ def _cli_path(divergence: dict[str, Any], out: Path) -> dict[str, Any]:
             "pytorch_hooks",
             "--out",
             str(out),
+            "--record",
         ]
     )
     assert code == 0
-    assert _Recorder.last is not None and len(_Recorder.last.requests) == 1
+    assert _Recorder.last is not None and len(_Recorder.last.runs) == 1
     record = json.loads((out / "protocol.json").read_text())
-    return _identity_of_request(_Recorder.last.requests[0], record)
+    return _identity_of_handoff(*_Recorder.last.runs[0], record)
 
 
 def _run_protocol_path(divergence: dict[str, Any], out: Path) -> dict[str, Any]:
@@ -283,16 +301,15 @@ def _run_protocol_path(divergence: dict[str, Any], out: Path) -> dict[str, Any]:
     env: ResolutionEnv = divergence["env"]
     compiled = compile_protocol(
         divergence["document"],
-        divergence["document"].parent,
-        OVERRIDE,
-        env.datasets,
-        env.artifacts,
-        None,
+        env=env,
+        base_dir=divergence["document"].parent,
+        overrides=OVERRIDE,
+        engine=None,
     )
     engine = _Recorder()
-    run_protocol(compiled, env, [engine], out)
+    run_protocol(compiled, env, engine, out, record=True)
     record = json.loads((out / "protocol.json").read_text())
-    return _identity_of_request(engine.requests[0], record)
+    return _identity_of_handoff(*engine.runs[0], record)
 
 
 def _workflow_paths(
@@ -302,25 +319,26 @@ def _workflow_paths(
     deferred, then the runner's protocol step against the run tree."""
     loaded = load_workflow(workflow, env)
     inner = loaded.inner["locate"]
-    assert inner.compiled is not None
-    validated = _identity_of_compiled(inner.compiled)
+    validated = _identity_of_compiled(inner.compiled, env)
     engine = _Recorder()
-    result = run_workflow(loaded, env, out, [engine])
+    result = run_workflow(loaded, env, out, engine)
     step = result.manifest["steps"]["locate"]
+    compiled, run = engine.runs[0]
+    indices = run.indices(len(steps_of(compiled, env).points))
     executed = {
         "canonical": None,  # a step record carries digests, not the document
-        "canonical_points": list(engine.requests[0].canonical),
-        "coords": [dict(c) for c in engine.requests[0].coords],
+        "canonical_points": [steps_of(compiled, env).canonical[i] for i in indices],
+        "coords": [dict(steps_of(compiled, env).points[i].coords) for i in indices],
         "document_digest": step["document_digest"],
-        "point_digests": list(engine.requests[0].digests),
+        "point_digests": [steps_of(compiled, env).digests[i] for i in indices],
     }
     assert step["point_digests"] == executed["point_digests"]
-    assert engine.requests[0].document_digest == step["document_digest"]
+    assert compiled.campaign_digest == step["document_digest"]
     return validated, executed, loaded
 
 
 # --------------------------------------------------------------------------- #
-# the acceptance test — the divergence case through every door
+# the acceptance test — one document through every door
 # --------------------------------------------------------------------------- #
 
 
@@ -403,7 +421,7 @@ def test_the_four_doors_compile_an_axes_document_byte_identically(
 def test_the_deferred_compile_differs_exactly_when_the_representative_does(
     divergence: dict[str, Any], workflow_env: ResolutionEnv, tmp_path: Path
 ) -> None:
-    """The other half of the acceptance: validation's compile is
+    """The other half of the acceptance test: validation's compile is
     honest about being deferred. Declare a representative the step does not
     emit and (d) no longer equals (c) — the run's identity is the real
     value's — while (c) still equals the standalone doors."""
@@ -430,35 +448,21 @@ def test_run_protocol_compiles_a_path_through_the_same_function(
     reaches the engine is what `compile_protocol` returns for those inputs."""
     env: ResolutionEnv = divergence["env"]
     engine = _Recorder()
-    run_protocol(divergence["document"], env, [engine], tmp_path / "out")
+    run_protocol(divergence["document"], env, engine, tmp_path / "out")
     want = compile_protocol(
         divergence["document"],
-        divergence["document"].parent,
-        None,
-        env.datasets,
-        env.artifacts,
-        None,
+        env=env,
+        base_dir=divergence["document"].parent,
+        overrides=None,
+        engine=None,
     )
-    assert engine.requests[0].document_digest == want.digests.document
-    assert list(engine.requests[0].digests) == list(want.digests.points)
-    assert list(engine.requests[0].canonical) == list(want.points.canonical)
-
-
-def test_load_is_a_view_of_the_compile(env: ResolutionEnv) -> None:
-    """`load` keeps its name and signature as a flat view over the compiler:
-    every field it reports is the compile's, and the compile it views is what
-    `run_protocol` executes."""
-    raw = base_doc()
-    loaded = load(raw, env)
-    compiled = compile_protocol(raw, None, None, env.datasets, env.artifacts, None)
-    assert loaded.compiled is not None
-    assert loaded.canonical_document == compiled.canonical
-    assert loaded.document_digest == compiled.digests.document
-    assert loaded.point_digests == compiled.digests.points
-    assert loaded.canonical_points == compiled.points.canonical
-    assert loaded.raw == compiled.points.explicit
-    assert loaded.expansion is loaded.compiled.points
-    assert loaded.point_documents == compiled.point_documents
+    compiled, run = engine.runs[0]
+    assert run.points is None  # every point, no shard
+    assert compiled.campaign_digest == want.digests.document
+    assert list(steps_of(compiled, env).digests) == list(steps_of(want, env).digests)
+    assert list(steps_of(compiled, env).canonical) == list(
+        steps_of(want, env).canonical
+    )
 
 
 def test_a_read_prefix_compiles_as_the_source_does(
@@ -472,14 +476,14 @@ def test_a_read_prefix_compiles_as_the_source_does(
     prefix = read_document(document, document.parent, OVERRIDE)
     assert prefix.raw["model"]["dtype"] == "bf16"
     via_prefix = compile_protocol(
-        prefix, document.parent, None, env.datasets, env.artifacts, None
+        prefix, env=env, base_dir=document.parent, overrides=None, engine=None
     )
     via_source = compile_protocol(
-        document, document.parent, OVERRIDE, env.datasets, env.artifacts, None
+        document, env=env, base_dir=document.parent, overrides=OVERRIDE, engine=None
     )
     assert via_prefix.digests == via_source.digests
     assert via_prefix.canonical == via_source.canonical
-    assert via_prefix.points.canonical == via_source.points.canonical
+    assert steps_of(via_prefix, env).canonical == steps_of(via_source, env).canonical
 
 
 # --------------------------------------------------------------------------- #
@@ -487,82 +491,92 @@ def test_a_read_prefix_compiles_as_the_source_does(
 # --------------------------------------------------------------------------- #
 
 
-def _section(heading: str) -> str:
-    depth = len(heading) - len(heading.lstrip("#"))
-    body = SPEC.read_text().split(heading, 1)
-    assert len(body) == 2, f"{heading!r} is not in {SPEC.name}"
-    import re
-
-    stop = re.compile(rf"^#{{1,{depth}}} ", re.M)
-    end = stop.search(body[1])
-    return body[1][: end.start()] if end else body[1]
-
-
-def _tables(text: str) -> list[list[list[str]]]:
-    """Every markdown table in ``text``, as body rows of stripped cells."""
-    import re
-
-    tables: list[list[list[str]]] = []
-    current: list[list[str]] = []
-    for line in text.splitlines():
-        match = re.match(r"^[ \t]*\|(.+)\|\s*$", line)
-        if not match:
-            if current:
-                tables.append(current)
-                current = []
-            continue
-        cells = [cell.strip() for cell in match.group(1).split("|")]
-        if all(set(cell) <= set("-: ") for cell in cells):
-            continue
-        current.append(cells)
-    if current:
-        tables.append(current)
-    return tables
-
-
-def _first_column(table: list[list[str]]) -> tuple[str, ...]:
-    import re
-
-    out: list[str] = []
-    for row in table[1:]:  # the header row is the first
-        code = re.search(r"`([^`]+)`", row[0])
-        assert code, f"row without a code cell: {row}"
-        out.append(code.group(1))
-    return tuple(out)
+#: The two rows of the spec's stage table that are not build stages: the
+#: checklist over the points and the engine's shortfall are
+#: ``pipeline.validate``'s, run on the built object. The table keeps the rows;
+#: the census below holds ``STAGES`` to the table with exactly these two set
+#: aside.
+VALIDATE_ROWS = ("validate", "route")
 
 
 def test_the_stage_list_is_the_spec_table() -> None:
     """The order is data: `STAGES` and the §9.1 table agree, in order — and
-    every stage has an implementation. A later compiler stage is one
-    entry and one row, inserted where the order says."""
-    tables = _tables(_section("### 9.1 One compiler, four doors"))
+    every stage has an implementation. A new compiler stage is one entry and
+    one row, inserted where the order says. The table's `validate` and `route`
+    rows are `pipeline.validate`'s, so they are set aside here rather than expected in `STAGES`."""
+    tables = spec_tables(spec_section("## 9.1 Compilation stages", INTERNALS))
     stage_table = next(t for t in tables if t[0][0].strip("` ") == "stage")
-    assert _first_column(stage_table) == STAGES
-    assert tuple(compiler._STAGE) == STAGES  # pyright: ignore[reportPrivateUsage]
+    documented = first_column(stage_table)
+    assert set(VALIDATE_ROWS) <= set(documented)
+    assert tuple(s for s in documented if s not in VALIDATE_ROWS) == STAGES
+    assert not set(VALIDATE_ROWS) & set(STAGES)
+    assert tuple(pipeline._STAGE) == STAGES  # pyright: ignore[reportPrivateUsage]
     assert STAGES.index("read") < STAGES.index("override")
     assert STAGES.index("override") < STAGES.index("resolve")
-    assert STAGES.index("expand") < STAGES.index("validate")
-    assert STAGES.index("validate") < STAGES.index("canonicalize")
+    assert "expand" not in STAGES  # the sweep is the engine's
+    assert STAGES.index("gate") < STAGES.index("canonicalize")
     assert STAGES.index("canonicalize") < STAGES.index("digest")
 
 
 def test_the_diagnostic_kinds_are_the_spec_table() -> None:
-    tables = _tables(_section("### 9.1 One compiler, four doors"))
+    tables = spec_tables(spec_section("## 9.1 Compilation stages", INTERNALS))
     kinds = next(t for t in tables if t[0][0].strip("` ") == "kind")
-    assert set(_first_column(kinds)) == set(DIAGNOSTIC_KINDS)
+    assert set(first_column(kinds)) == set(DIAGNOSTIC_KINDS)
     assert len(DIAGNOSTIC_KINDS) == len(set(DIAGNOSTIC_KINDS))
     with pytest.raises(AssertionError):
         compiler.Diagnostic("not_a_kind", "x")  # type: ignore[arg-type]
 
 
+#: Every output the §9.1 table names, and where a `CompiledProtocol` carries
+#: it: its own field, or a read-only property over the fields that
+#: replaced it (`canonical` → `explicit`, `digests` → `campaign_digest`,
+#: `axes` → the axes and the lowered tree they index into — the sweep is the
+#: engine's, so no points ride on the object — `capabilities`
+#: derived from the representatives on first read).
+OUTPUT_CARRIERS: dict[str, tuple[str, ...]] = {
+    "canonical": ("explicit",),
+    "axes": ("axes",),  # beside `tree` and `named_axes`, the tree they index into
+    "data": ("data",),
+    "artifacts": ("artifacts",),
+    "capabilities": ("tree", "axes", "named_axes"),
+    "digests": ("campaign_digest",),
+    "diagnostics": ("diagnostics",),
+    "positions": ("positions",),  # derived, not identity
+}
+
+
 def test_the_seven_outputs_are_the_spec_table() -> None:
+    """The §9.1 table and the object are held together by a fixed map: every
+    documented output is a field of `CompiledProtocol` or a property over
+    the fields `OUTPUT_CARRIERS` names, in the table's order, and the field
+    tuple is exactly the ten pinned below —
+    so a new field or a new output is a deliberate edit in both places."""
     import dataclasses
 
-    tables = _tables(_section("### 9.1 One compiler, four doors"))
+    tables = spec_tables(spec_section("## 9.1 Compilation stages", INTERNALS))
     outputs = next(t for t in tables if t[0][0].strip("` ") == "output")
-    assert _first_column(outputs) == tuple(
-        field.name for field in dataclasses.fields(CompiledProtocol)
-    )
+    documented = first_column(outputs)
+    assert documented == tuple(OUTPUT_CARRIERS)
+    fields = tuple(field.name for field in dataclasses.fields(CompiledProtocol))
+    assert set(fields) == {
+        "document",
+        "explicit",
+        "tree",
+        "axes",
+        "named_axes",
+        "campaign_digest",
+        "data",
+        "artifacts",
+        "diagnostics",
+        "positions",
+    }
+    for name, carriers in OUTPUT_CARRIERS.items():
+        assert set(carriers) <= set(fields), name
+        if carriers != (name,):
+            assert isinstance(
+                getattr(CompiledProtocol, name), (property, functools.cached_property)
+            ), name
+    assert documented[-1] == "positions" == fields[-1]  # the derived one is last
 
 
 def test_sugar_resolves_before_validation_and_hashing(env: ResolutionEnv) -> None:
@@ -573,16 +587,19 @@ def test_sugar_resolves_before_validation_and_hashing(env: ResolutionEnv) -> Non
     swept = base_doc()
     swept["method"]["sites"]["tgt"]["layers"] = {"sweep": [3, 99]}  # gpt2 has 12 layers
     with pytest.raises(ValidationError) as err:
-        load(swept, env)
+        compile_protocol(swept, env=env)
     assert err.value.rule == 4
     assert "99" in str(err.value)
 
     broken = base_doc()
     broken["method"]["sites"]["tgt"]["layers"] = 99
     with pytest.raises(ValidationError):
-        load(broken, env)
-    repaired = load(broken, env, overrides={"sites.tgt.layers": 3})
-    assert repaired.document_digest == load(base_doc(), env).document_digest
+        compile_protocol(broken, env=env)
+    repaired = compile_protocol(broken, env=env, overrides={"sites.tgt.layers": 3})
+    assert (
+        repaired.digests.document
+        == compile_protocol(base_doc(), env=env).digests.document
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -602,7 +619,7 @@ def _unswept_text(raw: dict[str, Any], env: ResolutionEnv) -> str:
     """The refusal one concrete point gets on its own through the whole load —
     for a refusal canonicalization raises rather than the checklist."""
     with pytest.raises(ValidationError) as err:
-        load(raw, env)
+        compile_protocol(raw, env=env)
     assert not isinstance(err.value, ValidationErrors)
     return str(err.value)
 
@@ -616,7 +633,7 @@ def test_distinct_violations_across_points_are_reported_together(
     doc = base_doc()
     doc["method"]["reads"]["v_cf"]["site"] = {"sweep": ["nope1", "nope2"]}
     with pytest.raises(ValidationErrors) as err:
-        load(doc, env)
+        compile_protocol(doc, env=env)
     assert len(err.value.errors) == 2
     first = base_doc()
     first["method"]["reads"]["v_cf"]["site"] = "nope1"
@@ -634,7 +651,7 @@ def test_canonicalization_refusals_are_collected_across_points_too(
     doc = base_doc()
     doc["method"]["sites"]["tgt"]["layers"] = {"sweep": [99, 100]}  # gpt2 has 12 layers
     with pytest.raises(ValidationErrors) as err:
-        load(doc, env)
+        compile_protocol(doc, env=env)
     assert len(err.value.errors) == 2
     point = base_doc()
     point["method"]["sites"]["tgt"]["layers"] = 99
@@ -648,7 +665,7 @@ def test_a_lone_violation_is_raised_as_itself(env: ResolutionEnv) -> None:
     doc = base_doc()
     doc["method"]["reads"]["v_cf"]["site"] = {"sweep": ["nope1", "tgt"]}
     with pytest.raises(ValidationError) as err:
-        load(doc, env)
+        compile_protocol(doc, env=env)
     assert not isinstance(err.value, ValidationErrors)
     point = base_doc()
     point["method"]["reads"]["v_cf"]["site"] = "nope1"
@@ -664,7 +681,7 @@ def test_identical_violations_across_points_collapse_to_one(
     doc["method"]["reads"]["v_cf"]["site"] = "nope"
     doc["method"]["reads"]["logits"]["pos"] = {"sweep": [-1, -2]}
     with pytest.raises(ValidationError) as err:
-        load(doc, env)
+        compile_protocol(doc, env=env)
     assert not isinstance(err.value, ValidationErrors)
     point = base_doc()
     point["method"]["reads"]["v_cf"]["site"] = "nope"
@@ -678,9 +695,11 @@ def test_identical_violations_across_points_collapse_to_one(
 
 def test_capabilities_are_the_registry_derived_requirement(env: ResolutionEnv) -> None:
     compiled = compile_protocol(
-        base_doc(), None, None, env.datasets, env.artifacts, None
+        base_doc(), env=env, base_dir=None, overrides=None, engine=None
     )
-    assert compiled.capabilities == requires_campaign(list(compiled.point_documents))
+    assert compiled.capabilities == requires_campaign(
+        list(steps_of(compiled, env).documents)
+    )
     assert compiled.capabilities  # a paired interchange needs something
 
 
@@ -688,20 +707,22 @@ def test_a_capability_shortfall_is_refused_when_capabilities_are_given(
     env: ResolutionEnv,
 ) -> None:
     """`engine_capabilities` given: a shortfall against what the document
-    requires is *refused* (rule 13, the routing text; the base
-    reported it as a `capability_shortfall` diagnostic and returned). No
+    requires is *refused* (rule 13, the routing text; an earlier
+    version reported it as a `capability_shortfall` diagnostic and returned). No
     engine given decides nothing and reports nothing, and an engine that
     covers the document compiles to the same digests — the valid-work twin.
     The diagnostic kind survives for the dry run that reports per candidate
     engine (`check_engine`)."""
     raw = base_doc()
-    unknown = compile_protocol(raw, None, None, env.datasets, env.artifacts, None)
+    unknown = compile_protocol(raw, env=env, base_dir=None, overrides=None, engine=None)
     assert unknown.diagnostics == ()
     with pytest.raises(ValidationError) as err:
-        compile_protocol(raw, None, None, env.datasets, env.artifacts, frozenset())
+        compile_protocol(
+            raw, env=env, base_dir=None, overrides=None, engine=frozenset()
+        )
     assert err.value.rule == 13 and "paired_forward" in str(err.value)
     covered = compile_protocol(
-        raw, None, None, env.datasets, env.artifacts, unknown.capabilities
+        raw, env=env, base_dir=None, overrides=None, engine=unknown.capabilities
     )
     assert covered.diagnostics == ()
     assert covered.digests == unknown.digests  # the engine never moves a digest
@@ -722,26 +743,31 @@ def test_rule_13_is_decided_from_the_engine_capabilities(env: ResolutionEnv) -> 
     }
     raw["method"]["writes"]["patch"]["do"] = {"pytorch_fn": {"code": "relu"}}
     del raw["method"]["reads"]["v_cf"]
+    del raw["method"]["intervened_models"][UNWRITTEN]  # nothing left to read on it
     del raw["data"]["counterfactual"]
     raw = in_order(raw)
-    unknown = compile_protocol(raw, None, None, env.datasets, env.artifacts, None)
+    unknown = compile_protocol(raw, env=env, base_dir=None, overrides=None, engine=None)
     # an engine covering exactly what the document requires — routing on the
     # component entries is rule 13's shortfall too, so a set that offered
     # `pytorch_fn_local` alone would be refused for the components it lacks
     local = frozenset({"pytorch_fn_local"})
     compile_protocol(
-        raw, None, None, env.datasets, env.artifacts, unknown.capabilities | local
+        raw, env=env, base_dir=None, overrides=None, engine=unknown.capabilities | local
     )
     with pytest.raises(ValidationError) as err:
         compile_protocol(
-            raw, None, None, env.datasets, env.artifacts, unknown.capabilities - local
+            raw,
+            env=env,
+            base_dir=None,
+            overrides=None,
+            engine=unknown.capabilities - local,
         )
     assert err.value.rule == 13 and "pytorch_fn" in str(err.value)
 
 
 def test_data_identities_and_schemas(env: ResolutionEnv) -> None:
     compiled = compile_protocol(
-        base_doc(), None, None, env.datasets, env.artifacts, None
+        base_doc(), env=env, base_dir=None, overrides=None, engine=None
     )
     assert set(compiled.data) == {"weekdays/data#train"}
     identity = compiled.data["weekdays/data#train"]
@@ -760,14 +786,13 @@ def test_artifacts_say_what_was_read_and_what_was_deferred(
     env: ResolutionEnv = divergence["env"]
     document: Path = divergence["document"]
     standalone = compile_protocol(
-        document, document.parent, OVERRIDE, env.datasets, env.artifacts, None
+        document, env=env, base_dir=document.parent, overrides=OVERRIDE, engine=None
     )
     assert [(a.path, a.reference, a.key, a.deferred) for a in standalone.artifacts] == [
         ("sites.target.layers", "pick", "layer", False)
     ]
     assert standalone.diagnostics == ()
     deferred = load_workflow(divergence["workflow"], workflow_env).inner["locate"]
-    assert deferred.compiled is not None
     assert [a.deferred for a in deferred.compiled.artifacts] == [True]
 
     from tests.protocol._env import build_env, write_rot_fixture
@@ -775,9 +800,7 @@ def test_artifacts_say_what_was_read_and_what_was_deferred(
     root = divergence["artifacts"].parent / "artifacts-shipped"
     shutil.copytree(FIXTURES / "artifacts", root)
     write_rot_fixture(root)
-    shipped = load_workflow(
-        REPO / "causalab/configs/workflows/weekdays_8b.json", build_env(root)
-    )
+    shipped = load_workflow(WORKFLOWS_DIR / "weekdays.json", build_env(root))
     apply = shipped.inner["apply"].compiled
     assert apply is not None
     files = [a for a in apply.artifacts if a.key is None]
@@ -796,7 +819,7 @@ def test_the_compiler_imports_no_torch() -> None:
     """In a subprocess, since `tests/conftest.py` has torch loaded already."""
     probe = (
         "import sys, json\n"
-        "import causalab.protocol.compile\n"
+        "import causalab.protocol.pipeline\n"
         "print(json.dumps(sorted(m for m in ('torch', 'numpy', 'safetensors') "
         "if m in sys.modules)))\n"
     )
@@ -808,22 +831,33 @@ def test_the_compiler_imports_no_torch() -> None:
 
 
 #: The calls that *are* the pipeline. A module calling two or more of them is
-#: composing the sequence for itself — which is exactly what `loader.load` did
-#: before the compiler and what the four callers must never do again.
+#: composing the sequence for itself — which is exactly what the pre-compiler
+#: loader did and what the four callers must never do again.
 PIPELINE_CALLS = frozenset(
     {
         "check_protocol_version",
         "resolve_artifact_fields",
-        "expand",
         "validate_document",
         "canonicalize",
     }
 )
 #: The modules a pipeline call is attributed through when spelled `m.f(...)`.
 PIPELINE_MODULES = frozenset(
-    {"schema", "resolve", "sweep", "validate", "canonical", "_canonical"}
+    {
+        "schema",
+        "resolve",
+        "sweep",
+        "validate",
+        "canonical",
+        "_canonical",
+        # the canonical form's home
+        "explicit",
+        "_explicit",
+    }
 )
-COMPILER = REPO / "causalab" / "protocol" / "compile.py"
+#: Where the pipeline is composed — ``pipeline.py``; ``compile.py``
+#: is a facade over its two verbs and calls none of these itself.
+COMPILER = REPO / "causalab" / "protocol" / "pipeline.py"
 
 
 def _pipeline_calls(path: Path) -> set[str]:
@@ -846,10 +880,11 @@ def _pipeline_calls(path: Path) -> set[str]:
 
 
 def test_no_module_outside_the_compiler_composes_the_pipeline() -> None:
-    """The grep-proof, as a test: outside `compile.py`, no module under
+    """The grep-proof, as a test: outside `pipeline.py`, no module under
     `causalab/` calls more than one of the pipeline's functions. `loader.py`
     called all five before this; it calls none now (`schema.parse_document`
-    calls the version check, which is one)."""
+    calls the version check, which is one), and neither does the
+    `compile.py` facade."""
     offenders = {
         str(path.relative_to(REPO)): sorted(calls)
         for path in sorted((REPO / "causalab").rglob("*.py"))

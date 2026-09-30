@@ -1,99 +1,20 @@
-"""One immutable ``ScoringSpec`` per task — the task's definition of correct.
+"""Define how a task grades outputs through one immutable ``ScoringSpec``.
 
-A task used to say what a correct answer *is* in eleven places across four
-layers: the ``output_tokens`` forms map, the
-per-variable mode map beside it (the legacy constructor kwargs, now derived
-views), the plain instance attributes both were stored in, the
-string checker ``derive_checker`` built from them, a bespoke ``checker.py``
-that silently won over it, the probability path's ``form_groups``, the
-serialized ``*_forms`` columns, an advisory copy of the mode in the
-manifest, the protocol's own two-member ``MATCH_MODES``, the ``prefix`` →
-``first_token`` bridge living in a parse-error string, and the token-id
-resolvers with their refusals. Representations that live apart can disagree,
-and two of them did: the string checker graded an undeclared expected value
-by literal match while the serializer refused to write it, and the task's
-``prefix`` (whole-string ``startswith``) was related to the protocol's
-``first_token`` (argmax at one position) by prose alone.
+The specification holds accepted answer forms and the string matching mode,
+plus an optional full-string checker. It defines how undeclared values and
+invalid outputs are handled. The task loader and serializer use the same rule
+as the grader. ``check_scoring`` checks a document's match modes against the
+mode recorded in a dataset table.
 
-This module is the one source. A :class:`ScoringSpec` holds
-
-* ``forms`` — ``{variable: {value: (surface form, …)}}``, the word the
-  ``output_tokens`` declaration always used (never "labels": that word already
-  names five things in this tree);
-* ``answer_variable`` — which declared variable the graded string
-  (``raw_output``) is a form of. Required when several variables declare
-  forms: MCQA declares ``answer`` (the letter the model emits) *and*
-  ``answer_position`` (the variable an interchange targets), and grading
-  against the wrong one is exactly the disagreement this object removes;
-* ``string_mode`` — ``exact`` | ``prefix`` (:data:`STRING_MODES`): whether a
-  generated string must equal a form or merely start with one. One mode per
-  task, not per variable: no shipped task mixes them, and a per-variable map
-  was one of the two sources the spec retires;
-* ``protocol_mode`` — **derived**, never authored: the ``mode`` a ``match``
-  metric over a table built from this spec declares, by the §2.10 translation
-  table :data:`PROTOCOL_MODES` (``exact → exact``, ``prefix → first_token``).
-  The bridge that used to be a diagnostic is now a field;
-* ``full_string_checker`` — optional, a dotted locator
-  (``package.module.function``) naming a bespoke
-  ``checker(neural_output, causal_output) -> bool``. Declared *inside* the
-  spec and digested (``checker_digest``, the sha256 of the module's source
-  bytes — the same quantity :func:`causalab.protocol.code.source_sha256`
-  hashes for a ``code`` declaration), so a bespoke grader stops being an
-  unversioned override: editing it moves the spec's digest, and a grader
-  whose source moved after the spec was built is refused, not run;
-* ``undeclared_value`` — ``refuse`` | ``literal``
-  (:data:`UNDECLARED_VALUE_POLICIES`): what :meth:`ScoringSpec.grade` does
-  when the *expected* value names no declared form. ``refuse`` (the default)
-  is what the serializer always did — the answer space and the declaration
-  disagree, which would silently mis-score a metric; ``literal`` is what
-  ``derive_checker`` did, kept as something a task states rather than
-  inherits;
-* ``invalid_output`` — ``incorrect`` | ``unscored``
-  (:data:`INVALID_OUTPUT_POLICIES`): the grade of a *generated* string that
-  matches no declared value at all. ``incorrect`` (the default) is a plain
-  ``0.0`` — an off-answer-space generation is a wrong answer under a 0/1
-  indicator; ``unscored`` returns ``None``, the value a metric row carries
-  when "the model never said it" has to stay distinguishable from "it said it
-  and scored 0". Neither is a refusal: what a model emits is data, and a run
-  that refused over it would be a refusal firing on legitimate work;
-* ``version`` — an integer, starting at 1, bumped when the *meaning* of a
-  task's correctness changes under an unchanged declaration;
-* ``digest`` — **derived**: the sha256 of the canonical JSON of every other
-  field. Two specs that agree on every field share a digest; two that differ
-  anywhere do not.
-
-The spec is a frozen dataclass and its mappings are read-only views, so the
-live defect — a ``CausalModel`` whose ``output_tokens`` could be reassigned
-after validation with nothing re-validating or re-digesting it — cannot
-recur: :class:`~causalab.causal.causal_model.CausalModel` stores the spec
-and exposes ``output_tokens`` and the legacy mode map as read-only derivations
-of it. Legacy interfaces compile *into* the spec; nothing stands beside it.
-
-**Where the identity lives.** The serializer writes two constant per-row
-columns into every table it builds (:data:`SCORING_DIGEST_COLUMN`,
-:data:`STRING_MODE_COLUMN`), so the dataset content digest (§2.2, §7) covers
-the scoring identity for free and a table rebuilt under a changed spec is a
-different dataset. :func:`check_scoring` compares a document's ``match``
-``mode`` against the table's recorded ``string_mode`` under the translation
-table — in the ``validate --data`` pass and again before the first forward —
-and refuses a contradiction. A table built before the columns existed is
-*unrecorded*: it loads and runs exactly as before, and the run receipt says
-so. Nothing here touches the canonical form, so no pinned digest moves.
-
-Torch-free and stdlib-only on purpose: the loader, the serializer and the
-protocol's ``validate --data`` pass all import it, and none of them may pay
-for numerics.
-"""
+This module uses the standard library so data validation can check scoring
+before loading a neural model."""
 
 from __future__ import annotations
 
 import ast
 import dataclasses
-import hashlib
 import importlib
 import importlib.util
-import json
-import re
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Callable, Mapping, Sequence
@@ -102,7 +23,6 @@ __all__ = [
     "GRADE_RECORD_IDENTITY",
     "INVALID_OUTPUT_POLICIES",
     "PROTOCOL_MODES",
-    "SCORING_DIGEST_COLUMN",
     "SCORING_FIELDS",
     "SCORING_RESULTS",
     "STRING_MODES",
@@ -134,7 +54,7 @@ PROTOCOL_MODES: Mapping[str, str] = MappingProxyType(
     {"exact": "exact", "prefix": "first_token"}
 )
 
-#: What :meth:`ScoringSpec.grade` does with an expected value that names no
+#: What [`ScoringSpec.grade`][] does with an expected value that names no
 #: declared form (the module docstring).
 UNDECLARED_VALUE_POLICIES: tuple[str, ...] = ("refuse", "literal")
 
@@ -142,31 +62,28 @@ UNDECLARED_VALUE_POLICIES: tuple[str, ...] = ("refuse", "literal")
 #: (the module docstring).
 INVALID_OUTPUT_POLICIES: tuple[str, ...] = ("incorrect", "unscored")
 
-#: Every field of a :class:`ScoringSpec`, authored and derived, in the order
-#: the ``causalab/tasks/README.md`` fields table lists them. The digest is
-#: over every field but ``digest`` itself.
+#: Every field of a [`ScoringSpec`][], authored and derived, in the order
+#: the ``causalab/tasks/README.md`` fields table lists them — the keys of
+#: [`ScoringSpec.identity`][].
 SCORING_FIELDS: tuple[str, ...] = (
     "forms",
     "answer_variable",
     "string_mode",
     "protocol_mode",
     "full_string_checker",
-    "checker_digest",
     "undeclared_value",
     "invalid_output",
     "version",
-    "digest",
 )
 
-#: The two constant per-row columns a serialized table carries when it was
+#: The one constant per-row column a serialized table carries when it was
 #: built from a task with a spec (``causalab/tasks/serialize.py``): the
-#: spec's digest and its ``string_mode``. Reserved column names.
-SCORING_DIGEST_COLUMN = "scoring_digest"
+#: spec's ``string_mode``. A reserved column name.
 STRING_MODE_COLUMN = "string_mode"
 
-#: What :func:`check_scoring` reports into the run receipt: ``ok`` — the
-#: table records its scoring identity and every ``match`` mode agrees with
-#: it; ``unrecorded`` — the table predates the columns, nothing was compared.
+#: What [`check_scoring`][] reports into the run receipt: ``ok`` — the
+#: table records its ``string_mode`` and every ``match`` mode agrees with
+#: it; ``unrecorded`` — the table has no such column, nothing was compared.
 #: A contradiction is a refusal, never a result.
 SCORING_RESULTS: tuple[str, ...] = ("ok", "unrecorded")
 
@@ -180,8 +97,6 @@ SCORING_RESULTS: tuple[str, ...] = ("ok", "unrecorded")
 GRADE_RECORD_IDENTITY: Mapping[str, str] = MappingProxyType(
     {"unit": "fraction", "estimand_version": "string_grade/v1"}
 )
-
-_HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
 class ScoringError(ValueError):
@@ -328,13 +243,6 @@ def _locate_checker(locator: str) -> tuple[str, str, Path]:
     return module_name, function, path
 
 
-def _source_sha256(path: Path) -> str:
-    """The sha256 of a Python source file's bytes — the same quantity
-    :func:`causalab.protocol.code.source_sha256` hashes, computed here so this
-    module stays stdlib-only."""
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 # --------------------------------------------------------------------------- #
 # the spec
 # --------------------------------------------------------------------------- #
@@ -344,10 +252,10 @@ def _source_sha256(path: Path) -> str:
 class ScoringSpec:
     """The task's definition of correct, once (the module docstring).
 
-    Construct with the authored fields; ``protocol_mode``, ``checker_digest``
-    and ``digest`` are derived here and cannot be passed. A frozen dataclass
+    Construct with the authored fields; ``protocol_mode`` is derived here and
+    cannot be passed. A frozen dataclass
     over read-only mappings: assignment to any field raises, and the derived
-    views a :class:`~causalab.causal.causal_model.CausalModel` exposes are
+    views a [`CausalModel`][causalab.causal.model.CausalModel] exposes are
     fresh copies, so nothing downstream can edit the declaration.
     """
 
@@ -359,8 +267,6 @@ class ScoringSpec:
     invalid_output: str = "incorrect"
     version: int = 1
     protocol_mode: str = dataclasses.field(init=False)
-    checker_digest: str | None = dataclasses.field(init=False)
-    digest: str = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
         put = object.__setattr__  # the one place a frozen field is written
@@ -398,19 +304,17 @@ class ScoringSpec:
             or self.version < 1
         ):
             raise ScoringError(f"version must be a positive int, got {self.version!r}.")
-        if self.full_string_checker is None:
-            put(self, "checker_digest", None)
-        else:
-            _module, _function, path = _locate_checker(self.full_string_checker)
-            put(self, "checker_digest", _source_sha256(path))
-        put(self, "digest", _digest(self.identity()))
+        if self.full_string_checker is not None:
+            _locate_checker(self.full_string_checker)
 
     # -- identity ---------------------------------------------------------- #
 
     def identity(self) -> dict[str, Any]:
-        """Every field but ``digest``, as plain JSON — what the digest is over.
-        Values are keyed by their string spelling (unique per variable by
-        construction), so a tuple-keyed declaration digests like any other."""
+        """Every field, authored and derived, as plain JSON (the keys are
+        [`SCORING_FIELDS`][]). Values are keyed by their string spelling
+        (unique per variable by construction), so a tuple-keyed declaration
+        serializes like any other; two specs are the same definition of
+        correct exactly when their identities are equal."""
         return {
             "forms": {
                 var: {
@@ -422,7 +326,6 @@ class ScoringSpec:
             "string_mode": self.string_mode,
             "protocol_mode": self.protocol_mode,
             "full_string_checker": self.full_string_checker,
-            "checker_digest": self.checker_digest,
             "undeclared_value": self.undeclared_value,
             "invalid_output": self.invalid_output,
             "version": self.version,
@@ -437,8 +340,7 @@ class ScoringSpec:
         Values whose form lists are identical collapse to one group: many
         ``(entity, group)`` tuples sharing one entity's forms are one score
         token, which is the dedup ``output_token_values`` used to encode by
-        hand. Formerly ``causal_utils.form_groups``; a derivation of the spec
-        now, so it cannot disagree with the string grader.
+        hand. The spec supplies the groups used to grade strings.
         """
         groups: list[list[str]] = []
         seen: set[tuple[str, ...]] = set()
@@ -454,7 +356,7 @@ class ScoringSpec:
         the ``answer_variable``) — the answer-form group a serialized row
         carries and the group the probability path scores.
 
-        One resolution rule, shared with :meth:`grade`: by identity (the
+        One resolution rule, shared with [`grade`][]: by identity (the
         declared value itself), by the value's spelling, or by being one of its
         forms — so a trace's ``raw_output`` string resolves to the value it
         spells. A **list** is a list of acceptable answers (graph_walk's
@@ -516,7 +418,7 @@ class ScoringSpec:
     def grader(self, variable: str | None = None) -> Callable[[dict, str], bool]:
         """The string grader in the task-checker shape ``checker(neural_output,
         causal_output) -> bool`` — what ``Task.checker`` is, and what
-        a per-example ``grade`` is computed with. ``True`` iff :meth:`grade`
+        a per-example ``grade`` is computed with. ``True`` iff [`grade`][]
         is ``1.0``."""
         var = self._variable(variable)
 
@@ -525,7 +427,7 @@ class ScoringSpec:
                 self.grade(neural_output["string"], causal_output, variable=var) == 1.0
             )
 
-        checker.__doc__ = f"ScoringSpec {self.digest[:12]}… grader over {var!r}"
+        checker.__doc__ = f"ScoringSpec grader over {var!r}"
         return checker
 
     # -- internals --------------------------------------------------------- #
@@ -554,7 +456,7 @@ class ScoringSpec:
 
     def _resolve(self, variable: str, value: Any) -> tuple[str, ...] | None:
         """The declared forms ``value`` names, or ``None`` when it names none
-        (:meth:`forms_of` for the rule)."""
+        ([`forms_of`][] for the rule)."""
         var_map = self.forms[variable]
         if isinstance(value, list) and tuple(value) in var_map:
             # a tuple-keyed value read back from JSON, where a tuple is a list
@@ -591,91 +493,59 @@ class ScoringSpec:
         return candidates[0]
 
     def _checker(self) -> Callable[[Mapping[str, Any], Any], bool]:
-        """Import the declared checker, refusing if its source moved since
-        the spec was built — a table stamped with this spec's digest would
-        otherwise be graded by code the digest does not name."""
+        """Import the declared checker (located and validated at
+        construction)."""
         assert self.full_string_checker is not None
-        module_name, function, path = _locate_checker(self.full_string_checker)
-        now = _source_sha256(path)
-        if now != self.checker_digest:
-            raise ScoringError(
-                f"full_string_checker {self.full_string_checker!r}: the source at "
-                f"{path} digests {now[:12]}… but this spec recorded "
-                f"{str(self.checker_digest)[:12]}… — the checker moved after the "
-                "spec was built. Rebuild the spec (and any table stamped with it)."
-            )
+        module_name, function, _path = _locate_checker(self.full_string_checker)
         return getattr(importlib.import_module(module_name), function)
 
 
-def _digest(identity: Mapping[str, Any]) -> str:
-    return hashlib.sha256(
-        json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
-
-
 # --------------------------------------------------------------------------- #
-# the table-side identity, compared at load and before the first forward
+# the table-side string_mode, compared at load and before the first forward
 # --------------------------------------------------------------------------- #
 
 
 @dataclasses.dataclass(frozen=True)
 class ScoringCheck:
-    """What :func:`check_scoring` found for one table: the identity it
+    """What [`check_scoring`][] found for one table: the ``string_mode`` it
     records (``None`` when unrecorded) and the result — the run receipt's
     ``scoring`` block, per ref."""
 
-    digest: str | None
     string_mode: str | None
     result: str
 
     def as_record(self) -> dict[str, Any]:
-        return {
-            "digest": self.digest,
-            "string_mode": self.string_mode,
-            "result": self.result,
-        }
+        return {"string_mode": self.string_mode, "result": self.result}
 
 
-def table_scoring(rows: Sequence[Mapping[str, Any]]) -> tuple[str | None, str | None]:
-    """``(scoring_digest, string_mode)`` a table's rows record, or
-    ``(None, None)`` for an unrecorded table.
+def table_scoring(rows: Sequence[Mapping[str, Any]]) -> str | None:
+    """The ``string_mode`` a table's rows record, or ``None`` for an
+    unrecorded table (no row carries the column).
 
-    The two columns are constant by construction, so rows that disagree — or
-    a table carrying one column without the other — are a malformed table,
-    refused rather than read as whichever row came first.
+    The column is constant by construction, so rows that disagree — or a mode
+    outside [`STRING_MODES`][] — are a malformed table, refused rather than
+    read as whichever row came first.
     """
-    digests = {row.get(SCORING_DIGEST_COLUMN) for row in rows}
     modes = {row.get(STRING_MODE_COLUMN) for row in rows}
-    if not rows or (digests == {None} and modes == {None}):
-        return None, None
-    if len(digests) != 1 or len(modes) != 1:
+    if not rows or modes == {None}:
+        return None
+    if len(modes) != 1:
         raise ScoringError(
-            f"the table's rows disagree on their scoring identity "
-            f"({SCORING_DIGEST_COLUMN}: {sorted(map(str, digests))}, "
-            f"{STRING_MODE_COLUMN}: {sorted(map(str, modes))}) — the two columns "
-            "are constant per table by construction."
+            f"the table's rows disagree on {STRING_MODE_COLUMN} "
+            f"({sorted(map(str, modes))}) — the column is constant per table "
+            "by construction."
         )
-    (digest,) = digests
     (mode,) = modes
-    if digest is None or mode is None:
-        raise ScoringError(
-            f"the table records {SCORING_DIGEST_COLUMN}={digest!r} with "
-            f"{STRING_MODE_COLUMN}={mode!r} — a recorded table carries both."
-        )
-    if not isinstance(digest, str) or not _HEX64.match(digest):
-        raise ScoringError(
-            f"{SCORING_DIGEST_COLUMN} {digest!r} is not a sha256 hex digest."
-        )
     if mode not in STRING_MODES:
         raise ScoringError(
             f"{STRING_MODE_COLUMN} {mode!r} is not one of {STRING_MODES}."
         )
-    return digest, str(mode)
+    return str(mode)
 
 
 def declared_modes(metrics: Mapping[str, Any]) -> dict[str, str]:
     """``{metric name: mode}`` for every ``match`` metric of a *point*
-    document — the modes :func:`check_scoring` compares. Duck-typed on
+    document — the modes [`check_scoring`][] compares. Duck-typed on
     ``kind`` / ``fields`` so this module needs no import from the protocol
     layer; a swept ``mode`` is a scalar by the time a point exists."""
     out: dict[str, str] = {}
@@ -695,8 +565,8 @@ def check_scoring(
     *,
     where: str,
 ) -> ScoringCheck:
-    """Compare the ``match`` modes a document declares against the scoring
-    identity the table records, under the §2.10 translation table.
+    """Compare the ``match`` modes a document declares against the
+    ``string_mode`` the table records, under the §2.10 translation table.
 
     A ``prefix`` table — the task's answers are not single-token, so its
     ``string_mode`` derives to ``first_token`` — under a metric declaring
@@ -710,9 +580,9 @@ def check_scoring(
     (``metrics._refuse_indistinct_first_tokens``), which this deliberately
     does not duplicate. An unrecorded table compares nothing and says so.
     """
-    digest, table_mode = table_scoring(rows)
+    table_mode = table_scoring(rows)
     if table_mode is None:
-        return ScoringCheck(None, None, "unrecorded")
+        return ScoringCheck(None, "unrecorded")
     derived = PROTOCOL_MODES[table_mode]
     for name, declared in modes.items():
         if table_mode == "prefix" and declared != derived:
@@ -725,4 +595,25 @@ def check_scoring(
                 "table from a task whose string_mode is 'exact'.",
                 metric=name,
             )
-    return ScoringCheck(digest, table_mode, "ok")
+    return ScoringCheck(table_mode, "ok")
+
+
+def build_output_tokens(values: list, prefix: str = " ") -> dict[Any, list[str]]:
+    """Build the ``{value: [forms]}`` map for one variable's ``output_tokens``.
+
+    For each value, emits the space-prefixed ``f"{prefix}{v}"`` and the bare
+    ``str(v)`` form (deduplicated, order-stable) — the typical BPE leading-space
+    token plus its bare counterpart. This is the mechanical case; tasks with
+    synonyms or a non-default surface form should build the map explicitly.
+
+    Case is left alone: declared values define distinct class columns, and
+    folding case here could merge them.
+    """
+    out: dict[Any, list[str]] = {}
+    for v in values:
+        forms: list[str] = []
+        for cand in (f"{prefix}{v}", str(v)):
+            if cand and cand not in forms:
+                forms.append(cand)
+        out[v] = forms
+    return out

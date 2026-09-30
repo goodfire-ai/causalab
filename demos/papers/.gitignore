@@ -1,0 +1,7 @@
+# `causalab run workflows/<name>.json --data-root artifacts/data --out artifacts/output`
+# writes each run tree under artifacts/output/<name>/, which is not kept. The
+# tables and paper crops under artifacts/data/ and the committed figures and
+# their values under artifacts/figures/ are kept.
+artifacts/output/
+__pycache__/
+workflows/scripts/*/jobs/

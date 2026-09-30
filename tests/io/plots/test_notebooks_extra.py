@@ -3,9 +3,10 @@
 Two claims, and the second is the one that can rot silently:
 
 * all seven interactive-only packages are declared in the ``notebook`` extra
-  and in no runtime dependency — the *declaration*. The two this test was
-  written for are ``dash`` and ``dash-cytoscape``, which the extra at first
-  had to leave in core because ``causal_graph`` imported them at module scope;
+  and in no runtime dependency — the *declaration*. Five of the seven moved
+  there first; the two this test was written for are ``dash`` and
+  ``dash-cytoscape``, which that move had to leave in core because
+  ``causal_graph`` imported them at module scope;
 * ``causalab.io.plots`` imports, and its matplotlib views work, on a machine
   where Dash cannot be imported at all — the *behaviour*.
 

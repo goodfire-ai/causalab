@@ -4,11 +4,12 @@ The golden tier is one ``pytest -n 0 -m golden`` process on one accelerator,
 module after module in collection order. The engine loaders cache up to four
 models each (``functools.lru_cache``), so a module that loads through them —
 every paper golden does, through its protocol run — leaves those models alive
-for the next module; the per-test reclamation in ``tests/conftest.py`` frees
-only dead ones. A module that clears the cache in its own teardown protects
-only the module *after* it, and a ``Qwen/Qwen3.6-35B-A3B`` module that sorts
-after ``test_paper_goldens.py`` meets a CUDA OOM with the paper goldens' GPT-2
-XL and Llama-3.1-8B still cached.
+for the next module; the per-test reclamation in ``tests/conftest.py``
+frees only dead ones. Before this fixture, the two ``Qwen/Qwen3.6-35B-A3B``
+modules protected the module *after* them by clearing the cache in their own
+teardown, and were protected themselves only by sorting before
+``test_paper_goldens.py`` — ``test_readout_a3b.py`` does not, and hit a CUDA
+OOM with the paper goldens' GPT-2 XL and Llama-3.1-8B still cached.
 
 So the invariant is enforced here, at the boundary, for every golden module:
 the loader caches are emptied and the accelerator drained before a module's

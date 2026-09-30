@@ -22,7 +22,8 @@ def scale(f: Any, factor: float = 1.0) -> Any:
 
 def corrupt(f: Any, factor: float = 1.0, *, row_roles: Any = None) -> Any:
     """A declared edit that is *told* which rows are which rather than
-    assuming a batch shape (§2.8.1) — ROME's corruption, written down."""
+    assuming a batch shape (§2.8.1): the ROME corruption function's row
+    convention, written down."""
     if row_roles is None:
         return f * factor
     lo, hi = row_roles["corrupted"]

@@ -26,7 +26,7 @@ VISUALIZATION_SUFFIXES: tuple[str, ...] = (".png", ".pdf", ".html")
 
 
 def normalize_figure_format(value: str | None, *, default: str = "png") -> str:
-    """Return one of :data:`ALLOWED_FIGURE_FORMATS`; validate input.
+    """Return one of [`ALLOWED_FIGURE_FORMATS`][]; validate input.
 
     ``default`` is ``png`` deliberately — see the module docstring."""
     raw = default if value is None else str(value)

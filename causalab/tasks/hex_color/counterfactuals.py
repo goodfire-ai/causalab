@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import random
 
-from causalab.causal.counterfactual_dataset import CounterfactualExample
+from causalab.causal.counterfactuals import CounterfactualExample
 
 from .causal_models import CAUSAL_MODEL, COLORS, HEX_TO_LABEL, HEXES, HEXES_BY_COLOR
 

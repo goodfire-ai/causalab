@@ -1,0 +1,27 @@
+{
+  "document": "protocols/interchange.json",
+  "document_digest": "51107ea91c91982050f328444e2f8be71e59f437a7a0c9052c88f5fadf07b74a",
+  "run_digest": "51107ea91c91982050f328444e2f8be71e59f437a7a0c9052c88f5fadf07b74a",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 33.0,
+  "metrics": {
+    "iia": {
+      "metric": "iia",
+      "unit": "fraction",
+      "rows": 30,
+      "eligible_rows": 30,
+      "mean": 0.8667
+    },
+    "logit_diff": {
+      "metric": "logit_diff",
+      "unit": "logit",
+      "rows": 30,
+      "eligible_rows": 30,
+      "mean": 3.5479
+    }
+  }
+}

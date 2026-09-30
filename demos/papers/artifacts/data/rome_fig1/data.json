@@ -1,0 +1,332 @@
+[
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ },
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ },
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ },
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ },
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ },
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ },
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ },
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ },
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ },
+ {
+  "base_answer": " Seattle",
+  "base_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "cf_answer": " Seattle",
+  "cf_answer_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "counterfactual_inputs": [
+   "The Space Needle is in downtown"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "object": "Seattle",
+    "subject": "The Space Needle",
+    "template": "{} is in downtown"
+   }
+  ],
+  "input": "The Space Needle is in downtown",
+  "label": " Seattle",
+  "label_forms": [
+   " Seattle",
+   "Seattle"
+  ],
+  "object": "Seattle",
+  "split": "all",
+  "string_mode": "exact",
+  "subject": "The Space Needle",
+  "template": "{} is in downtown"
+ }
+]

@@ -1,7 +1,7 @@
 """Local conftest for the IOI property-tier tests.
 
 The token-positions class is tokenizer-coupled: every invariant decodes
-indices through a real :class:`~causalab.neural.pipeline.LMPipeline`.
+indices through a real [`LMPipeline`][causalab.tasks.token_positions.LMPipeline].
 Building the pipeline once per session (rather than per test) keeps the
 hypothesis sweep sub-second even at ``max_examples=20``.
 
@@ -24,7 +24,7 @@ from tests._helpers.pipeline_shim import PipelineShim
 
 @pytest.fixture(scope="session")
 def gpt2_pipeline() -> PipelineShim:
-    """Session-scoped ``gpt2`` :class:`LMPipeline` for token-position tests.
+    """Session-scoped ``gpt2`` [`LMPipeline`][causalab.tasks.token_positions.LMPipeline] for token-position tests.
 
     Loaded once per pytest session; subsequent fixture injections reuse
     the same instance. ``max_new_tokens=1`` keeps the pipeline cheap — the

@@ -1,0 +1,19 @@
+{"schema_version": 1, "event": "phase_started", "seq": 0, "ts": "2026-09-28T12:48:51.111511+00:00", "payload": {"step": "ablate", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 1, "ts": "2026-09-28T12:48:56.971542+00:00", "payload": {"step": "ablate", "files": ["accuracy.json", "accuracy_clean.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 2, "ts": "2026-09-28T12:48:56.971608+00:00", "payload": {"step": "ablate", "status": "completed", "forwards": 29}}
+{"schema_version": 1, "event": "phase_started", "seq": 3, "ts": "2026-09-28T12:48:56.971668+00:00", "payload": {"step": "ablation_curve", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 4, "ts": "2026-09-28T12:48:57.189288+00:00", "payload": {"step": "ablation_curve", "files": ["12_steering_ablation.json", "12_steering_ablation.png"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 5, "ts": "2026-09-28T12:48:57.189361+00:00", "payload": {"step": "ablation_curve", "status": "completed"}}
+{"schema_version": 1, "event": "phase_started", "seq": 6, "ts": "2026-09-28T12:48:57.189424+00:00", "payload": {"step": "harvest", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 7, "ts": "2026-09-28T12:48:58.003604+00:00", "payload": {"step": "harvest", "files": ["acts_base.safetensors", "acts_cf.safetensors"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 8, "ts": "2026-09-28T12:48:58.003662+00:00", "payload": {"step": "harvest", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 9, "ts": "2026-09-28T12:48:58.003726+00:00", "payload": {"step": "direction", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 10, "ts": "2026-09-28T12:48:58.010808+00:00", "payload": {"step": "direction", "files": ["direction.safetensors", "stats.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 11, "ts": "2026-09-28T12:48:58.010859+00:00", "payload": {"step": "direction", "status": "completed"}}
+{"schema_version": 1, "event": "phase_started", "seq": 12, "ts": "2026-09-28T12:48:58.010913+00:00", "payload": {"step": "steer", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 13, "ts": "2026-09-28T12:48:58.436861+00:00", "payload": {"step": "steer", "files": ["accuracy.json", "flipped.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 14, "ts": "2026-09-28T12:48:58.436939+00:00", "payload": {"step": "steer", "status": "completed", "forwards": 11}}
+{"schema_version": 1, "event": "phase_started", "seq": 15, "ts": "2026-09-28T12:48:58.437000+00:00", "payload": {"step": "steer_curve", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 16, "ts": "2026-09-28T12:48:58.466147+00:00", "payload": {"step": "steer_curve", "files": ["12_steering_steer.json", "12_steering_steer.png"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 17, "ts": "2026-09-28T12:48:58.466204+00:00", "payload": {"step": "steer_curve", "status": "completed"}}
+{"schema_version": 1, "event": "campaign_terminal", "seq": 18, "ts": "2026-09-28T12:48:58.466621+00:00", "payload": {"outcome": "completed", "steps": {"ablate": "completed", "ablation_curve": "completed", "harvest": "completed", "direction": "completed", "steer": "completed", "steer_curve": "completed"}}}

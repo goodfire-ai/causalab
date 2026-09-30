@@ -10,8 +10,9 @@ machinery in ``natural_domains_arithmetic``.
 **``indigo`` dropped (7 → 6 colours).** The source dataset defined seven colour
 classes; ``indigo`` (hue 258°, between blue 235° and purple 285°) is dropped
 because the golden fixture (Qwen3-4B-Instruct) cannot perceptually separate it
-— it labels indigo swatches "purple" ~0.999-confident, which capped 7-colour
-accuracy at ~0.80, below the 0.9 golden floor (see ``README.md`` /
+— it labels indigo swatches "purple" ~0.999-confident. With every indigo
+swatch wrong, 7-colour balanced accuracy is at most 6/7 ≈ 0.86, below the 0.9
+accuracy floor of the task's golden check (see ``README.md`` /
 ``causal_models.py``).
 
 Constants here are the model-agnostic task definition. The 600 stimuli (100 per

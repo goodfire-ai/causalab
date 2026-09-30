@@ -1,0 +1,29 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "RQ1 -- can the model solve the task at all? No writes, so no intervened models: one un-intervened forward per row, scored against the row's own answer. A localization result on a task the model cannot do is a measurement of noise, so this document runs first and gates the rest."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
+  "data": {"base": {"dataset": "weekdays_geometry/data", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["logits"]}
+    },
+    "sites": {"lm_head": {"component": "lm_head"}},
+    "reads": {"logits": {"site": "lm_head", "pos": -1}},
+    "save": [
+      {
+        "read": "logits",
+        "model": "original",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms", "mode": "first_token"},
+        "file_path": "accuracy.json"
+      },
+      {
+        "read": "logits",
+        "model": "original",
+        "aggregation": {"kind": "top_k", "k": 3, "by": "prob"},
+        "file_path": "said.json"
+      }
+    ]
+  }
+}

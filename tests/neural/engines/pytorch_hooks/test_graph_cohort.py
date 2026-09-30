@@ -20,7 +20,10 @@ import torch
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from causalab.neural.engines.pytorch_hooks.cuda_graphs import GraphExecutor
+from causalab.neural.engines.pytorch_hooks.cuda_graphs import (
+    GraphExecutor,
+    graph_device,
+)
 from causalab.neural.engines.pytorch_hooks.graph_cohort import (
     CohortGraphs,
     EvaluationGraphs,
@@ -35,7 +38,9 @@ from causalab.neural.engines.pytorch_hooks.graph_cohort import (
     slotted_frame,
 )
 from causalab.neural.engines.pytorch_hooks.train import TrainingObjective, _slot_rows
+from causalab.neural.shared.devices import DeviceMap
 from causalab.neural.shared.encoding import EncodedBatch, first_real_indices
+from causalab.protocol.schema import ReadRef
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
 from tests.neural.engines.pytorch_hooks.test_train import (
@@ -117,7 +122,7 @@ class TestWeightedObjective:
         stages = {"rot": plain.stage("rot")}
         loss_plain = TrainingObjective(plain, stages)()
         loss_weighted = TrainingObjective(
-            weighted, stages, weight=torch.ones(3, device=bundle.device)
+            weighted, stages, weight=torch.ones(3, device=bundle.devices.head)
         )()
         torch.testing.assert_close(loss_weighted, loss_plain, rtol=1e-6, atol=1e-7)
 
@@ -133,7 +138,7 @@ class TestWeightedObjective:
         grad_real = parameter.grad.detach().clone()
         parameter.grad = None
 
-        weight = slot_weights(2, 4, bundle.device)
+        weight = slot_weights(2, 4, bundle.devices.head)
         loss_padded = TrainingObjective(padded, stages, weight=weight)()
         loss_padded.backward()
         grad_padded = parameter.grad.detach().clone()
@@ -152,7 +157,7 @@ class TestWeightedObjective:
         b = self._executor(bundle, [0, 1, 2])
         b.stage_cache = a.stage_cache
         stages = {"rot": a.stage("rot")}
-        weight = slot_weights(2, 3, bundle.device)
+        weight = slot_weights(2, 3, bundle.devices.head)
         torch.testing.assert_close(
             TrainingObjective(a, stages, weight=weight)(),
             TrainingObjective(b, stages, weight=weight)(),
@@ -211,15 +216,26 @@ class TestEligibility:
     ) -> None:
         members = [self._graph_executor(bundle), self._graph_executor(bundle)]
         # the device check comes first off CUDA; pretend the bundle is on one
-        monkeypatch.setattr(torch, "device", lambda spec: _Cuda())
+        # (the map is the placement contract, so that is the thing to fake)
+        on_cuda = dataclasses.replace(
+            bundle, devices=DeviceMap.parse("cuda", len(bundle.blocks))
+        )
+        for member in members:
+            monkeypatch.setattr(member, "bundle", on_cuda)
         reason = cohort_graph_reason(members, 3, [2, 2])
         assert reason is not None and "fit_rows=3" in reason
         assert cohort_graph_reason(members, 4, [2, 2]) is None
         assert cohort_graph_reason(members, None, [2, 2]) is None
 
-
-class _Cuda:
-    type = "cuda"
+    def test_a_bundle_spanning_devices_has_no_graph(self, bundle, monkeypatch) -> None:
+        members = [self._graph_executor(bundle), self._graph_executor(bundle)]
+        spanning = dataclasses.replace(
+            bundle, devices=DeviceMap.parse("cuda:0,cuda:1", len(bundle.blocks))
+        )
+        for member in members:
+            monkeypatch.setattr(member, "bundle", spanning)
+        reason = cohort_graph_reason(members, None, [2, 2])
+        assert reason is not None and "single-device" in reason
 
 
 @pytest.mark.parametrize(
@@ -261,7 +277,9 @@ def test_slot_rows_never_exceed_the_largest_real_minibatch(rows, expected):
 def test_failed_capture_releases_storage_and_stays_eager(failure, monkeypatch):
     parameter = torch.nn.Parameter(torch.ones(1))
     parameter.grad = torch.ones(1)
-    executor = SimpleNamespace(bundle=SimpleNamespace(device="cuda"))
+    executor = SimpleNamespace(
+        bundle=SimpleNamespace(devices=DeviceMap.parse("cuda", 2))
+    )
     members = [Member(i, executor, {}, [parameter], [], 1) for i in range(2)]
     bank = CohortGraphs(members, make_objective=Mock())
     bank.replay = object()
@@ -326,17 +344,16 @@ def test_evaluation_replays_its_slots_for_the_members_still_due(monkeypatch, rem
     bank.layout = bank._signature(members)
     bank.members = executors[:3]
     bank.groups = [{("patched", "base")}] * 3
-    values = tuple({"logits": torch.full((1,), float(i))} for i in range(3))
+    logits = ReadRef("logits", "patched")
+    values = tuple({logits: torch.full((1,), float(i))} for i in range(3))
     replay = Mock(return_value=values)
     bank.bank = replay
     assert bank.forward(members[:remaining])
     assert bank.bank is not None and not bank.disabled
     for i, ex in enumerate(executors[:3]):
         if i < remaining:
-            got = ex._read_values["logits"]
-            assert isinstance(got, torch.Tensor) and torch.equal(
-                got, values[i]["logits"]
-            )
+            got = ex._read_values[logits]
+            assert isinstance(got, torch.Tensor) and torch.equal(got, values[i][logits])
             assert ex._groups_run == {("patched", "base")}
         else:
             assert not ex._read_values and not ex._groups_run
@@ -427,7 +444,7 @@ def _bare_graph_executor() -> GraphExecutor:
     executor._groups_run = set()
     executor._masks = {}
     executor._position_ids = {}
-    executor.bundle = SimpleNamespace(device="cpu")  # type: ignore[assignment]
+    executor.bundle = SimpleNamespace(devices=DeviceMap.parse("cpu", 1))  # type: ignore[assignment]
     executor.reset_reads = lambda: None  # type: ignore[method-assign]
     return executor
 
@@ -573,7 +590,7 @@ class TestSharedPool:
             for fit in fits
         ]
         pool = GraphPool()
-        device = torch.device(bundle.device)
+        device = graph_device(bundle)
         bank = CohortGraphs(members, make_objective=TrainingObjective, pool=pool)
         assert bank.backward(window)
         assert bank.replay is not None
@@ -642,7 +659,9 @@ def test_a_cohort_fallback_releases_the_pool_only_after_an_oom_no_graph_holds(
     if held_elsewhere:
         pool.captured(other)
     executor = SimpleNamespace(
-        bundle=SimpleNamespace(device=device), reset_reads=lambda: None
+        # the bundle's placement, one device (`graph_device` reads it)
+        bundle=SimpleNamespace(devices=DeviceMap.parse("cuda:0", 1)),
+        reset_reads=lambda: None,
     )
     members = [
         Member(

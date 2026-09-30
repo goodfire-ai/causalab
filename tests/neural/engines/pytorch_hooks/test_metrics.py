@@ -8,15 +8,17 @@ import pytest
 import torch
 
 from causalab.neural.shared.metrics import (
-    column_first_token_id,
-    column_token_id,
-    column_token_ids,
     compute_metric,
     compute_windowed_metric,
 )
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.resolution import Unavailable
-from causalab.protocol.schema import MetricSpec
+from causalab.protocol.answers import (
+    column_first_token_id,
+    column_token_id,
+    column_token_ids,
+)
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.results import Unavailable
+from causalab.protocol.schema import AggregationSpec
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
 
@@ -37,12 +39,12 @@ def _logits(tokenizer, favored: str, disfavored: str) -> torch.Tensor:
     return logits
 
 
-def test_space_prefixed_first_resolution(tokenizer):
+def test_sentencepiece_encodes_both_forms_to_one_piece(tokenizer):
     # 📐 transformers 5.16.1: this sentencepiece tokenizer dropped the legacy
     # dummy prefix, so " Monday" and "Monday" BOTH encode to the single ▁Monday
-    # piece. The two forms agree because they are now the same id — not, as
-    # under transformers 4.x, because the spaced form was ▁+▁Monday and `auto`
-    # fell back. Pinned so the reason cannot drift silently again.
+    # piece. The two written forms agree here because they are the same id —
+    # a property of this family, not of the resolver, which adds and removes
+    # nothing (§2.10). Pinned so the reason cannot drift silently.
     assert tokenizer.encode(" Monday", add_special_tokens=False) == tokenizer.encode(
         "Monday", add_special_tokens=False
     )
@@ -52,7 +54,7 @@ def test_space_prefixed_first_resolution(tokenizer):
 
 
 def test_logit_diff(tokenizer):
-    metric = MetricSpec(kind="logit_diff", of="logits", fields={"a": "x", "b": "y"})
+    metric = AggregationSpec(kind="logit_diff", fields={"a": "x", "b": "y"})
     values = compute_metric(
         metric,
         _logits(tokenizer, " Monday", " Friday"),
@@ -67,12 +69,12 @@ def test_soft_accuracy_is_the_sigmoid_of_the_margin(tokenizer):
     pins at 3.0: σ(3) = 0.9526; swapping the columns gives 1 − σ(3), so the two
     rows of one table are complementary and the value lives in (0, 1)."""
     logits = _logits(tokenizer, " Monday", " Friday")
-    forward = MetricSpec(kind="soft_accuracy", of="logits", fields={"a": "x", "b": "y"})
+    forward = AggregationSpec(kind="soft_accuracy", fields={"a": "x", "b": "y"})
     values = compute_metric(
         forward, logits, [{"x": " Monday", "y": " Friday"}], tokenizer
     )
     assert values == [pytest.approx(1.0 / (1.0 + math.exp(-3.0)))]
-    reverse = MetricSpec(kind="soft_accuracy", of="logits", fields={"a": "y", "b": "x"})
+    reverse = AggregationSpec(kind="soft_accuracy", fields={"a": "y", "b": "x"})
     flipped = compute_metric(
         reverse, logits, [{"x": " Monday", "y": " Friday"}], tokenizer
     )
@@ -80,7 +82,7 @@ def test_soft_accuracy_is_the_sigmoid_of_the_margin(tokenizer):
 
 
 def test_cross_entropy(tokenizer):
-    metric = MetricSpec(kind="cross_entropy", of="logits", fields={"target": "label"})
+    metric = AggregationSpec(kind="cross_entropy", fields={"target": "label"})
     logits = _logits(tokenizer, " Monday", " Friday")
     values = compute_metric(metric, logits, [{"label": " Monday"}], tokenizer)
     want = -torch.log_softmax(logits[0, 0].float(), dim=-1)[
@@ -90,14 +92,14 @@ def test_cross_entropy(tokenizer):
 
 
 def test_match_is_an_argmax_indicator(tokenizer):
-    metric = MetricSpec(kind="match", of="logits", fields={"expected": "ans"})
+    metric = AggregationSpec(kind="match", fields={"expected": "ans"})
     logits = _logits(tokenizer, " Monday", " Friday")
     assert compute_metric(metric, logits, [{"ans": " Monday"}], tokenizer) == [1.0]
     assert compute_metric(metric, logits, [{"ans": " Friday"}], tokenizer) == [0.0]
 
 
 def test_kl_of_identical_distributions_is_zero(tokenizer):
-    metric = MetricSpec(kind="kl", of="p", fields={"target": "q"})
+    metric = AggregationSpec(kind="kl", fields={"target": "q"})
     logits = _logits(tokenizer, " Monday", " Friday")
     values = compute_metric(
         metric, logits, [{}], tokenizer, target_value=logits.clone()
@@ -106,7 +108,7 @@ def test_kl_of_identical_distributions_is_zero(tokenizer):
 
 
 def test_top_k_orders_by_probability(tokenizer):
-    metric = MetricSpec(kind="top_k", of="logits", fields={"k": 2, "by": "prob"})
+    metric = AggregationSpec(kind="top_k", fields={"k": 2, "by": "prob"})
     logits = _logits(tokenizer, " Monday", " Friday")
     (entry,) = compute_metric(metric, logits, [{}], tokenizer)
     assert entry["tokens"][0].strip() == "Monday"
@@ -129,7 +131,7 @@ _SIGNED_CODE = torch.tensor([[[0.5, -7.0, 3.0, -0.25, 6.0, -2.0]]])
 def test_top_k_by_value_takes_the_largest_signed_entries(tokenizer):
     """Oracle: sorted descending the code is 6.0 (idx 4), 3.0 (idx 2),
     0.5 (idx 0) — the negatives never place."""
-    metric = MetricSpec(kind="top_k", of="code", fields={"k": 3, "by": "value"})
+    metric = AggregationSpec(kind="top_k", fields={"k": 3, "by": "value"})
     (entry,) = compute_metric(metric, _SIGNED_CODE, [{}], tokenizer, vocab_axis=False)
     assert entry["indices"] == [4, 2, 0]
     assert entry["values"] == [
@@ -143,7 +145,7 @@ def test_top_k_by_abs_value_ranks_on_magnitude_and_reports_the_sign(tokenizer):
     """Oracle: by |x| the code is 7.0 (idx 1, negative), 6.0 (idx 4),
     3.0 (idx 2). The reported value stays signed — ranking by magnitude must
     not hide that the strongest entry pushed the other way."""
-    metric = MetricSpec(kind="top_k", of="code", fields={"k": 3, "by": "abs_value"})
+    metric = AggregationSpec(kind="top_k", fields={"k": 3, "by": "abs_value"})
     (entry,) = compute_metric(metric, _SIGNED_CODE, [{}], tokenizer, vocab_axis=False)
     assert entry["indices"] == [1, 4, 2]
     assert entry["values"] == [
@@ -156,7 +158,7 @@ def test_top_k_by_abs_value_ranks_on_magnitude_and_reports_the_sign(tokenizer):
 def test_top_k_off_lm_head_emits_no_token_or_probability_column(tokenizer):
     """A neuron index is not a token id and a softmax across neurons is not a
     distribution, so neither column is emitted rather than emitted wrong."""
-    metric = MetricSpec(kind="top_k", of="code", fields={"k": 2, "by": "value"})
+    metric = AggregationSpec(kind="top_k", fields={"k": 2, "by": "value"})
     (entry,) = compute_metric(metric, _SIGNED_CODE, [{}], tokenizer, vocab_axis=False)
     assert set(entry) == {"indices", "values"}
 
@@ -164,7 +166,7 @@ def test_top_k_off_lm_head_emits_no_token_or_probability_column(tokenizer):
 def test_top_k_by_value_on_lm_head_still_decodes_but_does_not_normalize(tokenizer):
     """`tokens` follows the read (lm_head), `probs` follows `by` — the two
     columns are gated independently."""
-    metric = MetricSpec(kind="top_k", of="logits", fields={"k": 1, "by": "value"})
+    metric = AggregationSpec(kind="top_k", fields={"k": 1, "by": "value"})
     (entry,) = compute_metric(
         metric, _logits(tokenizer, " Monday", " Friday"), [{}], tokenizer
     )
@@ -176,7 +178,7 @@ def test_top_k_by_value_on_lm_head_still_decodes_but_does_not_normalize(tokenize
 def test_top_k_reduces_every_row_independently(tokenizer):
     """Two rows whose maxima sit at different indices — the reduction is
     per row, which is what makes it a drop-in for saving the tensor."""
-    metric = MetricSpec(kind="top_k", of="code", fields={"k": 1, "by": "value"})
+    metric = AggregationSpec(kind="top_k", fields={"k": 1, "by": "value"})
     batch = torch.tensor([[1.0, 9.0, 2.0], [8.0, -1.0, 3.0]])
     got = compute_metric(metric, batch, [{}, {}], tokenizer, vocab_axis=False)
     assert [entry["indices"] for entry in got] == [[1], [0]]
@@ -185,13 +187,13 @@ def test_top_k_reduces_every_row_independently(tokenizer):
 
 @pytest.mark.parametrize("k", [0, 7])
 def test_top_k_refuses_a_k_outside_the_read_width(tokenizer, k):
-    metric = MetricSpec(kind="top_k", of="code", fields={"k": k, "by": "value"})
+    metric = AggregationSpec(kind="top_k", fields={"k": k, "by": "value"})
     with pytest.raises(ProtocolError, match="k must be in"):
         compute_metric(metric, _SIGNED_CODE, [{}], tokenizer, vocab_axis=False)
 
 
 def test_windowed_top_k_carries_vocab_axis_through_to_the_reduction(tokenizer):
-    """The generated frame reduces through :func:`compute_windowed_metric`, and
+    """The generated frame reduces through [`compute_windowed_metric`][causalab.neural.shared.metrics.compute_windowed_metric], and
     ``vocab_axis`` has to survive that hop.
 
     The prompt-frame cases above pin the reduction itself; this pins the
@@ -210,7 +212,7 @@ def test_windowed_top_k_carries_vocab_axis_through_to_the_reduction(tokenizer):
         torch.tensor([[-8.0, 0.1, 0.2, 0.3, 0.4, 0.5]]),
         torch.zeros(0, 6),  # addressed no positions — a result, not a misalignment
     ]
-    metric = MetricSpec(kind="top_k", of="code", fields={"k": 2, "by": "value"})
+    metric = AggregationSpec(kind="top_k", fields={"k": 2, "by": "value"})
     got = compute_windowed_metric(
         metric, windows, [{}, {}, {}], tokenizer, vocab_axis=False
     )
@@ -226,9 +228,8 @@ def test_windowed_top_k_carries_vocab_axis_through_to_the_reduction(tokenizer):
 
 
 def test_class_probs_sums_group_members(tokenizer):
-    metric = MetricSpec(
+    metric = AggregationSpec(
         kind="class_probs",
-        of="logits",
         fields={"groups": {"days": [" Monday", " Friday"], "other": [" Sunday"]}},
     )
     logits = _logits(tokenizer, " Monday", " Friday")
@@ -247,16 +248,19 @@ def test_class_probs_sums_group_members(tokenizer):
 
 
 # --------------------------------------------------------------------------- #
-# §2.10 token_form — the answer-tokenization knob
+# §2.10 — an answer string is tokenized as written
 #
-# The bug this guards: `auto` returns the FIRST single-token candidate and tries
-# the space-prefixed form first, so a punctuation answer resolves to a row the
-# model never emits. Under gpt2 "?" is token 30 and " ?" is token 5633 — both
-# single tokens — so a `match` metric on a punctuation answer read a flat 0.000
-# at all 48 layers of a real gpt2-xl scan with no error raised anywhere.
+# The bug this guards: the retired `auto` resolver returned the FIRST
+# single-token candidate and tried the space-prefixed form first, so a
+# punctuation answer resolved to a row the model never emits. Under gpt2 "?"
+# is token 30 and " ?" is token 5633 — both single tokens — so a `match`
+# metric on a punctuation answer read a flat 0.000 at all 48 layers of a real
+# gpt2-xl scan with no error raised anywhere. Now the string IS the form: the
+# resolver adds no space and strips none, and the table row that fixes the
+# prompt fixes the answer's form with it.
 #
 # These use the real gpt2 tokenizer, not tiny-random-gpt2: the tiny stub's
-# 1000-token vocabulary has no " ?" row, so it cannot express the ambiguity.
+# 1000-token vocabulary has no " ?" row, so it cannot express two forms.
 # The IOI suite already loads real gpt2 (tests/tasks/IOI/conftest.py).
 # --------------------------------------------------------------------------- #
 
@@ -268,135 +272,118 @@ def gpt2_tokenizer():
     return AutoTokenizer.from_pretrained("gpt2")
 
 
-def test_gpt2_punctuation_is_the_ambiguous_case(gpt2_tokenizer):
-    """The premise, pinned: both forms are one token and they differ."""
+def test_gpt2_carries_two_rows_for_a_word_and_its_spaced_form(gpt2_tokenizer):
+    """The witness: on a byte-level BPE the two written forms are two rows."""
     assert gpt2_tokenizer.encode("?", add_special_tokens=False) == [30]
     assert gpt2_tokenizer.encode(" ?", add_special_tokens=False) == [5633]
+    assert gpt2_tokenizer.encode("Seattle", add_special_tokens=False) == [34007]
+    assert gpt2_tokenizer.encode(" Seattle", add_special_tokens=False) == [7312]
 
 
-def test_auto_still_takes_the_space_prefixed_form(gpt2_tokenizer):
-    """Backward compatibility: `auto` is exactly the historical resolver, so
-    every document written before ``token_form`` existed is unchanged — this
-    is also the CORRECT answer for the common case (an answer after a space)."""
-    assert column_token_id(gpt2_tokenizer, "?") == 5633
-    for word in (" Monday", "Monday", "Mary", " Mary"):
-        spaced = gpt2_tokenizer.encode(" " + word.strip(), add_special_tokens=False)
-        assert len(spaced) == 1
-        assert column_token_id(gpt2_tokenizer, word) == spaced[0]
+def test_an_answer_resolves_to_the_row_it_is_written_as(gpt2_tokenizer):
+    assert column_token_id(gpt2_tokenizer, "?") == 30
+    assert column_token_id(gpt2_tokenizer, " ?") == 5633
+    assert column_token_id(gpt2_tokenizer, "Seattle") == 34007
+    assert column_token_id(gpt2_tokenizer, " Seattle") == 7312
+    assert column_token_ids(gpt2_tokenizer, ["?", " ?", "."]) == [30, 5633, 13]
 
 
-def test_bare_form_resolves_the_token_the_model_emits(gpt2_tokenizer):
-    """The fix: a document that says `bare` gets the bare row."""
-    assert column_token_id(gpt2_tokenizer, "?", token_form="bare") == 30
-    assert column_token_id(gpt2_tokenizer, ".", token_form="bare") == 13
-    # a leading space in the authored value is stripped, not honored
-    assert column_token_id(gpt2_tokenizer, " ?", token_form="bare") == 30
+def test_no_leading_space_is_added_or_removed(gpt2_tokenizer):
+    """``"haus"`` is one gpt2 token and ``" haus"`` is two. The written form
+    is resolved and nothing falls back to the other one: the bare string
+    resolves, the spaced string is refused naming its pieces."""
+    assert column_token_id(gpt2_tokenizer, "haus") == 30404
+    with pytest.raises(ProtocolError) as err:
+        column_token_id(gpt2_tokenizer, " haus")
+    assert err.value.code == "P2"
+    assert "not a single token" in str(err.value)
+    assert "leading space" in str(err.value)
 
 
-def test_space_prefixed_form_is_pinnable(gpt2_tokenizer):
-    assert column_token_id(gpt2_tokenizer, "?", token_form="space_prefixed") == 5633
-    assert (
-        column_token_id(gpt2_tokenizer, "Monday", token_form="space_prefixed")
-        == (gpt2_tokenizer.encode(" Monday", add_special_tokens=False)[0])
+def test_a_column_refusal_names_the_column(gpt2_tokenizer):
+    with pytest.raises(ProtocolError) as err:
+        column_token_ids(gpt2_tokenizer, ["?", " haus"], where="metric match.expected")
+    assert str(err.value).startswith("[P2] metric match.expected:")
+
+
+def test_a_match_refusal_names_the_metric_and_field(gpt2_tokenizer):
+    """``match`` resolves form by form rather than through the column
+    resolver, and its refusal still says which metric and field the
+    multi-token answer came from."""
+    metric = AggregationSpec(kind="match", fields={"expected": "ans"})
+    logits = torch.zeros(1, 1, gpt2_tokenizer.vocab_size)
+    with pytest.raises(ProtocolError) as err:
+        compute_metric(metric, logits, [{"ans": " haus"}], gpt2_tokenizer)
+    assert str(err.value).startswith("[P2] metric match.expected:")
+    assert "' haus'" in str(err.value)
+
+
+def test_match_scores_the_answer_as_written(gpt2_tokenizer):
+    """The end-to-end regression, at the metric level: the model emits "?"
+    (token 30). A table that says ``"?"`` reads 1.0; one that says ``" ?"``
+    names row 5633 and reads 0.0 — the form is the author's statement, and
+    the metric scores exactly that statement."""
+    logits = torch.zeros(1, 1, gpt2_tokenizer.vocab_size)
+    logits[0, 0, 30] = 4.0  # what the model actually emits
+    metric = AggregationSpec(kind="match", fields={"expected": "ans"})
+    assert compute_metric(metric, logits, [{"ans": "?"}], gpt2_tokenizer) == [1.0]
+    assert compute_metric(metric, logits, [{"ans": " ?"}], gpt2_tokenizer) == [0.0]
+
+
+def test_a_match_group_credits_each_written_form(gpt2_tokenizer):
+    """``["?", " ?"]`` is a two-row group on gpt2 (the shipped tables'
+    ``*_forms`` columns list both spellings): either row's argmax scores."""
+    metric = AggregationSpec(kind="match", fields={"expected": "forms"})
+    rows = [{"forms": ["?", " ?"]}]
+    for emitted in (30, 5633):
+        logits = torch.zeros(1, 1, gpt2_tokenizer.vocab_size)
+        logits[0, 0, emitted] = 4.0
+        assert compute_metric(metric, logits, rows, gpt2_tokenizer) == [1.0]
+    logits = torch.zeros(1, 1, gpt2_tokenizer.vocab_size)
+    logits[0, 0, 13] = 4.0  # "."
+    assert compute_metric(metric, logits, rows, gpt2_tokenizer) == [0.0]
+
+
+def test_class_probs_sums_the_written_forms_of_one_answer(gpt2_tokenizer):
+    """A group may list both spellings and gets both rows' mass — the sum a
+    template-agnostic P(answer) needs, and one the retired normalization made
+    impossible (it folded the pair onto one id and refused it)."""
+    logits = torch.zeros(1, 1, gpt2_tokenizer.vocab_size)
+    logits[0, 0, 30] = 2.0
+    logits[0, 0, 5633] = 1.0
+    metric = AggregationSpec(kind="class_probs", fields={"groups": {"q": ["?", " ?"]}})
+    probs = torch.softmax(logits[0, 0], dim=-1)
+    (row,) = compute_metric(metric, logits, [{}], gpt2_tokenizer)
+    assert math.isclose(row["q"], float(probs[30] + probs[5633]), rel_tol=1e-6)
+
+
+def test_class_probs_refuses_two_strings_that_share_one_row(tokenizer):
+    """On this sentencepiece family ``"Monday"`` and ``" Monday"`` ARE one
+    piece, so listing both would count that row twice and report a
+    'probability' above 1 — refused naming both strings and the id."""
+    metric = AggregationSpec(
+        kind="class_probs",
+        fields={"groups": {"m": ["Monday", " Monday"]}},
     )
-
-
-def test_a_pinned_form_refuses_rather_than_falling_back(gpt2_tokenizer):
-    """Pinning a form means it: `space_prefixed` must refuse rather than quietly
-    hand back the bare row it was told not to use.
-
-    The witness moved to gpt2 in the transformers 5 bump. This contract needs a
-    value whose bare form is ONE token while its space-prefixed form is several
-    — 📐 under 5.16.1 the sentencepiece tokenizer no longer has one, because it
-    dropped the legacy dummy prefix and now encodes both forms identically (see
-    ``test_the_two_forms_collapse_on_sentencepiece``). gpt2's byte-level BPE
-    still separates them and is unchanged across the bump: "haus" is [30404],
-    " haus" is [387, 385]."""
-    assert len(gpt2_tokenizer.encode("haus", add_special_tokens=False)) == 1
-    assert len(gpt2_tokenizer.encode(" haus", add_special_tokens=False)) == 2
-
-    with pytest.raises(ProtocolError):
-        column_token_id(gpt2_tokenizer, "haus", token_form="space_prefixed")
-    # and the bare row it refused to fall back to is genuinely resolvable
-    assert column_token_id(gpt2_tokenizer, "haus", token_form="bare") == 30404
-    # `auto` is the form that IS allowed to fall back, and it lands on that same
-    # row — the contrast is what makes the refusal above a pin, not an accident
-    assert column_token_id(gpt2_tokenizer, "haus", token_form="auto") == 30404
+    with pytest.raises(ProtocolError) as err:
+        compute_metric(metric, torch.zeros(1, 1, 32000), [{}], tokenizer)
+    assert err.value.code == "P2"
+    assert "both resolve to token id" in str(err.value)
+    assert "'Monday'" in str(err.value) and "' Monday'" in str(err.value)
 
 
 def test_the_two_forms_collapse_on_sentencepiece(tokenizer):
     """📐 The hazard the transformers 5 bump introduced, recorded as a test.
 
     Dropping the legacy dummy prefix means " X" and "X" encode identically on
-    this family, so `token_form` cannot separate the two rows here and
-    `_ambiguous_under_auto` can never fire — the once-per-column warning that
-    exists because a punctuation `match` read a flat 0.000 across all 48 layers
-    of a gpt2-xl scan is structurally dark on sentencepiece. Nothing to fix in
-    the resolver (there is only one row to name); pinned so that the day a
-    tokenizer separates them again, this test says so out loud."""
-    assert column_token_id(tokenizer, "Monday", token_form="bare") == column_token_id(
-        tokenizer, "Monday", token_form="space_prefixed"
-    )
+    this family, so a document cannot separate the two rows here whatever it
+    writes, and the gpt2 tests above are structurally dark on sentencepiece.
+    Nothing to fix in the resolver (there is only one row to name); pinned so
+    that the day a tokenizer separates them again, this test says so."""
+    assert column_token_id(tokenizer, "Monday") == column_token_id(tokenizer, " Monday")
 
 
-def test_match_refuses_a_punctuation_answer_under_auto_and_scores_it_under_bare(
-    gpt2_tokenizer,
-):
-    """The end-to-end regression, at the metric level.
-
-    The model emits "?" (token 30). `auto` resolved the space-prefixed form,
-    token 5633, and read **0.0** — a wrong number that a pipeline gate scores
-    as a dead stage. It warned while doing it and nobody read the warning, so
-    the warning is now the refusal; `bare` still reads 1.0.
-    """
-    logits = torch.zeros(1, 1, gpt2_tokenizer.vocab_size)
-    logits[0, 0, 30] = 4.0  # what the model actually emits
-
-    metric = MetricSpec(kind="match", of="logits", fields={"expected": "ans"})
-    with pytest.raises(ProtocolError) as err:
-        compute_metric(metric, logits, [{"ans": "?"}], gpt2_tokenizer)
-    assert err.value.code == "P2"
-    assert "ambiguous under this tokenizer" in str(err.value)
-
-    fixed = MetricSpec(
-        kind="match", of="logits", fields={"expected": "ans"}, token_form="bare"
-    )
-    assert compute_metric(fixed, logits, [{"ans": "?"}], gpt2_tokenizer) == [1.0]
-
-
-def test_auto_refuses_once_per_column_when_the_forms_disagree(gpt2_tokenizer):
-    """`auto` stays the default, but it no longer guesses — at all.
-
-    Aggregated per column: half the IOI name vocabulary is ambiguous on gpt2,
-    and a per-value refusal would name one of them and hide the rest.
-    """
-    with pytest.raises(ProtocolError) as err:
-        column_token_ids(gpt2_tokenizer, ["?", "?", ".", "!"])
-    assert err.value.code == "P2"
-    assert "3 of 3 distinct answers are ambiguous" in str(err.value)
-
-
-def test_auto_is_accepted_when_there_is_nothing_to_disambiguate(tokenizer):
-    """📐 Under transformers 5.16.1 this tokenizer encodes " Monday" and "Monday"
-    to the SAME id, so the two forms cannot disagree — no choice was made, so
-    nothing is refused. (Under 4.x the same silence held for the opposite
-    reason: the spaced form was two pieces, so only the bare form resolved.)"""
-    assert len(column_token_ids(tokenizer, [" Monday", "Monday"])) == 2
-
-
-def test_a_pinned_form_is_never_refused(gpt2_tokenizer):
-    """`bare` and `space_prefixed` are unchanged: the author has said which
-    form the model emits, so there is nothing left to guess."""
-    assert column_token_ids(gpt2_tokenizer, ["?", "."], token_form="bare") == [
-        30,
-        13,
-    ]
-    assert (
-        len(column_token_ids(gpt2_tokenizer, ["?", "."], token_form="space_prefixed"))
-        == 2
-    )
-
-
+# --------------------------------------------------------------------------- #
 #  match: answer-form groups and first-token grading (§2.10)                   #
 # --------------------------------------------------------------------------- #
 
@@ -405,7 +392,7 @@ def test_match_accepts_any_form_in_a_group(tokenizer):
     """A list-valued expected column is a group of equivalent surface forms:
     the argmax matching any member scores 1.0 (the synonym channel — 'US' /
     'USA' / 'United States' — with the group serialized by the task)."""
-    metric = MetricSpec(kind="match", of="logits", fields={"expected": "forms"})
+    metric = AggregationSpec(kind="match", fields={"expected": "forms"})
     logits = _logits(tokenizer, " Monday", " Friday")
     assert compute_metric(
         metric, logits, [{"forms": [" Sunday", " Monday"]}], tokenizer
@@ -418,7 +405,7 @@ def test_match_accepts_any_form_in_a_group(tokenizer):
 def test_match_scalar_column_is_a_group_of_one(tokenizer):
     """The pre-existing spelling keeps its meaning — a scalar column is a
     one-member group, so no existing document changes behaviour."""
-    grouped = MetricSpec(kind="match", of="logits", fields={"expected": "ans"})
+    grouped = AggregationSpec(kind="match", fields={"expected": "ans"})
     logits = _logits(tokenizer, " Monday", " Friday")
     assert compute_metric(grouped, logits, [{"ans": " Monday"}], tokenizer) == [1.0]
 
@@ -427,7 +414,7 @@ def test_match_empty_group_is_an_excluded_row(tokenizer):
     """An empty form group is a row the table carries no answer for: an
     excluded measurement under ``alignment_missing`` (spec §2.10
     "Eligibility"), not a refusal of the run — it used to raise ``P2``."""
-    metric = MetricSpec(kind="match", of="logits", fields={"expected": "forms"})
+    metric = AggregationSpec(kind="match", fields={"expected": "forms"})
     (cell,) = compute_metric(
         metric, _logits(tokenizer, " Monday", " Friday"), [{"forms": []}], tokenizer
     )
@@ -439,9 +426,9 @@ def test_first_token_mode_credits_a_multi_token_answer(tokenizer):
     """``exact`` refuses " Thursday" (3 sentencepiece pieces either spelling);
     ``first_token`` credits its first *content* piece — what the model emits
     in context, and what the retired string-prefix grading meant."""
-    exact = MetricSpec(kind="match", of="logits", fields={"expected": "ans"})
-    first = MetricSpec(
-        kind="match", of="logits", fields={"expected": "ans", "mode": "first_token"}
+    exact = AggregationSpec(kind="match", fields={"expected": "ans"})
+    first = AggregationSpec(
+        kind="match", fields={"expected": "ans", "mode": "first_token"}
     )
     thursday_first = tokenizer.encode("Thursday", add_special_tokens=False)[0]
     logits = torch.zeros(1, 1, 32000)
@@ -453,13 +440,9 @@ def test_first_token_mode_credits_a_multi_token_answer(tokenizer):
 
 
 class _FormSplitTokenizer:
-    """A tokenizer whose two surface forms credit *different* first tokens.
-
-    The case `_ambiguous_under_auto` structurally cannot see: neither form is a
-    single token, so by its definition nothing is "ambiguous" — while `auto`
-    still picked a form, and under `first_token` the form decides which piece
-    gets the credit.
-    """
+    """A tokenizer whose two written forms credit *different* first tokens:
+    neither is a single token, and the form decides which piece ``first_token``
+    credits."""
 
     _PIECES = {1: "Th", 2: "urs", 3: "day", 4: " Thu", 5: "rsday"}
 
@@ -470,17 +453,12 @@ class _FormSplitTokenizer:
         return "".join(self._PIECES[int(i)] for i in ids)
 
 
-def test_auto_refuses_a_multi_token_value_whose_forms_credit_different_pieces():
-    """The silent half of the `auto` trap, and the one the aggregated column
-    check cannot reach. Pinning either form is accepted."""
+def test_first_token_credits_the_first_piece_of_the_form_as_written():
+    """No fallback between forms: the written string's own first content
+    piece is the credited one."""
     tok = _FormSplitTokenizer()
-    with pytest.raises(ProtocolError) as err:
-        column_first_token_id(tok, " Thursday")
-    assert err.value.code == "P2"
-    assert "credit different first tokens" in str(err.value)
-
-    assert column_first_token_id(tok, " Thursday", token_form="bare") == 1
-    assert column_first_token_id(tok, " Thursday", token_form="space_prefixed") == 4
+    assert column_first_token_id(tok, "Thursday") == 1
+    assert column_first_token_id(tok, " Thursday") == 4
 
 
 def test_first_token_refuses_an_answer_space_that_is_not_first_token_distinct(
@@ -494,15 +472,13 @@ def test_first_token_refuses_an_answer_space_that_is_not_first_token_distinct(
     against an expected ``85`` and nothing in the run says so. The two answers
     below share a first piece on this tokenizer for the same reason.
     """
-    first = MetricSpec(
+    first = AggregationSpec(
         kind="match",
-        of="logits",
         fields={"expected": "ans", "mode": "first_token"},
-        token_form="bare",
     )
     a, b = "Thursday", "Thursdays"
-    assert column_first_token_id(tokenizer, a, token_form="bare") == (
-        column_first_token_id(tokenizer, b, token_form="bare")
+    assert column_first_token_id(tokenizer, a) == (
+        column_first_token_id(tokenizer, b)
     ), "witness moved: these two answers no longer share a first token"
 
     logits = torch.zeros(2, 1, 32000)
@@ -515,14 +491,12 @@ def test_first_token_refuses_an_answer_space_that_is_not_first_token_distinct(
 def test_first_token_accepts_a_distinct_answer_space(tokenizer):
     """The weekdays answer space *is* distinct, so nothing is refused — the
     check is a guard on the metric's honesty, not a ban on prefix grading."""
-    first = MetricSpec(
+    first = AggregationSpec(
         kind="match",
-        of="logits",
         fields={"expected": "ans", "mode": "first_token"},
-        token_form="bare",
     )
     logits = torch.zeros(2, 1, 32000)
-    monday = column_first_token_id(tokenizer, "Monday", token_form="bare")
+    monday = column_first_token_id(tokenizer, "Monday")
     logits[0, 0, monday] = 4.0
     scores = compute_metric(
         first, logits, [{"ans": "Monday"}, {"ans": "Friday"}], tokenizer
@@ -535,9 +509,9 @@ class _LoneSpacePieceTokenizer:
 
     Which *values* trigger the trap is a property of a released tokenizer and it
     moved under transformers 5; the rule that `first_token` must never credit a
-    whitespace-only piece is a property of :func:`column_first_token_id`. Pinning
+    whitespace-only piece is a property of [`column_first_token_id`][causalab.protocol.answers.column_first_token_id]. Pinning
     the rule against a stub keeps it honest across bumps, and
-    :func:`test_first_token_skips_a_real_lone_space_piece` keeps a live witness."""
+    `test_first_token_skips_a_real_lone_space_piece` keeps a live witness."""
 
     _PIECES = {0: " ", 1: "Th", 2: "urs", 3: "day"}
 
@@ -566,7 +540,7 @@ def test_first_token_skips_a_real_lone_space_piece(tokenizer):
     [29871, 29941, 29889, 29896, 29946] and 29871 decodes to "". So the skip is
     load-bearing, not dead code. A failure of the premise below means the
     witness moved, not that the behaviour broke — the behaviour is pinned in
-    :func:`test_first_token_skips_the_lone_space_piece`."""
+    `test_first_token_skips_the_lone_space_piece`."""
     ids = tokenizer.encode(" 3.14", add_special_tokens=False)
     assert len(ids) > 1, "witness moved: ' 3.14' is a single token now"
     assert tokenizer.decode([ids[0]]).strip() == "", (
@@ -589,7 +563,7 @@ def test_first_token_agrees_with_exact_on_single_token_answers(tokenizer):
 #
 # `_candidates` strips a leading space before `token_form` picks a form, so
 # ["Sorry", " Sorry"] resolves to one id twice and `class_probs` — which SUMS a
-# group's ids — counted it twice, so a "probability" above 1 was possible.
+# group's ids — counted it twice, so a reported "probability" could exceed 1.
 #
 # The gpt2 tokenizer is the witness that makes this visible. On the
 # sentencepiece fixture above, half the surface-form distinctions collapse
@@ -603,14 +577,13 @@ def _one_hot(vocab: int, token: int, value: float = 4.0) -> torch.Tensor:
     return logits
 
 
-def test_class_probs_refuses_a_group_whose_members_are_one_token(gpt2_tokenizer):
-    """The `["X", " X"]` idiom is inert, and in this kind it was worse than
-    inert. Refusing beats returning 1.99."""
-    metric = MetricSpec(
+def test_class_probs_refuses_a_group_that_lists_one_row_twice(gpt2_tokenizer):
+    """Two entries on one id would sum that row twice. Refusing beats
+    returning 1.99. (``["Sorry", " Sorry"]`` is two gpt2 rows and a real
+    two-member class — see the as-written tests above.)"""
+    metric = AggregationSpec(
         kind="class_probs",
-        of="logits",
-        fields={"groups": {"refusal": ["Sorry", " Sorry"]}},
-        token_form="space_prefixed",
+        fields={"groups": {"refusal": ["Sorry", "Sorry"]}},
     )
     with pytest.raises(ProtocolError) as err:
         compute_metric(
@@ -625,12 +598,10 @@ def test_class_probs_refuses_a_group_whose_members_are_one_token(gpt2_tokenizer)
 
 def test_class_probs_over_a_deduplicated_group_stays_a_probability(gpt2_tokenizer):
     """The number the double-count was hiding: one member, one id, ≤ 1.0."""
-    token = column_token_id(gpt2_tokenizer, "Sorry", token_form="space_prefixed")
-    metric = MetricSpec(
+    token = column_token_id(gpt2_tokenizer, "Sorry")
+    metric = AggregationSpec(
         kind="class_probs",
-        of="logits",
         fields={"groups": {"refusal": ["Sorry"]}},
-        token_form="space_prefixed",
     )
     logits = _one_hot(gpt2_tokenizer.vocab_size, token, value=12.0)
     (entry,) = compute_metric(metric, logits, [{}], gpt2_tokenizer)
@@ -639,17 +610,15 @@ def test_class_probs_over_a_deduplicated_group_stays_a_probability(gpt2_tokenize
     assert 0.0 <= entry["refusal"] <= 1.0
 
 
-def test_class_probs_distinct_forms_under_bare_still_sum(gpt2_tokenizer):
-    """The dedup must not eat a real two-member class: under `bare`, "Sorry"
-    and "sorry" are different gpt2 ids and both belong in the group."""
-    upper = column_token_id(gpt2_tokenizer, "Sorry", token_form="bare")
-    lower = column_token_id(gpt2_tokenizer, "sorry", token_form="bare")
+def test_class_probs_distinct_forms_still_sum(gpt2_tokenizer):
+    """The dedup must not eat a real two-member class: "Sorry" and "sorry"
+    are different gpt2 ids and both belong in the group."""
+    upper = column_token_id(gpt2_tokenizer, "Sorry")
+    lower = column_token_id(gpt2_tokenizer, "sorry")
     assert upper != lower  # the premise
-    metric = MetricSpec(
+    metric = AggregationSpec(
         kind="class_probs",
-        of="logits",
         fields={"groups": {"refusal": ["Sorry", "sorry"]}},
-        token_form="bare",
     )
     logits = _one_hot(gpt2_tokenizer.vocab_size, upper, value=6.0)
     logits[0, 0, lower] = 6.0
@@ -669,12 +638,10 @@ def test_class_probs_distinct_forms_under_bare_still_sum(gpt2_tokenizer):
 _ANSWERS = (" Monday", " Friday", " Sunday")
 
 
-def _token_logits_metric(tokens=_ANSWERS, token_form="space_prefixed"):
-    return MetricSpec(
+def _token_logits_metric(tokens=_ANSWERS):
+    return AggregationSpec(
         kind="token_logits",
-        of="logits",
         fields={"tokens": tuple(tokens)},
-        token_form=token_form,
     )
 
 
@@ -687,16 +654,12 @@ def test_token_logits_equal_the_corresponding_token_logit_values(tokenizer):
 
     for entry, example in ((first, 0), (second, 1)):
         assert list(entry) == ["indices", "tokens", "values"]
-        assert entry["indices"] == [
-            column_token_id(tokenizer, t, token_form="space_prefixed") for t in _ANSWERS
-        ]
+        assert entry["indices"] == [column_token_id(tokenizer, t) for t in _ANSWERS]
         assert entry["tokens"] == [tokenizer.decode([i]) for i in entry["indices"]]
         for answer, value in zip(_ANSWERS, entry["values"]):
-            oracle = MetricSpec(
+            oracle = AggregationSpec(
                 kind="token_logit",
-                of="logits",
                 fields={"token": "t"},
-                token_form="space_prefixed",
             )
             (want,) = compute_metric(
                 oracle, logits[example : example + 1], [{"t": answer}], tokenizer
@@ -730,8 +693,8 @@ def test_token_logits_refuses_two_entries_that_resolve_to_one_id(tokenizer):
     tokenizer can map two different strings to one id regardless; either way
     the same row would be saved twice under two names. On this sentencepiece
     fixture " Monday" and "Monday" are one id (see the resolution pin at the
-    top of the file), which is the collision a `MetricSpec` can carry."""
-    metric = _token_logits_metric(tokens=("Monday", " Monday"), token_form="auto")
+    top of the file), which is the collision a `AggregationSpec` can carry."""
+    metric = _token_logits_metric(tokens=("Monday", " Monday"))
     with pytest.raises(ProtocolError) as err:
         compute_metric(metric, torch.zeros(1, 1, 32000), [{}], tokenizer)
     assert "resolve to token id" in str(err.value)
@@ -748,7 +711,7 @@ def test_windowed_token_logits_reduces_per_position(tokenizer):
         _token_logits_metric(), windows, [{}, {}, {}], tokenizer
     )
     assert [len(row) for row in got] == [2, 0, 1]
-    ids = [column_token_id(tokenizer, t, token_form="space_prefixed") for t in _ANSWERS]
+    ids = [column_token_id(tokenizer, t) for t in _ANSWERS]
     for window, row in zip(windows, got):
         for position, entry in enumerate(row):
             assert entry["indices"] == ids
@@ -773,14 +736,14 @@ def _js_by_hand(p_logits: torch.Tensor, q_logits: torch.Tensor) -> float:
 
 
 def test_js_of_identical_distributions_is_zero(tokenizer):
-    metric = MetricSpec(kind="js", of="p", fields={"target": "q"})
+    metric = AggregationSpec(kind="js", fields={"target": "q"})
     p = _logits(tokenizer, " Monday", " Friday")
     values = compute_metric(metric, p, [{}], tokenizer, target_value=p.clone())
     assert values == [pytest.approx(0.0, abs=1e-7)]
 
 
 def test_js_is_symmetric_and_bounded_by_ln2(tokenizer):
-    metric = MetricSpec(kind="js", of="p", fields={"target": "q"})
+    metric = AggregationSpec(kind="js", fields={"target": "q"})
     # well-separated peaks, so the value is O(0.1) and a float32 log_softmax
     # over 32000 entries is compared at a tolerance it can meet (the definition
     # is evaluated in float64; the reduction runs in float32)
@@ -812,17 +775,13 @@ def test_restricted_js_is_js_over_the_renormalised_slice(tokenizer):
     p = _logits(tokenizer, " Monday", " Friday")
     q = _logits(tokenizer, " Friday", " Monday")
     p[0, 0, 5] = 6.0  # mass on a token outside the answer set
-    literal = MetricSpec(
+    literal = AggregationSpec(
         kind="js",
-        of="p",
         fields={"target": "q", "restrict": tuple(answers)},
-        token_form="space_prefixed",
     )
-    column = MetricSpec(
+    column = AggregationSpec(
         kind="js",
-        of="p",
         fields={"target": "q", "restrict": "valid"},
-        token_form="space_prefixed",
     )
     by_literal = compute_metric(literal, p, [{}], tokenizer, target_value=q)[0]
     by_column = compute_metric(
@@ -832,18 +791,16 @@ def test_restricted_js_is_js_over_the_renormalised_slice(tokenizer):
     assert by_literal == pytest.approx(expected, rel=1e-5)
     assert by_column == pytest.approx(expected, rel=1e-5)
     # and it is not the unrestricted value: the off-set mass changes that one
-    unrestricted = MetricSpec(kind="js", of="p", fields={"target": "q"})
+    unrestricted = AggregationSpec(kind="js", fields={"target": "q"})
     assert compute_metric(unrestricted, p, [{}], tokenizer, target_value=q)[
         0
     ] != pytest.approx(expected, rel=1e-3)
 
 
 def test_js_restrict_column_empty_row_is_an_excluded_measurement(tokenizer):
-    metric = MetricSpec(
+    metric = AggregationSpec(
         kind="js",
-        of="p",
         fields={"target": "q", "restrict": "valid"},
-        token_form="space_prefixed",
     )
     p = torch.cat([_logits(tokenizer, " Monday", " Friday")] * 2, dim=0)
     q = torch.cat([_logits(tokenizer, " Friday", " Monday")] * 2, dim=0)
@@ -859,11 +816,9 @@ def test_js_restrict_refuses_two_answers_on_one_id(tokenizer):
     mass in the restricted softmax. On this sentencepiece tokenizer
     `" Monday"` and `"Monday"` are one id (pinned above), so the pair is the
     run-time collision the parse-time check cannot see."""
-    metric = MetricSpec(
+    metric = AggregationSpec(
         kind="js",
-        of="p",
         fields={"target": "q", "restrict": "valid"},
-        token_form="auto",
     )
     p = _logits(tokenizer, " Monday", " Friday")
     with pytest.raises(ProtocolError) as err:

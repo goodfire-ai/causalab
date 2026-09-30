@@ -4,8 +4,8 @@ legitimate campaign (T9) — torch-free.
 **T9.** A document with an ordinary base/counterfactual pair and no pairs
 declaration loads, canonicalizes to an unchanged digest, and runs: no fixture
 table under ``tests/protocol/fixtures/data/`` carries the column; every corpus
-document over them passes ``validate --data`` and keeps its pinned digest; the
-shipped workflow pins are what they were; the serializer writes the column
+document over them passes ``validate --data`` and keeps its pinned digest; both
+shipped workflows still load; the serializer writes the column
 **only** for an example that declares groups, and rebuilding the committed
 ``prepared/weekdays_n4`` table reproduces its bytes; ``build_task_dataset.py
 --validate-pairs`` writes the table alone (nothing beside it) and writes
@@ -30,10 +30,12 @@ from typing import Any
 
 import pytest
 
-from causalab.causal.pairs import EDIT_GROUPS_COLUMN
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.loader import check_data_columns, load
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.causal.pair_validation import EDIT_GROUPS_COLUMN
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.rules.data import check_data_columns
+from causalab.protocol.schema import PROTOCOL_VERSION
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.tasks.natural_domains_arithmetic.config import NaturalDomainConfig
 from causalab.tasks.serialize import (
     RESERVED_COLUMNS,
@@ -46,13 +48,15 @@ from causalab.tasks.loader import load_task, load_task_counterfactuals
 from causalab.workflow.document import load_workflow
 
 from tests._helpers.tiny import TINY_RANDOM_GPT2_MODEL_NAME
-from tests.protocol._env import CORPUS_DIR, FIXTURES
+from tests.protocol._docs import UNWRITTEN, aggregation, saved
+from tests.protocol._env import CORPUS_DIR, FIXTURES, steps_of
+from tests._helpers.paths import WORKFLOWS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
 BUILD_SCRIPT = REPO / "scripts" / "build_task_dataset.py"
-WORKFLOW_DIR = REPO / "causalab/configs/workflows"
+WORKFLOW_DIR = WORKFLOWS_DIR
 CORPUS_PINS = json.loads((Path(__file__).parent / "corpus_digests.json").read_text())
 
 REF = "pairs/swap"
@@ -62,53 +66,38 @@ def _document(ref: str = REF) -> dict[str, Any]:
     """An interchange at a ``variable`` position over one table for both sides."""
     return {
         "header": {
-            "protocol_version": "3",
+            "protocol_version": PROTOCOL_VERSION,
             "description": "interchange at the first mapping entry",
         },
-        "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main"},
+        "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
         "data": {
             "base": {"dataset": ref, "field": "input"},
             "counterfactual": {"dataset": ref, "field": "counterfactual_inputs[0]"},
         },
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "positions": {"first": {"variable": "first"}},
             "sites": {
                 "target": {"component": "block_output", "layers": [1]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "target",
-                    "pos": "first",
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "logits": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "target", "pos": "first"},
+                "logits": {"site": "lm_head", "pos": -1},
             },
             "writes": {
                 "patch": {"site": "target", "pos": "first", "do": {"swap": "v_cf"}}
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "metrics": {
-                "iia": {
-                    "kind": "match",
-                    "of": "logits",
-                    "expected": "cf_answer",
-                    "token_form": "space_prefixed",
-                }
-            },
             "save": [
-                {
-                    "value": "iia",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "iia.json",
-                }
+                saved(
+                    "logits",
+                    "patched",
+                    "iia.json",
+                    aggregation("match", expected="cf_answer"),
+                )
             ],
         },
     }
@@ -165,7 +154,7 @@ def _env(root: Path, rows: list[dict[str, Any]], ref: str = REF) -> ResolutionEn
 
 def test_a_well_formed_declaration_loads_and_validates(tmp_path):
     env = _env(tmp_path, swap_rows())
-    loaded = load(_document(), env)
+    loaded = compile_protocol(_document(), env=env)
     assert "cf_answer" in check_data_columns(loaded, env)
     assert EDIT_GROUPS_COLUMN in env.datasets.columns(REF)
 
@@ -176,8 +165,8 @@ def test_the_column_is_not_in_the_canonical_form(tmp_path):
     content digest — no key of the document changes."""
     with_groups = _env(tmp_path / "with", swap_rows())
     without = _env(tmp_path / "without", swap_rows(declare=False))
-    a = load(_document(), with_groups).canonical_document
-    b = load(_document(), without).canonical_document
+    a = compile_protocol(_document(), env=with_groups).canonical
+    b = compile_protocol(_document(), env=without).canonical
     assert json.dumps(a, sort_keys=True).count(EDIT_GROUPS_COLUMN) == 0
     assert set(a) == set(b)
 
@@ -204,7 +193,9 @@ def test_a_malformed_declaration_is_refused_as_rule_27_at_data_base(
     rows = swap_rows()
     mutate(rows[1][EDIT_GROUPS_COLUMN][0])
     env = _env(tmp_path, rows)
-    loaded = load(_document(), env)  # the bare load is fine: the pass is --data
+    loaded = compile_protocol(
+        _document(), env=env
+    )  # the bare load is fine: the pass is --data
     with pytest.raises(ValidationError) as err:
         check_data_columns(loaded, env)
     assert err.value.rule == 27 and err.value.rule_id == "segment_declared"
@@ -221,14 +212,14 @@ def test_rows_without_the_column_are_not_read(tmp_path):
     mixed = swap_rows()
     del mixed[0][EDIT_GROUPS_COLUMN]
     env = _env(tmp_path / "mixed", mixed)
-    check_data_columns(load(_document(), env), env)
+    check_data_columns(compile_protocol(_document(), env=env), env)
     plain = _env(tmp_path / "plain", swap_rows(declare=False))
-    check_data_columns(load(_document(), plain), plain)
+    check_data_columns(compile_protocol(_document(), env=plain), plain)
 
 
 def test_atomic_false_loads_the_same(tmp_path):
     env = _env(tmp_path, swap_rows(atomic=False))
-    check_data_columns(load(_document(), env), env)
+    check_data_columns(compile_protocol(_document(), env=env), env)
 
 
 # --------------------------------------------------------------------------- #
@@ -251,10 +242,10 @@ def test_no_fixture_table_carries_the_column():
     "document", sorted(CORPUS_DIR.glob("*_im.json")), ids=lambda p: p.name
 )
 def test_every_corpus_document_validates_and_keeps_its_pin(document, env):
-    loaded = load(document, env)
+    loaded = compile_protocol(document, env=env)
     check_data_columns(loaded, env)
-    assert loaded.document_digest == CORPUS_PINS[document.name]["document"]
-    assert list(loaded.point_digests) == CORPUS_PINS[document.name]["points"]
+    assert loaded.digests.document == CORPUS_PINS[document.name]["document"]
+    assert list(steps_of(loaded, env).digests) == CORPUS_PINS[document.name]["points"]
 
 
 def test_the_shipped_workflows_load_with_inner_documents(env):
@@ -263,12 +254,12 @@ def test_the_shipped_workflows_load_with_inner_documents(env):
     whole-workflow pin (§7); the corpus documents' byte-identity is
     `test_every_corpus_document_validates_and_keeps_its_pin` above."""
     shipped = sorted(p.name for p in WORKFLOW_DIR.glob("*.json"))
-    assert shipped == ["mean_ablation.json", "weekdays_8b.json"]
+    assert shipped == ["mean_ablation.json", "pca_basis.json", "weekdays.json"]
     for name in shipped:
         loaded = load_workflow(WORKFLOW_DIR / name, env)
         assert loaded.inner, name
         for inner in loaded.inner.values():
-            assert len(inner.document_digest) == 64
+            assert len(inner.compiled.digests.document) == 64
 
 
 def test_the_serializer_writes_the_column_only_for_a_declaring_example():

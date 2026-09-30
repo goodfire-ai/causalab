@@ -1,4 +1,4 @@
-"""Round-3 MoE per-expert interior: taps inside the grouped experts dispatch.
+"""MoE per-expert interior: taps inside the grouped experts dispatch.
 
 The per-expert interior is not a set of module boundaries. 📐
 ``Qwen3_5MoeExperts`` stores its weights as 3-D parameters and its only child
@@ -34,9 +34,11 @@ from causalab.neural.engines.pytorch_hooks.experts_interface import (
 )
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.registry import component_shape
-from causalab.protocol.schema import SiteSpec
+from causalab.protocol.schema import PROTOCOL_VERSION, SiteSpec
+
+from tests.protocol._docs import saved
 
 from ._drive import base_data_section, executor_for
 from .conftest import TINY_LLAMA, TINY_QWEN35_MOE
@@ -55,74 +57,67 @@ D_EXPERT = 32
 
 def _read_doc(component: str = "expert_activation", layer: int = MOE_LAYER) -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": {"component": component, "layers": [layer]}},
-            "reads": {
-                "r": {"site": "tap", "pos": "all", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "all"}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 
 
+def _also_read(doc: dict, name: str, component: str, site: str | None = None) -> None:
+    """Add a second whole-sequence read of ``component`` at the MoE layer to
+    a `_read_doc`, on the same un-intervened forward, and save it."""
+    site = site or f"{name}_site"
+    doc["method"]["sites"][site] = {"component": component, "layers": [MOE_LAYER]}
+    doc["method"]["reads"][name] = {"site": site, "pos": "all"}
+    doc["method"]["intervened_models"]["original"]["reads"].append(name)
+    doc["method"]["save"].append(saved(name, "original", f"{site}.safetensors"))
+
+
 def _write_doc(component: str, do: dict, *, layer: int = MOE_LAYER) -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "original_base": {"input": "base", "reads": ["clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {"component": component, "layers": [layer]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "clean": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": "all"},
+                "clean": {"site": "lm_head", "pos": {"index": -1}},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {"patch": {"site": "tap", "pos": "all", "do": do}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "p.safetensors",
-                },
-                {
-                    "value": "clean",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "c.safetensors",
-                },
+                saved("after", "patched", "p.safetensors"),
+                saved("clean", "original_base", "c.safetensors"),
             ],
         },
     }
+
+
+def _own_value(doc: dict) -> dict:
+    """Take ``v_cf`` on the un-intervened *base* forward instead of the
+    counterfactual one: the write's operand is the tap's own value."""
+    models = doc["method"]["intervened_models"]
+    del models["original_counterfactual"]
+    models["original_base"]["reads"].append("v_cf")
+    return doc
 
 
 def _moved(bundle: ModelBundle, doc: dict, **kw) -> float:
@@ -182,7 +177,8 @@ def test_the_unsort_matches_a_manual_reference(qwen35moe_bundle):
     """The pin on the permutation plumbing: un-sorting the raw ``act_fn`` rows
     with the router's own indices reproduces the read exactly.
 
-    ⚠️ This is also the tie-order guard the interior needs: the wrapper
+    ⚠️ This is also the tie-order guard, since the read must keep each row
+    with its own token under ties: the wrapper
     *recomputes* ``torch.sort(top_k_index.reshape(-1))``, which does not promise
     tie order. If a kernel ever breaks ties differently than the recomputation,
     rows would be attributed to the wrong tokens — and this 0.0 would fail
@@ -242,16 +238,16 @@ def test_swapping_a_tap_with_its_own_value_moves_nothing(qwen35moe_bundle):
     """The identity payload, exactly 0.0: an edit that substitutes the same
     tensor must be exactly the identity — through the un-sort, the write math,
     and the re-sort — or the write is landing somewhere it should not."""
-    doc = _write_doc("expert_activation", {"swap": "v_cf"})
-    doc["method"]["reads"]["v_cf"]["input"] = "base"
+    doc = _own_value(_write_doc("expert_activation", {"swap": "v_cf"}))
     assert _moved(qwen35moe_bundle, doc) == 0.0
 
 
 def test_doubling_the_activation_moves_the_logits(qwen35moe_bundle):
     """📐 The probe's causal spike (act ×2 moved the logits by 0.2486),
     expressed in the vocabulary: add the tap's own value to itself."""
-    doc = _write_doc("expert_activation", {"add_scaled": {"op": "v_cf", "alpha": 1.0}})
-    doc["method"]["reads"]["v_cf"]["input"] = "base"
+    doc = _own_value(
+        _write_doc("expert_activation", {"add_scaled": {"op": "v_cf", "alpha": 1.0}})
+    )
     assert _moved(qwen35moe_bundle, doc) > 1e-3
 
 
@@ -260,20 +256,9 @@ def test_a_read_of_a_written_slot_sees_the_written_value(qwen35moe_bundle):
     registers edits before reads, so a document that swaps and reads the same
     slot sees the written value — difference exactly 0.0."""
     doc = _write_doc("expert_activation", {"swap": "v_cf"})
-    doc["method"]["reads"]["obs"] = {
-        "site": "tap",
-        "pos": "all",
-        "model": "patched",
-        "input": "base",
-    }
-    doc["method"]["save"].append(
-        {
-            "value": "obs",
-            "model": "patched",
-            "input": "base",
-            "file_path": "o.safetensors",
-        }
-    )
+    doc["method"]["reads"]["obs"] = {"site": "tap", "pos": "all"}
+    doc["method"]["intervened_models"]["patched"]["reads"].append("obs")
+    doc["method"]["save"].append(saved("obs", "patched", "o.safetensors"))
     executor = executor_for(
         doc, qwen35moe_bundle, base_texts=[TEXT], counterfactual_texts=[CF_TEXT]
     )
@@ -307,7 +292,7 @@ def test_a_continuation_read_accumulates_one_row_per_step(qwen35moe_bundle):
 def test_the_fixture_runs_the_grouped_path_by_default(qwen35moe_bundle):
     """📐 The pin's premise: ``grouped_mm`` is the default dispatch even on CPU
     with no kwarg — the gate is a class check, not a device check. If a
-    transformers bump ever changes this default, the whole interior's taps move,
+    transformers bump ever changes this default, the whole round's taps move,
     and this is the test that says so first."""
     config = qwen35moe_bundle.model.config
     text = getattr(config, "text_config", None) or config
@@ -452,7 +437,7 @@ def test_the_shape_declares_the_fixtures_widths(qwen35moe_bundle):
 
 
 # --------------------------------------------------------------------------- #
-# the interface-slot components
+# The interface-slot components
 # --------------------------------------------------------------------------- #
 
 INTERIOR = (
@@ -502,24 +487,7 @@ def test_the_projection_halves_share_one_fused_capture(qwen35moe_bundle):
     ``expert_activation == act_fn(expert_gate_proj)`` pins which chunk is
     which — exactly, because the model's own SiLU is deterministic."""
     doc = _read_doc("expert_gate_proj")
-    doc["method"]["sites"]["act"] = {
-        "component": "expert_activation",
-        "layers": [MOE_LAYER],
-    }
-    doc["method"]["reads"]["a"] = {
-        "site": "act",
-        "pos": "all",
-        "model": "original",
-        "input": "base",
-    }
-    doc["method"]["save"].append(
-        {
-            "value": "a",
-            "model": "original",
-            "input": "base",
-            "file_path": "b.safetensors",
-        }
-    )
+    _also_read(doc, "a", "expert_activation", site="act")
     executor = executor_for(doc, qwen35moe_bundle, base_texts=[TEXT])
     gate, act = executor.read_value("r"), executor.read_value("a")
     torch.testing.assert_close(torch.nn.functional.silu(gate), act, atol=0.0, rtol=0.0)
@@ -542,29 +510,8 @@ def test_the_registry_identity_reconstructs_routed_output_exactly(qwen35moe_bund
     assert set(declared.inputs) == {"expert_output", "router_scores"}
     atol, rtol = declared.tolerance_for(qwen35moe_bundle.dtype)
     doc = _read_doc("expert_output")
-    doc["method"]["sites"]["scores"] = {
-        "component": "router_scores",
-        "layers": [MOE_LAYER],
-    }
-    doc["method"]["sites"]["routed"] = {
-        "component": "routed_output",
-        "layers": [MOE_LAYER],
-    }
-    for name, site in (("s", "scores"), ("o", "routed")):
-        doc["method"]["reads"][name] = {
-            "site": site,
-            "pos": "all",
-            "model": "original",
-            "input": "base",
-        }
-        doc["method"]["save"].append(
-            {
-                "value": name,
-                "model": "original",
-                "input": "base",
-                "file_path": f"{name}.safetensors",
-            }
-        )
+    _also_read(doc, "s", "router_scores", site="scores")
+    _also_read(doc, "o", "routed_output", site="routed")
     executor = executor_for(doc, qwen35moe_bundle, base_texts=[TEXT])
     out = executor.read_value("r").reshape(1, 5, TOP_K, 8)
     scores = executor.read_value("s").reshape(1, 5, TOP_K, 1)
@@ -577,39 +524,24 @@ def test_interior_writes_hold_the_identity_bar(qwen35moe_bundle, component):
     """swap-with-own-value is exactly 0.0 through the fused scatter and the
     re-sort; a counterfactual swap moves the logits (📐 expert_out +1 moved
     them by 1.53 in the probe)."""
-    doc = _write_doc(component, {"swap": "v_cf"})
-    doc["method"]["reads"]["v_cf"]["input"] = "base"
+    doc = _own_value(_write_doc(component, {"swap": "v_cf"}))
     assert _moved(qwen35moe_bundle, doc) == 0.0
     assert _moved(qwen35moe_bundle, _write_doc(component, {"swap": "v_cf"})) > 1e-4
 
 
 # --------------------------------------------------------------------------- #
-# the `expert:` sub-axis
+# The `expert:` sub-axis
 # --------------------------------------------------------------------------- #
 
 
 def test_the_expert_face_selects_exactly_the_routed_pairs(qwen35moe_bundle):
     """The ragged face against a manual join: rows where ``expert_idx == e``,
     in (position, slot) order, at exactly 0.0."""
-    from causalab.neural.shared.executor_base import RaggedValue
+    from causalab.neural.shared.executor import RaggedValue
 
     hit, _ = _hit_and_missing_expert(qwen35moe_bundle)
     doc = _read_doc("expert_activation")
-    doc["method"]["sites"]["idxs"] = {"component": "expert_idx", "layers": [MOE_LAYER]}
-    doc["method"]["reads"]["i"] = {
-        "site": "idxs",
-        "pos": "all",
-        "model": "original",
-        "input": "base",
-    }
-    doc["method"]["save"].append(
-        {
-            "value": "i",
-            "model": "original",
-            "input": "base",
-            "file_path": "i.safetensors",
-        }
-    )
+    _also_read(doc, "i", "expert_idx", site="idxs")
     executor = executor_for(doc, qwen35moe_bundle, base_texts=[TEXT])
     full, idx = executor.read_value("r"), executor.read_value("i")
 
@@ -627,7 +559,7 @@ def test_an_expert_no_token_chose_reads_as_width_zero(qwen35moe_bundle):
     """The honest form of the never-fired-hook question: there is no hook to
     not-fire. The router simply sent this expert nothing at these positions,
     and the read says so as data — width-0 rows, no error."""
-    from causalab.neural.shared.executor_base import RaggedValue
+    from causalab.neural.shared.executor import RaggedValue
 
     _, missing = _hit_and_missing_expert(qwen35moe_bundle)
     doc = _read_doc("expert_activation")
@@ -654,13 +586,8 @@ def test_a_write_under_expert_lands_only_on_that_experts_rows(qwen35moe_bundle):
             "component": "expert_activation",
             "layers": [MOE_LAYER],
         }
-        doc["method"]["reads"]["v_cf"] = {
-            "site": "whole",
-            "pos": "all",
-            "model": "original",
-            "input": "base",
-        }
-        return doc
+        doc["method"]["reads"]["v_cf"] = {"site": "whole", "pos": "all"}
+        return _own_value(doc)
 
     assert _moved(qwen35moe_bundle, masked_doc(hit)) > 1e-4
     assert _moved(qwen35moe_bundle, masked_doc(missing)) == 0.0
@@ -669,7 +596,7 @@ def test_a_write_under_expert_lands_only_on_that_experts_rows(qwen35moe_bundle):
 def test_the_expert_face_reads_in_the_generated_frame(qwen35moe_bundle):
     """D7 extends to the ragged face: the routing table accumulates per decode
     step, so the face selects over the generated tokens' own routing."""
-    from causalab.neural.shared.executor_base import RaggedValue
+    from causalab.neural.shared.executor import RaggedValue
 
     hit, _ = _hit_and_missing_expert(qwen35moe_bundle)
     doc = _read_doc("expert_output")

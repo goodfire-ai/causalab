@@ -1,0 +1,46 @@
+[
+  {
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "value": 0.0
+  },
+  {
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "value": 0.0
+  }
+]

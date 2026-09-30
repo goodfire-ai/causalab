@@ -1,50 +1,14 @@
-"""Estimand identity: what unit a metric record is in, and which arithmetic
-produced it (intervention_protocol §2.10 / §7; workflow_protocol §2.6).
+"""Describe what a metric measures and identify its arithmetic.
 
-Two numbers with the same name are not the same number: a mean of per-row
-ratios and a ratio of sums both called "normalized recovery", a fraction
-compared to percentage points, a report quoting a value its table no longer
-held. This module is
-the one home of the three things that stop that, imported by both the
-intervention layer (``schema.py``, ``neural/shared/outputs.py``) and the
-workflow layer (``workflow/reduction.py``, ``analysis/paired_ttest.py``):
-
-* **the unit vocabulary** :data:`UNITS` — closed, grown by PR, censused
-  against the spec table — and :data:`METRIC_UNITS`, the unit each metric
-  kind's per-example value is in. ``kl`` and ``cross_entropy`` are both in
-  nats (natural-log ``log_softmax``), ``match`` is a 0/1 indicator whose mean
-  is a fraction, ``top_k`` and ``decode`` produce no scalar and have no unit;
-* **the identifier grammar** ``<estimand>/v<n>`` (:data:`IDENTIFIER`):
-  ``<estimand>`` is ``snake_case`` naming the *arithmetic*, not the quantity,
-  and ``<n>`` increments whenever the arithmetic changes under an unchanged
-  name. A metric kind's identity is derived — ``kl/v1`` — because a kind is
-  one arithmetic once its fields are fixed. A reduction's is derived from its
-  estimator — ``mean/v1`` — unless the block authors a campaign identifier
-  such as ``mean_of_eligible_row_ratios/v1``, which must be one the block's
-  arithmetic **admits** (:data:`REDUCTION_ESTIMANDS`): declaring one while
-  computing the other is refused at load (workflow rule 13);
-* **the refusals** — :func:`compare` refuses two records whose units differ,
-  naming both units and both records, and labels a same-unit comparison as
-  ``arm`` (same estimand) or ``version`` (different estimands, allowed);
-  :func:`check_claim` refuses a :class:`Claim` whose bound record no longer
-  produces the value it quotes, naming the record and its point digest.
-
-**Where the identity lives.** The authoritative copy is the canonical form
-(§7), where ``unit`` / ``estimand_version`` appear **only when authored** —
-so no digest moves for a document that authors neither. Every metric row and
-every reduced row also carries both as repeated columns (a metric table has
-no envelope, ``tables.py``), derived when unauthored, so a reader with ``jq``
-can see what a number is without the document.
-
-Nothing here is required. A document, a reduction and a table that declare
-nothing compare cleanly with each other: an undeclared unit is *unknown*, not
-*wrong*, and a check that fired on valid work would be switched off. The
-refusal fires only when two records both say what they are and disagree.
-"""
+Metric records carry a ``unit`` and ``estimand_version``. Their identity also
+records the model read, answer forms, scoring mode, and relevant options.
+Reduction code uses this information to check that measurements can be combined.
+Keep definitions synchronized with the metric implementation and reference tables."""
 
 from __future__ import annotations
 
 import dataclasses
+import json
 import math
 import re
 from typing import Any, Mapping, Sequence
@@ -56,7 +20,6 @@ __all__ = [
     "IDENTIFIER",
     "IDENTITY_COLUMNS",
     "METRIC_UNITS",
-    "PRODUCED_BY_COLUMN",
     "REDUCTION_ESTIMANDS",
     "Record",
     "ReductionEstimand",
@@ -115,10 +78,6 @@ IDENTIFIER = re.compile(
 #: The two identity columns a metric row and a reduced row carry, in order.
 IDENTITY_COLUMNS: tuple[str, ...] = ("unit", "estimand_version")
 
-#: The provenance column a metric row carries (the point digest, §7) and a
-#: reduced row carries through when its group came from one point.
-PRODUCED_BY_COLUMN = "produced_by"
-
 
 class EstimandError(ValueError):
     """A unit, an identifier or a claim is refused. Plain ``ValueError`` on
@@ -162,7 +121,7 @@ def metric_identity(kind: str) -> str:
 def metric_record_identity(
     kind: str, *, unit: Any = None, estimand_version: Any = None
 ) -> dict[str, Any]:
-    """The identity columns one metric row carries (``outputs.py``): the
+    """The identity columns one metric row carries (``neural/shared/results.py``): the
     authored ``unit`` / ``estimand_version`` when the document states them,
     the kind's own otherwise. Authored values are checked against the kind at
     parse (``schema.py``), so the two never disagree here."""
@@ -216,7 +175,7 @@ class ReductionEstimand:
 
 #: Every identifier a reduction block may declare. The first eight are the
 #: estimators' own — what an unauthored block is recorded as. The last two are
-#: the "normalized recovery" pair: the same value column, the same rows, two
+#: a pair: the same value column, the same rows, two
 #: different questions, so they may not share a name — and each is admissible
 #: only for the block that computes it, which is what rule 13 checks.
 REDUCTION_ESTIMANDS: tuple[ReductionEstimand, ...] = (
@@ -321,13 +280,12 @@ def reduction_unit(estimator: str, table_unit: str | None) -> str | None:
 @dataclasses.dataclass(frozen=True)
 class Record:
     """The identity of one metric record as a comparison sees it: a label
-    (a file, a step slot), its unit and estimand, and the point digest that
-    produced it. ``None`` is *undeclared*, never a unit of its own."""
+    (a file, a step slot), its unit and its estimand. ``None`` is
+    *undeclared*, never a unit of its own."""
 
     name: str
     unit: str | None = None
     estimand_version: str | None = None
-    produced_by: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -352,8 +310,8 @@ def compare(left: Record, right: Record) -> Comparison:
 
     An undeclared unit on either side is not a mismatch — two tables written
     before units existed, or a script's own table, compare as they always did.
-    The refusal is for two records that both say what they are and disagree:
-    ``fraction`` against ``percentage_points`` is the case this exists for."""
+    The refusal is for two records that both say what they are and disagree,
+    such as ``fraction`` against ``percentage_points``."""
     if left.unit is not None and right.unit is not None and left.unit != right.unit:
         raise EstimandError(
             f"unit mismatch: {left.name} is in {left.unit!r} and {right.name} is in "
@@ -387,26 +345,26 @@ def table_record(rows: Sequence[Mapping[str, Any]], *, name: str) -> Record:
             "reduced together with percentage points; reduce each unit on its own"
         )
     estimands = _column_values(rows, "estimand_version") - {None}
-    produced = _column_values(rows, PRODUCED_BY_COLUMN) - {None}
     return Record(
         name=name,
         unit=next(iter(units)) if units else None,
         estimand_version=next(iter(estimands)) if len(estimands) == 1 else None,
-        produced_by=next(iter(produced)) if len(produced) == 1 else None,
     )
 
 
 @dataclasses.dataclass(frozen=True)
 class Claim:
     """A number a report quotes, bound to the record it came from: the file,
-    the point digest stamped on the record (``produced_by``), the estimand
-    and the unit, and the value. Binding by ``produced_by`` rather than by
-    path is what makes a rerun visible — the path is unchanged when the
-    document that wrote it is not (the workflow layer's generated views are
-    the full version of this; here it is the binding and the refusal)."""
+    the row in it (``where``: a column → value mapping that selects the row —
+    a reduced row's ``group_by`` coordinates, say; empty for a one-row
+    table), the estimand and the unit, and the value. The binding is to the
+    record's *content*: a recomputation that changes the value, the unit or
+    the estimand at that row is refused naming file and coordinates. A rerun
+    that lands the same number at the same row is, by design, the same
+    record."""
 
     file: str
-    produced_by: str
+    where: Mapping[str, Any]
     estimand_version: str
     unit: str
     value: float
@@ -418,24 +376,39 @@ def check_claim(
     """Refuse a claim its record no longer supports.
 
     ``rows`` are the claim's file as it is *now*. The record is the row (one)
-    produced by the claim's point digest; it must carry the claim's unit and
+    the claim's ``where`` mapping selects; it must carry the claim's unit and
     estimand, and its ``value`` must equal the claim's within ``tolerance``
     (exact by default: a recomputation that reproduces writes the same JSON
-    number). Every refusal names the record — its file and the point digest —
-    so the stale sentence can be found from the message alone."""
-    where = f"{claim.file} (produced_by {claim.produced_by})"
-    bound = [row for row in rows if row.get(PRODUCED_BY_COLUMN) == claim.produced_by]
-    if not bound:
-        held = sorted(str(d) for d in _column_values(rows, PRODUCED_BY_COLUMN) - {None})
+    number). Every refusal names the record — its file and the selecting
+    columns — so the stale sentence can be found from the message alone."""
+    selection = json.dumps(dict(claim.where), sort_keys=True, default=str)
+    where = f"{claim.file} (where {selection})"
+    # a column the file no longer carries is a different table, not a match:
+    # a `where` entry binds a *present* column's value (a row without the
+    # column is not a row where it is None)
+    unknown = [k for k in claim.where if not any(k in row for row in rows)]
+    if unknown:
         raise EstimandError(
-            f"stale claim: {where} holds no record produced by that point — the "
-            f"file now carries {held or 'no produced_by at all'}; the document "
-            "that wrote it changed, so the quoted value binds to nothing"
+            f"stale claim: {where} names column(s) {unknown} that no row of the "
+            f"file carries — the document that wrote it changed, so the quoted "
+            "value binds to nothing"
+        )
+    bound = [
+        row
+        for row in rows
+        if all(k in row and row[k] == v for k, v in claim.where.items())
+    ]
+    if not bound:
+        raise EstimandError(
+            f"stale claim: {where} holds no row at those coordinates — the file "
+            f"now carries {len(rows)} row(s), none matching; the document that "
+            "wrote it changed, so the quoted value binds to nothing"
         )
     if len(bound) != 1:
         raise EstimandError(
             f"claim binds {len(bound)} rows in {where}; a claim binds one record — "
-            "reduce the table first (workflow spec §2.6) and bind the reduced row"
+            "reduce the table first (workflow spec §2.6) and bind the reduced row, "
+            "or name every column that singles it out"
         )
     record = table_record(bound, name=where)
     if record.unit != claim.unit:

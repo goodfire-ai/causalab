@@ -1,0 +1,20 @@
+{
+  "document": "protocols/mean_ablation.json",
+  "document_digest": "1ab131d3e55f200f86d3d004c8bfab913a6ea952ddbed6b485d42302a7a9a4f7",
+  "run_digest": "bcaa5178004d5f54cf603e42ed0f87fc4e5e357d1ee3b488189d7fccd4f7b089",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 17.4,
+  "metrics": {
+    "ld": {
+      "metric": "ld",
+      "unit": "logit",
+      "rows": 19,
+      "eligible_rows": 19,
+      "mean": 0.2365
+    }
+  }
+}

@@ -1,0 +1,8066 @@
+[
+  {
+    "component": "residual",
+    "layer": 0,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.04107864201068878,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 1,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 2.1079372345411684e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 2,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.019242646172642708,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 3,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.019062364473938942,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 4,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.02075769752264023,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 5,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.012531776912510395,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 6,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.014503182843327522,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 7,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.02527926303446293,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 8,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.04391035810112953,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 9,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.8792163133621216,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 10,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.26730799674987793,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 11,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.006264147348701954,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 12,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.0002063542779069394,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 13,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.00798849668353796,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 14,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.0028736810199916363,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 15,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.3195728361606598,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 16,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 5.476327351061627e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 17,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.00035555337672121823,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 18,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.09206059575080872,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 19,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.0002829537552315742,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 20,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.024965453892946243,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 21,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.0732722282409668,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 22,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.04945754632353783,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 23,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.005200990475714207,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 24,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.008254415355622768,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 25,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.00016427497030235827,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 26,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.4018535614013672,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 27,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.018748659640550613,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 28,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.1889076679944992,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 29,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.23281364142894745,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 30,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.7216549515724182,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 31,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9234031438827515,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 32,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9707422256469727,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 33,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9692103862762451,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 34,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9602157473564148,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 35,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9735543727874756,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 36,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9708552956581116,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 37,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9643879532814026,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 38,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9792585968971252,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 39,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9799894690513611,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 40,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9816312193870544,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 41,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9740771055221558,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 42,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9755688309669495,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 43,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9747426509857178,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 44,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9761441349983215,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 45,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.976506769657135,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 46,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9778099656105042,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 47,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9775426387786865,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 0,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.02691611647605896,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 1,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.018419725820422173,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 2,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.01907619647681713,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 3,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.019895249977707863,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 4,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.02055232599377632,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 5,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.017282748594880104,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 6,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.019131796434521675,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 7,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.022908082231879234,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 8,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.09044288843870163,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 9,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.8510119915008545,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 10,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9291939735412598,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 11,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9767270088195801,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 12,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9732561707496643,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 13,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9773469567298889,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 14,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.8790220022201538,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 15,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9473891258239746,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 16,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9413583278656006,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 17,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9684134125709534,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 18,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9897648096084595,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 19,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9854623079299927,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 20,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9784975647926331,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 21,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9842549562454224,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 22,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.6175079941749573,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 23,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9797853827476501,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 24,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9795927405357361,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 25,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9429007768630981,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 26,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9691512584686279,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 27,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9605568051338196,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 28,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9771161079406738,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 29,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9676373600959778,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 30,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9731729626655579,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 31,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9699099063873291,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 32,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9736139178276062,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 33,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9609265327453613,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 34,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9507943987846375,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 35,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9583287239074707,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 36,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9545886516571045,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 37,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9638732075691223,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 38,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9725350737571716,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 39,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9355552196502686,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 40,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9705276489257812,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 41,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9678593277931213,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 42,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9720978140830994,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 43,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9734548330307007,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 44,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9728418588638306,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 45,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9723120927810669,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 46,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.971869707107544,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 47,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9725005626678467,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 0,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.020320864394307137,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 1,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.00520749669522047,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 2,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.02224506251513958,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 3,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.009559644386172295,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 4,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.0401296503841877,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 5,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.010283668525516987,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 6,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.016316844150424004,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 7,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.009691092185676098,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 8,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.02011563815176487,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 9,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.021222958341240883,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 10,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.02020166628062725,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 11,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.28656497597694397,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 12,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9497985243797302,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 13,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.8161903023719788,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 14,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.8674409985542297,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 15,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9060192108154297,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 16,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9639716744422913,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 17,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9648236632347107,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 18,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9785482883453369,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 19,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9828773736953735,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 20,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9883231520652771,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 21,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9847834706306458,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 22,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9867011904716492,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 23,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9698660373687744,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 24,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9460362792015076,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 25,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9839392900466919,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 26,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763756990432739,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 27,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9463077783584595,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 28,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9779052138328552,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 29,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9697263240814209,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 30,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9709792137145996,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 31,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9796503782272339,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 32,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9751927256584167,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 33,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9725836515426636,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 34,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9733267426490784,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 35,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9792704582214355,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 36,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9737845063209534,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 37,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9778513312339783,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 38,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763410687446594,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 39,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9771561622619629,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 40,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9775443077087402,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 41,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9730990529060364,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 42,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9758307337760925,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 43,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9760178327560425,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 44,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9754966497421265,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 45,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.975143551826477,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 46,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9746971130371094,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 47,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9744967222213745,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 0,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.024448608979582787,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 1,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.0185785423964262,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 2,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.02271018736064434,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 3,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03308133780956268,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 4,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.011470912024378777,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 5,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.007422967813909054,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 6,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.0078031690791249275,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 7,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.022334735840559006,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 8,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.0027066105976700783,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 9,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03689232096076012,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 10,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.01917867362499237,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 11,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.023745890706777573,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 12,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.030730504542589188,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 13,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.02543163299560547,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 14,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.012936297804117203,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 15,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.027116429060697556,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 16,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.030752602964639664,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 17,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.030764756724238396,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 18,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.035795800387859344,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 19,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03755467012524605,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 20,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.029372138902544975,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 21,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03924783319234848,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 22,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.024834373965859413,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 23,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.016912857070565224,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 24,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.012839997187256813,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 25,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.021396519616246223,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 26,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.05204647406935692,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 27,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.031729500740766525,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 28,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03913022205233574,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 29,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.086815744638443,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 30,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.04946509748697281,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 31,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.06842240691184998,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 32,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.09172289818525314,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 33,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.1317802518606186,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 34,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.4428001046180725,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 35,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.5955095887184143,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 36,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.7536982297897339,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 37,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.7927740216255188,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 38,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.83636474609375,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 39,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.8848454356193542,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 40,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9264243841171265,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 41,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9653815031051636,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 42,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9644017815589905,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 43,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9680354595184326,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 44,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9685465693473816,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 45,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9700860977172852,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 46,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9674736261367798,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 47,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9771973490715027,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 0,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.14211568236351013,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 1,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9059904217720032,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 2,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9830939769744873,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 3,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.5857897400856018,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 4,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.6427879929542542,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 5,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9824451804161072,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 6,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.6694329977035522,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 7,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.859055757522583,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 8,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.7771074175834656,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 9,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.96774822473526,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 10,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9248887896537781,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 11,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9736834168434143,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 12,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9126600623130798,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 13,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9635685086250305,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 14,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.11846759915351868,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 15,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9805671572685242,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 16,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9589473009109497,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 17,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9842700958251953,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 18,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9778891801834106,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 19,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9591729044914246,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 20,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9641048908233643,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 21,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9714692831039429,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 22,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9660020470619202,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 23,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9329330921173096,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 24,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9555423855781555,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 25,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9279846549034119,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 26,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9620555639266968,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 27,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.8884050250053406,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 28,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.969005823135376,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 29,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9588217735290527,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 30,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9697622060775757,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 31,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.970946192741394,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 32,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9743701815605164,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 33,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9678223729133606,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 34,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9720067977905273,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 35,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9764670729637146,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 36,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9789304733276367,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 37,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9720930457115173,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 38,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9726169109344482,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 39,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9710546731948853,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 40,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9740374088287354,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 41,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9741082191467285,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 42,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9751126170158386,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 43,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9752514958381653,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 44,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9741277098655701,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 45,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9740496277809143,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 46,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9737010598182678,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 47,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9735050201416016,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 0,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.1659182757139206,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 1,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.6885231733322144,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 2,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.6922409534454346,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 3,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.678266704082489,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 4,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.49819445610046387,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 5,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.7167727947235107,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 6,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.14261525869369507,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 7,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.5065072774887085,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 8,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.01507915835827589,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 9,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9312299489974976,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 10,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9570766091346741,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 11,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9498085975646973,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 12,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.8766423463821411,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 13,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.949456512928009,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 14,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.41274240612983704,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 15,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.972098708152771,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 16,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9513364434242249,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 17,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9789764285087585,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 18,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.975152850151062,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 19,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9642849564552307,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 20,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9291591048240662,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 21,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9690319299697876,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 22,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9730923771858215,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 23,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9085966944694519,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 24,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9764556884765625,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 25,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.8357790112495422,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 26,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9641696810722351,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 27,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.7418636083602905,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 28,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.962574303150177,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 29,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9609588980674744,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 30,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9688652753829956,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 31,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9727405309677124,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 32,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9740448594093323,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 33,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9754147529602051,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 34,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9761993885040283,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 35,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9674772024154663,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 36,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9759517908096313,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 37,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9741072058677673,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 38,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9704006314277649,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 39,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9645347595214844,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 40,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9698845148086548,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 41,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9704205393791199,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 42,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9717910289764404,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 43,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9722017645835876,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 44,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9710983633995056,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 45,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.971085786819458,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 46,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9706935882568359,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 47,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9697315096855164,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 0,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 9.030308319779579e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 1,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.00010792817192850634,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 2,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.0008505703881382942,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 3,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 4.9929778469959274e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 4,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 1.6965382201306056e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 5,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.00041033103480003774,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 6,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.00019786122720688581,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 7,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.00037497837911359966,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 8,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 1.6580501323915087e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 9,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 3.790844971263141e-07,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 10,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 6.353777592948973e-08,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 11,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 3.438682142586913e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 12,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.00920057762414217,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 13,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 3.3498592983960407e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 14,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.4590481189079583e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 15,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 6.3450229390582535e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 16,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.002784545999020338,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 17,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.1273683614708716e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 18,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.0005922045093029737,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 19,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 9.162063179246616e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 20,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 5.365165634430014e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 21,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.00035033663152717054,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 22,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 7.127394201233983e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 23,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 8.6736683442723e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 24,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 6.545645737787709e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 25,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 3.689349057367508e-07,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 26,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.97255210170988e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 27,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.2984258407632296e-07,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 28,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 1.1905615792784374e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 29,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 1.8153970131606911e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 30,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 8.94717868504813e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 31,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 1.5879475085966988e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 32,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 4.5965693971083965e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 33,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 7.105401891749352e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 34,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 3.093746499871486e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 35,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 6.368161393766059e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 36,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 3.570062858671008e-07,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 37,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.0002089725894620642,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 38,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.3637114281882532e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 39,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 1.5965106285875663e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 40,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 7.726425366172407e-08,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 41,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.754777142399689e-06,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 42,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.194586159021128e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 43,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.593551471363753e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 44,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.593551471363753e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 45,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.593551471363753e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 46,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.593551471363753e-05,
+    "n": 1
+  },
+  {
+    "component": "residual",
+    "layer": 47,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.593551471363753e-05,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 0,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.007562009152024984,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 1,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.005083760712295771,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 2,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.004049479495733976,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 3,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.0036884373985230923,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 4,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.0041311741806566715,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 5,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.005916247610002756,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 6,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.03377426788210869,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 7,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9448010325431824,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 8,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9699034690856934,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 9,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.98130863904953,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 10,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.988602876663208,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 11,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9574608206748962,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 12,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9451299905776978,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 13,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9717636704444885,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 14,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9697684645652771,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 15,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.974155843257904,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 16,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9752572774887085,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 17,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9771514534950256,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 18,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9780527949333191,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 19,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.978725254535675,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 20,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9792039394378662,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 21,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9791553616523743,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 22,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9790392518043518,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 23,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9789000749588013,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 24,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9787105917930603,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 25,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9783784747123718,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 26,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9780765175819397,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 27,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9779245853424072,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 28,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9777987599372864,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 29,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9775661826133728,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 30,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9775100350379944,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 31,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9775258898735046,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 32,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9774277806282043,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 33,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9772891998291016,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 34,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9772011041641235,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 35,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9770305156707764,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 36,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9768697023391724,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 37,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.976773738861084,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 38,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9766142964363098,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 39,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9765022993087769,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 40,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.97642982006073,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 41,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9763873815536499,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 42,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9764583110809326,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 43,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9764887690544128,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 44,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9764959216117859,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 45,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9765052795410156,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 46,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9765690565109253,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 47,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9766181707382202,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 0,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.02706632949411869,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 1,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.02908618561923504,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 2,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.029658785089850426,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 3,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.028352869674563408,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 4,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.028113942593336105,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 5,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.02651548571884632,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 6,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.7702578902244568,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 7,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9530730843544006,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 8,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9569104313850403,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 9,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.970687747001648,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 10,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9689081311225891,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 11,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.975510835647583,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 12,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9751234650611877,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 13,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.975695788860321,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 14,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.97479647397995,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 15,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.974990963935852,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 16,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9750154614448547,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 17,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9741661548614502,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 18,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9754902124404907,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 19,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9768672585487366,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 20,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9750160574913025,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 21,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9757859110832214,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 22,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9749876856803894,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 23,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9759475588798523,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 24,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9763745665550232,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 25,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9759349822998047,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 26,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9765908718109131,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 27,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9770460724830627,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 28,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9765963554382324,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 29,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9759947061538696,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 30,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9758309721946716,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 31,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9752737879753113,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 32,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9748035669326782,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 33,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9746960997581482,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 34,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.974697470664978,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 35,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9745351076126099,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 36,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9742553234100342,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 37,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9743597507476807,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 38,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9749690294265747,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 39,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9749447703361511,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 40,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9750996828079224,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 41,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9751196503639221,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 42,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9750632047653198,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 43,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.975683867931366,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 44,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9755311608314514,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 45,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9754514098167419,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 46,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9756007194519043,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 47,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9759307503700256,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 0,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.01842542551457882,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 1,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.023886583745479584,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 2,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.02503596991300583,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 3,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.021571533754467964,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 4,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.02891325205564499,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 5,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.0185770932585001,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 6,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.0365314856171608,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 7,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9424153566360474,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 8,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9497438669204712,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 9,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.959866464138031,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 10,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9717938303947449,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 11,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9736668467521667,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 12,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9689381122589111,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 13,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9679415225982666,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 14,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9666433334350586,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 15,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9722946286201477,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 16,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.975000262260437,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 17,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9755434989929199,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 18,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9728469252586365,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 19,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9766507744789124,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 20,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9757410883903503,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 21,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9752878546714783,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 22,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9746325612068176,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 23,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9757481217384338,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 24,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763270616531372,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 25,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9762520790100098,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 26,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9766393303871155,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 27,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9769391417503357,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 28,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9769152402877808,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 29,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9770768284797668,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 30,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9770768284797668,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 31,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9770289063453674,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 32,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9771029949188232,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 33,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.976966917514801,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 34,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9768906831741333,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 35,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9767228960990906,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 36,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9765705466270447,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 37,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9764406085014343,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 38,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763826131820679,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 39,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9764623045921326,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 40,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9764264822006226,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 41,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763454794883728,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 42,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763838648796082,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 43,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.976382315158844,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 44,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.976375937461853,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 45,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763546586036682,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 46,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9762548208236694,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 47,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763014912605286,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 0,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03287314623594284,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 1,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.030456919223070145,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 2,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.027563733980059624,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 3,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.02510654740035534,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 4,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.02677636593580246,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 5,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.025889098644256592,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 6,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.643133819103241,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 7,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.5236672759056091,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 8,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.6547001600265503,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 9,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.8207963109016418,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 10,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.28948837518692017,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 11,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.060581110417842865,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 12,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03203403204679489,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 13,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.031390752643346786,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 14,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03174467384815216,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 15,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03357294201850891,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 16,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03949723765254021,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 17,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03592276945710182,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 18,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03443024680018425,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 19,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.04512147977948189,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 20,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.0557062141597271,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 21,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.15711817145347595,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 22,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.3422505855560303,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 23,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.7835472822189331,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 24,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.8377317786216736,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 25,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.7426294088363647,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 26,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.7956798672676086,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 27,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.8959106206893921,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 28,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9566522240638733,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 29,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9493975639343262,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 30,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9779416918754578,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 31,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9806422591209412,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 32,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9823164343833923,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 33,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9797795414924622,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 34,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9812902808189392,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 35,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.981713593006134,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 36,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9807060956954956,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 37,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9804383516311646,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 38,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9799289107322693,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 39,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9795281887054443,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 40,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9785418510437012,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 41,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.977925181388855,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 42,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9772760272026062,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 43,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9757927060127258,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 44,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9739065766334534,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 45,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9741585850715637,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 46,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9749491810798645,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 47,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9741102457046509,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 0,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9436145424842834,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 1,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9724480509757996,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 2,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9879094958305359,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 3,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9846934080123901,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 4,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9852957725524902,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 5,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9892793297767639,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 6,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9741685390472412,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 7,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9723940491676331,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 8,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9789918065071106,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 9,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.978293240070343,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 10,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9763737916946411,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 11,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.971774697303772,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 12,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9623404145240784,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 13,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9695600271224976,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 14,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9718047380447388,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 15,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9728744626045227,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 16,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9627429246902466,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 17,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9633733630180359,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 18,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9651658535003662,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 19,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.966992974281311,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 20,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9683305621147156,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 21,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9733308553695679,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 22,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9735059142112732,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 23,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9761715531349182,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 24,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9764784574508667,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 25,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.978756308555603,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 26,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9784653782844543,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 27,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9776194095611572,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 28,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.976900577545166,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 29,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9774093627929688,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 30,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9778417348861694,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 31,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9776971340179443,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 32,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9773966073989868,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 33,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9775403141975403,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 34,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9779014587402344,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 35,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9779722690582275,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 36,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9784438610076904,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 37,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9781838059425354,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 38,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9781237244606018,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 39,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9778159856796265,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 40,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9781872630119324,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 41,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9783545136451721,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 42,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9778413772583008,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 43,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9774104952812195,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 44,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9772655367851257,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 45,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9770853519439697,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 46,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.976725161075592,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 47,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9764119386672974,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 0,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.6244711875915527,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 1,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.7380350828170776,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 2,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.8075376749038696,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 3,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.8624200224876404,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 4,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.8545258045196533,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 5,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.8929160833358765,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 6,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9491233825683594,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 7,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9704290628433228,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 8,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9644851684570312,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 9,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9626734852790833,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 10,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9707131385803223,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 11,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9654968976974487,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 12,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9502667188644409,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 13,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9759519100189209,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 14,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9787344932556152,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 15,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9712725281715393,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 16,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9728800654411316,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 17,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9715846180915833,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 18,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9707650542259216,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 19,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9692395925521851,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 20,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9691248536109924,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 21,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9730939269065857,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 22,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.974704384803772,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 23,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.974254846572876,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 24,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9767246246337891,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 25,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9775506854057312,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 26,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9790574312210083,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 27,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9789549112319946,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 28,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9788095355033875,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 29,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.97808438539505,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 30,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9789530038833618,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 31,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9794341921806335,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 32,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9789574146270752,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 33,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9798216819763184,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 34,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9790197014808655,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 35,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9783434271812439,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 36,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9783734083175659,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 37,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9780157208442688,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 38,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9774230122566223,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 39,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9762643575668335,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 40,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9769991040229797,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 41,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.976851761341095,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 42,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9767695069313049,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 43,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9760141968727112,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 44,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9768152236938477,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 45,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9768220782279968,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 46,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.976669430732727,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 47,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9763258099555969,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 0,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.0005333988228812814,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 1,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.428333209536504e-05,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 2,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.06023512780666351,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 3,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.018797781318426132,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 4,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 2.156199570890749e-06,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 5,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.0015229824930429459,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 6,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.6709174513816833,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 7,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8876365423202515,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 8,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.5698444247245789,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 9,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.7100936770439148,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 10,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8080350756645203,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 11,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8023750185966492,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 12,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.824816107749939,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 13,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.896583080291748,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 14,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9075503945350647,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 15,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9190868735313416,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 16,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9019635915756226,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 17,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9344722628593445,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 18,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9404400587081909,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 19,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9069772362709045,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 20,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8964802622795105,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 21,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8902960419654846,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 22,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8992186188697815,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 23,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8658650517463684,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 24,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.847160279750824,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 25,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.6703513860702515,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 26,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.6590545177459717,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 27,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.5913727879524231,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 28,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.691300094127655,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 29,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.6272211670875549,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 30,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.685032308101654,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 31,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.7215902209281921,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 32,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.812929093837738,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 33,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.7826170921325684,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 34,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.7777835726737976,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 35,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8343256711959839,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 36,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8717086911201477,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 37,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9138104319572449,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 38,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9477276802062988,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 39,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9808881878852844,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 40,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9909526109695435,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 41,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9943878054618835,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 42,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9976556301116943,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 43,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9979627132415771,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 44,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.997856080532074,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 45,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9978036284446716,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 46,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9980219602584839,
+    "n": 1
+  },
+  {
+    "component": "mlp",
+    "layer": 47,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9981901049613953,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 0,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.975767970085144,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 1,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9743530750274658,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 2,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9735168814659119,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 3,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9730119109153748,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 4,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9728983640670776,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 5,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9728533625602722,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 6,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9730352759361267,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 7,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9730744361877441,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 8,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9740956425666809,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 9,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9746586084365845,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 10,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9747080206871033,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 11,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9756907820701599,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 12,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9759106636047363,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 13,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9759155511856079,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 14,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9758756160736084,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 15,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9760211706161499,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 16,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9760777950286865,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 17,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9759122729301453,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 18,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9760652184486389,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 19,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9759662747383118,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 20,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9760121703147888,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 21,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9759455323219299,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 22,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9758066534996033,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 23,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9759126901626587,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 24,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9758428931236267,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 25,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9756700396537781,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 26,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9755852818489075,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 27,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9754045605659485,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 28,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9753789305686951,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 29,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9756324887275696,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 30,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9754185080528259,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 31,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9753968715667725,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 32,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.975405216217041,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 33,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9753322005271912,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 34,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9752402305603027,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 35,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9751520752906799,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 36,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9750672578811646,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 37,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9752318859100342,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 38,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9751157760620117,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 39,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9749298095703125,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 40,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.97492516040802,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 41,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9750012159347534,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 42,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9755510091781616,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 43,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9757457375526428,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 44,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9759333729743958,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 45,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9760798811912537,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 46,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9762156009674072,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 47,
+    "position": 0,
+    "token": "The",
+    "p_ablated": 0.9763011336326599,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 0,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9761922955513,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 1,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9762299060821533,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 2,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9764779806137085,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 3,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9777682423591614,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 4,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9781100153923035,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 5,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.978080689907074,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 6,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9785547852516174,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 7,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9744648933410645,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 8,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9741642475128174,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 9,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9749099612236023,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 10,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9761354327201843,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 11,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9759290814399719,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 12,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.976250171661377,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 13,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9760863184928894,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 14,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9761378169059753,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 15,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9763848781585693,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 16,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9764061570167542,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 17,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9765064120292664,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 18,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.976549506187439,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 19,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9766039252281189,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 20,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9764286875724792,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 21,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.976515531539917,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 22,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9763240218162537,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 23,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.976303219795227,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 24,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9763610363006592,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 25,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9765554070472717,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 26,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9765151739120483,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 27,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9766407608985901,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 28,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9768736958503723,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 29,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9771161675453186,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 30,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9772328734397888,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 31,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9772361516952515,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 32,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9772102236747742,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 33,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9774282574653625,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 34,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9773086905479431,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 35,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9770879745483398,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 36,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9769794344902039,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 37,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9769206047058105,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 38,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9768054485321045,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 39,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9767332673072815,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 40,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.976632833480835,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 41,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9766427278518677,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 42,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9767065048217773,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 43,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.976579487323761,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 44,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9765335917472839,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 45,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9765030145645142,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 46,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9765579104423523,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 47,
+    "position": 1,
+    "token": "Space",
+    "p_ablated": 0.9765287041664124,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 0,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.971774697303772,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 1,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9664021134376526,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 2,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.8331301808357239,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 3,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.05082204192876816,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 4,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.03508102893829346,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 5,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.0339045375585556,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 6,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.035113897174596786,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 7,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.046943310648202896,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 8,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.17886203527450562,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 9,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9190459847450256,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 10,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763472080230713,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 11,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9820574522018433,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 12,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9821896553039551,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 13,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9826831817626953,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 14,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9813515543937683,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 15,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9803627133369446,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 16,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9794137477874756,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 17,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9787382483482361,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 18,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9785199761390686,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 19,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9779695272445679,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 20,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.977037787437439,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 21,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9767881631851196,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 22,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9765516519546509,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 23,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9764694571495056,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 24,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763700366020203,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 25,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763069748878479,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 26,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763408303260803,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 27,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763045907020569,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 28,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763972759246826,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 29,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9764020442962646,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 30,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.97639399766922,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 31,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763773083686829,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 32,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763770699501038,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 33,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763434529304504,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 34,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763349294662476,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 35,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763607978820801,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 36,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.976266622543335,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 37,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9762864112854004,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 38,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.976287305355072,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 39,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763228893280029,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 40,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763142466545105,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 41,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763578772544861,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 42,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.976341724395752,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 43,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9763799905776978,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 44,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9764053821563721,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 45,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9764227271080017,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 46,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.9764373302459717,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 47,
+    "position": 2,
+    "token": "Need",
+    "p_ablated": 0.976441502571106,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 0,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9582200646400452,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 1,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.8267841935157776,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 2,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.31187188625335693,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 3,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03694312646985054,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 4,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.032564543187618256,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 5,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.03048831783235073,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 6,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.029926780611276627,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 7,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.04006599634885788,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 8,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.048758864402770996,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 9,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.04938768595457077,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 10,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.12224790453910828,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 11,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.47323980927467346,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 12,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.2028886079788208,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 13,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.1460111439228058,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 14,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.12300026416778564,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 15,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.15469539165496826,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 16,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9012842774391174,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 17,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.953692615032196,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 18,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9675650596618652,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 19,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.975193440914154,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 20,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9780448079109192,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 21,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9817193150520325,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 22,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9825208783149719,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 23,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9839963316917419,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 24,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9844361543655396,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 25,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9769598245620728,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 26,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9674655199050903,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 27,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9688317179679871,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 28,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9698860049247742,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 29,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.96802818775177,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 30,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9694744944572449,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 31,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9685917496681213,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 32,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9636819958686829,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 33,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9630229473114014,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 34,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9545459747314453,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 35,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.967850387096405,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 36,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9749222993850708,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 37,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9754307866096497,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 38,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9750474095344543,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 39,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9758283495903015,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 40,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9754294157028198,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 41,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9754613637924194,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 42,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.97657710313797,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 43,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9768103361129761,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 44,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9767731428146362,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 45,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9770784974098206,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 46,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9767128825187683,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 47,
+    "position": 3,
+    "token": "le",
+    "p_ablated": 0.9765951037406921,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 0,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.975774347782135,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 1,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9759147763252258,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 2,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9748607873916626,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 3,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9747878313064575,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 4,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9761167764663696,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 5,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9766432642936707,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 6,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9772975444793701,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 7,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9792293310165405,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 8,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9788718819618225,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 9,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9779046773910522,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 10,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9777726531028748,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 11,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.977912425994873,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 12,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9741676449775696,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 13,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9745825529098511,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 14,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9736862778663635,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 15,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9729384183883667,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 16,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9726047515869141,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 17,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9727495908737183,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 18,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9726828932762146,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 19,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9727986454963684,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 20,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9727376103401184,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 21,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9740434288978577,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 22,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9755217432975769,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 23,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.975669264793396,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 24,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9755086898803711,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 25,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9755987524986267,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 26,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9752590656280518,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 27,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9750962853431702,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 28,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9749975800514221,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 29,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9742891192436218,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 30,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9742407202720642,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 31,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9744200706481934,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 32,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9744619727134705,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 33,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9746866822242737,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 34,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9749152064323425,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 35,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9750078916549683,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 36,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9749657511711121,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 37,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9752110242843628,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 38,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9749992489814758,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 39,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9755553007125854,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 40,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9757112264633179,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 41,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9757596850395203,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 42,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9758791327476501,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 43,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9758660793304443,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 44,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9759484529495239,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 45,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9759821891784668,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 46,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9760661125183105,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 47,
+    "position": 4,
+    "token": "is",
+    "p_ablated": 0.9760741591453552,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 0,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9781303405761719,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 1,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9746402502059937,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 2,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9747417569160461,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 3,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.99100261926651,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 4,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9912886619567871,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 5,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.992316722869873,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 6,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.989523708820343,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 7,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9897900223731995,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 8,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9899219870567322,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 9,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9898291230201721,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 10,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9746549725532532,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 11,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9731404781341553,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 12,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9738634824752808,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 13,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9722274541854858,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 14,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9699916243553162,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 15,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9714162945747375,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 16,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9704766273498535,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 17,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9693464636802673,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 18,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9687092900276184,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 19,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9697816967964172,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 20,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9692990779876709,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 21,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9666866660118103,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 22,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.965873122215271,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 23,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9682478308677673,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 24,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9704610705375671,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 25,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9708232283592224,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 26,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9728279709815979,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 27,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9735255837440491,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 28,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9722802042961121,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 29,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9703928828239441,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 30,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9708064198493958,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 31,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9702743887901306,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 32,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.969576358795166,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 33,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9705178737640381,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 34,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9704830646514893,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 35,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9721936583518982,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 36,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9727855324745178,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 37,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9735172986984253,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 38,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9725459814071655,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 39,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9731311798095703,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 40,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9730696678161621,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 41,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9732630848884583,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 42,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9743064641952515,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 43,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.974324107170105,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 44,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.974482536315918,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 45,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9747186303138733,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 46,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.9747980237007141,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 47,
+    "position": 5,
+    "token": "in",
+    "p_ablated": 0.974762499332428,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 0,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9705684781074524,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 1,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9677680730819702,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 2,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.955136239528656,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 3,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9168676137924194,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 4,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8179239630699158,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 5,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.782389760017395,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 6,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.7336050271987915,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 7,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.7872819304466248,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 8,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9459763765335083,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 9,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9630776047706604,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 10,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9606258869171143,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 11,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9644676446914673,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 12,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9698994755744934,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 13,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9743854403495789,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 14,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.973590075969696,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 15,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9710509181022644,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 16,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9694682359695435,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 17,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9719041585922241,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 18,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9681997895240784,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 19,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9661362171173096,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 20,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9620863795280457,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 21,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.957619309425354,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 22,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9512827396392822,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 23,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9547398686408997,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 24,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9528952836990356,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 25,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9306439757347107,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 26,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9318958520889282,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 27,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8829152584075928,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 28,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8669546246528625,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 29,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8416783809661865,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 30,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8683340549468994,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 31,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8052958846092224,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 32,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.6778663992881775,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 33,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.7264634966850281,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 34,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.6118798851966858,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 35,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.7702974677085876,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 36,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8309727907180786,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 37,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9232152700424194,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 38,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8315774202346802,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 39,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.852872371673584,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 40,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.8746396899223328,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 41,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9170761108398438,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 42,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9468171000480652,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 43,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9432691931724548,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 44,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9529190063476562,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 45,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9529654383659363,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 46,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9559381604194641,
+    "n": 1
+  },
+  {
+    "component": "attention",
+    "layer": 47,
+    "position": 6,
+    "token": "downtown",
+    "p_ablated": 0.9519426226615906,
+    "n": 1
+  }
+]

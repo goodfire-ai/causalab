@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from causalab.protocol.tables import write_table
+from causalab.io.tables import write_table
 
 __all__ = ["put_sidecar", "put_table", "run_step"]
 

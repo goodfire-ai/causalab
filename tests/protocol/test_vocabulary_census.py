@@ -71,11 +71,11 @@ from typing import get_args
 
 import pytest
 
-from causalab.protocol.errors import RULES, ParseError
+from causalab.protocol.rules.errors import RULES, ParseError
 
-from causalab.causal.pairs import GRADE_VALUES, GRADES
+from causalab.causal.pair_validation import GRADE_VALUES, GRADES
 from causalab.causal.scoring import PROTOCOL_MODES, SCORING_FIELDS, STRING_MODES
-from causalab.protocol.axes import AXIS_KINDS, RULE_KINDS
+from causalab.protocol.lowering import AXIS_KINDS, RULE_KINDS
 from causalab.protocol.engine import CAPABILITIES
 from causalab.protocol.registry import GROUP_SITE_SELECTORS
 from causalab.protocol.schema import (
@@ -93,6 +93,7 @@ from causalab.protocol.schema import (
     METRIC_FIELDS,
     METRIC_KINDS,
     OPTIONAL_METRIC_FIELDS,
+    PROTOCOL_VERSION,
     DRAW_KINDS,
     FORWARD_MASKS,
     GATE_AXES,
@@ -102,14 +103,18 @@ from causalab.protocol.schema import (
     parse_document,
     SAVE_REDUCTIONS,
 )
-from causalab.protocol.shapes import AxisKind
+from causalab.protocol.registry.shapes import AxisKind
 from causalab.workflow.document import is_workflow
 from tests._helpers import tracked
 from tests._helpers.tracked import tracked_files
+from tests.protocol._docs import saved
+
 
 pytestmark = pytest.mark.unit
 
 SPEC = Path(__file__).resolve().parents[2] / "docs" / "intervention_protocol.md"
+#: The spec's §6–8 and §9.1, moved beside it.
+INTERNALS = SPEC.with_name("intervention_protocol_internals.md")
 
 #: A markdown table row: the cells between the outer pipes. Leading
 #: whitespace is allowed because §2.12's table sits inside a list item.
@@ -118,7 +123,7 @@ ROW = re.compile(r"^[ \t]*\|(.+)\|\s*$", re.M)
 CODE = re.compile(r"`([^`]+)`")
 
 
-def _section(heading: str) -> str:
+def _section(heading: str, spec: Path = SPEC) -> str:
     """The text under ``heading``, up to the next heading of equal or lesser depth.
 
     "Or lesser" matters: §2.12 is the last `###` of §2, so stopping only at
@@ -126,8 +131,8 @@ def _section(heading: str) -> str:
     is exactly how this guard would have passed against the wrong table.
     """
     depth = len(heading) - len(heading.lstrip("#"))
-    body = SPEC.read_text().split(heading, 1)
-    assert len(body) == 2, f"{heading!r} is not in {SPEC.name}"
+    body = spec.read_text().split(heading, 1)
+    assert len(body) == 2, f"{heading!r} is not in {spec.name}"
     stop = re.compile(rf"^#{{1,{depth}}} ", re.M)
     end = stop.search(body[1])
     return body[1][: end.start()] if end else body[1]
@@ -146,7 +151,7 @@ def _rows(table: str) -> list[list[str]]:
 
 def _metric_table() -> list[list[str]]:
     """§2.10's kind table — the one whose header starts with ``kind``."""
-    section = _section("### 2.10 `metrics`")
+    section = _section("### 2.10 `aggregation`: reductions over a read")
     rows = _rows(section)
     start = next(index for index, row in enumerate(rows) if row[0] == "kind")
     body: list[list[str]] = []
@@ -176,6 +181,8 @@ def _fields(cell: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
     run is optional (``(+ optional `mode`)``). ``of`` is dropped: every kind
     has it, so ``METRIC_FIELDS`` does not carry it.
     """
+    if cell.strip() == "none":  # a kind with no value fields (`decode`)
+        return (), ()
     runs = CODE.findall(cell)
     assert runs, f"no backticked field list in {cell!r}"
     mandatory = tuple(
@@ -268,7 +275,7 @@ def _translation_table() -> list[list[str]]:
     """§2.10's translation table — the one whose header starts with ``task
     `string_mode```: a task's string mode → the ``mode`` a ``match`` metric
     declares over its table."""
-    rows = _rows(_section("### 2.10 `metrics`"))
+    rows = _rows(_section("### 2.10 `aggregation`: reductions over a read"))
     start = next(
         index
         for index, row in enumerate(rows)
@@ -324,7 +331,7 @@ def _grades_table() -> list[list[str]]:
     a backtick on purpose: the scanners above read a table's body as "rows
     until one whose first cell is not code", so a code-first header would be
     swallowed into the translation table that precedes this one."""
-    rows = _rows(_section("### 2.10 `metrics`"))
+    rows = _rows(_section("### 2.10 `aggregation`: reductions over a read"))
     start = next(
         index for index, row in enumerate(rows) if row[0] == "per-example `grade`"
     )
@@ -357,11 +364,11 @@ def test_grades_are_the_spec_table_and_map_onto_scoring_spec_grade() -> None:
         assert len(row) >= 3 and len(row[2]) > 15, f"the row for {row[0]} says nothing"
 
 
-def test_grade_is_not_matched() -> None:
-    """The spec's sentence: the metric flag and the per-example status are two
-    words for two facts, and the spec says so where the vocabulary is
-    tabulated."""
-    assert "`grade` is not `matched`" in _section("### 2.10 `metrics`")
+def test_grade_and_matched_have_definitions() -> None:
+    """Document the meaning of each output field beside its vocabulary."""
+    section = _section("### 2.10 `aggregation`: reductions over a read")
+    assert "`grade` describes" in section
+    assert "`matched` records whether the addressed token position existed" in section
 
 
 def test_the_scoring_fields_table_is_not_empty() -> None:
@@ -392,7 +399,7 @@ def test_scoring_spec_fields_match_the_tasks_readme() -> None:
 RETIRED_SCORING_SPELLINGS: tuple[str, ...] = ("match_modes", "declared_match_mode")
 RETIRED_SPELLING_HOMES: frozenset[str] = frozenset(
     {
-        "causalab/causal/causal_model.py",  # the derived views
+        "causalab/causal/model.py",  # the derived views
         "causalab/tasks/serialize.py",  # the manifest copy
         "causalab/tasks/README.md",  # documents both, and what they retired
         "docs/CODEBASE.md",  # the module map names the views
@@ -474,8 +481,8 @@ BANNED_PHRASES: tuple[str, ...] = (
     "intervention protocols",
     "run record",
     # the per-example status is `grade`; `criterion` / `qualification` are
-    # retired words, and nothing here is declared under the phrase used for
-    # the field before the census renamed it.
+    # the words for its parts, and nothing is declared under the field's
+    # earlier name, which the census renamed.
     "correctness qualification",
 )
 
@@ -495,7 +502,7 @@ BANNED_PHRASES: tuple[str, ...] = (
 #: ``Intervention Protocol`` (the format, legal) from ``intervention
 #: protocols`` (the objects, banned). The cost is that Title Case is a general
 #: bypass — ``Intervention Protocol documents`` masks to ``documents`` and no
-#: ban fires. Two edits in this PR are exactly that shape
+#: ban fires. Two lines in the tree are exactly that shape
 #: (`causalab/workflow/document.py:1`, `docs/CODEBASE.md:85`) and both are
 #: right, because they genuinely name the format; nothing here can tell them
 #: apart from capitalizing one's way out of a failure, so this is a rule about
@@ -517,9 +524,9 @@ ALLOWED_CONTEXTS: tuple[str, ...] = (
     "protocols/",
 )
 
-#: Directory prefixes the vocabulary does not reach, with the reason. Empty: no
-#: tree in the repo is knowingly on its own vocabulary (§11.1); kept as the seam
-#: a future carve-out would use, so the existence check below keeps guarding it.
+#: Directory prefixes the vocabulary does not reach, with the reason. Empty:
+#: no tracked directory is on its own vocabulary (§11.1). Kept as the seam a
+#: future carve-out would use, so the existence check below keeps guarding it.
 EXEMPT_PREFIXES: tuple[str, ...] = ()
 
 #: Files the vocabulary cannot reach, with the reason.
@@ -538,13 +545,14 @@ EXEMPT_FILES: frozenset[str] = frozenset({"tests/protocol/test_vocabulary_census
 #: instead of silently widening the exemption.
 #:
 #: A ``path``-form script step (a template outside the package, such as a
-#: workflow author's own ``summarize.py``) is hashed
+#: user's own ``summarize.py``) is hashed
 #: the same way but lives outside the package, so it is out of this census's
 #: scope rather than exempt from it.
 #:
 #: The modules these five *import* are **not** digest-bearing — a script's
 #: identity is its own bytes, and the package is runtime identity
-#: (`docs/workflow_protocol.md` §4.2, §7; `tests/workflow/test_closure_census.py`
+#: (`docs/workflow_protocol_internals.md` §4.2, `docs/workflow_protocol.md` §7;
+#: `tests/workflow/test_closure_census.py`
 #: freezes what they reach as a layering census) — so they are deliberately not
 #: exempt: a vocabulary fix in `causalab/protocol/schema.py` moves no digest
 #: and is ordinary prose this census may touch.
@@ -552,23 +560,18 @@ HASHED_SCRIPTS: frozenset[str] = frozenset(
     {
         "causalab/analysis/fit_pca.py",
         "causalab/analysis/harvest_difference.py",
-        "causalab/analysis/head_stats.py",
+        "causalab/analysis/random_mask.py",
         "causalab/io/plots/workflow_figures.py",
+        "causalab/workflow/scripts/reduce.py",
         "causalab/workflow/scripts/select.py",
     }
 )
 
-#: The spec's opening paragraph names all five nouns in one breath. It comes
-#: out of the corpus along with §11.1's own table: an enumeration is not a
-#: *use*, and leaving it in scores every term ≥ 1 for free — which is how a
-#: dead name passes a "no dead names" check.
-ENUMERATION = "The five nouns used throughout"
-
 #: What separates two words of a banned phrase in prose: **whitespace and
 #: presentation markup**, stated once. A reader sees ``**protocol** document``,
 #: ``protocol\n> document`` and ``protocol document`` as the same two words;
-#: the census has to as well. Three review rounds each widened this by one
-#: case — indentation, then a line-lead marker, then inline emphasis
+#: the census has to as well. It was widened three times, by one case each
+#: — indentation, then a line-lead marker, then inline emphasis
 #: (`demos/README.md:69` was live and green with two asterisks between the
 #: words) — which is the sign that the separator was being enumerated rather
 #: than defined. So:
@@ -588,14 +591,14 @@ MARKUP = r"[*_`]*"
 GAP = rf"{MARKUP}(?:[ \t]*\n[ \t]*(?:[>#*]+[ \t]*)?|[ \t]+){MARKUP}"
 
 #: §11.1's heading, as `_section` matches it.
-VOCABULARY_SECTION = "### 11.1 One word per object"
+VOCABULARY_SECTION = "### 11.1 Terms"
 
 
 def _tree_files() -> list[Path]:
     """Every **tracked** markdown and python file in the tree.
 
-    The whole tree, deliberately. Three review rounds each added one glob to an
-    *inclusion* list and each turned up one more hole — `causalab/**/*.py`,
+    The whole tree, deliberately. An *inclusion* list grew one glob at a time,
+    and each new glob turned up one more hole — `causalab/**/*.py`,
     then `causalab/**/*.md`, then the repo `README.md`, then `demos/` and
     `scripts/`. An inclusion list makes the next new directory a blind spot;
     scanning everything and naming the carve-outs makes it a failure. That is
@@ -788,7 +791,7 @@ def test_every_group_has_a_site_selector() -> None:
 
 # -- §3.2 named axes: the axis kinds and the rule kinds ------------------- #
 
-AXES_SECTION = "### 3.2 `axes` — correlated rows and dependent axes"
+AXES_SECTION = "### 3.2 `axes`: correlated rows and dependent axes"
 
 
 def _axes_table(first_header: str) -> list[str]:
@@ -832,7 +835,7 @@ def test_every_gate_axis_is_spelled_in_the_featurizer_section() -> None:
     fails here."""
     section = _section("### 2.5 `featurizers`")
     assert GATE_AXES == ("position",)
-    assert "**`axis`**" in section, "§2.5 has no `axis` bullet"
+    assert "`axis`" in section, "§2.5 does not describe `axis`"
     for axis in GATE_AXES:
         assert f"`{axis}`" in section, f"§2.5 does not spell axis {axis!r}"
 
@@ -904,7 +907,8 @@ def test_every_regularizer_kind_is_in_the_objective_row() -> None:
         assert f'{{"{kind}": names}}' in row, (
             f"§2.11's objective row does not spell {kind!r}"
         )
-    for key in ("weight", "metric"):
+    # an aggregation term is spelled by its bound read and its reduction (§2.10)
+    for key in ("weight", "read", "model", "aggregation"):
         assert f'"{key}"' in row, f"§2.11's objective row does not name the {key!r} key"
 
 
@@ -924,37 +928,23 @@ def test_the_five_names_are_defined_once_each() -> None:
     )
 
 
-def test_every_name_says_what_it_is_and_what_it_is_not() -> None:
-    """Three columns, and the third is the one that does the work: a term
-    defined only by what it means still collides with its neighbours."""
+def test_every_name_has_a_definition() -> None:
+    """Each term has a definition in the glossary."""
     for row in _vocabulary_table():
         term = row[0].strip("* ")
-        assert len(row) >= 3, f"§11.1's row for {term} has no 'is not' cell"
+        assert len(row) >= 2, f"§11.1's row for {term} has no definition"
         assert len(row[1]) > 20, f"§11.1 does not say what {term} means"
-        assert len(row[2]) > 15, f"§11.1 does not say what {term} is not"
 
 
 def test_every_normative_name_is_actually_used() -> None:
-    """A normative name nothing uses is a dead name, and a reader who never
-    meets it in prose will not adopt it.
-
-    Both places that merely *list* the five names — §11.1's table and the
-    spec's opening enumeration — come out of the corpus first. Counting them
-    is what let ``run receipt`` sit at zero substantive uses while its
-    predecessor, ``run record``, was still the word the docs actually used.
-    """
+    """Each glossary term is used elsewhere in the documentation."""
     corpus = "\n".join(path.read_text(errors="replace") for path in _corpus())
     table = _section(VOCABULARY_SECTION)
     assert table in corpus, "§11.1's table is not in the corpus it was cut from"
-    corpus = corpus.replace(table, "")
-    start = corpus.find(ENUMERATION)
-    assert start != -1, f"the spec no longer opens with {ENUMERATION!r}"
-    end = corpus.index("\n\n", start)
-    corpus = (corpus[:start] + corpus[end:]).lower()
+    corpus = corpus.replace(table, "").lower()
     for term in FIVE_NAMES:
         assert corpus.count(term) >= 1, (
-            f"§11.1 makes {term!r} normative but nothing outside its own table "
-            "and the spec's enumeration uses it"
+            f"§11.1 makes {term!r} normative but nothing outside its own table uses it"
         )
 
 
@@ -982,7 +972,7 @@ def test_the_overloaded_word_does_not_come_back() -> None:
 
 def test_the_carve_outs_all_still_exist() -> None:
     """A carve-out for a file that is gone is a widened blind spot, not a free
-    line — the same argument that retired the `research-protocol` exemption."""
+    line — the same argument that retired an earlier directory exemption."""
     for name in HASHED_SCRIPTS | EXEMPT_FILES:
         assert (ROOT / name).is_file(), f"{name} is exempt but does not exist"
     for prefix in EXEMPT_PREFIXES:
@@ -1018,8 +1008,8 @@ def test_the_frozen_scripts_are_the_hashed_ones() -> None:
 def nested_copy() -> Iterator[Path]:
     """An untracked second copy of an offending file, where a checkout puts one.
 
-    ``worktrees/`` is gitignored and is where a developer worktree lands — a
-    full copy of the tree, at which every root-anchored
+    ``worktrees/`` is gitignored and is where a developer's tooling may park
+    a git worktree — a full copy of the tree, at which every root-anchored
     carve-out misses. The probe is one file, not a tree, because one file is
     enough to show whether the enumeration is *tracked* or *present*. Removed
     afterwards, along with ``worktrees/`` itself if the fixture created it.
@@ -1095,9 +1085,9 @@ def test_the_gap_is_whitespace_and_presentation_markup(
 # The third closed vocabulary in §2, and by far the largest: 62 names. It is
 # the one a document addresses most often and the one most likely to grow, and
 # until now it had no guard — the metric kinds and the `reduce` verbs did.
-# A review of the audit PR that added the sentence "the census checks the set,
-# all 62 of them" caught that the sentence was describing a test that did not
-# exist. This is that test; the sentence is now true.
+# The spec's sentence "the census checks the set, all 62 of them" once
+# described a test that did not exist. This is that test; the sentence is now
+# true.
 #
 # Unlike §2.10 and §2.12 the list is prose, not a table — a single
 # `·`-separated run of backticked names — so it gets its own reader.
@@ -1174,7 +1164,7 @@ def _capability_rows(second_header: str) -> list[list[str]]:
     `` `pytorch_hooks` `` the per-engine one. Selecting on the wrong cell is
     how this guard would silently check the same table twice.
     """
-    rows = _rows(_section("## 8. Engine contract"))
+    rows = _rows(_section("## 8. Engine contract", INTERNALS))
     start = next(
         (
             index
@@ -1363,6 +1353,8 @@ def test_the_component_counts_match_each_engine() -> None:
 # statement to the rows, and the rows to the vocabulary.
 
 RUNNING_EXPERIMENTS = SPEC.parent / "running_experiments.md"
+#: The model page that carries the generated component table.
+QWEN36_PAGE = SPEC.parent / "qwen36_35b_a3b.md"
 
 
 def test_every_component_has_exactly_one_capability_row() -> None:
@@ -1379,15 +1371,16 @@ def test_every_component_has_exactly_one_capability_row() -> None:
         assert row.component == component
 
 
-#: The two engines' `components` sets as the base before the registry declared
-#: them (`pytorch_hooks/engine.py:63-67`, `nnsight_tracing/engine.py:74-76`):
-#: 50 and 49 names — then the one decided change applied: the
+#: The two engines' `components` sets as the engines declared them before the
+#: registry generated them (hand-written in `pytorch_hooks/engine.py` and
+#: `nnsight_tracing/engine.py`): 50 and 49 names — then one decided change
+#: applied: the
 #: eight `deltanet_*` spellings that named the reference engine's `delta_*`
 #: tensors are aliases (schema.DEPRECATED_COMPONENTS), so they leave the
 #: nnsight set and the eight `delta_*` names enter it (50 and 49 members
 #: still, 54 names in all). Listed, not derived, so that generating the sets
 #: from the rows is proven to reproduce the routing the suite was green on.
-PRE_PR22_PYTORCH_HOOKS_COMPONENTS: frozenset[str] = frozenset(
+PRE_REGISTRY_PYTORCH_HOOKS_COMPONENTS: frozenset[str] = frozenset(
     {
         "input_ids", "embeddings", "block_input", "attention_input_norm",
         "delta_qkv", "delta_gate", "delta_conv", "delta_query", "delta_key",
@@ -1406,7 +1399,7 @@ PRE_PR22_PYTORCH_HOOKS_COMPONENTS: frozenset[str] = frozenset(
         "lm_head",
     }
 )  # fmt: skip
-PRE_PR22_NNSIGHT_COMPONENTS: frozenset[str] = frozenset(
+PRE_REGISTRY_NNSIGHT_COMPONENTS: frozenset[str] = frozenset(
     {
         "input_ids", "embeddings", "block_input", "attention_input_norm",
         "attention_query_pre_rope", "attention_key_pre_rope",
@@ -1428,8 +1421,8 @@ PRE_PR22_NNSIGHT_COMPONENTS: frozenset[str] = frozenset(
 
 
 def test_the_pre_pr_literals_have_their_recorded_sizes() -> None:
-    assert len(PRE_PR22_PYTORCH_HOOKS_COMPONENTS) == 50
-    assert len(PRE_PR22_NNSIGHT_COMPONENTS) == 49
+    assert len(PRE_REGISTRY_PYTORCH_HOOKS_COMPONENTS) == 50
+    assert len(PRE_REGISTRY_NNSIGHT_COMPONENTS) == 49
 
 
 def test_engine_component_sets_are_generated_from_the_rows() -> None:
@@ -1454,11 +1447,11 @@ def test_the_generated_sets_equal_the_pre_pr_declarations() -> None:
 
     assert components_served_by(
         "pytorch_hooks"
-    ) == PRE_PR22_PYTORCH_HOOKS_COMPONENTS | {
+    ) == PRE_REGISTRY_PYTORCH_HOOKS_COMPONENTS | {
         "mlp_neuron_output",
         "expert_neuron_output",
     }
-    assert components_served_by("nnsight") == PRE_PR22_NNSIGHT_COMPONENTS | {
+    assert components_served_by("nnsight") == PRE_REGISTRY_NNSIGHT_COMPONENTS | {
         "mlp_neuron_output",
         "expert_neuron_output",
     }
@@ -1467,8 +1460,10 @@ def test_the_generated_sets_equal_the_pre_pr_declarations() -> None:
 def test_the_capability_verbs_are_byte_identical_to_the_base() -> None:
     """`requires()`'s coarse verbs — `writable_attention_probs` included, now
     generated from the rows' `write_capability` cell — are the base's tuple,
-    in the base's order, plus the three training verbs appended for fits (§2.11,
-    rule 30: what a fit authors that an engine's loop may not implement)."""
+    in the base's order, plus the three training verbs appended since (§2.11,
+    rule 30: what a fit authors that an engine's loop may not implement) and
+    `generation_writes` beside `generate` (§2.9 `writes_during_generation`:
+    a write hook kept installed across the decode steps)."""
     assert CAPABILITIES == (
         "grad",
         "paired_forward",
@@ -1476,6 +1471,7 @@ def test_the_capability_verbs_are_byte_identical_to_the_base() -> None:
         "writable_attention_probs",
         "pytorch_fn_local",
         "generate",
+        "generation_writes",
         "quantized_weights",
         "train_free_params",
         "train_loss_precision",
@@ -1495,10 +1491,10 @@ def test_component_streams_equal_the_rows() -> None:
     assert not hasattr(schema, "COMPONENT_STREAMS")
 
 
-def _running_experiments_table_rows() -> list[str]:
-    """The body rows of the §5 component tables in running_experiments.md,
+def _component_table_rows() -> list[str]:
+    """The body rows of the component tables on the Qwen3.6-35B-A3B page,
     as raw lines, so the comparison is row for row and cell for cell."""
-    text = RUNNING_EXPERIMENTS.read_text()
+    text = QWEN36_PAGE.read_text()
     start = text.index("**Model boundary (no `layer`)**")
     end = text.index("<!-- generated: end component-table -->")
     section = text[start:end]
@@ -1509,13 +1505,14 @@ def _running_experiments_table_rows() -> list[str]:
     ]
 
 
-def test_the_component_table_in_running_experiments_is_the_rendering() -> None:
-    """`docs/running_experiments.md` §5's component table equals
+def test_the_component_table_on_the_model_page_is_the_rendering() -> None:
+    """`docs/qwen36_35b_a3b.md`'s component table equals
     `registry.render_component_tables()` row for row — the docs table is
-    generated, and the committed text is the rendering call's output."""
+    generated, and a later change can swap the committed text for the
+    rendering call."""
     from causalab.protocol.registry import render_component_tables
 
-    committed = _running_experiments_table_rows()
+    committed = _component_table_rows()
     rendered = [
         line
         for line in render_component_tables().splitlines()
@@ -1523,20 +1520,20 @@ def test_the_component_table_in_running_experiments_is_the_rendering() -> None:
     ]
     assert len(committed) >= 54  # 62 before eight spellings became aliases
     assert committed == rendered, (
-        "docs/running_experiments.md §5's component table is not the rendering "
+        "docs/qwen36_35b_a3b.md's component table is not the rendering "
         "of registry.CAPABILITIES — regenerate it with "
         "registry.render_component_tables()"
     )
 
 
-def test_the_running_experiments_headings_are_the_rendering() -> None:
+def test_the_component_table_headings_are_the_rendering() -> None:
     """The group headings (with their layer counts) are rendered too."""
     from causalab.protocol.registry import render_component_tables
 
-    text = RUNNING_EXPERIMENTS.read_text()
+    text = QWEN36_PAGE.read_text()
     for line in render_component_tables().splitlines():
         if line.startswith("**"):
-            assert line in text, f"heading missing from running_experiments.md: {line}"
+            assert line in text, f"heading missing from qwen36_35b_a3b.md: {line}"
 
 
 def test_the_engine_component_counts_are_the_rendering() -> None:
@@ -1608,7 +1605,7 @@ def _capability_table(first_header: str) -> list[list[str]]:
 def test_reason_codes_match_spec() -> None:
     """§2.4's reason-code table is exactly `errors.REASON_CODES`, and every row
     says which code path (or which PR) emits it."""
-    from causalab.protocol.errors import REASON_CODES
+    from causalab.protocol.rules.errors import REASON_CODES
 
     rows = _capability_table("reason")
     tabulated = [row[0].strip("`") for row in rows]
@@ -1629,18 +1626,12 @@ _EMITS_REASON = re.compile(r"""(?:\breason=|\bunavailable\(\s*)["'](\w+)["']""")
 
 
 def test_reason_code_emitters_match_the_code() -> None:
-    """§2.4's emitter column and the code agree on *which* codes are emitted.
+    """The table marks unused reason codes as reserved.
 
-    The table marks a declared-but-unemitted code by saying so in its emitter
-    cell (the words ``not yet emitted``). That marker is held to the
-    source: a code some path emits — `reason="…"` on a refusal, or the
-    `unavailable("…", …)` value — must not be marked as future, and a code
-    marked as future must not be emitted anywhere under `causalab/`. Wiring a
-    code means rewriting its row in the same
-    commit, and the converse catches a row that claims an emitter that does
-    not exist.
+    Compare that marker with the codes emitted in refusals and unavailable
+    results. Adding an emitter requires an update to its documentation row.
     """
-    from causalab.protocol.errors import REASON_CODES
+    from causalab.protocol.rules.errors import REASON_CODES
 
     emitted: set[str] = set()
     for path in sorted(PACKAGE.rglob("*.py")):
@@ -1649,10 +1640,10 @@ def test_reason_code_emitters_match_the_code() -> None:
     declared_only = {
         row[0].strip("`")
         for row in _capability_table("reason")
-        if "not yet emitted" in row[1]
+        if row[1].strip().startswith("Reserved")
     }
     assert emitted == set(REASON_CODES) - declared_only, (
-        f"emitted in code but marked not yet emitted: {sorted(emitted & declared_only)}; "
+        f"emitted in code but marked as reserved: {sorted(emitted & declared_only)}; "
         f"marked as emitted but no code emits it: "
         f"{sorted(set(REASON_CODES) - declared_only - emitted)}"
     )
@@ -1670,7 +1661,7 @@ def test_predicates_match_spec_and_have_a_probe() -> None:
         f"only in the spec: {sorted(set(tabulated) - set(PREDICATES))}; "
         f"only in the code: {sorted(set(PREDICATES) - set(tabulated))}"
     )
-    from causalab.neural.shared.sites import _PREDICATE_PROBES  # imports torch
+    from causalab.neural.shared.model_tree import _PREDICATE_PROBES  # imports torch
 
     assert set(_PREDICATE_PROBES) == set(PREDICATES)
     used = {p for row in CAPABILITIES.values() for p in row.requires}
@@ -1687,7 +1678,8 @@ def test_tap_kinds_are_the_closed_vocabulary() -> None:
 
 def test_override_keys_and_packings_match_spec() -> None:
     """§2.4's two per-family tap table vocabularies are exactly the code's
-    (`registry.OVERRIDE_KEYS`, `registry.PACKINGS`)."""
+    (`registry.OVERRIDE_KEYS`, `registry.PACKINGS`) — the tap table's census
+    guard."""
     from causalab.protocol.registry import OVERRIDE_KEYS, PACKINGS
 
     keys = [row[0].strip("`") for row in _capability_table("override key")]
@@ -1768,7 +1760,7 @@ def test_the_family_table_in_running_experiments_is_the_rendering() -> None:
 
 def test_the_reason_code_carried_by_a_refusal_is_in_the_vocabulary() -> None:
     """No code path can invent a reason: the error classes check it."""
-    from causalab.protocol.errors import ProtocolError, ValidationError
+    from causalab.protocol.rules.errors import ProtocolError, ValidationError
 
     assert ProtocolError("P4", "x", reason="component_unavailable").reason
     with pytest.raises(AssertionError, match="unknown reason code"):
@@ -1779,7 +1771,7 @@ def test_the_reason_code_carried_by_a_refusal_is_in_the_vocabulary() -> None:
 
 # --------------------------------------------------------------------------- #
 # §2.5 — the featurizer families, the gate maps and the field legality table
-# (docs/DOCUMENTATION.md §2.4, R13/R14): the tables the method pages render
+# (docs/DOCUMENTATION.md): the tables the method pages render
 # are the tables the parser and the validator read, and they cover the model.
 # --------------------------------------------------------------------------- #
 
@@ -1830,7 +1822,7 @@ def test_every_authorable_field_has_a_legality_row() -> None:
 
 
 def test_every_featurizer_spec_field_has_an_attribute_doc() -> None:
-    """R14: every field of the protocol object model's featurizer record
+    """Every field of the protocol object model's featurizer record
     carries a ``#:`` attribute doc — the method pages pull them through the
     support-tables tool's ``attrs`` reader, so a missing one is a blank page
     entry."""
@@ -1878,32 +1870,20 @@ _GATE_FIELD_VALUES: dict[str, object] = {
 
 def _gate_document(gate: dict[str, object]) -> dict[str, object]:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "gpt2", "revision": "main"},
         "data": {
             "base": {"dataset": "d#train", "field": "input"},
             "counterfactual": {"dataset": "d#train", "field": "cf"},
         },
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {"input": "counterfactual", "reads": ["v"]}
+            },
             "sites": {"t": {"component": "attention_premix", "layers": [1]}},
             "featurizers": {"g": {"kind": "gate", **gate}},
-            "reads": {
-                "v": {
-                    "site": "t",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                    "featurizer": "g",
-                }
-            },
-            "save": [
-                {
-                    "value": "v",
-                    "model": "original",
-                    "input": "counterfactual",
-                    "file_path": "v.json",
-                }
-            ],
+            "reads": {"v": {"site": "t", "pos": -1, "featurizer": "g"}},
+            "save": [saved("v", "original_counterfactual", "v.json")],
         },
     }
 
@@ -1914,7 +1894,7 @@ def _gate_document(gate: dict[str, object]) -> dict[str, object]:
 def test_the_parser_refuses_exactly_what_the_legality_table_says(
     field: str, parametrization: str, loaded: bool
 ) -> None:
-    """R13: the table and the parser agree cell by cell. For every gate field,
+    """The table and the parser agree cell by cell. For every gate field,
     map and fit state, a document authoring the field parses if and only if
     ``FEATURIZER_FIELD_CONDITIONS`` lists the map for that state. The base
     document carries whatever else the state needs — a ``k_schedule`` on a
@@ -1928,7 +1908,11 @@ def test_the_parser_refuses_exactly_what_the_legality_table_says(
     if parametrization == "budget" and not loaded and field != "k_schedule":
         gate["k_schedule"] = _GATE_FIELD_VALUES["k_schedule"]
     if field == "pool" and loaded:
-        gate["top_k"] = _GATE_FIELD_VALUES["top_k"]
+        # a pooled readout needs a top_k — where the table lets this map have
+        # one; where it does not, the pool row itself is the refusal under test
+        top_k_legal = FEATURIZER_FIELD_CONDITIONS["top_k"].legal(loaded=True)
+        if top_k_legal is None or parametrization in top_k_legal:
+            gate["top_k"] = _GATE_FIELD_VALUES["top_k"]
     gate[field] = _GATE_FIELD_VALUES[field]
     legal = FEATURIZER_FIELD_CONDITIONS[field].legal(loaded=loaded)
     expected = legal is None or parametrization in legal

@@ -1,62 +1,59 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "The self-swap twin of corpus 02 (workflow spec 2.2): the interchange ('patched', swap v_cf) beside its bit-exact no-op ('self_swap', swap v_self - the same address read from 'original' on the model's own input), with the five reads certify_control decides the legs from saved beside them. No metric: the tiny tokenizers split the weekday answers, and the legs need none. Model and layer are corpus 02's; a run on tiny-random sets model.key and sites.target.layers (two layers deep)."
   },
-  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main"},
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
   "data": {
     "base": {"dataset": "weekdays/data#train", "field": "input"},
     "counterfactual": {"dataset": "weekdays/data#train", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "original_base": {"input": "base", "reads": ["v_self", "recv_original"]},
+      "patched": {"input": "base", "reads": ["recv_target"], "writes": ["patch"]},
+      "self_swap": {"input": "base", "reads": ["recv_control"], "writes": ["self_patch"]}
+    },
     "sites": {
       "target": {"component": "block_output", "layers": [18]},
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "v_cf": {"site": "target", "pos": -1, "model": "original", "input": "counterfactual"},
-      "v_self": {"site": "target", "pos": -1, "model": "original", "input": "base"},
-      "recv_target": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"},
-      "recv_control": {"site": "lm_head", "pos": -1, "model": "self_swap", "input": "base"},
-      "recv_original": {"site": "lm_head", "pos": -1, "model": "original", "input": "base"}
+      "v_cf": {"site": "target", "pos": -1},
+      "v_self": {"site": "target", "pos": -1},
+      "recv_target": {"site": "lm_head", "pos": -1},
+      "recv_control": {"site": "lm_head", "pos": -1},
+      "recv_original": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "patch": {"site": "target", "pos": -1, "do": {"swap": "v_cf"}},
       "self_patch": {"site": "target", "pos": -1, "do": {"swap": "v_self"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]},
-      "self_swap": {"input": "base", "writes": ["self_patch"]}
-    },
     "save": [
       {
-        "value": "v_cf",
-        "model": "original",
-        "input": "counterfactual",
+        "read": "v_cf",
+        "model": "original_counterfactual",
         "file_path": "operand.safetensors"
       },
       {
-        "value": "v_self",
-        "model": "original",
-        "input": "base",
+        "read": "v_self",
+        "model": "original_base",
         "file_path": "overwritten.safetensors"
       },
       {
-        "value": "recv_target",
+        "read": "recv_target",
         "model": "patched",
-        "input": "base",
         "file_path": "receiver_target.safetensors"
       },
       {
-        "value": "recv_control",
+        "read": "recv_control",
         "model": "self_swap",
-        "input": "base",
         "file_path": "receiver_control.safetensors"
       },
       {
-        "value": "recv_original",
-        "model": "original",
-        "input": "base",
+        "read": "recv_original",
+        "model": "original_base",
         "file_path": "receiver_original.safetensors"
       }
     ]

@@ -1,22 +1,24 @@
-"""The residual accounting through the readout adapter on the real hybrid
-tower (golden tier): the readout adapter must reproduce the accepted parity
-fixture without architecture branches specific to one study.
+"""The Hydra-effect residual accounting through the readout adapter on the
+real tower (golden tier): the readout adapter must reproduce the accepted
+parity fixture without model-specific architecture branches.
 
 ``Qwen/Qwen3.6-35B-A3B`` in bf16 on cuda — the same accounting as the CPU
-tier (``tests/neural/shared/test_readout.py``, through
+tier (``tests/analysis/test_readout.py``, through
 ``tests/_helpers/readout_accounting.py``), the same assertion shape: the
 adapter's readout is the engine's ``lm_head`` read bit for bit; the closure
 is at the reference projection's noise floor with both declared rounding
 terms; each rounding term is within the declared band of bf16 roundoff at the
 value's magnitude; and dropping either term breaks the closure by exactly
-that term. On this fixture both rounding terms sit far above the fp64 floor
-and well under the band — that shape is what this test expects (exhibited,
-not pinned).
+that term. An earlier version of this accounting, *with* architecture
+branches, measured this fixture at closure 1.4e-14, without-norm 1.9e-2 and
+without-head 5.7e-2 — those numbers are the shape this test expects
+(exhibited, well under the band), not pins.
 
 One model resident, in this module only: the bundle is module-scoped, and
 ``tests/golden/conftest.py`` empties the loader caches and drains the
 accelerator at both module boundaries — this module sorts after
-``test_paper_goldens.py`` and would otherwise meet their cached models.
+``test_paper_goldens.py`` and hit a CUDA OOM on their cached models before
+the boundary owned that.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from causalab.neural.shared.readout import CERTIFICATION_ULPS, Readout, unit_roundoff
+from causalab.analysis.logit_lens import CERTIFICATION_ULPS, Readout, unit_roundoff
 from causalab.protocol.registry import DOCS_TABLE_MODEL
 
 from tests._helpers import readout_accounting as accounting
@@ -68,7 +70,7 @@ def test_the_accounting_closes_with_both_terms_and_breaks_without_either(acc):
 
 
 def test_the_fixture_exhibits_both_rounding_terms_at_bf16_scale(acc):
-    """The shape the fixture exhibits: both terms are bf16 roundings of their
+    """The shape the earlier version measured: both terms are bf16 roundings of their
     values — far above the fp64 floor, under the band — and the dropped
     closures are those terms."""
     roundoff = unit_roundoff(torch.bfloat16)

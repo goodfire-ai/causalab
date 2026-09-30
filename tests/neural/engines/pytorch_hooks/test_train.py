@@ -15,13 +15,13 @@ from typing import Any
 import pytest
 import torch
 
-from causalab.protocol.engine import ExecutionRequest
+from causalab.protocol.engine import RunContext
 from causalab.protocol.schema import parse_document
-from causalab.protocol.validate import validate_document
+from causalab.protocol.rules.document import validate_document
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
-from tests.protocol._docs import in_order
+from tests.protocol._docs import UNWRITTEN, by_label, in_order, saved, term
 
 pytestmark = pytest.mark.unit
 
@@ -39,13 +39,35 @@ COUNTERFACTUALS = [
 ]
 ANSWERS = [" one", " two", " three", " four"]
 
+#: The fits' one aggregation (§2.10): the cross-entropy of the patched logits
+#: against the row's ``label`` — the objective's term, and the table
+#: ``ce.json`` (label ``ce``) every training document saves.
+CE: dict[str, Any] = {
+    "kind": "cross_entropy",
+    "target": "label",
+}
+
+
+def ce_term(**extra: Any) -> dict[str, Any]:
+    """An objective or eval term reducing the patched logits by `CE`."""
+    return term("logits", "patched", dict(CE), **extra)
+
+
+def ce_save() -> dict[str, Any]:
+    """The save entry tabulating `CE` as ``ce.json``."""
+    return saved("logits", "patched", "ce.json", dict(CE))
+
 
 def das_doc(*, seed: int = 0, epochs: int = 2) -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "sites": {
                 "tgt": {"component": "block_output", "layers": [0]},
                 "lm_head": {"component": "lm_head"},
@@ -54,19 +76,8 @@ def das_doc(*, seed: int = 0, epochs: int = 2) -> dict:
                 "rot": {"kind": "subspace", "k": 4, "parametrization": "cayley"}
             },
             "reads": {
-                "v_cf": {
-                    "site": "tgt",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "counterfactual",
-                    "featurizer": "rot",
-                },
-                "logits": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tgt", "pos": {"index": -1}, "featurizer": "rot"},
+                "logits": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {
                 "patch": {
@@ -76,17 +87,8 @@ def das_doc(*, seed: int = 0, epochs: int = 2) -> dict:
                     "do": {"swap": "v_cf"},
                 }
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "metrics": {
-                "ce": {
-                    "kind": "cross_entropy",
-                    "of": "logits",
-                    "target": "label",
-                    "token_form": "space_prefixed",
-                }
-            },
             "train": {
-                "objective": [[1.0, "ce"]],
+                "objective": [[1.0, ce_term()]],
                 "params": ["rot"],
                 "optimizer": {"name": "adamw", "lr": 1e-2, "weight_decay": 0.0},
                 "steps": {"epochs": epochs},
@@ -94,12 +96,7 @@ def das_doc(*, seed: int = 0, epochs: int = 2) -> dict:
                 "seed": seed,
             },
             "save": [
-                {
-                    "value": "ce",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "ce.json",
-                },
+                ce_save(),
                 {"value": "rot", "site": "tgt", "file_path": "rot.safetensors"},
             ],
         },
@@ -117,7 +114,7 @@ class _NoDatasets:
 def _fit(doc_raw: dict) -> dict[str, torch.Tensor]:
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -128,12 +125,7 @@ def _fit(doc_raw: dict) -> dict[str, torch.Tensor]:
         extra_columns={"label": ANSWERS},
         grad_enabled=False,
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -181,21 +173,16 @@ def test_das_fit_reduces_its_own_objective():
         )
         if fit:
             from causalab.neural.engines.pytorch_hooks.train import run_training
-            from causalab.protocol.resolve import ResolutionEnv
+            from causalab.io.env import ResolutionEnv
 
-            request = ExecutionRequest(
-                points=(),
-                canonical=(),
-                digests=(),
-                coords=(),
-                document_digest="0" * 64,
+            request = RunContext(
                 env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
                 output_dir=None,  # type: ignore[arg-type]
             )
             run_training(executor.doc, executor, request)
             executor.reset_reads()
         values = compute_metric(
-            executor.doc.metrics["ce"],
+            by_label(executor.doc)["ce"],
             executor.dense_value("logits"),
             executor.rows_for_metrics(),
             bundle.tokenizer,
@@ -210,24 +197,11 @@ def _margin_doc(weight: float, kind: str) -> dict:
     between the row's label and a fixed wrong token — as the only objective
     term, at the authored `weight`."""
     doc = das_doc(seed=0, epochs=4)
-    doc["method"]["metrics"] = {
-        "margin": {
-            "kind": kind,
-            "of": "logits",
-            "a": "label",
-            "b": "wrong",
-            "token_form": "space_prefixed",
-        }
-    }
+    margin = {"kind": kind, "a": "label", "b": "wrong"}
     doc["method"]["train"]["objective"] = {
-        "fit": {"weight": weight, "metric": "margin"}
+        "fit": term("logits", "patched", dict(margin), weight=weight)
     }
-    doc["method"]["save"][0] = {
-        "value": "margin",
-        "model": "patched",
-        "input": "base",
-        "file_path": "margin.json",
-    }
+    doc["method"]["save"][0] = saved("logits", "patched", "margin.json", margin)
     return doc
 
 
@@ -248,21 +222,16 @@ def _mean_margin(doc_raw: dict, *, fit: bool) -> float:
     )
     if fit:
         from causalab.neural.engines.pytorch_hooks.train import run_training
-        from causalab.protocol.resolve import ResolutionEnv
+        from causalab.io.env import ResolutionEnv
 
-        request = ExecutionRequest(
-            points=(),
-            canonical=(),
-            digests=(),
-            coords=(),
-            document_digest="0" * 64,
+        request = RunContext(
             env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
             output_dir=None,  # type: ignore[arg-type]
         )
         run_training(executor.doc, executor, request)
         executor.reset_reads()
     values = compute_metric(
-        executor.doc.metrics["margin"],
+        by_label(executor.doc)["margin"],
         executor.read_value("logits"),
         executor.rows_for_metrics(),
         bundle.tokenizer,
@@ -274,7 +243,7 @@ def _mean_margin(doc_raw: dict, *, fit: bool) -> float:
 def test_a_negative_weight_maximizes_a_margin_term(kind):
     """A metric term's weight is signed (spec §2.11): the loop minimizes
     `Σ w · term`, so `-1` on a margin drives the margin *up* — MIB's objective
-    on `logit_diff`, a soft-accuracy objective on `soft_accuracy` — and `+1` drives it
+    on `logit_diff`, a sigmoid of the margin on `soft_accuracy` — and `+1` drives it
     down. Both directions are asserted so the test cannot pass on a fit that
     ignores the weight."""
     before = _mean_margin(_margin_doc(-1.0, kind), fit=False)
@@ -298,7 +267,7 @@ def test_the_soft_accuracy_objective_is_the_saved_tables_twin():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS, "wrong": WRONG},
     )
-    metric = executor.doc.metrics["margin"]
+    metric = by_label(executor.doc)["margin"]
     logits = executor.read_value("logits")
     rows = executor.rows_for_metrics()
     saved = compute_metric(metric, logits, rows, bundle.tokenizer)
@@ -314,10 +283,10 @@ def dbm_doc() -> dict:
     doc["method"]["reads"]["v_cf"]["featurizer"] = "gate"
     doc["method"]["writes"]["patch"]["featurizer"] = "gate"
     doc["method"]["train"]["params"] = ["gate"]
-    doc["method"]["train"]["objective"] = [[1.0, "ce"], [0.01, {"l1": "gate"}]]
+    doc["method"]["train"]["objective"] = [[1.0, ce_term()], [0.01, {"l1": "gate"}]]
     doc["method"]["train"]["anneal"] = {"gate.theta.temperature": [1.0, 0.01, 0.5]}
     doc["method"]["save"] = [
-        {"value": "ce", "model": "patched", "input": "base", "file_path": "ce.json"},
+        ce_save(),
         {"value": "gate", "site": "tgt", "file_path": "gate.safetensors"},
     ]
     return doc
@@ -326,7 +295,7 @@ def dbm_doc() -> dict:
 def test_dbm_fit_trains_theta_and_anneals_temperature():
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -336,12 +305,7 @@ def test_dbm_fit_trains_theta_and_anneals_temperature():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -364,13 +328,8 @@ def _gate_at_two_sites_doc(*, tied: bool, lr: float = 0.1) -> dict:
     if not tied:
         method["featurizers"]["g1"] = {"kind": "gate"}
     method["reads"]["v_cf"]["featurizer"] = "g0"
-    method["reads"]["v2"] = {
-        "site": "tgt2",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": second,
-    }
+    method["reads"]["v2"] = {"site": "tgt2", "pos": -1, "featurizer": second}
+    method["intervened_models"][UNWRITTEN]["reads"].append("v2")
     method["writes"]["patch"]["featurizer"] = "g0"
     method["writes"]["patch2"] = {
         "site": "tgt2",
@@ -380,12 +339,12 @@ def _gate_at_two_sites_doc(*, tied: bool, lr: float = 0.1) -> dict:
     }
     method["intervened_models"]["patched"]["writes"] = ["patch", "patch2"]
     method["train"]["params"] = ["g0"] if tied else ["g0", "g1"]
-    method["train"]["objective"] = [[1.0, "ce"]]
+    method["train"]["objective"] = [[1.0, ce_term()]]
     method["train"]["optimizer"] = {"name": "sgd", "lr": lr}
     method["train"]["steps"] = {"updates": 1}
     method["train"].pop("anneal", None)
     method["save"] = [
-        {"value": "ce", "model": "patched", "input": "base", "file_path": "ce.json"},
+        ce_save(),
         {"value": "g0", "site": "tgt", "file_path": "g0.safetensors"},
     ] + (
         [] if tied else [{"value": "g1", "site": "tgt2", "file_path": "g1.safetensors"}]
@@ -403,7 +362,7 @@ def test_one_gate_named_at_two_sites_is_one_stage_and_sums_the_gradients_of_both
     one name, and `train.params` and `save` named it once."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
 
@@ -420,12 +379,7 @@ def test_one_gate_named_at_two_sites_is_one_stage_and_sums_the_gradients_of_both
             assert executor.stage("g0") is executor.stage("g0")
         else:
             assert executor.stage("g1") is not executor.stage("g0")
-        request = ExecutionRequest(
-            points=(),
-            canonical=(),
-            digests=(),
-            coords=(),
-            document_digest="0" * 64,
+        request = RunContext(
             env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
             output_dir=None,  # type: ignore[arg-type]
         )
@@ -458,13 +412,13 @@ def test_parameter_count_costs_under_sum_fit_exactly_as_the_mean_does():
     by the wrong count."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
 
     def outcome(regularizer: dict):
         doc = dbm_doc()
-        doc["method"]["train"]["objective"] = [[1.0, "ce"], [0.01, regularizer]]
+        doc["method"]["train"]["objective"] = [[1.0, ce_term()], [0.01, regularizer]]
         doc["method"]["save"].append(
             {
                 "kind": "trajectory",
@@ -479,12 +433,7 @@ def test_parameter_count_costs_under_sum_fit_exactly_as_the_mean_does():
             counterfactual_texts=COUNTERFACTUALS,
             extra_columns={"label": ANSWERS},
         )
-        request = ExecutionRequest(
-            points=(),
-            canonical=(),
-            digests=(),
-            coords=(),
-            document_digest="0" * 64,
+        request = RunContext(
             env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
             output_dir=None,  # type: ignore[arg-type]
         )
@@ -515,11 +464,11 @@ def test_a_constraint_ascends_its_duals_toward_the_target_density():
     target, the duals' start and end and the last density."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     doc = dbm_doc()
     doc["method"]["train"]["objective"] = {
-        "fit": {"weight": 1.0, "metric": "ce"},
+        "fit": ce_term(weight=1.0),
         "density": {"l1": "gate", "constraint": {"target": 0.1, "dual": {"lr": 0.5}}},
     }
     # plain SGD, so the duals' ascent is exactly lr · gradient and can be pinned
@@ -535,12 +484,7 @@ def test_a_constraint_ascends_its_duals_toward_the_target_density():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -590,11 +534,11 @@ def test_a_constraint_holds_the_costed_density_and_its_duals_take_no_momentum():
     way; the second is not)."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     doc = dbm_doc()
     doc["method"]["train"]["objective"] = {
-        "fit": {"weight": 1.0, "metric": "ce"},
+        "fit": ce_term(weight=1.0),
         "density": {
             "l1": "gate",
             "costs": {"gate": 2.0},
@@ -610,12 +554,7 @@ def test_a_constraint_holds_the_costed_density_and_its_duals_take_no_momentum():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -644,7 +583,7 @@ def _drawn_executor(
     fixed ``eval`` member as the field. ``interning`` is the campaign store
     handle, when the test is about the store."""
     from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
-    from causalab.protocol.validate import validate_document
+    from causalab.protocol.rules.document import validate_document
 
     parsed = parse_document(in_order(doc))
     validate_document(parsed, engine_is_local=True)
@@ -690,14 +629,9 @@ def _drawn_dbm_doc(*, draw: bool, eval_member: int | None = None) -> dict:
 
 def _train(executor):
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -783,31 +717,20 @@ def test_a_drawn_role_takes_ragged_member_counts_and_a_nonzero_eval_with_sibling
     assert len(outcome.checkpoints) == 3
 
 
-def test_a_drawn_role_refuses_prepared_encodings_and_a_mismatched_sibling():
-    """A `<column>_encoding` sibling would make the fit train on a
-    re-tokenization while the point reads the prepared frame — refused at
-    prepare (P4), as `segments` is. A `<column>_…` list whose length is not
-    the member count is a per-member sibling that does not match — refused
-    (P2) rather than left whole for the document to read member 0 of."""
+def test_a_mismatched_per_member_sibling_is_refused():
+    """A `<column>_…` list whose length is not the member count is a
+    per-member sibling that does not match — refused (P2) rather than left
+    whole for the document to read member 0 of. `segments` (a declared frame)
+    does not combine with a re-encoded role (P4)."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import (
         _check_member_siblings,
         _drawn_row,
     )
-    from causalab.protocol.errors import ProtocolError
+    from causalab.protocol.rules.errors import ProtocolError
 
     bundle = load_model(TINY_LLAMA)
     two = [[cf, f"{cf} again"] for cf in COUNTERFACTUALS]
-    with pytest.raises(ProtocolError) as err:
-        _train(
-            _drawn_executor(
-                _drawn_dbm_doc(draw=True),
-                bundle,
-                two,
-                extra={"counterfactual_inputs_encoding": [[[1], [2]]] * len(BASES)},
-            )
-        )
-    assert err.value.code == "P4" and "prepared inputs" in str(err.value)
     row = {
         "input": "x",
         "counterfactual_inputs": ["p", "q", "r"],
@@ -862,10 +785,10 @@ def chain_doc(lr) -> dict:
     doc["method"]["reads"]["v_cf"]["featurizer"] = ["rot", "gate"]
     doc["method"]["writes"]["patch"]["featurizer"] = ["rot", "gate"]
     doc["method"]["train"]["params"] = ["rot", "gate"]
-    doc["method"]["train"]["objective"] = [[1.0, "ce"], [0.01, {"l1": "gate"}]]
+    doc["method"]["train"]["objective"] = [[1.0, ce_term()], [0.01, {"l1": "gate"}]]
     doc["method"]["train"]["optimizer"] = {"name": "adamw", "lr": lr}
     doc["method"]["save"] = [
-        {"value": "ce", "model": "patched", "input": "base", "file_path": "ce.json"},
+        ce_save(),
         {"value": "rot", "site": "tgt", "file_path": "rot.safetensors"},
         {"value": "gate", "site": "tgt", "file_path": "gate.safetensors"},
     ]
@@ -875,7 +798,7 @@ def chain_doc(lr) -> dict:
 def _fit_chain(lr):
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -885,12 +808,7 @@ def _fit_chain(lr):
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -923,9 +841,9 @@ def test_early_stop_returns_the_best_fit_not_the_last(monkeypatch):
 
     Nothing snapshotted the parameters: ``best`` was tracked, the loop broke
     after ``patience`` non-improving evals, and the stages returned were the
-    **last** ones — the worst of the tail. A run that sits at held-out 1.000
-    at every seed has last and best coincide *at ceiling*; that is luck,
-    not a property, and off ceiling nothing in the saved bundle says which
+    **last** ones — the worst of the tail. A fit that scores held-out
+    1.000 at every seed has last and best coinciding *at ceiling*; that is
+    luck, not a property, and off ceiling nothing in the saved bundle says which
     weights you have.
 
     The eval score is scripted here rather than engineered out of a random
@@ -934,16 +852,16 @@ def test_early_stop_returns_the_best_fit_not_the_last(monkeypatch):
     """
     from causalab.neural.engines.pytorch_hooks import train as train_module
     from causalab.neural.engines.pytorch_hooks.loading import load_model
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     doc_raw = das_doc(seed=0, epochs=5)
     doc_raw["method"]["train"]["eval"] = {
         "every": {"epochs": 1},
         "split": "weekdays/data#test",
-        "metrics": ["ce"],
+        "aggregations": {"ce": ce_term()},
     }
     doc_raw["method"]["train"]["early_stop"] = {
-        "metric": "ce",
+        "on": "ce",
         "patience": 10,
         "mode": "max",
     }
@@ -967,12 +885,7 @@ def test_early_stop_returns_the_best_fit_not_the_last(monkeypatch):
         extra_columns={"label": ANSWERS},
         grad_enabled=False,
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -997,13 +910,13 @@ def test_without_early_stop_the_last_fit_is_the_one_returned(monkeypatch):
     rather than leaving a reader to guess."""
     from causalab.neural.engines.pytorch_hooks import train as train_module
     from causalab.neural.engines.pytorch_hooks.loading import load_model
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     doc_raw = das_doc(seed=0, epochs=3)
     doc_raw["method"]["train"]["eval"] = {
         "every": {"epochs": 1},
         "split": "weekdays/data#test",
-        "metrics": ["ce"],
+        "aggregations": {"ce": ce_term()},
     }
 
     scores = [0.1, 0.9, 0.2]
@@ -1025,12 +938,7 @@ def test_without_early_stop_the_last_fit_is_the_one_returned(monkeypatch):
         extra_columns={"label": ANSWERS},
         grad_enabled=False,
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1046,19 +954,82 @@ def test_without_early_stop_the_last_fit_is_the_one_returned(monkeypatch):
     assert outcome.eval_score.passes == 3
 
 
+def test_max_mode_on_a_falling_metric_stops_at_patience_plus_two(monkeypatch):
+    """The early-stop arithmetic the graph-cohort goldens' fixture rests on
+    (``tests/golden/test_graph_cohort.py``, ``_early_stop_docs``): the first
+    eval improves because nothing precedes it, a later eval that does not
+    beat the best is stale — a tie included, the comparison is strict — and
+    the fit stops once ``stale > patience``. So ``mode: max`` on a metric
+    that only falls stops at pass ``patience + 2`` whatever the curve's
+    shape, and the weights that come back are the first eval's. Scripted
+    scores, as above: the arithmetic is under test, not a fit."""
+    from causalab.neural.engines.pytorch_hooks import train as train_module
+    from causalab.neural.engines.pytorch_hooks.loading import load_model
+    from causalab.io.env import ResolutionEnv
+
+    patience = 2
+    doc_raw = das_doc(seed=0, epochs=8)
+    doc_raw["method"]["train"]["eval"] = {
+        "every": {"epochs": 1},
+        "split": "weekdays/data#test",
+        "aggregations": {"ce": ce_term()},
+    }
+    doc_raw["method"]["train"]["early_stop"] = {
+        "on": "ce",
+        "patience": patience,
+        "mode": "max",
+    }
+
+    scores = [0.9, 0.9, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05]  # a tie, then only falls
+    seen: list[dict[str, torch.Tensor]] = []
+
+    def fake_eval(doc, executor, request, split, *, eval_executor=None):
+        stage = executor.stage_cache["rot"]
+        seen.append({k: v.detach().clone() for k, v in stage.state_dict().items()})
+        return {"ce": scores[len(seen) - 1]}
+
+    monkeypatch.setattr(train_module, "_run_eval", fake_eval)
+
+    bundle = load_model(TINY_LLAMA)
+    executor = executor_for(
+        doc_raw,
+        bundle,
+        base_texts=BASES,
+        counterfactual_texts=COUNTERFACTUALS,
+        extra_columns={"label": ANSWERS},
+        grad_enabled=False,
+    )
+    request = RunContext(
+        env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
+        output_dir=None,  # type: ignore[arg-type]
+    )
+    outcome = train_module.run_training(executor.doc, executor, request)
+
+    assert len(seen) == patience + 2  # improve, stale, stale, stale > patience
+    assert outcome.eval_score is not None
+    assert outcome.eval_score.passes == patience + 2
+    assert outcome.eval_score.selected == "early_stop.best"
+    assert outcome.eval_score.metrics["ce"] == scores[0]
+    key = "parametrizations.weight.original"
+    assert not torch.allclose(seen[0][key], seen[-1][key])  # the fit moved on
+    torch.testing.assert_close(
+        outcome.stages["rot"].state_dict()[key], seen[0][key], atol=0.0, rtol=0.0
+    )
+
+
 def test_an_update_counted_eval_is_refused_rather_than_never_run():
     """This loop only reaches an eval on an epoch boundary, so an ``updates``
     counter would run no eval at all and still save the fit."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
-    from causalab.protocol.errors import ProtocolError
+    from causalab.protocol.rules.errors import ProtocolError
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     doc_raw = das_doc(seed=0, epochs=1)
     doc_raw["method"]["train"]["eval"] = {
         "every": {"updates": 1},
         "split": "weekdays/data#test",
-        "metrics": ["ce"],
+        "aggregations": {"ce": ce_term()},
     }
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -1069,12 +1040,7 @@ def test_an_update_counted_eval_is_refused_rather_than_never_run():
         extra_columns={"label": ANSWERS},
         grad_enabled=False,
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1092,8 +1058,9 @@ def test_validation_accepts_the_train_docs():
 def test_a_gate_fit_reports_whether_its_mask_is_a_mask():
     """The DBM finding's non-GPU half.
 
-    As shipped, `configs/protocols/dbm.json` could leave **no** dimension
-    outside [0.1, 0.9] and still score **1.000** — because
+    An earlier version of `demos/methods/protocols/dbm.json` produced **no**
+    dimension outside [0.1, 0.9] and still scored **1.000** at a late layer —
+    because
     `Gate._mask` returns a *hard* `θ > 0` mask in eval mode, so an unseparated
     θ makes the mask a coin flip on gradient noise. Roughly half the dimensions
     swap, which at the readout layer scores 1.000. A meaningless mask and a
@@ -1105,7 +1072,7 @@ def test_a_gate_fit_reports_whether_its_mask_is_a_mask():
     """
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -1115,12 +1082,7 @@ def test_a_gate_fit_reports_whether_its_mask_is_a_mask():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1146,7 +1108,7 @@ def test_a_subspace_fit_reports_its_rotation_not_a_mask():
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
     from causalab.neural.shared.featurizers import ORTHONORMAL_TOLERANCE
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -1156,12 +1118,7 @@ def test_a_subspace_fit_reports_its_rotation_not_a_mask():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1179,23 +1136,19 @@ def js_dbm_doc(*, restrict: object = ("one", "two", "three", "four")) -> dict:
     is the literal list by default; ``"valid"`` names the per-row column the
     drive helper fills below."""
     doc = dbm_doc()
-    doc["method"]["reads"]["logits_cf"] = {
-        "site": "lm_head",
-        "pos": {"index": -1},
-        "model": "original",
-        "input": "counterfactual",
-    }
-    doc["method"]["metrics"]["js"] = {
+    doc["method"]["reads"]["logits_cf"] = {"site": "lm_head", "pos": {"index": -1}}
+    doc["method"]["intervened_models"][UNWRITTEN]["reads"].append("logits_cf")
+    js = {
         "kind": "js",
-        "of": "logits",
-        "target": "logits_cf",
+        # the save below carries it too, so the object form (§2.7)
+        "target": {"read": "logits_cf", "model": UNWRITTEN},
         "restrict": list(restrict) if not isinstance(restrict, str) else restrict,
-        "token_form": "space_prefixed",
     }
-    doc["method"]["train"]["objective"] = [[1.0, "js"], [0.01, {"l1": "gate"}]]
-    doc["method"]["save"].insert(
-        0, {"value": "js", "model": "patched", "input": "base", "file_path": "js.json"}
-    )
+    doc["method"]["train"]["objective"] = [
+        [1.0, term("logits", "patched", dict(js))],
+        [0.01, {"l1": "gate"}],
+    ]
+    doc["method"]["save"].insert(0, saved("logits", "patched", "js.json", js))
     return doc
 
 
@@ -1207,7 +1160,7 @@ def test_a_js_objective_reaches_theta_through_both_restrict_spellings(restrict):
     arithmetic — the same fit, to the bit, when they name the same set."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -1220,12 +1173,7 @@ def test_a_js_objective_reaches_theta_through_both_restrict_spellings(restrict):
             "valid": [["one", "two", "three", "four"]] * len(BASES),
         },
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1261,7 +1209,7 @@ def hard_concrete_dbm_doc(*, seed: int = 0) -> dict:
         "kind": "gate",
         "parametrization": "hard_concrete",
     }
-    doc["method"]["train"]["objective"] = [[1.0, "ce"], [0.05, {"l0": "gate"}]]
+    doc["method"]["train"]["objective"] = [[1.0, ce_term()], [0.05, {"l0": "gate"}]]
     doc["method"]["train"]["anneal"] = {"gate.theta.temperature": [1.0, 0.2, 0.5]}
     doc["method"]["train"]["seed"] = seed
     return doc
@@ -1270,7 +1218,7 @@ def hard_concrete_dbm_doc(*, seed: int = 0) -> dict:
 def _fit_hard_concrete(seed: int):
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -1280,12 +1228,7 @@ def _fit_hard_concrete(seed: int):
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1366,7 +1309,7 @@ def test_a_hard_concrete_fit_is_a_function_of_its_seed_and_anneals_beta():
 def test_an_authored_temperature_beside_its_anneal_is_refused():
     """Rule 4: ``_set_anneal`` writes the schedule's start onto the gate before
     the first forward, so an authored β would never take effect."""
-    from causalab.protocol.errors import ValidationError
+    from causalab.protocol.rules.errors import ValidationError
 
     from tests.protocol._docs import in_order
 
@@ -1383,13 +1326,13 @@ def test_the_mask_penalty_is_keyed_on_the_map():
     """Rule 4 (§2.11): ``l0`` pairs with a sampled mask and ``l1`` with a
     deterministic one — and the loop refuses the crossing again for a document
     that arrived unvalidated."""
-    from causalab.protocol.errors import ProtocolError, ValidationError
+    from causalab.protocol.rules.errors import ProtocolError, ValidationError
 
     from tests.protocol._docs import in_order
 
     l1_on_sampled = hard_concrete_dbm_doc()
     l1_on_sampled["method"]["train"]["objective"] = [
-        [1.0, "ce"],
+        [1.0, ce_term()],
         [0.05, {"l1": "gate"}],
     ]
     with pytest.raises(ValidationError) as err:
@@ -1397,7 +1340,7 @@ def test_the_mask_penalty_is_keyed_on_the_map():
     assert err.value.rule == 4 and "'l0'" in str(err.value)
     l0_on_sigmoid = dbm_doc()
     l0_on_sigmoid["method"]["train"]["objective"] = [
-        [1.0, "ce"],
+        [1.0, ce_term()],
         [0.01, {"l0": "gate"}],
     ]
     with pytest.raises(ValidationError) as err:
@@ -1414,7 +1357,7 @@ def test_the_mask_penalty_is_keyed_on_the_map():
 
 
 def test_validation_accepts_the_hard_concrete_doc_and_refuses_its_fields_elsewhere():
-    from causalab.protocol.errors import ParseError
+    from causalab.protocol.rules.errors import ParseError
 
     from tests.protocol._docs import in_order
 
@@ -1430,7 +1373,7 @@ def test_validation_accepts_the_hard_concrete_doc_and_refuses_its_fields_elsewhe
 def test_a_clamp_gate_fit_is_projected_onto_the_unit_interval_and_rounds():
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -1440,12 +1383,7 @@ def test_a_clamp_gate_fit_is_projected_onto_the_unit_interval_and_rounds():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1459,7 +1397,7 @@ def test_a_clamp_gate_fit_is_projected_onto_the_unit_interval_and_rounds():
     # clipped sits exactly on a pole; one whose gradient flipped sign may not)
     assert float(theta.min()) >= 0.0 and float(theta.max()) <= 1.0
     assert bool(torch.any((theta == 0.0) | (theta == 1.0)))
-    from causalab.neural.shared.execution import MASK_DECISIVE_MARGIN
+    from causalab.neural.shared.results import MASK_DECISIVE_MARGIN
 
     report = outcome.diagnostics["gate"]
     assert report["parametrization"] == "clamp"
@@ -1472,7 +1410,7 @@ def test_a_clamp_gate_fit_is_projected_onto_the_unit_interval_and_rounds():
 
 
 def test_validation_refuses_a_temperature_anneal_on_a_clamp_gate():
-    from causalab.protocol.errors import ValidationError
+    from causalab.protocol.rules.errors import ValidationError
 
     from tests.protocol._docs import in_order
 
@@ -1489,7 +1427,7 @@ def test_a_gate_fill_is_where_the_fit_starts_and_is_recorded():
     every unit; the fit records the fill beside its diagnostics."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     doc = clamp_dbm_doc(lr=1e-3)
     doc["method"]["featurizers"]["gate"]["init"] = {"fill": 0.99}
@@ -1504,12 +1442,7 @@ def test_a_gate_fill_is_where_the_fit_starts_and_is_recorded():
     gate = executor.stage("gate")
     assert torch.allclose(gate.theta, torch.full_like(gate.theta, 0.99))
     assert float(gate.hard_mask().sum()) == gate.theta.numel()
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1528,7 +1461,7 @@ def controlled_dbm_doc() -> dict:
     doc = clamp_dbm_doc(lr=0.1)
     doc["method"]["featurizers"]["gate"]["init"] = {"fill": 0.99}
     doc["method"]["train"]["objective"] = {
-        "fit": {"weight": 1.0, "metric": "ce"},
+        "fit": ce_term(weight=1.0),
         "sparsity": {"weight": 0.01, "l1": "gate"},
     }
     doc["method"]["train"]["steps"] = {"epochs": 10}
@@ -1650,7 +1583,7 @@ def fraction_controlled_dbm_doc() -> dict:
 def test_a_fraction_valued_signal_is_the_kept_count_over_the_units():
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     from tests.protocol._docs import in_order
 
@@ -1665,12 +1598,7 @@ def test_a_fraction_valued_signal_is_the_kept_count_over_the_units():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1687,7 +1615,7 @@ def test_a_fraction_valued_signal_is_the_kept_count_over_the_units():
 def test_a_controlled_weight_follows_the_fit_and_is_recorded():
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -1697,12 +1625,7 @@ def test_a_controlled_weight_follows_the_fit_and_is_recorded():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1798,7 +1721,7 @@ def test_checkpoint_steps_space_the_run_and_always_end_on_its_last_update():
 def test_a_trajectory_photographs_the_fit_at_its_scheduled_updates():
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     doc = clamp_dbm_doc(lr=0.1)
     doc["method"]["save"].append(
@@ -1812,12 +1735,7 @@ def test_a_trajectory_photographs_the_fit_at_its_scheduled_updates():
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1855,7 +1773,7 @@ def annealed_weight_dbm_doc(schedule) -> dict:
     doc = clamp_dbm_doc(lr=0.1)
     doc["method"]["featurizers"]["gate"]["init"] = {"fill": 0.99}
     doc["method"]["train"]["objective"] = {
-        "fit": {"weight": 1.0, "metric": "ce"},
+        "fit": ce_term(weight=1.0),
         "sparsity": {"weight": 0.01, "l1": "gate"},
     }
     doc["method"]["train"]["steps"] = {"epochs": 3}
@@ -1869,7 +1787,7 @@ def annealed_weight_dbm_doc(schedule) -> dict:
 def _fit_outcome(doc: dict):
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     bundle = load_model(TINY_LLAMA)
     executor = executor_for(
@@ -1879,12 +1797,7 @@ def _fit_outcome(doc: dict):
         counterfactual_texts=COUNTERFACTUALS,
         extra_columns={"label": ANSWERS},
     )
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -1901,7 +1814,7 @@ def test_a_frozen_gate_keeps_every_unit_it_dropped_and_records_the_rule():
     nested sequence the DCM sweep relies on."""
     doc = dbm_doc()
     doc["method"]["featurizers"]["gate"]["dead"] = {"freeze_after": 1}
-    doc["method"]["train"]["objective"] = [[1.0, "ce"], [1000.0, {"l1": "gate"}]]
+    doc["method"]["train"]["objective"] = [[1.0, ce_term()], [1000.0, {"l1": "gate"}]]
     doc["method"]["save"].append(
         {"kind": "trajectory", "every": {"count": 3}, "file_path": "t.safetensors"}
     )
@@ -1936,7 +1849,7 @@ def test_a_leak_moves_a_saturated_unit_the_plain_gate_cannot():
     for dead in (None, {"leak": 0.5}):
         doc = dbm_doc()
         del doc["method"]["train"]["anneal"]
-        doc["method"]["train"]["objective"] = [[1.0, "ce"]]
+        doc["method"]["train"]["objective"] = [[1.0, ce_term()]]
         doc["method"]["train"]["optimizer"] = {"name": "sgd", "lr": 10.0}
         doc["method"]["featurizers"]["gate"]["init"] = {"fill": 1e-9}
         if dead is not None:
@@ -1998,10 +1911,10 @@ def test_a_geometric_anneal_walks_the_ratio_not_the_difference():
 def test_a_weight_anneal_on_a_positional_term_is_refused_at_load():
     """Rule 4: a positional term has no name to address, so the schedule's
     target resolves to nothing — the `control` rule, on the open-loop twin."""
-    from causalab.protocol.errors import ValidationError
+    from causalab.protocol.rules.errors import ValidationError
 
     doc = annealed_weight_dbm_doc([0.01, 1.0, 1.0])
-    doc["method"]["train"]["objective"] = [[1.0, "ce"], [0.01, {"l1": "gate"}]]
+    doc["method"]["train"]["objective"] = [[1.0, ce_term()], [0.01, {"l1": "gate"}]]
     with pytest.raises(ValidationError) as err:
         validate_document(parse_document(in_order(doc)), engine_is_local=True)
     assert err.value.rule == 4 and "named objective term" in str(err.value)
@@ -2019,7 +1932,7 @@ def phased_chain_doc() -> dict:
     annealed over that phase; every update photographed."""
     doc = chain_doc(0.05)
     doc["method"]["train"]["objective"] = {
-        "fit": {"weight": 1.0, "metric": "ce"},
+        "fit": ce_term(weight=1.0),
         "sparsity": {"weight": 0.01, "l1": "gate"},
     }
     doc["method"]["train"]["phases"] = [
@@ -2099,7 +2012,7 @@ def test_phases_that_do_not_partition_the_run_are_refused_before_a_step():
     """An `updates` partition is checked against the run's update count by
     the loop (the parser cannot know it): a last phase short of the run, or
     past it, is a refusal, not a silently unowned tail."""
-    from causalab.protocol.errors import ProtocolError
+    from causalab.protocol.rules.errors import ProtocolError
 
     doc = phased_chain_doc()
     doc["method"]["train"]["phases"] = [
@@ -2113,41 +2026,13 @@ def test_phases_that_do_not_partition_the_run_are_refused_before_a_step():
         _fit_outcome(doc)
 
 
-@pytest.mark.numerical_unit
-def test_lr_factor_is_hfs_linear_warmup_then_decay() -> None:
-    """``get_linear_schedule_with_warmup`` at 10 % warm-up over 100 updates: 0 at
-    the first update, 1 at the end of the warm-up, 0 after the last update;
-    linear on both sides. No warm-up: a straight decay from 1."""
-    from causalab.neural.engines.pytorch_hooks.train import lr_factor
-
-    assert lr_factor(0, 100, 0.1) == 0.0
-    assert lr_factor(5, 100, 0.1) == pytest.approx(0.5)
-    assert lr_factor(10, 100, 0.1) == pytest.approx(1.0)
-    assert lr_factor(55, 100, 0.1) == pytest.approx(0.5)
-    assert lr_factor(100, 100, 0.1) == 0.0
-    assert lr_factor(0, 100, 0.0) == pytest.approx(1.0)
-    assert lr_factor(50, 100, 0.0) == pytest.approx(0.5)
-    # HF's own scheduler agrees at every update
-    from transformers import get_linear_schedule_with_warmup
-
-    p = torch.nn.Parameter(torch.zeros(1))
-    opt = torch.optim.SGD([p], lr=1.0)
-    hf = get_linear_schedule_with_warmup(
-        opt, num_warmup_steps=10, num_training_steps=100
-    )
-    for step in range(100):
-        assert opt.param_groups[0]["lr"] == pytest.approx(lr_factor(step, 100, 0.1))
-        opt.step()
-        hf.step()
-
-
 def test_a_position_gate_fits_over_the_window_and_counts_positions():
     """§2.5 ``axis: position``: a DBM fit whose write goes through a position
     gate over the first three tokens — θ has three entries, one update runs,
     the diagnostics count positions."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ARTIFACT_IDENTITY_KEYS, ResolutionEnv
+    from causalab.io.env import ARTIFACT_IDENTITY_KEYS, ResolutionEnv
 
     doc = dbm_doc()
     doc["method"]["featurizers"] = {"pg": {"kind": "gate", "axis": "position"}}
@@ -2158,11 +2043,11 @@ def test_a_position_gate_fits_over_the_window_and_counts_positions():
     doc["method"]["writes"]["patch"]["pos"] = {"span": [0, 3]}
     doc["method"]["writes"]["patch"]["featurizer"] = "pg"
     doc["method"]["train"]["params"] = ["pg"]
-    doc["method"]["train"]["objective"] = [[1.0, "ce"], [0.01, {"l1": "pg"}]]
+    doc["method"]["train"]["objective"] = [[1.0, ce_term()], [0.01, {"l1": "pg"}]]
     doc["method"]["train"]["anneal"] = {"pg.theta.temperature": [1.0, 0.01, 0.5]}
     doc["method"]["train"]["steps"] = {"updates": 2}
     doc["method"]["save"] = [
-        {"value": "ce", "model": "patched", "input": "base", "file_path": "ce.json"},
+        ce_save(),
         {"value": "pg", "site": "tgt", "file_path": "pg.safetensors"},
     ]
     bundle = load_model(TINY_LLAMA)
@@ -2179,12 +2064,7 @@ def test_a_position_gate_fits_over_the_window_and_counts_positions():
     # schema — the save that would otherwise die at its first bundle
     assert set(gate.identity_fields()) <= set(ARTIFACT_IDENTITY_KEYS)
     assert gate.identity_fields()["axis"] == "position"
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -2220,7 +2100,7 @@ def test_a_position_gate_chained_before_a_feature_gate_sizes_each_by_its_own_axi
     one pins the sizing and the fit.)"""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     doc = dbm_doc()
     doc["method"]["featurizers"] = {
@@ -2232,11 +2112,14 @@ def test_a_position_gate_chained_before_a_feature_gate_sizes_each_by_its_own_axi
     doc["method"]["writes"]["patch"]["pos"] = {"span": [0, 3]}
     doc["method"]["writes"]["patch"]["featurizer"] = ["pg", "gate"]
     doc["method"]["train"]["params"] = ["pg", "gate"]
-    doc["method"]["train"]["objective"] = [[1.0, "ce"], [0.01, {"l1": ["pg", "gate"]}]]
+    doc["method"]["train"]["objective"] = [
+        [1.0, ce_term()],
+        [0.01, {"l1": ["pg", "gate"]}],
+    ]
     doc["method"]["train"].pop("anneal", None)
     doc["method"]["train"]["steps"] = {"updates": 2}
     doc["method"]["save"] = [
-        {"value": "ce", "model": "patched", "input": "base", "file_path": "ce.json"},
+        ce_save(),
         {"value": "pg", "site": "tgt", "file_path": "pg.safetensors"},
         {"value": "gate", "site": "tgt", "file_path": "gate.safetensors"},
     ]
@@ -2250,12 +2133,7 @@ def test_a_position_gate_chained_before_a_feature_gate_sizes_each_by_its_own_axi
     )
     assert executor.stage("pg").theta.numel() == 3
     assert executor.stage("gate").theta.numel() == bundle.info.hidden_size
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -2271,7 +2149,7 @@ def test_a_straight_through_gate_fits_and_stamps_its_forward():
     records the split as provenance."""
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     doc = dbm_doc()
     doc["method"]["featurizers"]["gate"]["parametrization"] = {
@@ -2288,12 +2166,7 @@ def test_a_straight_through_gate_fits_and_stamps_its_forward():
     )
     gate = executor.stage("gate")
     assert gate.forward_mask == "hard" and gate.parametrization == "sigmoid"
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -2306,7 +2179,67 @@ def test_a_straight_through_gate_fits_and_stamps_its_forward():
     # the stamp path: `identity_fields()` is splatted into the closed
     # artifact-identity schema at the save — a key it does not know kills
     # the fit after it has run, which is where `forward` (and `axis`) died
-    from causalab.protocol.resolve import build_artifact_identity
+    from causalab.io.env import build_artifact_identity
 
     stamped = build_artifact_identity(**fitted.identity_fields())
     assert stamped["forward"] == "hard"
+
+
+def boundless_das_doc(*, seed: int = 0, epochs: int = 3) -> dict:
+    """Boundless DAS (§2.5 `boundary`): `das_doc`'s rotation with a boundary
+    gate behind it, both trained, `l1` on the gate weighted so β visibly moves
+    in a few steps, the temperature annealed."""
+    doc = das_doc(seed=seed, epochs=epochs)
+    doc["method"]["featurizers"]["bnd"] = {
+        "kind": "gate",
+        "parametrization": "boundary",
+    }
+    doc["method"]["reads"]["v_cf"]["featurizer"] = ["rot", "bnd"]
+    doc["method"]["writes"]["patch"]["featurizer"] = ["rot", "bnd"]
+    doc["method"]["train"]["params"] = ["rot", "bnd"]
+    doc["method"]["train"]["objective"] = [[1.0, ce_term()], [0.5, {"l1": "bnd"}]]
+    doc["method"]["train"]["anneal"] = {"bnd.theta.temperature": [1.0, 0.1, 0.5]}
+    doc["method"]["save"].append(
+        {"value": "bnd", "site": "tgt", "file_path": "bnd.safetensors"}
+    )
+    return doc
+
+
+def test_a_boundless_das_fit_moves_its_boundary_and_records_the_learned_rank():
+    """§2.5 ``boundary``: one β behind the rotation, trained under ``ce`` and
+    ``l1``; the record carries β itself and ``hard_mask_size`` is the prefix
+    it names, ``⌈β⌉``; nothing per unit is reported."""
+    from causalab.neural.engines.pytorch_hooks.loading import load_model
+    from causalab.neural.engines.pytorch_hooks.train import run_training
+    from causalab.io.env import ResolutionEnv
+
+    doc = boundless_das_doc()
+    validate_document(parse_document(in_order(doc)), engine_is_local=True)
+    bundle = load_model(TINY_LLAMA)
+    executor = executor_for(
+        doc,
+        bundle,
+        base_texts=BASES,
+        counterfactual_texts=COUNTERFACTUALS,
+        extra_columns={"label": ANSWERS},
+    )
+    request = RunContext(
+        env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
+        output_dir=None,  # type: ignore[arg-type]
+    )
+    outcome = run_training(executor.doc, executor, request)
+    bnd = outcome.stages["bnd"]
+    assert bnd.parametrization == "boundary" and tuple(bnd.theta.shape) == (1,)
+    theta = float(bnd.theta)
+    beta = bnd.boundary()
+    assert 0.0 <= theta <= 1.0 and theta != 0.5  # projected, and moved off the start
+    assert beta == pytest.approx(theta * 4.0)
+    assert bnd.temperature < 1.0  # the anneal ran
+    assert not bnd.training
+    report = outcome.diagnostics["bnd"]
+    assert report["parametrization"] == "boundary" and report["boundary"] == beta
+    assert report["width"] == 4.0
+    assert report["hard_mask_size"] == float(sum(i < beta for i in range(4)))
+    assert report["hard_mask_size"] == float(bnd.hard_mask().sum())
+    assert "reawakened_units" not in report and "groups" not in report
+    assert "rot" in outcome.stages  # the rotation trained beside it

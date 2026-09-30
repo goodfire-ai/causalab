@@ -1,61 +1,20 @@
-"""One CUDA graph for a cohort's optimizer step (spec §4 "Cohorts" under
-``--cuda-graphs``).
+"""Capture a cohort's differentiable step in one CUDA graph.
 
-An eager cohort step is one forward over the concatenation of its members'
-minibatches (``cohort.py``). Its wall time is mostly host time — the Python
-that issues a large model's forward can take longer than the GPU takes to
-execute it — which is exactly what a CUDA graph removes. A graph, though, is one fixed shape and one fixed row
-layout, and an eager cohort's layout moves every step: each member draws its
-own minibatch order, an epoch's last minibatch is a remainder, so which
-members bring a short minibatch to a given step is random and a composition
-almost never recurs.
+Each member owns a fixed slot of ``min(pairs, dataset_size)`` rows. Short
+minibatches repeat their last row with zero loss weight. Padding can change
+MoE group sizes and bf16 rounding. Full active slots preserve the eager
+cohort's arithmetic. Stopped members retain slots with ignored gradients.
 
-This module therefore captures the cohort on a **fixed layout**: member ``m``
-owns a slot of ``pairs_m`` rows (capped at its dataset size) in the captured
-frame, whatever its current minibatch holds. A minibatch shorter than its
-slot is padded by repeating its last row, and the padding rows carry a loss weight of zero
-(:class:`~causalab.neural.engines.pytorch_hooks.train.TrainingObjective`'s
-``weight``), so they contribute nothing to any member's gradient. One capture
-then serves every step of the fit. The trade is stated plainly: a padded
-step is not the eager cohort's computation — the padding rows change the
-expert group sizes the MoE layers dispatch, so the surviving rows' values
-move at bf16 rounding, the same class of difference an eager cohort already
-has against solo fits. With graphs off nothing here runs and the eager cohort
-is untouched; with graphs on, a step whose slots are full (every minibatch
-whole) is the eager cohort's arithmetic bit for bit.
+Capture includes the intervened forward, member objectives, summed loss,
+and backward. Optimizer updates, projection, schedules, and scoring remain
+in Python. Evaluation uses a separate capture. Replays copy current inputs
+and prepared minibatch data into persistent storage.
 
-What is captured is the whole step's differentiable work: the members'
-intervened forwards as one model call, every member's objective on its own
-rows, the summed loss, and its backward into each member's own parameters.
-Optimizer updates, projection, schedules, metric scoring and early stopping
-stay in Python, as in ``cuda_graphs.py``. The cohort's eval passes are one
-capture too (:class:`EvaluationGraphs`), replayed for whichever members are
-still due. Each replay stages what changed — the
-members' tokens, masks and labels, the padding weights, the source
-activations for the current rows, the un-intervened prefix the forward
-resumes from, and the current parameter values — as plain device copies from
-values prepared once per minibatch (a minibatch executor's rows never
-change), with no host synchronization on repeated minibatches. Host staging
-can then overlap the previous step's device work.
-
-**The campaign store stays in charge of the constants.** The members'
-minibatch and eval executors keep their store handles (``train.py``,
-``GraphExecutor.keep_store``), so the source forwards are shared across the
-members as they are eagerly (one pass per row slice, the campaign's tap
-union) and the eval passes resume from stored prefixes. What the graph needs
-of those constants is copied out of the store into storage the capture owns:
-the raw source captures into each worker's frozen buffers, and the residual
-entering the shallowest write across the members into one prefix buffer the
-captured forward resumes from (§4 "Resume"). A slice whose prefix the store
-lacks gets it the way the eager cohort would — from an un-intervened pass
-over the same concatenated frame, stopped at the resume block — so a
-full-slot step's prefix is the eager cohort's, bit for bit.
-
-A member that stops early keeps its slot — its rows still flow through the
-captured forward, its gradients are computed and ignored — so membership
-changes never force a recapture. A CUDA out-of-memory during capture or
-replay releases the graph and hands the rest of the fit to the eager cohort;
-so does a padded mask the captured mask buffers cannot hold.
+The campaign store continues to share source forwards. Captures copy source
+values and the prefix below the shallowest write into owned buffers.
+Missing prefixes are computed on the same concatenated frame. Allocation
+failure or an incompatible padded mask releases the graph and continues
+with the eager cohort.
 """
 
 from __future__ import annotations
@@ -79,11 +38,14 @@ from causalab.neural.engines.pytorch_hooks.cohort import (
     groups_read_by,
     run_groups,
 )
+from causalab.neural.engines.pytorch_hooks.budget import OOMPolicy, abort_distributed
 from causalab.neural.engines.pytorch_hooks.cuda_graphs import (
+    IN_GRAPH,
     GraphExecutor,
     GraphPool,
     Replay,
     copy_executor_stages,
+    graph_device,
 )
 from causalab.neural.engines.pytorch_hooks.executor import (
     PointExecutor,
@@ -91,9 +53,10 @@ from causalab.neural.engines.pytorch_hooks.executor import (
     _resumable,
 )
 from causalab.neural.shared.encoding import EncodedBatch
-from causalab.neural.shared.executor_base import PrefixKey, RowWindow, TapKey, tap_key
+from causalab.neural.shared.executor import PrefixKey, RowWindow, TapKey, tap_key
 from causalab.neural.shared.featurizers import Gate, Stage
-from causalab.neural.shared.mechanisms import operand_names
+from causalab.neural.shared.plan import group_reads, is_unwritten, write_names
+from causalab.protocol.schema import ReadRef, operand_reads
 
 __all__ = [
     "CohortGraphs",
@@ -121,13 +84,13 @@ def padded_indices(indices: Sequence[int], pairs: int) -> list[int]:
 
 def slotted_frame(batch: EncodedBatch, real: int, total: int) -> EncodedBatch:
     """``batch``'s ``real`` rows laid into a slot of ``total`` — the last row
-    repeated, as :func:`pad_rows` lays a tensor — with every per-row field of
+    repeated, as [`pad_rows`][] lays a tensor — with every per-row field of
     the frame, its first-real cache included, sliced in step. Building the
     slot as a row selection rather than by replacing the two tensors is what
     keeps the frame's cached indices the mask's: a replaced mask with the
     minibatch's shorter cache is refused by the frame. A minibatch that
     fills its slot *is* the slot — returned as is, its tensors aliased
-    rather than copied, as :func:`pad_rows` does."""
+    rather than copied, as [`pad_rows`][] does."""
     if batch.input_ids.shape[0] != real:
         raise ValueError(
             f"expected a {real}-row minibatch to slot into {total}, got "
@@ -167,7 +130,7 @@ def cohort_graph_reason(
 ) -> str | None:
     """Why this cohort cannot be captured as one graph, or ``None``.
 
-    Every member must already be graph-eligible (a :class:`GraphExecutor`,
+    Every member must already be graph-eligible (a [`GraphExecutor`][],
     which ``make_executor`` only builds for the validated CUDA path), and an
     authored ``fit_rows`` must hold the whole layout: the captured frame is
     every member's slot at once, so a bound that would split the members into
@@ -177,8 +140,13 @@ def cohort_graph_reason(
         return "a cohort graph needs at least two members"
     if not all(isinstance(executor, GraphExecutor) for executor in executors):
         return "every member of a captured cohort must be graph-eligible"
-    device = torch.device(executors[0].bundle.device)
-    if device.type != "cuda":
+    single = executors[0].bundle.devices.single
+    if single is None:
+        return (
+            "CUDA graphs are single-device; the bundle places its layers on "
+            f"{executors[0].bundle.devices.spelling}"
+        )
+    if single.type != "cuda":
         return "CUDA graphs require a CUDA device"
     slots = sum(pairs)
     if fit_rows is not None and fit_rows < slots:
@@ -252,7 +220,7 @@ class _Slot:
     #: the captured parameters' positions in the replay's gradient list
     gradient_slice: slice
     #: the write operands and the ``(model, input)`` source group each reads
-    operands: dict[str, _Group]
+    operands: dict[ReadRef, _Group]
     #: the worker's stage tensors and the member's they are staged from
     state: _Copies
     #: worker gate, member gate: the annealed temperature is a Python float
@@ -286,27 +254,25 @@ def _single_role(members: Sequence[tuple[PointExecutor, Sequence[str]]]) -> str 
     return role
 
 
-def _trained_group(executor: PointExecutor, reads: Sequence[str]) -> _Group:
+def _trained_group(executor: PointExecutor, reads: Sequence[ReadRef]) -> _Group:
     """The ``(model, input)`` group the objective's reads are taken on — the
     one the cohort forward runs."""
     for model, role in groups_read_by(executor.doc, reads):
-        if model != "original":
+        if not is_unwritten(executor.doc, model):
             return model, role
     raise AssertionError("a fit's objective reads no intervened model")
 
 
-def _operand_groups(executor: PointExecutor) -> dict[str, _Group]:
+def _operand_groups(executor: PointExecutor) -> dict[ReadRef, _Group]:
     """The reads a member's writes take their payload from, and the source
     group each is a tap of — what the worker's frozen buffers must hold."""
     doc = executor.doc
-    out: dict[str, _Group] = {}
-    for im in doc.intervened_models.values():
-        writes = im.writes if isinstance(im.writes, tuple) else ()
-        for ename in writes:
-            for operand in operand_names(doc.writes[ename].do.payload):
-                if operand in doc.reads and operand not in out:
-                    read = doc.reads[operand]
-                    out[operand] = (str(read.model), str(read.input))
+    out: dict[ReadRef, _Group] = {}
+    for model in doc.intervened_models:
+        for ename in write_names(doc, model) or ():
+            for ref in operand_reads(doc, doc.writes[ename].do):
+                if ref not in out:
+                    out[ref] = doc.group_of(ref)
     return out
 
 
@@ -316,9 +282,8 @@ def _group_taps(executor: PointExecutor, group: _Group) -> dict[TapKey, Any]:
     which is what the store and the frozen sources are keyed by."""
     model, role = group
     reads = [
-        (rname, read)
-        for rname, read in executor.doc.reads.items()
-        if str(read.model) == model and str(read.input) == role
+        (ref.read, executor.doc.reads[ref.read])
+        for ref in group_reads(executor.doc, model, role)
     ]
     taps = executor._read_taps(model, role, reads)
     return {
@@ -331,11 +296,17 @@ class CohortGraphs:
     every member, replayed on every later one (module docstring).
 
     ``make_objective(executor, stages, weight=)`` builds a member's objective
-    on a worker — the loop's :class:`TrainingObjective` — with the slot's
+    on a worker — the loop's [`TrainingObjective`][causalab.neural.engines.pytorch_hooks.train.TrainingObjective] — with the slot's
     padding weight; it is injected so this module does not import the loop.
-    ``pool`` is the fit's :class:`GraphPool` the step graph is captured into
-    — the loop hands the same one to :class:`EvaluationGraphs` and owns its
-    release; by default the bank opens one of its own.
+    ``pool`` is the fit's [`GraphPool`][] the step graph is captured into
+    — the loop hands the same one to [`EvaluationGraphs`][] and owns its
+    release; by default the bank opens one of its own. ``oom_policy`` is the
+    fit's: under ``OOMPolicy.ABORT`` an out-of-memory capture or replay ends
+    the run by name instead of turning this rank alone eager
+    ([`TrainingGraphs`][causalab.neural.engines.pytorch_hooks.cuda_graphs.TrainingGraphs]).
+    A `_LayoutMismatch` keeps the eager fallback under every policy: it
+    follows from the staged rows and the store, which every rank of a model
+    group holds alike, so the ranks turn eager on the same step.
     """
 
     def __init__(
@@ -344,11 +315,13 @@ class CohortGraphs:
         *,
         make_objective: Callable[..., Any],
         pool: GraphPool | None = None,
+        oom_policy: OOMPolicy = OOMPolicy.RETRY,
     ) -> None:
         if len(members) < 2:
             raise ValueError("a cohort graph needs at least two members")
         self.members = list(members)
         self.make_objective = make_objective
+        self.oom_policy = oom_policy
         self._owns_pool = pool is None
         self.pool = GraphPool() if pool is None else pool
         self.by_key = {member.key: i for i, member in enumerate(self.members)}
@@ -385,12 +358,17 @@ class CohortGraphs:
                 self._capture(window)
             return self._step(window)
         except (torch.OutOfMemoryError, _LayoutMismatch) as error:
+            if (
+                isinstance(error, torch.OutOfMemoryError)
+                and self.oom_policy is OOMPolicy.ABORT
+            ):
+                abort_distributed(error, IN_GRAPH)
             reason = str(error)
             # a bool, not the exception: binding `error` past this clause
             # would keep its traceback, and so the failed capture's graph,
             # alive through the pool release below
             out_of_memory = isinstance(error, torch.OutOfMemoryError)
-            device = torch.device(self.members[0].executor.bundle.device)
+            device = graph_device(self.members[0].executor.bundle)
             torch.cuda.synchronize(device)
             self._release()
             self.disabled = True
@@ -422,7 +400,7 @@ class CohortGraphs:
 
     def _release(self) -> None:
         if self.slots:
-            torch.cuda.synchronize(self.members[0].executor.bundle.device)
+            torch.cuda.synchronize(graph_device(self.members[0].executor.bundle))
         for slot in self.slots:
             slot.worker.close()
         self.slots = []
@@ -437,7 +415,7 @@ class CohortGraphs:
 
     def _capture(self, window: Sequence[WindowItem]) -> None:
         items = sorted(window, key=lambda item: self.by_key[item.key])
-        device = torch.device(self.members[0].executor.bundle.device)
+        device = graph_device(self.members[0].executor.bundle)
         parameters: list[torch.nn.Parameter] = []
         stages: dict[str, Stage] = {}
         offset = 0
@@ -644,7 +622,7 @@ class CohortGraphs:
     # the constants: source activations and the resume prefix
 
     def _sources(
-        self, minibatch: PointExecutor, operands: Mapping[str, _Group]
+        self, minibatch: PointExecutor, operands: Mapping[ReadRef, _Group]
     ) -> dict[_Group, tuple[dict[TapKey, torch.Tensor], dict[TapKey, torch.Tensor]]]:
         """The raw captures (and routing) of the operand groups over
         ``minibatch``'s rows: from the store when the member has one — the
@@ -667,10 +645,10 @@ class CohortGraphs:
                     {key: routing[key] for key in taps if key in routing},
                 )
                 continue
-            digest = minibatch._group_digest(*group)
-            assert digest is not None
+            group_key = minibatch._group_key(*group)
+            assert group_key is not None
             cache = minibatch.interning.cache
-            key = minibatch._capture_key(digest)
+            key = minibatch._capture_key(group_key)
             captured = cache.captured.get(key)
             if captured is None or any(k not in captured for k in taps):
                 raise _LayoutMismatch(f"the store holds no capture of {group}")
@@ -716,7 +694,7 @@ class CohortGraphs:
             if minibatch.interning is None:
                 return 0
             group = _trained_group(minibatch, slot.member.objective_reads)
-            plan = minibatch._prefix_plan(minibatch._group_digest(*group))
+            plan = minibatch._prefix_plan(minibatch._group_key(*group))
             if plan is None:
                 return 0
             depth = min(depth, plan.resume_at, last)
@@ -726,7 +704,7 @@ class CohortGraphs:
         self, slot: _Slot, minibatch: PointExecutor, real: int
     ) -> PrefixKey:
         group = _trained_group(minibatch, slot.member.objective_reads)
-        plan = minibatch._prefix_plan(minibatch._group_digest(*group))
+        plan = minibatch._prefix_plan(minibatch._group_key(*group))
         assert plan is not None
         return minibatch._prefix_key(plan, RowWindow(0, real, real), self.resume_at)
 
@@ -905,7 +883,7 @@ class EvaluationGraphs:
     brings every member, the first having warmed the store with the split's
     sources and prefixes — over the members' rows concatenated in cohort
     order, and replayed on every later pass. A member that early-stops keeps
-    its slot, exactly as in :class:`CohortGraphs`: its rows still flow through
+    its slot, exactly as in [`CohortGraphs`][]: its rows still flow through
     the replay and its reads are left where they are — never copied out,
     never scored — so a membership change forces neither a recapture nor a
     fall back to the eager pass.
@@ -939,7 +917,7 @@ class EvaluationGraphs:
     masks and position ids, ``GraphExecutor.prepare_batch`` — when the layout
     is first seen, and registered under its id on the lead executor; the
     first, eager pass runs ``run_groups(frame=)`` against it
-    (:meth:`frames_for`) instead of a per-forward concatenation, whose masks
+    ([`frames_for`][]) instead of a per-forward concatenation, whose masks
     ``_model_forward`` keys by shape and prepares again once its four-entry
     transient cache has evicted them (the key carries the rows' first real
     tokens, so that path makes no host read either); and the capture records
@@ -951,26 +929,41 @@ class EvaluationGraphs:
 
     **Memory.** Sources and prefixes stay the campaign store's; the frame is
     tokens, masks and position ids; and the graph is captured into the fit's
-    :class:`GraphPool` when the caller hands one in (``pool``) — the training
+    [`GraphPool`][] when the caller hands one in (``pool``) — the training
     cohort's, so the eval forward's activations reuse the blocks the training
     capture freed instead of a second private pool (by default the bank opens
-    a pool of its own and releases it with :meth:`close`). That is safe
+    a pool of its own and releases it with [`close`][]). That is safe
     because the two graphs replay in stream order and each one's outputs —
     the gradients, the read values — are consumed before the other replays
-    (the two rules ``GraphPool`` states). A CUDA out-of-memory in capture or
-    replay releases the graph and hands the remaining passes to the eager
-    path; so does a set that overlaps the layout with a member the capture
+    (the two rules ``GraphPool`` states). The capture records **without a
+    warm-up pass** (``Replay(warmup=False)``): the layout's first pass has
+    just run the same forward eagerly, on the same frame and storage, so
+    every kernel it launches is compiled, tuned and loaded, and there is no
+    backward to start an autograd thread for — the warm-up would repeat a
+    pass the fit has already completed, and its working set is the step
+    graph's forward, already in the pool. A CUDA out-of-memory in capture
+    or replay
+    releases the graph and hands the remaining passes to the eager path; so
+    does a set that overlaps the layout with a member the capture
     holds no slot for (a disjoint set — another split's — runs eagerly
     beside it), and so does a row bound that has fallen below the layout's
-    group (:meth:`holds`): the bound falls only because the device ran
+    group ([`holds`][]): the bound falls only because the device ran
     short and never rises again, and the layout's replay is the fit's
     widest eval frame, so the capture is given back rather than held
     against a later due set small enough to fit again as members stop — a
     trade of those replays for the pool blocks — and not recaptured at the
-    smaller size, the churn the training graph declines too.
+    smaller size, the churn the training graph declines too. Under
+    ``oom_policy`` ``OOMPolicy.ABORT`` the out-of-memory ends the run by name
+    instead, as the step graph's does ([`CohortGraphs`][]).
     """
 
-    def __init__(self, *, pool: GraphPool | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        pool: GraphPool | None = None,
+        oom_policy: OOMPolicy = OOMPolicy.RETRY,
+    ) -> None:
+        self.oom_policy = oom_policy
         self._owns_pool = pool is None
         self.pool = GraphPool() if pool is None else pool
         #: the layout: every member the cohort evaluates together, with the
@@ -1002,7 +995,7 @@ class EvaluationGraphs:
     ) -> dict[str, EncodedBatch] | None:
         """The prepared frame an eager pass over ``members`` runs on — the
         layout's own, when ``members`` are the whole layout (its first pass,
-        warming the store; :meth:`forward` laid it out); ``None`` for any
+        warming the store; [`forward`][] laid it out); ``None`` for any
         other set — a window of a larger group — which concatenates per
         forward as an eager cohort does."""
         if self.disabled or self.layout is None:
@@ -1012,7 +1005,7 @@ class EvaluationGraphs:
     def forward(self, members: Sequence[tuple[PointExecutor, Sequence[str]]]) -> bool:
         """Serve the due ``members``' trained-group reads from the replay;
         ``False`` when the pass runs eagerly instead — the layout's first
-        pass (on :meth:`frames_for`'s frame; the next full pass captures),
+        pass (on [`frames_for`][]'s frame; the next full pass captures),
         a set disjoint from the layout (another split's members, the layout
         untouched), or a set the capture holds no slot for, which releases
         it."""
@@ -1052,7 +1045,9 @@ class EvaluationGraphs:
                 ex._read_values.update(values)
                 ex._groups_run.update(groups)
             return True
-        except torch.OutOfMemoryError:
+        except torch.OutOfMemoryError as error:
+            if self.oom_policy is OOMPolicy.ABORT:
+                abort_distributed(error, IN_GRAPH)
             self._release()
             self.disabled = True
         # Unwind the failed capture's frames (which keep its graph live to the
@@ -1117,8 +1112,14 @@ class EvaluationGraphs:
         try:
             for ex in self.members:
                 ex.device_reads = True
+            # no warm-up: the layout's first, eager pass ran this forward on
+            # this frame (class docstring, "Memory")
             self.bank = Replay(
-                work, stages, device=torch.device(lead.bundle.device), pool=self.pool
+                work,
+                stages,
+                device=graph_device(lead.bundle),
+                pool=self.pool,
+                warmup=False,
             )
             self.groups = [set(ex._groups_run) for ex in self.members]
         finally:
@@ -1161,7 +1162,7 @@ class EvaluationGraphs:
 
     def _release(self) -> None:
         if self.members:
-            device = torch.device(self.members[0].bundle.device)
+            device = graph_device(self.members[0].bundle)
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
             self._release_frames()

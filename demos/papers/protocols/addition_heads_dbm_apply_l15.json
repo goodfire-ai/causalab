@@ -1,0 +1,50 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Held-out scoring of the layer-15 head masks of addition_heads_dbm_fit_l15.json on Qwen/Qwen3.5-2B: load one L1 weight's fitted head gate (3 here; the workflow sets the entry for each weight), swap the kept heads' attention_premix from the counterfactual problem at '=' with no training, and save how often the next token is the counterfactual's tens digit (iia) or the base's (null), which workflows/scripts/addition_heads_dbm/heads_figure.py draws; the workflow also points it at size-matched random masks, and the bundle fit_l15/gate.safetensors is a run-tree path that only the workflow resolves, so this document does not validate on its own."
+  },
+  "model": {"key": "Qwen/Qwen3.5-2B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "addition_heads_dbm/data#test", "field": "input"},
+    "counterfactual": {"dataset": "addition_heads_dbm/data#test", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]}
+    },
+    "sites": {
+      "target": {"component": "attention_premix", "layers": [15]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "gate": {
+        "kind": "gate",
+        "group": "head",
+        "file_path": "fit_l15/gate.safetensors",
+        "entry": {"objective.sparsity.weight": 3.0}
+      }
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "featurizer": "gate"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask": {"site": "target", "pos": -1, "featurizer": "gate", "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms"},
+        "file_path": "null.json"
+      }
+    ]
+  }
+}

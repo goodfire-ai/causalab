@@ -160,8 +160,8 @@ pub struct StorageProfile {
 /// **a placeholder**. One small `pread` on NFSv3 over TCP is a request and
 /// a reply on the wire plus the server's own lookup, a few hundred
 /// microseconds on a datacenter LAN; 200 µs at 3 GB/s makes the coalescing
-/// gap 600 KB, well inside the planner's 64 KiB–8 MiB clamp either way. A
-/// measured profile fills it in; until then the source string says
+/// gap 600 KB, well inside the planner's 64 KiB–8 MiB clamp either way. The
+/// multi-rank bench measures it; until then the source string says
 /// "unmeasured".
 pub const NFS_IO_COST_US_PLACEHOLDER: f64 = 200.0;
 
@@ -339,7 +339,9 @@ fn non_negative(entry: &str, field: &'static str, value: f64) -> Result<(), Prof
 pub struct Profile {
     /// The schema this document follows; [`SCHEMA_VERSION`].
     pub schema_version: u32,
-    /// Who produced these numbers and when — a tool name, a host, a date.
+    /// Where and when these numbers were measured: the hardware type, the
+    /// storage and the date, plus notes on unmeasured entries. It names
+    /// hardware by type, not by host name.
     /// Printed in every reason line the planner writes from this profile.
     pub source: String,
     /// One entry per storage class described.
@@ -411,10 +413,11 @@ pub struct StorageLookup {
 }
 
 impl Profile {
-    /// The measurements in `docs/fastersafetensors.md` §Measurements: one H100
-    /// 80 GB node, 16 cores, weights on an NFSv3 mount, 2026-09-08; plus the
-    /// CUDA runtime notes from the same node (CUDA 13.0, cuFile 1.15.1) of
-    /// the same day.
+    /// The measurements in `docs/fastersafetensors.md` §Measurements and
+    /// `docs/profiles/h100-nfs-2026-09-08.json`: one H100 80 GB host, 16
+    /// cores, weights on NFSv3 `nconnect=16`, 2026-09-08; plus the CUDA
+    /// runtime notes from the same host (CUDA 13.0, cuFile 1.15.1) of the
+    /// same day.
     ///
     /// * `Nfs`: one file caps near 3 GB/s however split (fastsafetensors one
     ///   file at a time, 16 threads, 64–256 MB blocks: 2.9–3.1). Aggregate
@@ -425,13 +428,13 @@ impl Profile {
     ///   `registers: false`. `io_cost_us` is
     ///   [`NFS_IO_COST_US_PLACEHOLDER`], **unmeasured**.
     /// * `LocalBlock`: **unmeasured**. The table is the NFS table cut at 4
-    ///   files, which reproduces the planner's original fixed rule (4 files
-    ///   in flight, split across readers) until a local mount is measured.
+    ///   files, which reproduces the first planner's rule (4 files in flight,
+    ///   split across readers) until a local mount is measured.
     ///   `split_helps: true` is the property that defines the class.
-    ///   `gds.registers: true` is the original assumption that a block
-    ///   device is GDS-capable when `nvidia_fs` is loaded; some block-device
-    ///   layouts (an xfs volume over md RAID, for one) refute it, which a
-    ///   per-node profile expresses through `mounts`.
+    ///   `gds.registers: true` is the first planner's assumption that a block
+    ///   device is GDS-capable when `nvidia_fs` is loaded; the H100 host's
+    ///   `/tmp` (xfs over md RAID) refutes it for that mount, which a
+    ///   per-host profile expresses through `mounts`.
     /// * `Ram`: reads are memcpy from page cache; the warm figures stand in:
     ///   7.2 GB/s one stream, 25.9 at 16. Splitting helps; no cuFile.
     /// * `device`: 1 GiB H2D from pinned at 55 GB/s (PCIe Gen5);
@@ -670,12 +673,12 @@ pub(crate) mod tests {
         "/../../docs/profiles/b200-nfs-2026-09-09.json"
     );
 
-    /// An 8x B200 node's profile (measured 2026-09-09) loads, is the
-    /// measured shape — NFS plateaus at 16 files in flight (2.0 / 9.26 /
-    /// 12.34 GB/s at 1 / 8 / 16) and one file scales with readers there, no
-    /// cuFile — and merges
+    /// The 8x B200 host's profile (`docs/profiles/b200-nfs-2026-09-09.json`,
+    /// measured 2026-09-09) loads, is the measured shape — NFS
+    /// plateaus at 16 files in flight (2.0 / 9.26 / 12.34 GB/s at 1 / 8 /
+    /// 16) and one file scales with readers there, no cuFile — and merges
     /// over the defaults into a valid profile that keeps the defaults' `Ram`
-    /// entry, which the node did not measure.
+    /// entry, which the host did not measure.
     #[test]
     fn b200_profile_loads_and_merges_over_defaults() {
         let node = Profile::from_path(Path::new(B200_FILE)).unwrap();
@@ -686,7 +689,10 @@ pub(crate) mod tests {
         assert!(!nfs.gds_registers());
         let local = &node.storage[&StorageClassKey::LocalBlock];
         assert!(local.split_helps);
-        assert!(!local.gds_registers(), "local xfs: unmeasured counts as no");
+        assert!(
+            !local.gds_registers(),
+            "md RAID xfs: unmeasured counts as no"
+        );
         assert!(!node.storage.contains_key(&StorageClassKey::Ram));
         assert!(node.device.is_some());
 

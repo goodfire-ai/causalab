@@ -1,0 +1,19 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Activation-manifold input for Figure 4 of Wurgaft et al. 2026 (arXiv:2605.05115): one un-intervened forward per prompt of the 49-prompt weekdays pool, saving the layer-28 residual stream at the last token, which the workflow's pca48 step and workflows/scripts/manifold_fig4/manifold_path.py turn into the activation manifold."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b", "dtype": "bf16"},
+  "data": {"base": {"dataset": "manifold_fig4/data", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["acts"]}
+    },
+    "positions": {"slot": {"index": -1}},
+    "sites": {
+      "target": {"component": "block_output", "layers": [28]}
+    },
+    "reads": {"acts": {"site": "target", "pos": "slot"}},
+    "save": [{"read": "acts", "model": "original", "file_path": "acts.safetensors"}]
+  }
+}

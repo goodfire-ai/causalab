@@ -26,7 +26,7 @@ import torch
 
 from causalab.cli import main
 
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 from tests.golden._env import FIXTURES, GOLDEN_PROTOCOLS, GOLDENS_FILE
 
 
@@ -93,6 +93,8 @@ def run_document(name: str, out: Path, **extra: str) -> None:
     be measured at a precision its record does not name."""
     argv = [
         "run",
+        "--engine",
+        "auto",
         str(GOLDEN_PROTOCOLS / name),
         "--data-root",
         str(FIXTURES / "data"),
@@ -215,7 +217,7 @@ def test_rome_mlp_window_aie_peak(tmp_path):
             ]
             doc = {
                 "header": {
-                    "protocol_version": "3",
+                    "protocol_version": "4",
                     "description": f"generated: ROME MLP window restore, center {center}, width-{width} shard",
                 },
                 "model": {"key": "gpt2-xl", "revision": "main", "dtype": "fp32"},
@@ -238,25 +240,10 @@ def test_rome_mlp_window_aie_peak(tmp_path):
                         },
                     },
                     "reads": {
-                        "logits_corr": {
-                            "site": "lm_head",
-                            "pos": -1,
-                            "model": "corrupted",
-                            "input": "base",
-                        },
-                        "logits_rest": {
-                            "site": "lm_head",
-                            "pos": -1,
-                            "model": "restored",
-                            "input": "base",
-                        },
+                        "logits_corr": {"site": "lm_head", "pos": -1},
+                        "logits_rest": {"site": "lm_head", "pos": -1},
                         **{
-                            f"v{layer}": {
-                                "site": f"mlp{layer}",
-                                "pos": "last_subject",
-                                "model": "original",
-                                "input": "base",
-                            }
+                            f"v{layer}": {"site": f"mlp{layer}", "pos": "last_subject"}
                             for layer in layers
                         },
                     },
@@ -282,37 +269,39 @@ def test_rome_mlp_window_aie_peak(tmp_path):
                         },
                     },
                     "intervened_models": {
-                        "corrupted": {"input": "base", "writes": ["noise"]},
+                        # the clean window values, read on the un-intervened network
+                        "original": {
+                            "input": "base",
+                            "reads": [f"v{layer}" for layer in layers],
+                        },
+                        "corrupted": {
+                            "input": "base",
+                            "reads": ["logits_corr"],
+                            "writes": ["noise"],
+                        },
                         "restored": {
                             "input": "base",
+                            "reads": ["logits_rest"],
                             "writes": ["noise"] + [f"rest{layer}" for layer in layers],
-                        },
-                    },
-                    "metrics": {
-                        "ce_corr": {
-                            "kind": "cross_entropy",
-                            "of": "logits_corr",
-                            "target": "answer",
-                            "token_form": "space_prefixed",
-                        },
-                        "ce_rest": {
-                            "kind": "cross_entropy",
-                            "of": "logits_rest",
-                            "target": "answer",
-                            "token_form": "space_prefixed",
                         },
                     },
                     "save": [
                         {
-                            "value": "ce_corr",
+                            "read": "logits_corr",
                             "model": "corrupted",
-                            "input": "base",
+                            "aggregation": {
+                                "kind": "cross_entropy",
+                                "target": "answer",
+                            },
                             "file_path": "ce_corr.json",
                         },
                         {
-                            "value": "ce_rest",
+                            "read": "logits_rest",
                             "model": "restored",
-                            "input": "base",
+                            "aggregation": {
+                                "kind": "cross_entropy",
+                                "target": "answer",
+                            },
                             "file_path": "ce_rest.json",
                         },
                     ],
@@ -323,6 +312,8 @@ def test_rome_mlp_window_aie_peak(tmp_path):
             out = tmp_path / f"out_c{center}_w{width}"
             argv = [
                 "run",
+                "--engine",
+                "auto",
                 str(doc_path),
                 "--data-root",
                 str(FIXTURES / "data"),
@@ -360,8 +351,9 @@ def test_mixing_positional_shares(tmp_path):
     intervention layer for gemma-2-2b-it ("the last layer before
     retrieval starts", named as layers 16-18, anchored at ~18). A max-attribution heuristic is wrong here: past retrieval
     (L20+) the patch carries the counterfactual's finished answer and
-    reflexive sweeps to ~100% everywhere (an H100 layer table corroborated it:
-    L16 edges 100/74% vs middle 28%; L18 90/65% vs 17%; L22+ ref≈100%).
+    reflexive sweeps to ~100% everywhere (layer table of one H100 run of
+    this test: L16 edges 100/74% vs middle 28%; L18 90/65% vs 17%; L22+
+    ref≈100%).
     One document per bucket keeps the single-batch lm_head forward within
     GPU memory; the scan stays in the document so the retrieval
     transition remains visible in the saved tables."""
@@ -485,7 +477,7 @@ def test_arithmetic_steering_diagonal(tmp_path):
     for target in range(24):
         doc = {
             "header": {
-                "protocol_version": "3",
+                "protocol_version": "4",
                 "description": f"generated: hours steering toward target {target:02d}",
             },
             "model": {
@@ -499,14 +491,7 @@ def test_arithmetic_steering_diagonal(tmp_path):
                     "l18": {"component": "block_output", "layers": [18]},
                     "lm_head": {"component": "lm_head"},
                 },
-                "reads": {
-                    "logits": {
-                        "site": "lm_head",
-                        "pos": -1,
-                        "model": "steered",
-                        "input": "base",
-                    }
-                },
+                "reads": {"logits": {"site": "lm_head", "pos": -1}},
                 "code": {
                     "steer_fn": {
                         "locator": f"tests.golden._steering.apply_target_{target}",
@@ -521,21 +506,20 @@ def test_arithmetic_steering_diagonal(tmp_path):
                     }
                 },
                 "intervened_models": {
-                    "steered": {"input": "base", "writes": ["steer"]}
-                },
-                "metrics": {
-                    "hour_probs": {
-                        "kind": "class_probs",
-                        "of": "logits",
-                        "groups": groups,
-                        "token_form": "bare",
+                    "steered": {
+                        "input": "base",
+                        "reads": ["logits"],
+                        "writes": ["steer"],
                     }
                 },
                 "save": [
                     {
-                        "value": "hour_probs",
+                        "read": "logits",
                         "model": "steered",
-                        "input": "base",
+                        "aggregation": {
+                            "kind": "class_probs",
+                            "groups": groups,
+                        },
                         "file_path": "hour_probs.json",
                     }
                 ],
@@ -546,6 +530,8 @@ def test_arithmetic_steering_diagonal(tmp_path):
         out = tmp_path / f"steer_out_{target:02d}"
         argv = [
             "run",
+            "--engine",
+            "auto",
             str(doc_path),
             "--data-root",
             str(tmp_path / "data"),

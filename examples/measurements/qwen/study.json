@@ -1,0 +1,225 @@
+{
+  "version": "1",
+  "description": "Real-model v1 apparatus validation; identical source arms, two-update fits, clean/no-op and held-out replay. Not a method quality claim.",
+  "output_dir": "research",
+  "steps": {
+    "das": {
+      "type": "intervention_protocol",
+      "document": "das.json"
+    },
+    "das_eval": {
+      "type": "intervention_protocol",
+      "document": "das_eval.json"
+    },
+    "dbm": {
+      "type": "intervention_protocol",
+      "document": "dbm.json"
+    },
+    "dbm_eval": {
+      "type": "intervention_protocol",
+      "document": "dbm_eval.json"
+    },
+    "clean": {
+      "type": "intervention_protocol",
+      "document": "clean.json"
+    },
+    "noop": {
+      "type": "intervention_protocol",
+      "document": "noop.json"
+    }
+  },
+  "measurement": {
+    "version": 1,
+    "arms": {
+      "before": {
+        "revision": "HEAD",
+        "execution": {
+          "batch_rows": 2
+        }
+      },
+      "after": {
+        "revision": "HEAD",
+        "execution": {
+          "batch_rows": 2
+        }
+      }
+    },
+    "seeds": [
+      7,
+      8
+    ],
+    "repeats": 2,
+    "warmups": 1,
+    "bootstrap_draws": 1000,
+    "cases": {
+      "das_fit": {
+        "kind": "operation",
+        "step": "das"
+      },
+      "dbm_fit": {
+        "kind": "operation",
+        "step": "dbm"
+      },
+      "resident_workflow": {
+        "kind": "workflow",
+        "cold_process": false
+      },
+      "cold_workflow": {
+        "kind": "workflow",
+        "cold_process": true
+      }
+    },
+    "observations": {
+      "rot": {
+        "step": "das",
+        "file": "rot.safetensors",
+        "kind": "subspace"
+      },
+      "das_iia": {
+        "step": "das",
+        "file": "iia.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "das_ce": {
+        "step": "das",
+        "file": "ce.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "das_eval_iia": {
+        "step": "das_eval",
+        "file": "iia.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "das_eval_ce": {
+        "step": "das_eval",
+        "file": "ce.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "gate": {
+        "step": "dbm",
+        "file": "gate.safetensors",
+        "kind": "gate"
+      },
+      "dbm_iia": {
+        "step": "dbm",
+        "file": "iia.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "dbm_ce": {
+        "step": "dbm",
+        "file": "ce.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "dbm_eval_iia": {
+        "step": "dbm_eval",
+        "file": "iia.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "dbm_eval_ce": {
+        "step": "dbm_eval",
+        "file": "ce.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "clean_logits": {
+        "step": "clean",
+        "file": "logits.safetensors",
+        "kind": "tensor"
+      },
+      "clean_accuracy": {
+        "step": "clean",
+        "file": "accuracy.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "noop_logits": {
+        "step": "noop",
+        "file": "logits.safetensors",
+        "kind": "tensor"
+      },
+      "noop_accuracy": {
+        "step": "noop",
+        "file": "accuracy.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      }
+    },
+    "evaluation": {
+      "arm": "before",
+      "crossed": true,
+      "cases": {
+        "das_fit": [
+          "das_eval"
+        ],
+        "dbm_fit": [
+          "dbm_eval"
+        ],
+        "resident_workflow": [
+          "das_eval",
+          "dbm_eval"
+        ],
+        "cold_workflow": [
+          "das_eval",
+          "dbm_eval"
+        ]
+      }
+    },
+    "profile": {
+      "cases": [
+        "das_fit",
+        "dbm_fit",
+        "resident_workflow",
+        "cold_workflow"
+      ],
+      "record_shapes": true,
+      "reason": "Whole case with step/training/forward/backward/optimizer phase annotations."
+    }
+  }
+}

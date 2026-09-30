@@ -24,7 +24,7 @@ Usage::
     uv run python scripts/build_task_dataset.py ... --check
 
     # Validate the pairs under a tokenizer before writing (spec §2.2,
-    # causalab/causal/pairs.py): every row's answers differ, and every row
+    # causalab/causal/pair_validation.py): every row's answers differ, and every row
     # that declares edit_groups carries its edit in tokens with no edit
     # outside the declared spans. Nothing is written if a row fails.
     uv run python scripts/build_task_dataset.py ... \\
@@ -32,27 +32,26 @@ Usage::
 
 ``--set k=v`` values are parsed as JSON when they parse, else kept as
 strings, and are passed as keyword arguments to the task's config dataclass
-(the convention :func:`causalab.tasks.serialize.config_class` resolves).
+(the convention [`causalab.tasks.serialize.config_class`][] resolves).
 Singleton tasks take none.
 """
 
 from __future__ import annotations
 
 import argparse
-
 import json
 import sys
 from pathlib import Path
 from typing import Any, Sequence
 
-from causalab.causal.pairs import (
+from causalab.causal.pair_validation import (
     EditGroupError,
     check_answer_change,
     check_intended_token_change,
     check_no_unintended_edits,
     parse_edit_groups,
 )
-from causalab.causal.scoring import SCORING_DIGEST_COLUMN
+from causalab.causal.scoring import STRING_MODE_COLUMN
 from causalab.tasks.serialize import (
     config_class,
     serialize_counterfactual_dataset,
@@ -77,7 +76,7 @@ def _parse_set(values: Sequence[str]) -> dict[str, Any]:
 
 
 def _records_scoring(table: Path) -> bool:
-    """Whether the table on disk carries the scoring identity columns — an
+    """Whether the table on disk carries the ``string_mode`` column — an
     absent or unreadable table records nothing, so a fresh build would."""
     if not table.is_file():
         return True
@@ -87,7 +86,7 @@ def _records_scoring(table: Path) -> bool:
         return True
     if not isinstance(rows, list) or not rows:
         return True
-    return any(isinstance(row, dict) and SCORING_DIGEST_COLUMN in row for row in rows)
+    return any(isinstance(row, dict) and STRING_MODE_COLUMN in row for row in rows)
 
 
 def _validate_pairs(
@@ -129,7 +128,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="the split every row of this table declares (§2.2). Required with "
         "no default: a single undivided pool is a claim worth stating "
         "(--split all), and a table that forgot to say is what the column "
-        "exists to prevent.",
+        "exists to prevent. For a partitioned table use build_split_dataset.py",
     )
     parser.add_argument(
         "--set",
@@ -162,7 +161,7 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="run the pair-validity checks that need only the rows and a "
         "tokenizer (answer change; for rows declaring edit_groups, intended "
-        "token change and absence of unintended edits — causalab/causal/pairs.py) "
+        "token change and absence of unintended edits — causalab/causal/pair_validation.py) "
         "and write nothing if any row fails. Needs --tokenizer",
     )
     parser.add_argument(
@@ -183,9 +182,9 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="fail instead of writing when the table would change — the "
         "determinism guard for committed tables. A committed table built "
-        "before the scoring_digest / string_mode columns existed is rebuilt "
-        "without them, as its recipe says (the columns are part of the recipe, "
-        "not of the generator's determinism)",
+        "before the string_mode column existed is rebuilt without it, as its "
+        "recipe says (the column is part of the recipe, not of the "
+        "generator's determinism)",
     )
     return parser
 
@@ -201,9 +200,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     task_cfg = cls(**overrides) if cls is not None and overrides else None
 
-    # A new table always records its scoring identity (spec §2.2). Under
-    # --check the recipe is the table on disk: one written before the two
-    # columns existed is reproduced without them, so the check keeps guarding
+    # A new table always records its string_mode (spec §2.2). Under
+    # --check the recipe is the table on disk: one written before the
+    # column existed is reproduced without it, so the check keeps guarding
     # what it guards — the generator's and the causal model's determinism —
     # rather than failing every committed table the day the columns landed.
     reproduce = args.check

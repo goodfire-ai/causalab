@@ -1,0 +1,42 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Interchange intervention: swap the answer-slot residual from the counterfactual into base; IIA scoring."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#train",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "sites": {
+      "target": {"component": "block_output", "layers": [23]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {"v_cf": {"site": "target", "pos": -1}, "logits": {"site": "lm_head", "pos": -1}},
+    "writes": {
+      "patch": {"site": "target", "pos": -1, "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "logit_diff.json"
+      }
+    ]
+  }
+}

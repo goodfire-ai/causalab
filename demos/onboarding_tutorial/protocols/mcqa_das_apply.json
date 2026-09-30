@@ -1,17 +1,21 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Apply each fitted rotation to a split the fit never saw. No train section: the featurizer's file_path loads the artifact mcqa_das_fit.json wrote, and its ArtifactIdentity (model, site, k, parametrization, dtype) is checked on load, so an apply against the wrong cell or the wrong k refuses instead of scoring. The k sweep here is the same axis name as the fit's, so the two zip rather than cross -- each point loads the entry fitted at its own k."
+    "protocol_version": "4",
+    "description": "Load each fitted rotation and measure interchange accuracy and logit difference on held-out pairs when only its first k coordinates are swapped."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {
-    "base": {"dataset": "mcqa/data#test", "field": "input"},
-    "counterfactual": {"dataset": "mcqa/data#test", "field": "counterfactual_inputs[0]"}
+    "base": {"dataset": "mcqa/test_n64_s2", "field": "input"},
+    "counterfactual": {"dataset": "mcqa/test_n64_s2", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "positions": {"best": {"index": -1}},
     "sites": {
-      "target": {"component": "block_output", "layers": [14]},
+      "target": {"component": "block_output", "layers": [26]},
       "lm_head": {"component": "lm_head"}
     },
     "featurizers": {
@@ -23,42 +27,23 @@
       }
     },
     "reads": {
-      "v_cf": {
-        "site": "target",
-        "pos": "best",
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": "rot"
-      },
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
+      "v_cf": {"site": "target", "pos": "best", "featurizer": "rot"},
+      "logits": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "patch": {"site": "target", "pos": "best", "featurizer": "rot", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "logit_diff": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
       {
-        "value": "logit_diff",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
         "file_path": "logit_diff.json"
       }
     ]

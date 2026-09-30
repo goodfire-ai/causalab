@@ -38,6 +38,25 @@ def fixture() -> dict[str, Any]:
 
 
 @pytest.mark.numerical_unit
+def test_first_ten_natural_harmonics_preserve_both_periods():
+    _, scores, metadata = fit(
+        {**fixture(), "periods": [10, 7], "harmonics": list(range(1, 11))}
+    )
+    aliases = {
+        (a["period"], a["harmonic"])
+        for spec in metadata["frequencies"]
+        for a in spec["aliases"]
+    }
+    assert aliases == {(float(p), h) for p in (10, 7) for h in range(1, 11)}
+    assert len(metadata["frequencies"]) == 19
+    decimal_third = next(s for s in scores if s["period"] == 10 and s["harmonic"] == 3)
+    assert decimal_third["frequency"] == 3 / 10
+    constant = next(s for s in scores if s["frequency"] == 1)
+    assert constant["reason"] == "constant_training_targets"
+    assert constant["evaluation"]["r2"] is None
+
+
+@pytest.mark.numerical_unit
 def test_known_frequency_rank_one_and_sklearn_oracle():
     inputs = fixture()
     tensors, scores, metadata = fit(inputs)

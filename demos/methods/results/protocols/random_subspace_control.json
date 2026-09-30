@@ -1,0 +1,26 @@
+{
+  "document": "protocols/random_subspace_control.json",
+  "document_digest": "abab2541623e1a190e0072d8a0fa3a67147fecd134db9be07be3f6cc3e645134",
+  "run_digest": "abab2541623e1a190e0072d8a0fa3a67147fecd134db9be07be3f6cc3e645134",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 44.7,
+  "metrics": {
+    "iia": {
+      "metric": "iia",
+      "unit": "logit",
+      "rows": 57,
+      "eligible_rows": 57,
+      "mean": -2.2446,
+      "cells": 3,
+      "best_cell": {
+        "featurizers.rot.seed": 1
+      },
+      "best_mean": -2.2373,
+      "worst_mean": -2.2531
+    }
+  }
+}

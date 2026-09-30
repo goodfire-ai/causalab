@@ -7,7 +7,7 @@ anything: hashing needs no import.
 
 **The guarantee, stated as weakly as it can be while still buying that.** Not
 "nothing is imported" — resolving a ``{"module": …}`` locator calls
-:func:`importlib.util.find_spec`, and the stdlib imports the target's *parent
+`importlib.util.find_spec`, and the stdlib imports the target's *parent
 packages* ("If the name is for a submodule (contains a dot), the parent package
 is automatically imported"). So the property is about *what* is imported:
 
@@ -18,7 +18,7 @@ is automatically imported"). So the property is about *what* is imported:
 (2) is the obligation the ``{"path": …}`` case below cannot see, and it was
 unmet: ``causalab.io.plots.workflow_figures`` is a shipped script and
 ``causalab/io/plots/__init__.py`` eagerly imported the plotting stack, so
-``validate`` of the shipped ``weekdays_8b.json`` reached torch. That package is
+``validate`` of the shipped ``weekdays.json`` reached torch. That package is
 lazy now (PEP 562), and the two tests added here are what keep it so — one per
 numbered clause.
 
@@ -42,19 +42,20 @@ from pathlib import Path
 import pytest
 
 from tests.protocol._env import FIXTURES
+from tests._helpers.paths import PROTOCOLS_DIR, WORKFLOWS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
 #: the shipped intervention specifications, one file per experiment.
-METHODS = REPO / "causalab/configs/protocols"
+METHODS = PROTOCOLS_DIR
 
 _PROBE = """
 import json, sys
 from causalab.cli import main
 
 code = main(["validate", sys.argv[1], "--data-root", sys.argv[2],
-             "--artifacts-root", sys.argv[3]])
+             "--artifacts-root", sys.argv[3], "--engine", "auto"])
 print(json.dumps({"code": code, "torch": "torch" in sys.modules}))
 """
 
@@ -122,6 +123,7 @@ def test_validate_of_a_script_workflow_never_imports_torch(tmp_path: Path) -> No
 #: listed by hand — see `test_the_script_packages_are_the_shipped_ones`.
 SCRIPT_PACKAGES = (
     "causalab.analysis",
+    "causalab.measurement.analysis",
     "causalab.io.plots",
     "causalab.workflow.scripts",
 )
@@ -140,7 +142,7 @@ print(json.dumps({"heavy": heavy}))
 def _shipped_script_modules() -> set[str]:
     """Every `{"module": …}` locator the shipped workflows name."""
     out: set[str] = set()
-    for shipped in sorted((REPO / "causalab" / "configs" / "workflows").glob("*.json")):
+    for shipped in sorted((WORKFLOWS_DIR).glob("*.json")):
         document = json.loads(shipped.read_text())
         for step in document.get("steps", {}).values():
             locator = step.get("script")
@@ -194,7 +196,7 @@ def test_a_script_package_is_importable_without_numerics(package: str) -> None:
 def test_validate_of_a_shipped_module_locator_never_imports_torch() -> None:
     """Clause 1+2 together, through the real CLI on the real shipped workflow.
 
-    `weekdays_8b.json` names `causalab.io.plots.workflow_figures`, which is the
+    `weekdays.json` names `causalab.io.plots.workflow_figures`, which is the
     locator that broke the guarantee. The `{"path": …}` case above could not see
     it: a path locator has no parent package to import.
     """
@@ -203,7 +205,7 @@ def test_validate_of_a_shipped_module_locator_never_imports_torch() -> None:
             sys.executable,
             "-c",
             _PROBE,
-            str(REPO / "causalab/configs/workflows/weekdays_8b.json"),
+            str(WORKFLOWS_DIR / "weekdays.json"),
             str(FIXTURES / "data"),
             str(FIXTURES / "artifacts"),
         ],
@@ -218,4 +220,68 @@ def test_validate_of_a_shipped_module_locator_never_imports_torch() -> None:
         "validate of the shipped workflow imported torch — resolving its "
         "`causalab.io.plots.workflow_figures` locator imported the parent "
         "package eagerly (workflow spec §4.2)"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# the pipeline's two verbs, against a real engine's capability set
+# --------------------------------------------------------------------------- #
+
+_PIPELINE_PROBE = """
+import json, sys
+from pathlib import Path
+
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.lowering import point_count
+from causalab.protocol.pipeline import build, validate
+from causalab.tasks import TASKS_ROOT
+
+env = ResolutionEnv(
+    datasets=FileDatasets(root=Path(sys.argv[2]), fallback_roots=(TASKS_ROOT,)),
+    artifacts=FileArtifacts(root=Path(sys.argv[3])),
+)
+document = Path(sys.argv[1])
+compiled = build(document, base_dir=document.parent, env=env)
+validated = validate(compiled, "pytorch_hooks", env=env, data=True)
+print(json.dumps({
+    "same": validated is compiled,
+    "points": point_count(compiled.axes),
+    "digest": compiled.campaign_digest,
+    "torch": "torch" in sys.modules,
+}))
+"""
+
+
+def test_build_and_validate_against_an_engine_never_import_torch() -> None:
+    """The invariant of the pipeline's two verbs: ``build``
+    then ``validate`` — the checklist, the data rules and the engine's
+    shortfall against the reference engine's *registered* capability set —
+    on the shipped ``weekdays_locate_scan`` against the fixture environment,
+    with torch never imported. The engine is named, not constructed: its
+    capabilities are the registry's rows, so no engine module loads.
+
+    A subprocess for the same reason as every test above — ``conftest.py``
+    has already imported torch in this process.
+    """
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            _PIPELINE_PROBE,
+            str(METHODS / "weekdays_locate_scan.json"),
+            str(FIXTURES / "data"),
+            str(FIXTURES / "artifacts"),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(REPO),
+    )
+    assert completed.returncode == 0, completed.stderr
+    result = json.loads(completed.stdout.strip().splitlines()[-1])
+    assert result["same"], "validate returns the object it was handed"
+    assert result["points"] == 56 and len(result["digest"]) == 64
+    assert not result["torch"], (
+        "build + validate(engine='pytorch_hooks', data=True) imported torch — "
+        "the pipeline must decide everything it decides from the registry and "
+        "the resolved tables alone"
     )

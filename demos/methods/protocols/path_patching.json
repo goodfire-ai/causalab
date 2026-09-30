@@ -1,0 +1,51 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Path patching on IOI. The sender is attention head 9 at layer 8, swapped to its counterfactual value in the patched model. The attention outputs of layers 9 and 10 are swapped back to their clean values (freeze_9, freeze_10), so the sender reaches the receiver at layer 11 through the residual stream and the MLPs. The receiver value is read from the patched model and injected into the final model, an otherwise clean run. The writes of the patched model are the restoration policy: to add a layer between sender and receiver, add its freeze write there."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "IOI/data/default", "field": "input"},
+    "counterfactual": {"dataset": "IOI/data/default", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_sender"]},
+      "original_base": {"input": "base", "reads": ["v_a9", "v_a10"]},
+      "patched": {
+        "input": "base",
+        "reads": ["v_receiver"],
+        "writes": ["swap_sender", "freeze_9", "freeze_10"]
+      },
+      "final": {"input": "base", "reads": ["logits"], "writes": ["inject"]}
+    },
+    "sites": {
+      "sender": {"component": "attention_premix", "layers": [8], "head": 9},
+      "receiver": {"component": "block_input", "layers": [11]},
+      "a9": {"component": "attention_output", "layers": [9]},
+      "a10": {"component": "attention_output", "layers": [10]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_sender": {"site": "sender", "pos": -1},
+      "v_a9": {"site": "a9", "pos": -1},
+      "v_a10": {"site": "a10", "pos": -1},
+      "v_receiver": {"site": "receiver", "pos": -1},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "swap_sender": {"site": "sender", "pos": -1, "do": {"swap": "v_sender"}},
+      "freeze_9": {"site": "a9", "pos": -1, "do": {"swap": "v_a9"}},
+      "freeze_10": {"site": "a10", "pos": -1, "do": {"swap": "v_a10"}},
+      "inject": {"site": "receiver", "pos": -1, "do": {"swap": "v_receiver"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "final",
+        "aggregation": {"kind": "logit_diff", "a": "base_answer", "b": "cf_answer"},
+        "file_path": "logit_diff.json"
+      }
+    ]
+  }
+}

@@ -1,27 +1,21 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "IOI clean baseline (Wang et al. 2023, arXiv:2211.00593): mean logit(IO) - logit(S) at END over the clean IOI distribution. Golden: paper reports 3.56 on 100k examples (band +/-1.2); the IO-over-S rate follows post-hoc as the fraction of positive per-row values."
   },
   "model": {"key": "gpt2", "revision": "main", "dtype": "fp32"},
   "data": {"base": {"dataset": "ioi/clean", "field": "input"}},
   "method": {
-    "sites": {"lm_head": {"component": "lm_head"}},
-    "reads": {"logits": {"site": "lm_head", "pos": -1, "model": "original", "input": "base"}},
-    "metrics": {
-      "ld": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "io",
-        "b": "s",
-        "token_form": "space_prefixed"
-      }
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["logits"]}
     },
+    "sites": {"lm_head": {"component": "lm_head"}},
+    "reads": {"logits": {"site": "lm_head", "pos": -1}},
     "save": [
       {
-        "value": "ld",
+        "read": "logits",
         "model": "original",
-        "input": "base",
+        "aggregation": {"kind": "logit_diff", "a": "io", "b": "s"},
         "file_path": "logit_diff.json"
       }
     ]

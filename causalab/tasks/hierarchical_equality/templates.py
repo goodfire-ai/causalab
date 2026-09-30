@@ -46,30 +46,30 @@ def get_func_name(template: str) -> str:
     return template.split("def ")[1].split("(")[0]
 
 
-def _sample_pattern_values(pattern: str) -> tuple[str, str, str, str]:
+def _sample_pattern_values(pattern: str, rng) -> tuple[str, str, str, str]:
     """Sample letter values according to a pattern."""
     if pattern == "AABB":
-        a = random.choice(LETTERS)
-        c = random.choice(LETTERS)
+        a = rng.choice(LETTERS)
+        c = rng.choice(LETTERS)
         return (a, a, c, c)
     elif pattern == "ABCD":
-        chosen = random.sample(LETTERS, 4)
+        chosen = rng.sample(LETTERS, 4)
         return (chosen[0], chosen[1], chosen[2], chosen[3])
     elif pattern == "ABCC":
-        a = random.choice(LETTERS)
-        b = random.choice([letter for letter in LETTERS if letter != a])
-        c = random.choice(LETTERS)
+        a = rng.choice(LETTERS)
+        b = rng.choice([letter for letter in LETTERS if letter != a])
+        c = rng.choice(LETTERS)
         return (a, b, c, c)
     elif pattern == "AABC":
-        a = random.choice(LETTERS)
-        c = random.choice(LETTERS)
-        d = random.choice([letter for letter in LETTERS if letter != c])
+        a = rng.choice(LETTERS)
+        c = rng.choice(LETTERS)
+        d = rng.choice([letter for letter in LETTERS if letter != c])
         return (a, a, c, d)
     else:
         raise ValueError(f"Unknown pattern: {pattern}")
 
 
-def _generate_icl_lines(n: int, fmt: str) -> str:
+def _generate_icl_lines(n: int, fmt: str, rng) -> str:
     """Generate *n* balanced ICL lines in the given format.
 
     fmt: "algorithmic" → ``A A B B: 1``
@@ -79,24 +79,24 @@ def _generate_icl_lines(n: int, fmt: str) -> str:
     per_pattern = n // len(PATTERNS)
     for pattern in PATTERNS:
         for _ in range(per_pattern):
-            v1, v2, v3, v4 = _sample_pattern_values(pattern)
+            v1, v2, v3, v4 = _sample_pattern_values(pattern, rng)
             out = 1 if (v1 == v2) == (v3 == v4) else 0
             if fmt == "minimal_function":
                 lines.append(f"f({v1},{v2},{v3},{v4})={out}")
             else:
                 lines.append(f"{v1} {v2} {v3} {v4}: {out}")
-    random.shuffle(lines)
+    rng.shuffle(lines)
     return "\n".join(lines)
 
 
-def generate_icl_examples(func_name: str, n: int = NUM_ICL_EXAMPLES) -> str:
+def generate_icl_examples(func_name: str, rng, n: int = NUM_ICL_EXAMPLES) -> str:
     """Generate n balanced ICL examples for code mode."""
     examples = []
     per_pattern = n // len(PATTERNS)
 
     for pattern in PATTERNS:
         for _ in range(per_pattern):
-            a, b, c, d = _sample_pattern_values(pattern)
+            a, b, c, d = _sample_pattern_values(pattern, rng)
             output = 1 if (a == b) == (c == d) else 0
             line = (
                 f'The function call {func_name}("{a}", "{b}", "{c}", "{d}") '
@@ -104,24 +104,27 @@ def generate_icl_examples(func_name: str, n: int = NUM_ICL_EXAMPLES) -> str:
             )
             examples.append(line)
 
-    random.shuffle(examples)
+    rng.shuffle(examples)
     return "\n".join(examples)
 
 
-def fill_template(template: str, var_1: str, var_2: str, var_3: str, var_4: str) -> str:
+def fill_template(
+    template: str, var_1: str, var_2: str, var_3: str, var_4: str, *, seed: int
+) -> str:
     """Build the full prompt respecting PROMPT_MODE."""
+    rng = random.Random(seed)
     if template == "algorithmic":
-        icl = _generate_icl_lines(NUM_ICL_EXAMPLES, "algorithmic")
+        icl = _generate_icl_lines(NUM_ICL_EXAMPLES, "algorithmic", rng)
         query = f"{var_1} {var_2} {var_3} {var_4}: "
         return icl + "\n" + query
     elif template == "minimal_function":
-        icl = _generate_icl_lines(NUM_ICL_EXAMPLES, "minimal_function")
+        icl = _generate_icl_lines(NUM_ICL_EXAMPLES, "minimal_function", rng)
         query = f"f({var_1},{var_2},{var_3},{var_4})="
         return icl + "\n" + query
     else:
         # code mode
         func_name = get_func_name(template)
-        icl_lines = generate_icl_examples(func_name)
+        icl_lines = generate_icl_examples(func_name, rng)
         test_query = (
             f'The function call {func_name}("{var_1}", "{var_2}", "{var_3}", "{var_4}") '
             f"returns the value "

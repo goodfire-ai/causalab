@@ -1,5 +1,5 @@
 """A budget pool end to end through the CLI (spec §2.5 ``pool``): two budget
-gates at two sites of the tiny fixture fitted as one shared budget under a
+gates at two sites of the tiny fixture fitted as ONE budget under a
 ``kept`` log-uniform schedule, then the two bundles replayed through one
 pooled ``top_k`` axis (§3.2 ``axes``).
 
@@ -19,12 +19,14 @@ from pathlib import Path
 import pytest
 
 from causalab.cli import main
-from causalab.protocol.resolve import read_safetensors_metadata
+from causalab.io.env import read_safetensors_metadata
 from tests.neural.engines.pytorch_hooks.conftest import TINY_QWEN35_MOE
+from tests.protocol._docs import UNWRITTEN
 from tests.protocol._env import FIXTURES
+from tests._helpers.paths import PROTOCOLS_DIR
 
 REPO = Path(__file__).resolve().parents[4]
-PROTOCOLS = REPO / "causalab/configs/protocols"
+PROTOCOLS = PROTOCOLS_DIR
 PINS = {
     "model.key": TINY_QWEN35_MOE,
     "model.dtype": "fp32",
@@ -47,12 +49,8 @@ def _two_sites(doc: dict, gate_a: dict, gate_b: dict | None) -> dict:
     for either gate spells the plain swap of that site."""
     method = doc["method"]
     method["sites"]["mlp"] = {"component": "mlp_output", "layers": [1]}
-    method["reads"]["v_cf_b"] = {
-        "site": "mlp",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-    }
+    method["reads"]["v_cf_b"] = {"site": "mlp", "pos": -1}
+    method["intervened_models"][UNWRITTEN]["reads"].append("v_cf_b")
     method["writes"]["mask_b"] = {"site": "mlp", "pos": -1, "do": {"swap": "v_cf_b"}}
     method["intervened_models"]["masked"]["writes"].append("mask_b")
     method["featurizers"] = {}
@@ -77,7 +75,7 @@ def _fit_document(schedule: dict) -> dict:
     gate = {"parametrization": "budget", "k_schedule": schedule, "pool": "mib"}
     fit = _two_sites(fit, gate, gate)
     train = fit["method"]["train"]
-    train["objective"] = [[1.0, "ce"]]
+    del train["objective"]["l1"]  # the task term alone; the pool sets the sparsity
     train["params"] = ["gate", "gate_b"]
     train.pop("anneal", None)
     fit["method"]["save"].append(
@@ -114,21 +112,18 @@ def _apply_document(
         apply["method"]["save"].append({"kind": "rank", "file_path": "rank.json"})
     method = apply["method"]
     if base_metric:
-        method["reads"]["logits_base"] = {
-            "site": "lm_head",
-            "pos": -1,
-            "model": "original",
+        # the same margin on the un-intervened model, read on base (§2.9)
+        method["reads"]["logits_base"] = {"site": "lm_head", "pos": -1}
+        method["intervened_models"]["original_base"] = {
             "input": "base",
+            "reads": ["logits_base"],
         }
-        method["metrics"]["iia_base"] = {
-            **method["metrics"]["iia"],
-            "of": "logits_base",
-        }
+        (iia,) = [e for e in method["save"] if e["file_path"] == "iia.json"]
         method["save"].append(
             {
-                "value": "iia_base",
-                "model": "original",
-                "input": "base",
+                "read": "logits_base",
+                "model": "original_base",
+                "aggregation": iia["aggregation"],
                 "file_path": "iia_base.json",
             }
         )
@@ -155,6 +150,8 @@ def _run(tmp_path: Path, steps: dict[str, tuple[dict, dict]], out: str) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -281,6 +278,8 @@ def test_a_pooled_bundle_is_refused_alone(tmp_path: Path) -> None:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),

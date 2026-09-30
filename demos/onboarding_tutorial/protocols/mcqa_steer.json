@@ -1,20 +1,23 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Add the harvested contrast direction to the located cell at eleven strengths and watch the answer move. alpha=0 is the un-intervened model, so the sweep contains its own control; the direction enters as a params constant because a write operand is a name or a scalar and never a tensor. Compare the curve to 03's interchange: an interchange replaces the cell with one particular row's value, while this adds the same population-mean difference to every row, so anything the two agree on is a property of the direction rather than of a pair."
+    "protocol_version": "4",
+    "description": "Add the mean-difference direction to block 26's answer slot at eleven strengths on 64 held-out original prompts. Measure how often the model gives its original answer and the counterfactual answer."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
-  "data": {"base": {"dataset": "mcqa/data#test", "field": "input"}},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
+  "data": {"base": {"dataset": "mcqa/test_n64_s2", "field": "input"}},
   "method": {
+    "intervened_models": {
+      "steered": {"input": "base", "reads": ["logits"], "writes": ["push"]}
+    },
     "positions": {"slot": {"index": -1}},
     "sites": {
-      "target": {"component": "block_output", "layers": [14]},
+      "target": {"component": "block_output", "layers": [26]},
       "lm_head": {"component": "lm_head"}
     },
     "params": {
       "steer": {"file_path": "direction/direction.safetensors", "entry": {"slot": "weight"}}
     },
-    "reads": {"logits": {"site": "lm_head", "pos": -1, "model": "steered", "input": "base"}},
+    "reads": {"logits": {"site": "lm_head", "pos": -1}},
     "writes": {
       "push": {
         "site": "target",
@@ -27,34 +30,17 @@
         }
       }
     },
-    "intervened_models": {
-      "steered": {"input": "base", "writes": ["push"]}
-    },
-    "metrics": {
-      "accuracy": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "base_answer",
-        "token_form": "space_prefixed"
-      },
-      "flipped": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
       {
-        "value": "accuracy",
+        "read": "logits",
         "model": "steered",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "base_answer"},
         "file_path": "accuracy.json"
       },
       {
-        "value": "flipped",
+        "read": "logits",
         "model": "steered",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
         "file_path": "flipped.json"
       }
     ]

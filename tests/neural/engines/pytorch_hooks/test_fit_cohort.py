@@ -32,10 +32,10 @@ from causalab.neural.engines.pytorch_hooks.train import (
     run_training,
 )
 from causalab.neural.shared.execution import campaign_cache
-from causalab.neural.shared.executor_base import ForwardCache, Interning
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.plan import plan_point
-from causalab.protocol.resolve import ResolutionEnv
+from causalab.neural.shared.executor import ForwardCache, Interning
+from causalab.protocol.engine import RunContext
+from causalab.neural.shared.plan import plan_point
+from causalab.io.env import ResolutionEnv
 from causalab.protocol.schema import Document, parse_document
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
@@ -48,7 +48,7 @@ from tests.neural.engines.pytorch_hooks.test_train import (
     das_doc,
     dbm_doc,
 )
-from tests.protocol._docs import in_order
+from tests.protocol._docs import in_order, term
 
 EVAL_SPLIT = "inline#eval"
 EVAL_ROWS = [
@@ -90,13 +90,8 @@ class _InlineDatasets:
         return self._splits[ref]
 
 
-def _request() -> ExecutionRequest:
-    return ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+def _request() -> RunContext:
+    return RunContext(
         env=ResolutionEnv(
             datasets=_InlineDatasets({EVAL_SPLIT: EVAL_ROWS}),
             artifacts=None,  # type: ignore[arg-type]
@@ -131,13 +126,20 @@ def _train_doc(
         method["train"]["eval"] = {
             "every": {"epochs": eval_every},
             "split": EVAL_SPLIT,
-            "metrics": ["ce"],
+            "aggregations": {"ce": _ce_term(raw)},
         }
         if early_stop is not None:
             method["train"]["early_stop"] = early_stop
         else:
             method["train"].pop("early_stop", None)
     return raw
+
+
+def _ce_term(raw: dict[str, Any]) -> dict[str, Any]:
+    """The document's cross-entropy as an objective or eval term: the
+    aggregation its ``ce.json`` save entry tabulates, over the same read."""
+    (ce,) = [e for e in raw["method"]["save"] if e.get("file_path") == "ce.json"]
+    return term(ce["read"], ce["model"], ce["aggregation"])
 
 
 def _campaign(
@@ -150,9 +152,7 @@ def _campaign(
     if cache is None:
         cache = campaign_cache(docs, plans)
     return docs, [
-        Interning(
-            digests={(g.model, g.input): g.digest for g in plan.groups}, cache=cache
-        )
+        Interning(keys={(g.model, g.input): g.key for g in plan.groups}, cache=cache)
         for plan in plans
     ]
 
@@ -347,7 +347,7 @@ class TestCohortArithmetic:
                 "draw": {"kind": "uniform"},
             }
             raw["method"]["train"]["objective"] = [
-                [1.0, "ce"],
+                [1.0, _ce_term(raw)],
                 [l1_weight, {"l1": "gate"}],
             ]
             raws.append(raw)
@@ -437,7 +437,7 @@ class TestCohortArithmetic:
         stopper = _train_doc(
             seed=0,
             epochs=epochs,
-            early_stop={"metric": "ce", "patience": 0, "mode": "min"},
+            early_stop={"on": "ce", "patience": 0, "mode": "min"},
         )
         runner = _train_doc(seed=1, epochs=epochs)
         outcomes, _executors, sizes, _cache = _fit_cohort([stopper, runner], bundle)
@@ -583,7 +583,7 @@ class TestCohortBackend:
         ``block_output`` (runs the document's backend): the plan puts them in
         separate cohorts, so the boundary member's forwards are never dragged
         onto eager by its neighbour."""
-        from causalab.protocol.plan import fit_cohorts
+        from causalab.neural.shared.plan import fit_cohorts
 
         interior = _train_doc(k=2, epochs=1, layer=1)
         interior["method"]["sites"]["tgt"]["component"] = "attention_query"

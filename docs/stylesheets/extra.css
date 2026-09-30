@@ -1,0 +1,204 @@
+/* The site's palette.
+ *
+ * The colors come from the flame logo. Sampling it by pixel count gives four:
+ * paper #f6f5f0 (72% of the image), crimson #b22935 (11%), ember #c4652d (9%),
+ * gold #eab651 (6%). The site uses all but ember. The header logo,
+ * docs/assets/logo.png, is the flame of the Goodfire logo (Goodfire publishes
+ * this repository), alone on a transparent ground. The hexes are recorded
+ * here rather than derived from it at build time. Three colors
+ * come from outside it: the warm graphite #24211e, which the light chrome
+ * needs and the logo has no color for, and the dark page #151515 with its ink
+ * #f0efec, a near-black page and an off-white ink chosen for the dark scheme.
+ *
+ * The roles:
+ *
+ *   graphite  header and nav bar in the light scheme
+ *   crimson   header and nav bar in the dark scheme, darkened; body links,
+ *             as sampled in the light scheme and lifted in the dark
+ *   paper     the light page
+ *   #151515   the dark page, with #f0efec as its body ink
+ *   gold      hover in the dark scheme; highlighted text in both
+ *
+ * Material only ships its own named palettes, so colors outside them are set
+ * as `palette.primary: custom` and `palette.accent: custom` in mkdocs.yml plus
+ * the variables below; this is the theme's documented route:
+ * https://squidfunk.github.io/mkdocs-material/setup/changing-the-colors/#custom-colors
+ *
+ * Where a color is shifted, the shift is in lightness only, holding the hue
+ * and saturation of the sampled color. Ratios are WCAG 2.1 against the
+ * background the color actually sits on. Hover always raises contrast.
+ *
+ * The selector below is `:root > *`, not `:root`, because the scheme's own
+ * variables land on `<body>`: a value on `<html>` would lose to them.
+ */
+:root > * {
+  /* Graphite chrome, so the header does not compete with the text. It carries
+   * white at 16.0:1, which the 0.7rem nav labels need. `--dark` is the
+   * repository band in the mobile drawer, white at 18.1:1.
+   */
+  --md-primary-fg-color: #24211e;
+  --md-primary-fg-color--light: #39322d;
+  --md-primary-fg-color--dark: #1b1917;
+}
+
+/* ------------------------------------------------------------------------- *
+ * light scheme
+ * ------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  /* The logo's paper, which is near enough to white to cost nothing: body ink
+   * measures 14.9:1 on it against 15.3:1 on white, and the theme's secondary
+   * ink 4.49:1 against 4.48:1. The alpha steps are the theme's own (70%, 30%,
+   * 12%), which it applies to white; they are scrims over the page color.
+   */
+  --md-default-bg-color: #f6f5f0;
+  --md-default-bg-color--light: #f6f5f0b3;
+  --md-default-bg-color--lighter: #f6f5f04d;
+  --md-default-bg-color--lightest: #f6f5f01f;
+
+  /* Code blocks read as inset, four points below the paper:
+   * hsl(50, 25%, 91%) against paper's hsl(50, 25%, 95%).
+   */
+  --md-code-bg-color: #eeece2;
+
+  /* Links are crimson as sampled, hsl(355, 63%, 43%), at 5.9:1.
+   *
+   * Hover deepens the same hue to hsl(355, 63%, 30%) at 9.3:1. Gold is the
+   * hover in the dark scheme but cannot be one here: it is 1.7:1 on paper.
+   * The accent also outlines Mermaid nodes and tints their fill.
+   */
+  --md-typeset-a-color: #b22935;
+  --md-accent-fg-color: #7d1c24;
+  --md-accent-fg-color--transparent: #7d1c241a;
+
+  /* Gold at 50% behind `==highlighted==` text, the alpha the theme uses for
+   * its own yellow; the body ink over it is 9.5:1.
+   */
+  --md-typeset-mark-color: #eab65180;
+}
+
+/* ------------------------------------------------------------------------- *
+ * dark scheme
+ * ------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  /* Slate derives every grey from `--md-hue`, whose default 225 is what gives
+   * the dark page a blue cast. 25 keeps the greys this file does not set,
+   * such as the code-block ink and the shadows, warm rather than blue. The
+   * page and the body ink are set outright below.
+   * https://squidfunk.github.io/mkdocs-material/setup/changing-the-colors/#custom-color-schemes
+   */
+  --md-hue: 25;
+
+  /* The dark page and its ink: page #151515, ink #f0efec, 15.9:1. Slate fixes
+   * saturation at 15%, so both are set outright. The page keeps slate's alpha
+   * steps (54%, 26%, 7%). The ink is opaque for body text, and its lighter
+   * steps keep slate's alphas (56%, 32%, 12%), which the theme uses for
+   * secondary text, rules and borders.
+   */
+  --md-default-bg-color: #151515;
+  --md-default-bg-color--light: #1515158a;
+  --md-default-bg-color--lighter: #15151542;
+  --md-default-bg-color--lightest: #15151512;
+  --md-default-fg-color: #f0efec;
+  --md-default-fg-color--light: #f0efec8f;
+  --md-default-fg-color--lighter: #f0efec52;
+  --md-default-fg-color--lightest: #f0efec1f;
+
+  /* Code blocks rise off the page here rather than sinking into it, four
+   * points above it and neutral with it; the ink on them is 14.3:1. The
+   * footer sinks three below.
+   */
+  --md-code-bg-color: #1f1f1f;
+  --md-footer-bg-color: #0e0e0e;
+  --md-footer-bg-color--dark: #0a0a0a;
+
+  /* Graphite would disappear into the dark page, so the dark header takes the
+   * logo's crimson instead, held at its hue and saturation and darkened to
+   * 22%: hsl(355, 63%, 22%). It carries white at 13.4:1 and reads 1.36:1
+   * against the page. The light header stays graphite: the two schemes share
+   * the logo's palette rather than one chrome color.
+   */
+  --md-primary-fg-color: #5b151b;
+  --md-primary-fg-color--light: #6c191f;
+  --md-primary-fg-color--dark: #4a1116;
+
+  /* Slate links take the primary color, which here is the header's crimson.
+   * Crimson lifted to hsl(355, 63%, 70%) gives 6.8:1 instead. Hover goes to
+   * gold as sampled, 9.8:1.
+   */
+  --md-typeset-a-color: #e3828a;
+  --md-accent-fg-color: #eab651;
+  --md-accent-fg-color--transparent: #eab6511a;
+
+  /* Gold at 30% behind highlighted text, the alpha slate uses for its own blue
+   * mark; the body ink over it is 8.1:1.
+   */
+  --md-typeset-mark-color: #eab6514d;
+}
+
+/* ------------------------------------------------------------------------- *
+ * Demos landing page: two path cards
+ * ------------------------------------------------------------------------- */
+/* docs/demos_hub.md draws two Material grid cards, which sit side by side on
+ * a wide page and stack on a phone. Each card is one large target: the link
+ * in it stretches over the whole card, so a click anywhere follows it.
+ * https://squidfunk.github.io/mkdocs-material/reference/grids/#using-card-grids
+ */
+.md-typeset .path-cards > ul > li {
+  position: relative;
+  padding: 1.6rem 1.2rem;
+  text-align: center;
+}
+
+.md-typeset .path-cards > ul > li > p:first-child .twemoji {
+  height: 3.2rem;
+  color: var(--md-typeset-a-color);
+}
+
+.md-typeset .path-cards > ul > li > p:first-child .twemoji svg {
+  width: auto;
+  height: 3.2rem;
+  max-height: none;
+}
+
+.md-typeset .path-cards > ul > li a {
+  font-size: 1.2em;
+}
+
+.md-typeset .path-cards > ul > li a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+/* ------------------------------------------------------------------------- *
+ * Architecture diagrams shown inline
+ * ------------------------------------------------------------------------- */
+/* docs/qwen36_35b_a3b.md embeds docs/qwen36-35b-a3b-architecture.html, the
+ * same file tests/test_architecture_diagram.py checks, so the picture on the
+ * page cannot drift from the tested one. The diagram draws into a
+ * 2600 x 3800 viewBox at full width, inside 24px of padding and above a
+ * credit line. The ratio 2600 / 4100 leaves room for both from phone width to
+ * the widest content column, so the frame shows no scrollbar. It keeps its
+ * own white ground in both schemes.
+ */
+.md-typeset iframe.arch-diagram {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2600 / 4100;
+  border: 0.05rem solid var(--md-default-fg-color--lightest);
+  border-radius: 0.1rem;
+  background: #fff;
+}
+
+/* The whole diagram is a link to its own page. A click on an iframe goes to
+ * the framed document, so the frame takes no pointer events and the click
+ * lands on the surrounding link. The frame has nothing to scroll or select.
+ */
+.md-typeset a.arch-diagram-link {
+  display: block;
+  cursor: zoom-in;
+}
+
+.md-typeset a.arch-diagram-link iframe.arch-diagram {
+  pointer-events: none;
+}

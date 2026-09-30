@@ -1,0 +1,17 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "A read over a variable-width subject for tests/_helpers/test_fabricated_outputs.py: the token embeddings at the subject of each of the six known facts in facts/known, which come from the known_1000 facts of Meng et al. 2022 (arXiv:2202.05262, https://rome.baulab.info/data/dsets/known_1000.json). It is the former rome_fig1 noise-scale document, kept here because the fabricator's ragged-read cases need a table with a subject column."
+  },
+  "model": {"key": "gpt2-xl", "revision": "main", "dtype": "fp32"},
+  "data": {"base": {"dataset": "facts/known", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["e"]}
+    },
+    "positions": {"subject": {"variable": "subject"}},
+    "sites": {"emb": {"component": "embeddings"}},
+    "reads": {"e": {"site": "emb", "pos": "subject"}},
+    "save": [{"read": "e", "model": "original", "file_path": "subject_embeddings.safetensors"}]
+  }
+}

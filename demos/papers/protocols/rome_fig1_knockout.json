@@ -1,0 +1,40 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Knockout extension of Figure 1 of Meng et al. 2022 (arXiv:2202.05262): zero the MLP outputs of a ten-layer window at one token of `The Space Needle is in downtown` and save p(Seattle) at the last position, which workflows/scripts/rome_fig1/knockout_figure.py draws as p(Seattle) over window centre x token, while the workflow reruns the document on attention outputs and on the residual stream by overriding `sites.target.component`."
+  },
+  "model": {"key": "gpt2-xl", "revision": "15ea56dee5df4983c59b2538573817e1667135e2", "dtype": "fp32"},
+  "data": {"inputs": ["The Space Needle is in downtown"]},
+  "axes": {
+    "center": {"range": [0, 48]},
+    "window": {
+      "dependent_on": "center",
+      "rule": {"clipped_band": {"width": 10, "clip_to": "layers"}}
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "ablated": {"input": "base", "reads": ["logits_ablated"], "writes": ["knockout"]}
+    },
+    "positions": {"tap": {"index": {"sweep": {"range": [0, 7]}}}},
+    "sites": {
+      "target": {"component": "mlp_output", "layers": {"axis": "window"}},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "logits_ablated": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "knockout": {"site": "target", "pos": "tap", "do": {"swap": 0}}
+    },
+    "save": [
+      {
+        "read": "logits_ablated",
+        "model": "ablated",
+        "aggregation": {"kind": "class_probs", "groups": {"Seattle": [" Seattle"]}},
+        "file_path": "p_ablated.json"
+      },
+      {"kind": "location_ledger", "file_path": "location_ledger.json"}
+    ]
+  }
+}

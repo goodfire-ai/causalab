@@ -33,8 +33,8 @@ same thing, so declaring both is refused), and ``reduction`` — the authored
 block, which the runner delivers under that name. Output: one ``table`` slot, one row per group,
 carrying the group coordinates, ``value``, the counts (``n``, ``n_rows``,
 ``n_missing``, ``n_unmatched``, ``n_excluded``), the record's identity
-(``unit``, ``estimand_version``, ``produced_by`` — what the number *is* and
-which point it came from, so a report claim can bind to the row) and
+(``unit``, ``estimand_version`` — what the number *is*; the group coordinates
+say which point it came from, so a report claim can bind to the row) and
 ``lower``/``upper`` when an uncertainty procedure is declared.
 
 The block is re-validated here with the same parser the loader used (rule

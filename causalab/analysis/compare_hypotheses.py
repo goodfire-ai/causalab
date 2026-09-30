@@ -13,12 +13,46 @@ from pathlib import Path
 
 from causalab.io.step_io import write_table
 
+# the metric-row schema (neural/shared/results.py ``MetricTable._row``); every
+# other column on a neural row is a sweep coordinate, keyed by its full axis id
+METRIC_COLUMNS = frozenset(
+    {
+        "example_id",
+        "metric",
+        "value",
+        "unit",
+        "estimand_version",
+        "eligible",
+        "reason_code",
+        "step",
+        "matched",
+    }
+)
+
+
+def coordinate_key(row: Mapping[str, Any]) -> tuple[tuple[str, Any], ...]:
+    """The point a neural row came from: its sorted coordinate columns."""
+    import json
+
+    return tuple(
+        sorted(
+            (
+                column,
+                value
+                if isinstance(value, (int, float, str, bool))
+                else json.dumps(value, sort_keys=True),
+            )
+            for column, value in row.items()
+            if column not in METRIC_COLUMNS
+        )
+    )
+
 
 def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
     """Workflow adapter for native saved-output comparisons."""
     from transformers import AutoTokenizer
 
-    from causalab.protocol.tables import read_table
+    from causalab.io.tables import read_table
 
     tokenizer = AutoTokenizer.from_pretrained(
         inputs["tokenizer"],
@@ -33,7 +67,6 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
         target=inputs["target"],
         alternatives=inputs["alternatives"],
         metric=inputs["metric"],
-        token_form=inputs["token_form"],
         split=inputs.get("split"),
     )
     write_table(Path(outputs["comparisons"]), rows)
@@ -48,18 +81,21 @@ def compare_saved_outputs(
     target: str,
     alternatives: Sequence[str],
     metric: str,
-    token_form: str,
     split: str | None = None,
 ) -> list[dict[str, Any]]:
     """Join native top-1 rows to exact pairs and frozen symbolic predictions.
 
     Returns one scalar difference per alternative and pair, with both agreement
-    scores. Reduce separately by produced_by, family, split and alternative.
-    ``token_form`` must equal the intervention's exact-match metric setting.
+    scores. A neural row's point is its coordinate columns (every column outside
+    the metric-row schema); each point must cover the exact pair table, and the
+    coordinates pass through to the result rows. Reduce separately by the sweep
+    coordinates, family, split and alternative. A prediction's answer forms
+    are tokenized as written, as the intervention's exact-match metric
+    tokenizes its column (§2.10).
     """
     import json
 
-    from causalab.neural.shared.metrics import column_token_ids
+    from causalab.protocol.answers import column_token_ids
 
     names = [target, *alternatives]
     if isinstance(alternatives, str) or len(set(names)) != len(names):
@@ -80,7 +116,7 @@ def compare_saved_outputs(
         key = identity(pair)
         if key in by_id:
             raise ValueError(f"duplicate pair example_id: {key}")
-        for field in ("pair_id", "family", "split", "scoring_digest"):
+        for field in ("pair_id", "family", "split"):
             if not pair.get(field):
                 raise ValueError(f"pair {key} is missing {field}")
         by_id[key] = pair
@@ -98,15 +134,13 @@ def compare_saved_outputs(
             raise ValueError(f"prediction has unknown example_id: {key}")
         if (key, name) in symbolic:
             raise ValueError(f"duplicate prediction: {key}, {name}")
-        for field in ("pair_id", "family", "split", "scoring_digest"):
+        for field in ("pair_id", "family", "split"):
             if prediction.get(field) != by_id[key][field]:
                 raise ValueError(f"prediction {key} disagrees on {field}")
         forms = prediction.get("answer_forms")
         if not isinstance(forms, list) or not forms:
             raise ValueError(f"prediction {key}, {name} has no answer forms")
-        symbolic[key, name] = set(
-            column_token_ids(tokenizer, forms, token_form=token_form)
-        )
+        symbolic[key, name] = set(column_token_ids(tokenizer, forms))
     if set(symbolic) != {(key, name) for key in by_id for name in names}:
         raise ValueError("predictions must cover every pair and hypothesis")
 
@@ -118,9 +152,7 @@ def compare_saved_outputs(
         key = identity(output)
         if key not in by_id:
             raise ValueError(f"neural output has unknown example_id: {key}")
-        point = output.get("produced_by")
-        if not isinstance(point, str) or not point:
-            raise ValueError("neural output is missing produced_by")
+        point = coordinate_key(output)
         if (point, key) in seen:
             raise ValueError(f"duplicate neural output: {point}, {key}")
         seen.add((point, key))
@@ -154,7 +186,7 @@ def compare_saved_outputs(
                     **output,
                     **{
                         field: by_id[key][field]
-                        for field in ("pair_id", "family", "split", "scoring_digest")
+                        for field in ("pair_id", "family", "split")
                     },
                     "target": target,
                     "alternative": alternative,

@@ -1,6 +1,6 @@
 """Structured grid-cell records for mask/feature-count plots.
 
-Plot axes are joined **structurally** from :class:`GridCell` records —
+Plot axes are joined **structurally** from [`GridCell`][] records —
 never parsed out of result-key strings. The Plan-era builders that
 recovered cells from a built ``SiteGrid``'s specs left with that stack;
 a protocol-era consumer builds cells directly from its result tables'

@@ -381,7 +381,7 @@ def plot_matrix_heatmap(
     """Plot a similarity/confusion matrix as a seaborn heatmap.
 
     Args:
-        matrix: (N, M) matrix to plot.
+        matrix (np.ndarray): (N, M) matrix to plot.
         row_labels: Labels for rows (ground-truth classes).
         col_labels: Labels for columns (output tokens). Defaults to row_labels.
         output_dir: Directory to save the plot.

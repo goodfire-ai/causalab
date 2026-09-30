@@ -16,7 +16,6 @@ are the ones a workflow hands over, not a stand-in.
 
 from __future__ import annotations
 
-import hashlib
 import json
 
 import pytest
@@ -26,12 +25,13 @@ from causalab.analysis import fit_pca
 from causalab.io.step_io import read_tensor
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.neural.shared.featurizers import Subspace, build_stack
-from causalab.neural.shared.services import TensorBundle
-from causalab.protocol.errors import ProtocolError
+from causalab.io.tensor_files import TensorBundle
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.schema import FeaturizerSpec
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import saved
 from tests.step_scripts import run_step
 
 WIDTH = 16  # tiny-random Llama's hidden size
@@ -44,34 +44,24 @@ TEXTS = [
     "bright yellow parrots sing early",
     "seven broken clocks tick wrongly",
     "warm quiet valleys rest gently",
+    # a ninth row: centering leaves n - 1 components with variance, so eight
+    # principal components need nine rows (fit_pca refuses k > n - 1)
+    "nine pale lanterns glow softly",
 ]
 BASIS_PATH = "pca/basis.safetensors"
-BASIS_IDENTITY = {"produced_by": "ab" * 32, "trained_on": "weekdays/train"}
+BASIS_IDENTITY = {"trained_on": "weekdays/train"}
 
 
 def _harvest_doc() -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["acts"]}},
             "sites": {"tgt": {"component": "block_output", "layers": [0]}},
-            "reads": {
-                "acts": {
-                    "site": "tgt",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "save": [
-                {
-                    "value": "acts",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "acts.safetensors",
-                }
-            ],
+            "reads": {"acts": {"site": "tgt", "pos": {"index": -1}}},
+            "save": [saved("acts", "original", "acts.safetensors")],
         },
     }
 
@@ -79,7 +69,8 @@ def _harvest_doc() -> dict:
 @pytest.fixture(scope="module")
 def basis(tmp_path_factory: pytest.TempPathFactory) -> torch.Tensor:
     """The ``(16, 8)`` principal basis of ``block_output`` L0 at the last
-    position over ``TEXTS`` — what a harvest → ``fit_pca`` pipeline writes."""
+    position over the nine ``TEXTS``, as a harvest and ``fit_pca`` pipeline
+    writes it."""
     executor = executor_for(_harvest_doc(), load_model(TINY_LLAMA), base_texts=TEXTS)
     acts = executor.read_value("acts").detach().to(torch.float32)
     assert acts.shape == (len(TEXTS), 1, WIDTH)
@@ -174,7 +165,7 @@ class TestTheStartIsThePcaProjection:
 
     @pytest.mark.parametrize("k", [1, 2, 4])
     def test_the_cayley_base_is_the_projection_itself(self, basis, k):
-        """The low-rank ``cayley`` map (:class:`Cayley`) is a trivialization
+        """The low-rank ``cayley`` map ([`Cayley`][causalab.neural.shared.featurizers.stages.Cayley]) is a trivialization
         at the ``(d, k)`` start directly — there is no d×d frame to complete,
         so its base is ``P_k`` verbatim and nothing about it is drawn."""
         q0 = _base(_stage(basis, k, "cayley"))
@@ -255,50 +246,32 @@ class TestTheStartIsThePcaProjection:
 class TestTheRecordAndTheRefusals:
     pytestmark = pytest.mark.unit
 
-    def test_identity_fields_name_the_basis_and_the_columns_taken(self, basis):
+    def test_identity_fields_name_the_basis_data_and_the_columns_taken(self, basis):
         """What a bundle saved from this fit stamps beyond the document: the
-        basis's provenance, the component indices, and a digest of the
-        seeding matrix itself — so the record says where the fit started."""
+        data the basis was fitted over and the component indices — so the
+        record says where the fit started."""
         fields = _stage(basis, 4).identity_fields()
-        columns = basis[:, :4].contiguous()
         assert fields == {
-            "init_produced_by": "ab" * 32,
             "init_trained_on": "weekdays/train",
             "init_components": [0, 1, 2, 3],
-            "init_digest": hashlib.sha256(columns.numpy().tobytes()).hexdigest(),
         }
 
-    def test_a_basis_without_provenance_refuses_at_build(self, basis):
-        """The load-time check refuses an unstamped file; the build repeats
-        the one requirement only the selected entry can answer for — a swept
-        bundle stamps ``produced_by`` per entry — rather than record a start
-        it cannot name."""
-        with pytest.raises(ProtocolError, match="carries no 'produced_by'"):
-            build_stack(
-                "rot",
-                _spec(2),
-                width=WIDTH,
-                load_tensors=_loader(basis),
-                stage_cache={},
-            )
-
-    def test_a_swept_basis_records_the_selected_entrys_provenance(self, basis):
-        """A fitted rotation reused as a warm start: the file names the
-        producing *document*, each entry the *point* that fitted it, and the
-        record has to name the point (§8 — per entry, not per file)."""
+    def test_a_swept_basis_records_the_selected_entrys_data(self, basis):
+        """A fitted rotation reused as a warm start: a swept bundle stamps
+        ``trained_on`` per entry, and the record reads it off the entry the
+        document selected (§8 — per entry, not per file)."""
         table = {
             f"weight[k={k}]": {
                 "slot": "weight",
                 "coords": {"k": k},
-                "produced_by": f"{k}" * 64,
-                "trained_on": "weekdays/train",
+                "trained_on": f"weekdays/train_k{k}",
             }
             for k in (2, 4)
         }
         bundle = TensorBundle(
             tensors={f"weight[k={k}]": basis[:, :k].contiguous() for k in (2, 4)},
             entry_coords=table,
-            header={"produced_by": "d" * 64, "entries": json.dumps(table)},
+            header={"trained_on": "weekdays/train", "entries": json.dumps(table)},
         )
         stack = build_stack(
             "rot",
@@ -308,8 +281,8 @@ class TestTheRecordAndTheRefusals:
             stage_cache={},
         )
         fields = stack.stages[0].identity_fields()
-        assert fields["init_produced_by"] == "4" * 64
-        assert fields["init_trained_on"] == "weekdays/train"
+        assert fields["init_trained_on"] == "weekdays/train_k4"
+        assert fields["init_components"] == [0, 1, 2, 3]
         assert torch.equal(stack.stages[0].weight, basis[:, :4])
 
     def test_a_basis_that_is_not_orthonormal_refuses(self, basis):

@@ -6,7 +6,7 @@ device parts the engine drains through its pinned staging ring with the
 device-to-host copy of the next chunk overlapped against the write of the
 current one. Nothing is joined and no tensor is copied in Python. ``save()``
 has no file to stream to, so it copies device tensors to the host first and
-joins once (:class:`Payload`).
+joins once (`Payload`).
 """
 
 from __future__ import annotations
@@ -114,7 +114,7 @@ def write_file(
 ) -> int:
     """Write ``tensors`` to ``filename`` through the write engine; returns the
     bytes written. Torch's stream is synchronized before device pointers go
-    down (see :func:`~causalab.io.fastersafetensors._files.sync_torch`)."""
+    down (see `sync_torch`)."""
     names = list(tensors)
     parts, device = _one_device(
         [prepare(n, tensors[n], host_only=False) for n in names]

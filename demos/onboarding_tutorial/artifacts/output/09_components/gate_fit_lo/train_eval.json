@@ -1,0 +1,15 @@
+[
+  {
+    "point": "4ca94098abfad1e9b987d21722df5c05ba46afe640a525ba375a8675670f063c",
+    "coords": {},
+    "split": "mcqa/test_n64_s2",
+    "metrics": {
+      "iia": 0.921875
+    },
+    "passes": 20,
+    "featurizers": [
+      "gate"
+    ],
+    "selected": "last"
+  }
+]

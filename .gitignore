@@ -8,6 +8,8 @@ __pycache__
 .zed
 .vscode
 *.lock
+# uv.lock pins the environment `uv sync` builds, so it is tracked.
+!uv.lock
 
 # Testing and coverage artifacts
 .coverage
@@ -56,6 +58,9 @@ agent_logs/
 **/output/*.html
 **/output/*.png
 test_run_logs/
+
+# Archived workflow attempts; keep only the current run outputs in Git.
+.attempts/
 
 # `uv build` output — the standalone-install recipe builds a wheel locally
 # (docs/standalone_install.md); it is never committed.

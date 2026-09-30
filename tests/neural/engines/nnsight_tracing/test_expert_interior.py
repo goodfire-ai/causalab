@@ -6,16 +6,16 @@ on three legs instead:
 
 * **two implementations of the same math**: the grouped_mm kernel this engine
   serves from, against transformers' own eager per-expert loop, reconstructed
-  through ``tracer.iter``;
+  through ``tracer.iter`` (a cross-check of the two, as a test);
 * **identities**: the slot-sum of ``expert_output · router_scores`` is
-  ``routed_output`` exactly (the registry's pre-routing-weight identity); the
-  activation is ``act(gate)`` exactly; the permutation is a
+  ``routed_output`` exactly (the registry's pre-routing-weight
+  identity); the activation is ``act(gate)`` exactly; the permutation is a
   permutation;
 * **causal writes**: a swap moves the logits, a same-value swap moves nothing,
   a written slot reads back written.
 
-Plus the ownership seam that survives the reference engine serving the four
-slot components through its dispatch wrapper:
+Plus the ownership seam that remains once the reference engine serves the
+four slot components through its dispatch wrapper:
 ``expert_permutation`` is still this engine's alone, and routing knows it.
 """
 
@@ -28,13 +28,15 @@ from causalab.neural.engines.nnsight_tracing.engine import NnsightEngine
 from causalab.neural.engines.nnsight_tracing.executor import TracePointExecutor
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
-from causalab.protocol.engine import choose_engine, component_capability
-from causalab.protocol.errors import ProtocolError, ValidationError
-from causalab.protocol.schema import parse_document
+from causalab.protocol.engine import component_capability, requires
+from causalab.protocol.rules.capability import refuse_shortfall
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
+from causalab.protocol.schema import PROTOCOL_VERSION, parse_document
 
-from tests.protocol._docs import in_order
+from tests.protocol._docs import in_order, saved
 
 from .test_parity_module_boundaries import ATOL, _data, _executor
+
 
 pytestmark = pytest.mark.smoke
 
@@ -52,77 +54,47 @@ EXPERT_COMPONENTS = (
 
 def _read_doc(component: str, *, pos: object = -1, extra: dict | None = None) -> dict:
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": {"component": component, "layers": [LAYER]}},
-            "reads": {
-                "r": {"site": "tap", "pos": pos, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": pos}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
     for name, site in (extra or {}).items():
         doc["method"]["sites"][f"{name}_site"] = site
-        doc["method"]["reads"][name] = {
-            "site": f"{name}_site",
-            "pos": pos,
-            "model": "original",
-            "input": "base",
-        }
-        doc["method"]["save"].append(
-            {
-                "value": name,
-                "model": "original",
-                "input": "base",
-                "file_path": f"{name}.safetensors",
-            }
-        )
+        doc["method"]["reads"][name] = {"site": f"{name}_site", "pos": pos}
+        doc["method"]["intervened_models"]["original"]["reads"].append(name)
+        doc["method"]["save"].append(saved(name, "original", f"{name}.safetensors"))
     return doc
 
 
 def _swap_doc(component: str) -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {"component": component, "layers": [LAYER]},
                 "head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "logits": {
-                    "site": "head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": -1},
+                "logits": {"site": "head", "pos": -1},
             },
             "writes": {"patch": {"site": "tap", "pos": -1, "do": {"swap": "v_cf"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "save": [
-                {
-                    "value": "logits",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "l.safetensors",
-                }
-            ],
+            "save": [saved("logits", "patched", "l.safetensors")],
         },
     }
 
@@ -137,7 +109,7 @@ def _single_row_read(trace_qwen, component: str, text: str) -> torch.Tensor:
     """A one-example pos:"all" read — dense, so whole-frame identities can
     reshape it (the two-row harness's uneven lengths would make it ragged)."""
     from causalab.protocol.schema import parse_document
-    from causalab.protocol.validate import validate_document
+    from causalab.protocol.rules.document import validate_document
 
     doc = parse_document(in_order(_read_doc(component, pos="all")))
     validate_document(doc, engine_is_local=True)
@@ -226,7 +198,7 @@ def test_the_permutation_is_a_permutation(trace_qwen):
 
 
 def test_grouped_and_eager_implementations_agree(trace_qwen):
-    """The §8 cross-check: transformers' own eager per-expert loop — a wholly
+    """The cross-check: transformers' own eager per-expert loop — a wholly
     independent implementation, one Python iteration per hit expert — rebuilt
     into the same (token, slot) frame through ``tracer.iter``, against the
     grouped_mm tensor this engine serves."""
@@ -291,27 +263,20 @@ def test_a_swap_moves_the_logits_and_a_self_swap_does_not(trace_qwen, component)
     assert moved > 1e-5, f"{component}: the swap landed nowhere"
 
     self_swap = _swap_doc(component)
-    self_swap["method"]["reads"]["v_cf"]["input"] = "base"
+    # the operand read on the network on base itself: the swap writes back
+    # what was there (the model keeps its name; names are free, §2.9)
+    self_swap["method"]["intervened_models"]["original_counterfactual"]["input"] = (
+        "base"
+    )
     unmoved = float((logits(self_swap) - clean).abs().max())
     assert unmoved == 0.0, f"{component}: a same-value swap must be the identity"
 
 
 def test_a_written_slot_reads_back_written(trace_qwen):
     doc = _swap_doc("expert_gate_proj")
-    doc["method"]["reads"]["obs"] = {
-        "site": "tap",
-        "pos": -1,
-        "model": "patched",
-        "input": "base",
-    }
-    doc["method"]["save"].append(
-        {
-            "value": "obs",
-            "model": "patched",
-            "input": "base",
-            "file_path": "o.safetensors",
-        }
-    )
+    doc["method"]["reads"]["obs"] = {"site": "tap", "pos": -1}
+    doc["method"]["intervened_models"]["patched"]["reads"].append("obs")
+    doc["method"]["save"].append(saved("obs", "patched", "o.safetensors"))
     executor = _executor(TracePointExecutor, doc, trace_qwen, with_cf=True)
     src, obs = executor.read_value("v_cf"), executor.read_value("obs")
     assert float((obs - src).abs().max()) == 0.0
@@ -319,13 +284,13 @@ def test_a_written_slot_reads_back_written(trace_qwen):
 
 def test_the_permutation_refuses_writes_as_kernel_bookkeeping(trace_qwen):
     doc = _swap_doc("expert_permutation")
-    with pytest.raises(ProtocolError, match="row bookkeeping"):
+    with pytest.raises(ProtocolError, match="ordering of token-slot rows from routing"):
         _executor(TracePointExecutor, doc, trace_qwen, with_cf=True).run_all()
 
 
 # --------------------------------------------------------------------------- #
-# ownership: the reference engine serves the four slot components through
-# its dispatch wrapper, so only the kernel's own bookkeeping is left to
+# ownership: the reference engine serves the four slot components (its
+# dispatch wrapper), so only the kernel's own bookkeeping is left to
 # refuse by name — and routing still knows this engine owns it.
 # --------------------------------------------------------------------------- #
 
@@ -336,10 +301,12 @@ def test_the_reference_engine_refuses_the_permutation_by_name(hooks_qwen):
         _executor(PointExecutor, doc, hooks_qwen, with_cf=False).run_all()
 
 
-def test_routing_chooses_this_engine_even_listed_second():
+def test_this_engine_serves_the_permutation_the_reference_refuses():
+    """Routing between engines is retired: the user pins
+    `--engine nnsight`, and the capability check says the reference engine
+    cannot serve the document."""
     doc = parse_document(in_order(_read_doc("expert_permutation")))
-    chosen = choose_engine(doc, [PytorchHooksEngine(), NnsightEngine()])
-    assert isinstance(chosen, NnsightEngine)
+    refuse_shortfall(requires(doc), NnsightEngine().effective_capabilities)
     assert component_capability("expert_permutation") not in (
         PytorchHooksEngine().effective_capabilities
     )
@@ -348,4 +315,4 @@ def test_routing_chooses_this_engine_even_listed_second():
 def test_the_generated_refusal_names_the_missing_component():
     doc = parse_document(in_order(_read_doc("expert_permutation")))
     with pytest.raises(ValidationError, match="component:expert_permutation"):
-        choose_engine(doc, [PytorchHooksEngine()])
+        refuse_shortfall(requires(doc), PytorchHooksEngine().effective_capabilities)

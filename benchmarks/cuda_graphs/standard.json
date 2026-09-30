@@ -5,7 +5,7 @@
   "steps": {
     "locate": {
       "type": "intervention_protocol",
-      "document": "../../causalab/configs/protocols/weekdays_locate_scan.json",
+      "document": "../../demos/methods/protocols/weekdays_locate_scan.json",
       "set": {
         "model.key": "Qwen/Qwen3.6-35B-A3B",
         "model.dtype": "bf16",
@@ -31,7 +31,7 @@
     },
     "das": {
       "type": "intervention_protocol",
-      "document": "../../causalab/configs/protocols/das.json",
+      "document": "../../demos/methods/protocols/das.json",
       "set": {
         "model.key": "Qwen/Qwen3.6-35B-A3B",
         "data.base.dataset": "months/data#train",
@@ -54,7 +54,7 @@
     },
     "dbm": {
       "type": "intervention_protocol",
-      "document": "../../causalab/configs/protocols/dbm.json",
+      "document": "../../demos/methods/protocols/dbm.json",
       "set": {
         "model.key": "Qwen/Qwen3.6-35B-A3B",
         "data.base.dataset": "months/data#train",
@@ -71,7 +71,7 @@
     },
     "control": {
       "type": "intervention_protocol",
-      "document": "../../causalab/configs/protocols/random_subspace_control.json",
+      "document": "../../demos/methods/protocols/random_subspace_control.json",
       "set": {
         "model.key": "Qwen/Qwen3.6-35B-A3B",
         "model.dtype": "bf16",
@@ -94,7 +94,7 @@
     },
     "harvest": {
       "type": "intervention_protocol",
-      "document": "../../causalab/configs/protocols/mean_harvest.json",
+      "document": "../../demos/methods/protocols/mean_harvest.json",
       "set": {
         "model.key": "Qwen/Qwen3.6-35B-A3B",
         "model.dtype": "bf16",
@@ -104,7 +104,7 @@
     },
     "ablate": {
       "type": "intervention_protocol",
-      "document": "../../causalab/configs/protocols/mean_ablation.json",
+      "document": "../../demos/methods/protocols/mean_ablation.json",
       "set": {
         "model.key": "Qwen/Qwen3.6-35B-A3B",
         "model.dtype": "bf16",

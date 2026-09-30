@@ -1,120 +1,12 @@
-"""The reduction contract (docs/workflow_protocol.md §2.6): the eight declared
-dimensions of a post-hoc reduction over a saved metric table, the closed
-estimator set, and the two uncertainty procedures.
+"""Define reductions over saved metric tables.
 
-A workflow ``script`` step may author a ``reduction`` block. It states, in a
-closed vocabulary, what a number published from a table *is*:
+A reduction declares its grouping, estimator, eligibility rules, and uncertainty
+procedure. Metric units and arithmetic versions are checked before rows are
+combined. The built-in estimators include scalar summaries and curve measures.
+Seeded resampling gives reproducible uncertainty estimates.
 
-| dimension | field | closed vocabulary |
-|---|---|---|
-| statistical unit | ``unit`` | ``{"kind": <UNIT_KINDS>, "columns": [...]}`` |
-| grouping | ``group_by`` | column names |
-| weighting | ``weight`` | a column name or ``null`` |
-| missing-value policy | ``missing`` | ``error · exclude · zero`` |
-| uncertainty procedure | ``uncertainty.kind`` | ``none · percentile_bootstrap · normal_approx`` |
-| resampling unit | ``uncertainty.resample_unit`` | as ``unit`` |
-| repetitions | ``uncertainty.repetitions`` | positive integer |
-| seed | ``uncertainty.seed`` | non-negative integer |
-
-plus the verb, ``estimator`` — one of :data:`ESTIMATORS`. Two of those,
-``auc`` and ``cpr`` (:data:`CURVE_ESTIMATORS`), reduce a *curve* — a table of
-``(x, y)`` rows such as a ``top_k`` sweep's metric table — to one area, and
-carry the columns and the axis they integrate over on the estimator itself
-(``x``, ``y``, ``x_scale``, ``normalize``, ``grid``; see "Curve estimators"
-below). The block is parsed here (:func:`parse_reduction`), checked at load by workflow checklist
-rule 12 (``causalab/workflow/document.py``), emitted into the step's canonical
-entry **only when authored** — so a document that declares nothing keeps its
-digest — and handed to the script under the ``inputs`` key
-:data:`REDUCTION_INPUT`. The built-in ``causalab.workflow.scripts.reduce`` runs
-it through :func:`reduce_frame`; a user script that authors the same block
-gets the same load-time validation and reads the same declaration.
-
-**Two reductions, two times.** ``save.reduce`` (intervention_protocol §2.12)
-runs *in the forward pass* over a read's gathered rows so the un-reduced
-harvest never reaches disk. This contract runs *after* the rows are on disk,
-over a table, and is where a statistical unit, a grouping and an uncertainty
-procedure can be declared at all. Where the verb is the same verb (``mean``,
-``sum``, ``count``, ``median``) it is spelled the same; the two vocabularies
-are not one, and neither grows for the other's sake.
-
-**What ``unit`` does.** Rows sharing the unit key are one observation: they
-are **collapsed** to it before the estimator runs — by their mean (weighted, if
-a weight is declared) for ``mean``/``weighted_mean``/``median``/``quantile``,
-by their sum for ``sum``, and ``count`` counts units. ``unit: row`` collapses
-nothing. This is why row, pair, prompt, source family and component are not
-interchangeable: a mean over pairs where one pair holds three rows and another
-one is not the mean over rows, and the declaration says which was taken.
-
-**Curve estimators** (``auc``, ``cpr``). Their observation is a point on a
-curve: rows sharing the unit key *and* an ``x`` value collapse to one
-observation by their mean, then the per-``x`` mean over observations is the
-curve ``m(x)``. ``auc`` is the trapezoid area of ``m`` over the sorted distinct
-``x`` — divided by ``normalize`` (a number, or a column constant within the
-group) when given, and taken in ``log x`` under ``x_scale: log``. ``cpr`` is
-MIB's ``evaluate_area_under_curve`` exactly: ``x`` holds *cuts* (units taking
-the counterfactual), ``normalize`` is the unit count ``N``, ``B = m(0)`` and
-``C = m(N)`` are the clean and fully-corrupted anchors,
-``cut(p) = N − int(p·N)`` for each ``p`` of the kept-fraction ``grid``
-(:data:`MIB_GRID` unless authored), ``faith(p) = (m(cut(p)) − C)/(B − C)`` and
-the value is the trapezoid of ``faith`` over the raw ``p`` (or ``log p``);
-several ``p`` that floor to one cut repeat that cut's ordinate at distinct
-``p`` — a flat segment, kept as MIB keeps it. A curve presumes a balanced
-panel: under a ``unit`` other than ``row``, every unit has a row at every ``x``
-the curve reads — ``cpr``'s anchors and grid cuts, ``auc``'s every distinct
-``x``. A missing anchor, a missing grid cut, a non-integer cut, ``B = C`` (to
-within ``1e-9`` of the curve's largest |mean| — a scale-free floor), an ``x`` or
-``normalize`` column that is the column being reduced, and a unit with no row at
-an ``x`` the curve reads are run-time refusals naming the cut (the ``x``, under
-``auc``); ``auc`` also refuses a curve with one distinct ``x`` (no area) and,
-under ``x_scale: log``, an ``x ≤ 0`` (a cut of 0 has no logarithm; the message
-names the column and its minimum, not a cut). An infinite ``x`` is refused once
-over the whole table before any group is read, an infinite ``normalize`` column
-at its group — a null ``x`` is ``missing``'s (``error`` raises, ``exclude`` drops
-the row; ``zero`` is refused on a curve — an abscissa has no zero); a table
-causalab wrote holds neither (``write_table`` maps a non-finite float to
-``null``), so an infinite value is a foreign table's or a direct caller's.
-Neither takes a ``weight`` (MIB's means are equal-weight; a weighted curve
-would be another estimand, not a flag), and ``normal_approx`` stays a mean's;
-``percentile_bootstrap`` redraws whole resample units and recomputes the curve
-each time.
-
-**What ``resample_unit`` does.** The bootstrap draws *resample units* with
-replacement — a cluster bootstrap when it is coarser than ``unit`` (ROME's
-fact-level intervals over fact × token rows). On a curve under a declared
-``unit`` a draw must be whole curves, so ``row`` is refused at load and a
-resample unit that splits a unit across clusters is refused at run time
-(:func:`_check_clusters_hold_units`). The normal approximation takes
-the estimator within each resample unit and the sample standard error across
-them. Both use the seeded :class:`numpy.random.Generator` the declaration
-names; ``random`` is never consulted, so two runs of one declaration are byte
-identical.
-
-**What the output says.** One row per group: the group's coordinates,
-``value``, ``n`` (observations — units — that contributed), ``n_rows``,
-``n_missing`` (rows whose value or weight was ``null``), ``n_unmatched`` (the
-part of ``n_missing`` written by a ``matched: false`` row — "the model never
-said it", as opposed to a non-finite value), ``n_excluded`` (rows the
-``exclude`` policy dropped), the record's **identity** — ``unit`` (the table's
-own, read from its rows; ``count`` is always in ``count``), ``estimand_version``
-(the block's authored identifier, or the estimator's own ``<estimator>/v1``)
-and ``produced_by`` (the one point digest the group's rows share, else
-``null``) — and ``lower``/``upper`` when an uncertainty procedure was declared.
-``n``/``n_excluded`` are the honest denominator a minimum-count check
-consumes; no threshold is checked here.
-
-**Estimand identity** (``causalab/protocol/estimand.py``, rule 13). A block
-may author ``estimand_version`` — ``mean_of_eligible_row_ratios/v1``,
-``ratio_of_sums/v1`` — naming the arithmetic the campaign means. It is checked
-at load against what the block computes: the two identifiers above are the
-same value column reduced by ``mean`` and by ``weighted_mean`` over its
-denominator, and a block declaring one while computing the other is refused
-naming both. Unauthored, the identity is derived and recorded on the output
-rows only, never in the canonical form. A table whose rows disagree on their
-``unit`` is refused before anything is summed.
-
-Heavy imports (numpy, pandas) are function-local: the document loader imports
-this module for the vocabularies and must stay numerics-free.
-"""
+Numerical imports occur inside the operations that use them so workflow
+validation can read the vocabulary before numerical libraries load."""
 
 from __future__ import annotations
 
@@ -127,7 +19,6 @@ from typing import Any, Callable, Mapping, Sequence
 from causalab.io.step_io import StepError
 from causalab.protocol.estimand import (
     IDENTITY_COLUMNS,
-    PRODUCED_BY_COLUMN,
     EstimandError,
     reduction_identity,
     reduction_unit,
@@ -181,7 +72,7 @@ UNCERTAINTY_KINDS: tuple[str, ...] = ("none", "percentile_bootstrap", "normal_ap
 #: The estimators. Where a verb is also a ``save.reduce`` verb it means the
 #: same thing: ``median`` is the lower of the two middle values, no
 #: interpolation; ``count`` is a denominator. ``auc`` and ``cpr`` are the two
-#: curve estimators (:data:`CURVE_ESTIMATORS`): one area from a table of
+#: curve estimators ([`CURVE_ESTIMATORS`][]): one area from a table of
 #: ``(x, y)`` rows.
 ESTIMATORS: tuple[str, ...] = (
     "mean",
@@ -226,7 +117,7 @@ REDUCTION_INPUT = "reduction"
 
 #: The built-in reduce step, by module — the one script whose conventions
 #: this module fixes: it reads the authored block under
-#: :data:`REDUCTION_INPUT`, and its optional ``value`` input names the column
+#: [`REDUCTION_INPUT`][], and its optional ``value`` input names the column
 #: to reduce, so the workflow parser holds ``inputs.value`` against
 #: ``estimator.y`` for this module alone (a user script's input of that name
 #: means what its author says).
@@ -248,12 +139,11 @@ OUTPUT_COLUMNS: tuple[str, ...] = (
     "n_unmatched",
     "n_excluded",
     *IDENTITY_COLUMNS,
-    PRODUCED_BY_COLUMN,
 )
 INTERVAL_COLUMNS: tuple[str, ...] = ("lower", "upper")
 
 #: The column a windowed metric writes to say an example addressed nothing
-#: (``causalab/neural/shared/outputs.py`` ``add_windowed``).
+#: (``causalab/neural/shared/results.py`` ``add_windowed``).
 MATCHED_COLUMN = "matched"
 
 #: z for a two-sided 95% normal interval. Stated to the digits used rather
@@ -267,7 +157,7 @@ class ReductionSpecError(ValueError):
     ``field`` names the offending dimension (dotted, e.g.
     ``uncertainty.seed``) so the loader can refuse *naming the field* — which
     is the whole of what rule 12 promises. ``rule`` is the checklist rule the
-    loader raises under: 12 for shape and vocabulary, :data:`IDENTITY_RULE`
+    loader raises under: 12 for shape and vocabulary, [`IDENTITY_RULE`][]
     for an ``estimand_version`` the block does not compute."""
 
     def __init__(self, field: str, message: str, *, rule: int = 12) -> None:
@@ -305,7 +195,7 @@ class Estimator:
     #: ``cpr`` requires it (its anchors are the cuts ``0`` and ``N``); ``auc``
     #: divides x by it when given
     normalize: str | int | float | None = None
-    #: ``cpr`` only: the kept-fraction grid, when it is not :data:`MIB_GRID`
+    #: ``cpr`` only: the kept-fraction grid, when it is not [`MIB_GRID`][]
     grid: tuple[float, ...] | None = None
 
     @property
@@ -353,7 +243,7 @@ class Reduction:
     missing: str
     uncertainty: Uncertainty
     #: the authored estimand identifier, or ``None`` — like the block itself,
-    #: in the canonical form only when authored; :attr:`identity` is what the
+    #: in the canonical form only when authored; [`identity`][] is what the
     #: output rows carry either way
     estimand_version: str | None = None
 
@@ -408,7 +298,7 @@ class Reduction:
 
 
 def _suggest(value: str, allowed: Sequence[str]) -> str:
-    from causalab.protocol.errors import suggest
+    from causalab.protocol.rules.errors import suggest
 
     return suggest(value, allowed)
 
@@ -685,8 +575,8 @@ def _parse_uncertainty(raw: Any, estimator: Estimator) -> Uncertainty:
 def parse_reduction(raw: Any) -> Reduction:
     """Parse and validate one authored ``reduction`` block.
 
-    Every refusal is a :class:`ReductionSpecError` naming the field. Column
-    *existence* is not checked here — that is data, and :func:`reduce_frame`
+    Every refusal is a [`ReductionSpecError`][] naming the field. Column
+    *existence* is not checked here — that is data, and [`reduce_frame`][]
     refuses it at run time against the real table."""
     if not isinstance(raw, Mapping):
         raise ReductionSpecError("", "is an object")
@@ -1027,7 +917,7 @@ def _check_panel(
     still averages different populations — §2.6 marks that limit.
 
     Read off ``obs_xs``, the ``x`` of every ``(unit, x)`` observation
-    :func:`_curve_observations` collapsed the group to — so the panel checked
+    `_curve_observations` collapsed the group to — so the panel checked
     is the one the curve is integrated from, decided once, and the check is
     one ``np.unique`` whatever the abscissa's cardinality (an ``auc`` reads
     every distinct ``x``, so a per-``x`` scan of the rows would be quadratic
@@ -1078,7 +968,7 @@ def _check_clusters_hold_units(
     unit_ids: Any, cluster_ids: Any, n_units: int, *, what: str
 ) -> None:
     """A curve's draw is a draw of whole curves only if every unit's rows fall
-    in one resample cluster: the panel (:func:`_check_panel`) gives each unit
+    in one resample cluster: the panel (`_check_panel`) gives each unit
     every ``x`` the curve reads, and one cluster per unit keeps those rows
     together in a draw. Decided on the table, not on column names —
     containment of ``resample_unit.columns`` in ``unit.columns`` is sufficient
@@ -1087,7 +977,7 @@ def _check_clusters_hold_units(
     a finer one (a ``method`` inside an ``example``) or one the data splits
     (a null in a unit column) is refused, naming how many units span
     clusters. One ``np.unique`` over the two label arrays already in hand,
-    compacted to one dense label as :func:`_bootstrap` compacts its draws.
+    compacted to one dense label as `_bootstrap` compacts its draws.
     ``resample_unit: row`` never reaches here — the parser refuses it under a
     declared unit."""
     import numpy as np
@@ -1256,7 +1146,7 @@ def reduce_frame(
     """Run one declaration over a table: one output row per group (§2.6).
 
     ``what`` labels refusals (the step and table). Every column the
-    declaration names must exist — refused with a :class:`StepError` naming
+    declaration names must exist — refused with a [`StepError`][] naming
     the column and the dimension that named it; that check is data, so it
     lives here rather than at load."""
     import numpy as np
@@ -1462,15 +1352,6 @@ def reduce_frame(
         row["n_excluded"] = n_excluded
         row["unit"] = reduction_unit(spec.estimator.kind, source.unit)
         row["estimand_version"] = identity
-        # the group's provenance: one point digest when every contributing
-        # row came from one point, else null — a cross-point reduction's
-        # provenance is the step's, not a point's
-        produced = (
-            set(group[PRODUCED_BY_COLUMN].dropna().astype(str))
-            if PRODUCED_BY_COLUMN in group.columns
-            else set()
-        )
-        row[PRODUCED_BY_COLUMN] = next(iter(produced)) if len(produced) == 1 else None
 
         procedure = spec.uncertainty
         if procedure.kind != "none":

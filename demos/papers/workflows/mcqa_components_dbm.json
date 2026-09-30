@@ -1,0 +1,181 @@
+{
+  "version": "1",
+  "description": "Desiderata-based masking (Davies et al. 2023, arXiv:2307.03637) over the components of Qwen2.5-1.5B-Instruct for the MCQA answer letter. scan repeats the component scan of onboarding 09 on the 64 held-out pairs. fit trains one site-grouped gate per attention output and per MLP output of all 28 layers at the answer slot, and apply scores the 56 fitted gates on the held-out pairs. head_fit trains one gate per attention head of layer 22 on attention_premix, and head_apply scores it. Each fit runs at the three l1 weights of onboarding 09: 0.01 as written, 0.3 in the _mid steps and 3.0 in the _hi steps. An apply document selects no bundle entry by an axis, so each weight is its own fit and apply step, and each apply step names the bundles of its own fit. scripts/mcqa_components_dbm/figures.py draws the scan and the masks.",
+  "output_dir": "mcqa_components_dbm",
+  "steps": {
+    "scan": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_scan.json"
+    },
+    "fit": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_fit.json"
+    },
+    "apply": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_apply.json"
+    },
+    "fit_mid": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_fit.json",
+      "set": {"train.objective.l1.weight": 0.3}
+    },
+    "apply_mid": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_apply.json",
+      "set": {
+        "featurizers.g_attn0.file_path": "fit_mid/g_attn0.safetensors",
+        "featurizers.g_attn1.file_path": "fit_mid/g_attn1.safetensors",
+        "featurizers.g_attn2.file_path": "fit_mid/g_attn2.safetensors",
+        "featurizers.g_attn3.file_path": "fit_mid/g_attn3.safetensors",
+        "featurizers.g_attn4.file_path": "fit_mid/g_attn4.safetensors",
+        "featurizers.g_attn5.file_path": "fit_mid/g_attn5.safetensors",
+        "featurizers.g_attn6.file_path": "fit_mid/g_attn6.safetensors",
+        "featurizers.g_attn7.file_path": "fit_mid/g_attn7.safetensors",
+        "featurizers.g_attn8.file_path": "fit_mid/g_attn8.safetensors",
+        "featurizers.g_attn9.file_path": "fit_mid/g_attn9.safetensors",
+        "featurizers.g_attn10.file_path": "fit_mid/g_attn10.safetensors",
+        "featurizers.g_attn11.file_path": "fit_mid/g_attn11.safetensors",
+        "featurizers.g_attn12.file_path": "fit_mid/g_attn12.safetensors",
+        "featurizers.g_attn13.file_path": "fit_mid/g_attn13.safetensors",
+        "featurizers.g_attn14.file_path": "fit_mid/g_attn14.safetensors",
+        "featurizers.g_attn15.file_path": "fit_mid/g_attn15.safetensors",
+        "featurizers.g_attn16.file_path": "fit_mid/g_attn16.safetensors",
+        "featurizers.g_attn17.file_path": "fit_mid/g_attn17.safetensors",
+        "featurizers.g_attn18.file_path": "fit_mid/g_attn18.safetensors",
+        "featurizers.g_attn19.file_path": "fit_mid/g_attn19.safetensors",
+        "featurizers.g_attn20.file_path": "fit_mid/g_attn20.safetensors",
+        "featurizers.g_attn21.file_path": "fit_mid/g_attn21.safetensors",
+        "featurizers.g_attn22.file_path": "fit_mid/g_attn22.safetensors",
+        "featurizers.g_attn23.file_path": "fit_mid/g_attn23.safetensors",
+        "featurizers.g_attn24.file_path": "fit_mid/g_attn24.safetensors",
+        "featurizers.g_attn25.file_path": "fit_mid/g_attn25.safetensors",
+        "featurizers.g_attn26.file_path": "fit_mid/g_attn26.safetensors",
+        "featurizers.g_attn27.file_path": "fit_mid/g_attn27.safetensors",
+        "featurizers.g_mlp0.file_path": "fit_mid/g_mlp0.safetensors",
+        "featurizers.g_mlp1.file_path": "fit_mid/g_mlp1.safetensors",
+        "featurizers.g_mlp2.file_path": "fit_mid/g_mlp2.safetensors",
+        "featurizers.g_mlp3.file_path": "fit_mid/g_mlp3.safetensors",
+        "featurizers.g_mlp4.file_path": "fit_mid/g_mlp4.safetensors",
+        "featurizers.g_mlp5.file_path": "fit_mid/g_mlp5.safetensors",
+        "featurizers.g_mlp6.file_path": "fit_mid/g_mlp6.safetensors",
+        "featurizers.g_mlp7.file_path": "fit_mid/g_mlp7.safetensors",
+        "featurizers.g_mlp8.file_path": "fit_mid/g_mlp8.safetensors",
+        "featurizers.g_mlp9.file_path": "fit_mid/g_mlp9.safetensors",
+        "featurizers.g_mlp10.file_path": "fit_mid/g_mlp10.safetensors",
+        "featurizers.g_mlp11.file_path": "fit_mid/g_mlp11.safetensors",
+        "featurizers.g_mlp12.file_path": "fit_mid/g_mlp12.safetensors",
+        "featurizers.g_mlp13.file_path": "fit_mid/g_mlp13.safetensors",
+        "featurizers.g_mlp14.file_path": "fit_mid/g_mlp14.safetensors",
+        "featurizers.g_mlp15.file_path": "fit_mid/g_mlp15.safetensors",
+        "featurizers.g_mlp16.file_path": "fit_mid/g_mlp16.safetensors",
+        "featurizers.g_mlp17.file_path": "fit_mid/g_mlp17.safetensors",
+        "featurizers.g_mlp18.file_path": "fit_mid/g_mlp18.safetensors",
+        "featurizers.g_mlp19.file_path": "fit_mid/g_mlp19.safetensors",
+        "featurizers.g_mlp20.file_path": "fit_mid/g_mlp20.safetensors",
+        "featurizers.g_mlp21.file_path": "fit_mid/g_mlp21.safetensors",
+        "featurizers.g_mlp22.file_path": "fit_mid/g_mlp22.safetensors",
+        "featurizers.g_mlp23.file_path": "fit_mid/g_mlp23.safetensors",
+        "featurizers.g_mlp24.file_path": "fit_mid/g_mlp24.safetensors",
+        "featurizers.g_mlp25.file_path": "fit_mid/g_mlp25.safetensors",
+        "featurizers.g_mlp26.file_path": "fit_mid/g_mlp26.safetensors",
+        "featurizers.g_mlp27.file_path": "fit_mid/g_mlp27.safetensors"
+      }
+    },
+    "fit_hi": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_fit.json",
+      "set": {"train.objective.l1.weight": 3.0}
+    },
+    "apply_hi": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_apply.json",
+      "set": {
+        "featurizers.g_attn0.file_path": "fit_hi/g_attn0.safetensors",
+        "featurizers.g_attn1.file_path": "fit_hi/g_attn1.safetensors",
+        "featurizers.g_attn2.file_path": "fit_hi/g_attn2.safetensors",
+        "featurizers.g_attn3.file_path": "fit_hi/g_attn3.safetensors",
+        "featurizers.g_attn4.file_path": "fit_hi/g_attn4.safetensors",
+        "featurizers.g_attn5.file_path": "fit_hi/g_attn5.safetensors",
+        "featurizers.g_attn6.file_path": "fit_hi/g_attn6.safetensors",
+        "featurizers.g_attn7.file_path": "fit_hi/g_attn7.safetensors",
+        "featurizers.g_attn8.file_path": "fit_hi/g_attn8.safetensors",
+        "featurizers.g_attn9.file_path": "fit_hi/g_attn9.safetensors",
+        "featurizers.g_attn10.file_path": "fit_hi/g_attn10.safetensors",
+        "featurizers.g_attn11.file_path": "fit_hi/g_attn11.safetensors",
+        "featurizers.g_attn12.file_path": "fit_hi/g_attn12.safetensors",
+        "featurizers.g_attn13.file_path": "fit_hi/g_attn13.safetensors",
+        "featurizers.g_attn14.file_path": "fit_hi/g_attn14.safetensors",
+        "featurizers.g_attn15.file_path": "fit_hi/g_attn15.safetensors",
+        "featurizers.g_attn16.file_path": "fit_hi/g_attn16.safetensors",
+        "featurizers.g_attn17.file_path": "fit_hi/g_attn17.safetensors",
+        "featurizers.g_attn18.file_path": "fit_hi/g_attn18.safetensors",
+        "featurizers.g_attn19.file_path": "fit_hi/g_attn19.safetensors",
+        "featurizers.g_attn20.file_path": "fit_hi/g_attn20.safetensors",
+        "featurizers.g_attn21.file_path": "fit_hi/g_attn21.safetensors",
+        "featurizers.g_attn22.file_path": "fit_hi/g_attn22.safetensors",
+        "featurizers.g_attn23.file_path": "fit_hi/g_attn23.safetensors",
+        "featurizers.g_attn24.file_path": "fit_hi/g_attn24.safetensors",
+        "featurizers.g_attn25.file_path": "fit_hi/g_attn25.safetensors",
+        "featurizers.g_attn26.file_path": "fit_hi/g_attn26.safetensors",
+        "featurizers.g_attn27.file_path": "fit_hi/g_attn27.safetensors",
+        "featurizers.g_mlp0.file_path": "fit_hi/g_mlp0.safetensors",
+        "featurizers.g_mlp1.file_path": "fit_hi/g_mlp1.safetensors",
+        "featurizers.g_mlp2.file_path": "fit_hi/g_mlp2.safetensors",
+        "featurizers.g_mlp3.file_path": "fit_hi/g_mlp3.safetensors",
+        "featurizers.g_mlp4.file_path": "fit_hi/g_mlp4.safetensors",
+        "featurizers.g_mlp5.file_path": "fit_hi/g_mlp5.safetensors",
+        "featurizers.g_mlp6.file_path": "fit_hi/g_mlp6.safetensors",
+        "featurizers.g_mlp7.file_path": "fit_hi/g_mlp7.safetensors",
+        "featurizers.g_mlp8.file_path": "fit_hi/g_mlp8.safetensors",
+        "featurizers.g_mlp9.file_path": "fit_hi/g_mlp9.safetensors",
+        "featurizers.g_mlp10.file_path": "fit_hi/g_mlp10.safetensors",
+        "featurizers.g_mlp11.file_path": "fit_hi/g_mlp11.safetensors",
+        "featurizers.g_mlp12.file_path": "fit_hi/g_mlp12.safetensors",
+        "featurizers.g_mlp13.file_path": "fit_hi/g_mlp13.safetensors",
+        "featurizers.g_mlp14.file_path": "fit_hi/g_mlp14.safetensors",
+        "featurizers.g_mlp15.file_path": "fit_hi/g_mlp15.safetensors",
+        "featurizers.g_mlp16.file_path": "fit_hi/g_mlp16.safetensors",
+        "featurizers.g_mlp17.file_path": "fit_hi/g_mlp17.safetensors",
+        "featurizers.g_mlp18.file_path": "fit_hi/g_mlp18.safetensors",
+        "featurizers.g_mlp19.file_path": "fit_hi/g_mlp19.safetensors",
+        "featurizers.g_mlp20.file_path": "fit_hi/g_mlp20.safetensors",
+        "featurizers.g_mlp21.file_path": "fit_hi/g_mlp21.safetensors",
+        "featurizers.g_mlp22.file_path": "fit_hi/g_mlp22.safetensors",
+        "featurizers.g_mlp23.file_path": "fit_hi/g_mlp23.safetensors",
+        "featurizers.g_mlp24.file_path": "fit_hi/g_mlp24.safetensors",
+        "featurizers.g_mlp25.file_path": "fit_hi/g_mlp25.safetensors",
+        "featurizers.g_mlp26.file_path": "fit_hi/g_mlp26.safetensors",
+        "featurizers.g_mlp27.file_path": "fit_hi/g_mlp27.safetensors"
+      }
+    },
+    "head_fit": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_head_fit.json"
+    },
+    "head_apply": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_head_apply.json"
+    },
+    "head_fit_mid": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_head_fit.json",
+      "set": {"train.objective.l1.weight": 0.3}
+    },
+    "head_apply_mid": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_head_apply.json",
+      "set": {"featurizers.gate.file_path": "head_fit_mid/gate.safetensors"}
+    },
+    "head_fit_hi": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_head_fit.json",
+      "set": {"train.objective.l1.weight": 3.0}
+    },
+    "head_apply_hi": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_components_dbm_head_apply.json",
+      "set": {"featurizers.gate.file_path": "head_fit_hi/gate.safetensors"}
+    }
+  }
+}

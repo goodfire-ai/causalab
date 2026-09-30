@@ -1,14 +1,14 @@
 """Property-tier invariants for ``causalab/tasks/loader.py``.
 
-``loader.py`` defines the unified :class:`Task` dataclass — the handle every
+``loader.py`` defines the unified [`Task`][causalab.tasks.loader.Task] dataclass — the handle every
 downstream pipeline stage (counterfactual generation, pipeline wiring,
 intervention, featurization, analysis) consumes — together with the
-convention-based factory :func:`load_task` and the sibling module-loaders
-:func:`load_task_counterfactuals` / :func:`load_task_token_positions`.
+convention-based factory [`load_task`][causalab.tasks.loader.load_task] and the sibling module-loaders
+[`load_task_counterfactuals`][causalab.tasks.loader.load_task_counterfactuals] / [`load_task_token_positions`][causalab.tasks.loader.load_task_token_positions].
 Every baseline runner enters the pipeline through
 ``causalab/runner/helpers.py``, which calls ``load_task`` and
 ``load_task_counterfactuals``; if the loader returns a malformed
-:class:`Task`, every downstream step breaks at the runner entry point.
+[`Task`][causalab.tasks.loader.Task], every downstream step breaks at the runner entry point.
 
 Test tiers (see ``docs/TESTS.md``): ``tasks/`` requires
 ``[smoke-transitive, property-direct, numerical-direct]``. Smoke is
@@ -32,17 +32,16 @@ from pathlib import Path
 
 import pytest
 
-from causalab.causal.causal_model import CausalModel
-from causalab.tasks.loader import resolve_task
+from causalab.causal.model import CausalModel
 from causalab.causal.scoring import ScoringError
 from causalab.tasks.loader import (
     Task,
     load_task,
     load_task_counterfactuals,
     load_task_token_positions,
+    resolve_task,
 )
 from tests._helpers.tasks import FACTORY_TASKS, SINGLETON_TASKS
-
 
 # ---------------------------------------------------------------------------
 # Factory-config builders — kept inline (no fixture chain) so each test
@@ -87,7 +86,7 @@ def _factory_cfg(task_name: str):
 
 
 class TestTaskProperty:
-    """Invariants of the :class:`Task` dataclass itself."""
+    """Invariants of the [`Task`][causalab.tasks.loader.Task] dataclass itself."""
 
     pytestmark = pytest.mark.property
 
@@ -122,7 +121,7 @@ class TestTaskProperty:
 
 
 class TestLoadTaskProperty:
-    """Dispatch + field-population invariants for :func:`load_task`."""
+    """Dispatch + field-population invariants for [`load_task`][causalab.tasks.loader.load_task]."""
 
     pytestmark = pytest.mark.property
 
@@ -226,7 +225,7 @@ class TestLoadTaskProperty:
         task = load_task("graph_walk", task_cfg=_ring6_cfg())
         model = task.causal_model
         trace = model.new_trace(
-            {"node_coordinates": model.values["node_coordinates"][0]}
+            {"node_coordinates": model.values["node_coordinates"][0], "walk_seed": 0}
         )
         neighbours = trace["raw_output"]
         assert isinstance(neighbours, list) and neighbours
@@ -254,23 +253,22 @@ class TestLoadTaskProperty:
     def test_a_task_without_scoring_cannot_grade(self) -> None:
         """No bespoke module and no strict-equality fallback: a causal model that
         declares no ``ScoringSpec`` is a task that cannot grade, refused at load."""
-        from causalab.causal.trace import Mechanism, input_var
+        from causalab.causal import Dom, V, mechanism
         from causalab.tasks.loader import _grader
 
-        model = CausalModel(
-            {
-                "x": input_var(["a"]),
-                "raw_input": Mechanism(parents=["x"], compute=lambda t: t["x"]),
-                "raw_output": Mechanism(parents=["x"], compute=lambda t: t["x"]),
-            },
-            {"x": ["a"], "raw_input": None, "raw_output": None},
-        )
+        @mechanism
+        def equations(x: Dom(["a"])):
+            raw_input = V(x)  # noqa: F841
+            raw_output = V(x)
+            return raw_output
+
+        model = CausalModel(equations)
         with pytest.raises(ValueError, match="cannot grade its output"):
             _grader(model, "unscored_task")
 
 
 class TestLoadTaskCounterfactualsProperty:
-    """Invariants for :func:`load_task_counterfactuals`."""
+    """Invariants for [`load_task_counterfactuals`][causalab.tasks.loader.load_task_counterfactuals]."""
 
     pytestmark = pytest.mark.property
 
@@ -290,7 +288,7 @@ class TestLoadTaskCounterfactualsProperty:
 
 
 class TestLoadTaskTokenPositionsProperty:
-    """Invariants for :func:`load_task_token_positions`."""
+    """Invariants for [`load_task_token_positions`][causalab.tasks.loader.load_task_token_positions]."""
 
     pytestmark = pytest.mark.property
 
@@ -314,23 +312,19 @@ class TestLoadTaskTokenPositionsProperty:
 # A minimal singleton task, written into a fake ``${SESSION_DIR}/code/tasks/<name>/``
 # package on a session-style PYTHONPATH. Kept trivial — the assertions exercise
 # the *resolution* path, not task semantics.
-_FIXTURE_CAUSAL_MODELS = """\
-from causalab.causal.causal_model import CausalModel, build_output_tokens
+_FIXTURE_CAUSAL_MODELS = """from causalab.causal.model import CausalModel
+from causalab.causal.scoring import build_output_tokens
 from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import Mechanism, input_var
+from causalab.causal import Dom, V, mechanism
 
 COLORS = ["red", "green", "blue"]
-values = {"color": COLORS, "raw_input": None, "raw_output": None}
-mechanisms = {
-    "color": input_var(COLORS),
-    "raw_input": Mechanism(
-        parents=["color"], compute=lambda t: f"The color is {t['color']}. The color is"
-    ),
-    "raw_output": Mechanism(parents=["color"], compute=lambda t: t["color"]),
-}
+@mechanism
+def equations(color: Dom(COLORS)):
+    raw_input = V(f'The color is {color}. The color is', domain=Dom(str))
+    raw_output = V(color, domain=Dom(str))
+    return raw_output
 CAUSAL_MODEL = CausalModel(
-    mechanisms,
-    values,
+    equations,
     id="session_local_fixture",
     scoring=ScoringSpec(forms={"color": build_output_tokens(COLORS)}),
 )
@@ -339,25 +333,21 @@ TEMPLATE = "The color is {color}. The color is"
 """
 
 # Same fixture, but exporting the model under the *lowercase* ``causal_model``
-# name the task-setup template historically scaffolded. The loader must
+# name older task templates used. The loader must
 # accept it without the task having to export both casings.
-_FIXTURE_CAUSAL_MODELS_LOWERCASE = """\
-from causalab.causal.causal_model import CausalModel, build_output_tokens
+_FIXTURE_CAUSAL_MODELS_LOWERCASE = """from causalab.causal.model import CausalModel
+from causalab.causal.scoring import build_output_tokens
 from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import Mechanism, input_var
+from causalab.causal import Dom, V, mechanism
 
 COLORS = ["red", "green", "blue"]
-values = {"color": COLORS, "raw_input": None, "raw_output": None}
-mechanisms = {
-    "color": input_var(COLORS),
-    "raw_input": Mechanism(
-        parents=["color"], compute=lambda t: f"The color is {t['color']}. The color is"
-    ),
-    "raw_output": Mechanism(parents=["color"], compute=lambda t: t["color"]),
-}
+@mechanism
+def equations(color: Dom(COLORS)):
+    raw_input = V(f'The color is {color}. The color is', domain=Dom(str))
+    raw_output = V(color, domain=Dom(str))
+    return raw_output
 causal_model = CausalModel(
-    mechanisms,
-    values,
+    equations,
     id="lowercase_singleton_fixture",
     scoring=ScoringSpec(forms={"color": build_output_tokens(COLORS)}),
 )
@@ -368,27 +358,22 @@ TEMPLATE = "The color is {color}. The color is"
 # A factory task exporting only the lowercase ``create_causal_model`` — the
 # factory counterpart of the casing tolerance. resolve_task's factory
 # probe and load_task's dispatch must both recognise it.
-_FIXTURE_CAUSAL_MODELS_LOWERCASE_FACTORY = """\
-from causalab.causal.causal_model import CausalModel, build_output_tokens
+_FIXTURE_CAUSAL_MODELS_LOWERCASE_FACTORY = """from causalab.causal.model import CausalModel
+from causalab.causal.scoring import build_output_tokens
 from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import Mechanism, input_var
+from causalab.causal import Dom, V, mechanism
 
 COLORS = ["red", "green", "blue"]
 
 
 def create_causal_model(cfg):
-    values = {"color": COLORS, "raw_input": None, "raw_output": None}
-    mechanisms = {
-        "color": input_var(COLORS),
-        "raw_input": Mechanism(
-            parents=["color"],
-            compute=lambda t: f"The color is {t['color']}. The color is",
-        ),
-        "raw_output": Mechanism(parents=["color"], compute=lambda t: t["color"]),
-    }
+    @mechanism
+    def equations(color: Dom(COLORS)):
+        raw_input = V(f'The color is {color}. The color is', domain=Dom(str))
+        raw_output = V(color, domain=Dom(str))
+        return raw_output
     return CausalModel(
-    mechanisms,
-    values,
+    equations,
     id="lowercase_factory_fixture",
     scoring=ScoringSpec(forms={"color": build_output_tokens(COLORS)}),
 )
@@ -457,8 +442,8 @@ def _write_session_local_task(
     include_checker=True,
     checker_src=None,
 ):
-    """Materialise a ``code/tasks/<task_name>/`` package (mirrors what
-    task setup scaffolds session-locally). ``checker_src`` overrides the
+    """Materialise a ``code/tasks/<task_name>/`` package (the layout of a
+    session-local task). ``checker_src`` overrides the
     checker.py body (e.g. a broken or function-less checker); the module is
     inert unless the causal model's spec declares it as its
     ``full_string_checker``."""
@@ -583,14 +568,11 @@ class TestSessionLocalFallbackProperty:
         # the always-True module did not run
         assert task.checker({"string": "blue"}, "red") is False
 
-    def test_a_declared_full_string_checker_grades_and_is_digested(
+    def test_a_declared_full_string_checker_grades(
         self, tmp_path, monkeypatch, isolate_tasks_namespace
     ) -> None:
         """T14's fixture task: a bespoke matcher declared inside the spec grades
-        exactly as it says — and now carries a digest, so it is versioned with
-        everything else the spec declares."""
-        import hashlib
-
+        exactly as it says, and the locator is part of the spec's identity."""
         code = tmp_path / "code"
         pkg = _write_session_local_task(
             code,
@@ -604,11 +586,8 @@ class TestSessionLocalFallbackProperty:
         spec = task.causal_model.scoring
         assert spec is not None
         assert spec.full_string_checker == "tasks.bespoke_task.checker.checker"
-        assert (
-            spec.checker_digest
-            == hashlib.sha256((pkg / "checker.py").read_bytes()).hexdigest()
-        )
-        assert spec.identity()["checker_digest"] == spec.checker_digest
+        assert spec.identity()["full_string_checker"] == spec.full_string_checker
+        assert (pkg / "checker.py").is_file()  # the locator resolved to the fixture
         # the checker's own semantics, not the derived grader's
         assert task.checker({"string": "I think it is red today"}, "red") is True
         assert task.checker({"string": "blue"}, "red") is False
@@ -684,10 +663,9 @@ class TestSessionLocalFallbackProperty:
 
 class TestModelExportCasingProperty:
     """The loader reads a causal-model export under its canonical UPPER_SNAKE
-    name *or* the lowercase alias the task-setup template historically
-    scaffolded, so a task following the template verbatim loads without
-    having to export both casings. Exercised through the session-local layer —
-    the same machinery task setup scaffolds into."""
+    name *or* the lowercase alias older task templates used, so a task
+    written from such a template loads without having to export both casings.
+    Exercised through the session-local layer."""
 
     pytestmark = pytest.mark.property
 

@@ -3,14 +3,14 @@
 import pytest
 import torch
 
-from causalab.neural.shared.metrics import (
+from causalab.neural.shared.metrics import compute_metric
+from causalab.protocol.answers import (
     column_token_id,
     column_token_ids,
-    compute_metric,
     restrict_token_ids,
 )
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.schema import MetricSpec
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.schema import AggregationSpec
 
 pytestmark = pytest.mark.unit
 
@@ -27,8 +27,8 @@ class Vocabulary:
 
 def test_metric_reuses_bound_across_rows_and_columns():
     tokenizer = Vocabulary()
-    metric = MetricSpec(
-        kind="logit_diff", of="read", fields={"a": "a", "b": "b"}, token_form="id"
+    metric = AggregationSpec(
+        kind="logit_diff", fields={"a": "a", "b": "b"}, token_form="id"
     )
     logits = torch.arange(64, dtype=torch.float32).reshape(8, 8)
     rows = [{"a": 7, "b": 2}] * 8
@@ -38,8 +38,8 @@ def test_metric_reuses_bound_across_rows_and_columns():
 
 def test_grouped_match_reuses_bound_and_preserves_scores():
     tokenizer = Vocabulary()
-    metric = MetricSpec(
-        kind="match", of="read", fields={"expected": "answer"}, token_form="id"
+    metric = AggregationSpec(
+        kind="match", fields={"expected": "answer"}, token_form="id"
     )
     logits = torch.arange(64, dtype=torch.float32).reshape(8, 8)
     rows = [{"answer": [1, 7]}, {"answer": [2, 3]}] * 4
@@ -66,8 +66,8 @@ def test_next_call_sees_added_tokens():
 
 def test_tokenizer_bound_is_not_model_output_width():
     tokenizer = Vocabulary(9)
-    metric = MetricSpec(
-        kind="token_logit", of="read", fields={"token": "answer"}, token_form="id"
+    metric = AggregationSpec(
+        kind="token_logit", fields={"token": "answer"}, token_form="id"
     )
     # A tokenizer-added ID is valid for tokenization but does not invent a model row.
     with pytest.raises(IndexError):
@@ -76,9 +76,8 @@ def test_tokenizer_bound_is_not_model_output_width():
 
 def test_js_restrict_takes_integer_ids_and_the_metric_call_queries_once():
     tokenizer = Vocabulary()
-    metric = MetricSpec(
+    metric = AggregationSpec(
         kind="js",
-        of="read",
         fields={"target": "other", "restrict": "answers"},
         token_form="id",
     )
@@ -93,9 +92,8 @@ def test_js_restrict_takes_integer_ids_and_the_metric_call_queries_once():
 
 def test_js_restrict_literal_list_and_the_objective_path_query_once():
     tokenizer = Vocabulary()
-    metric = MetricSpec(
+    metric = AggregationSpec(
         kind="js",
-        of="read",
         fields={"target": "other", "restrict": [1, 7]},
         token_form="id",
     )
@@ -108,9 +106,8 @@ def test_js_restrict_literal_list_and_the_objective_path_query_once():
 @pytest.mark.parametrize("bad", [[1, 8], [1, "7"], [1, True]])
 def test_js_restrict_keeps_the_integer_bound(bad):
     tokenizer = Vocabulary()
-    metric = MetricSpec(
+    metric = AggregationSpec(
         kind="js",
-        of="read",
         fields={"target": "other", "restrict": bad},
         token_form="id",
     )

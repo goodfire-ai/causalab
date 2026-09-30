@@ -15,25 +15,26 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.errors import ProtocolWarning
+from causalab.protocol.rules.errors import ProtocolWarning
 from causalab.workflow.document import (
     WorkflowError,
     is_workflow,
     load_workflow,
     parse_workflow,
 )
+from tests._helpers.paths import PROTOCOLS_DIR, WORKFLOWS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
-WEEKDAYS_WF = REPO / "causalab/configs/workflows/weekdays_8b.json"
+WEEKDAYS_WF = WORKFLOWS_DIR / "weekdays.json"
 
 
 def _copy_locate(tmp_path: Path) -> None:
     methods = tmp_path / "methods"
     methods.mkdir(exist_ok=True)
     shutil.copyfile(
-        REPO / "causalab/configs/protocols/weekdays_locate_scan.json",
+        PROTOCOLS_DIR / "weekdays_locate_scan.json",
         methods / "locate.json",
     )
 
@@ -58,7 +59,7 @@ def tiny_workflow(tmp_path: Path) -> dict[str, Any]:
                     "emit": {"best_layer": "sites.target.layers"},
                 },
                 "outputs": {
-                    "values": {"file": "values.json", "keys": {"best_layer": 18}}
+                    "values": {"file": "values.json", "keys": {"best_layer": 23}}
                 },
             },
         },
@@ -323,10 +324,10 @@ def test_rule_4_a_relative_path_is_not_resolved_against_the_repo(env, tmp_path):
     exists under the repo root but not beside the document is absent. An
     installed wheel has no repo root, so a document that leaned on one would
     load from a checkout and refuse everywhere else."""
-    assert (REPO / "causalab/configs/protocols/interchange.json").is_file()
+    assert (PROTOCOLS_DIR / "interchange.json").is_file()
     raw = tiny_workflow(tmp_path)
     raw["steps"]["best"]["inputs"]["pins"] = {
-        "path": "causalab/configs/protocols/interchange.json"
+        "path": "demos/methods/protocols/interchange.json"
     }
     expect_rule(4, raw, env, tmp_path)
 
@@ -335,9 +336,9 @@ def test_rule_4_absolute_path_is_not_existence_checked(env, tmp_path):
     """Validation and execution routinely run on different hosts, so an
     absolute path naming another machine's data must not fail a load."""
     raw = tiny_workflow(tmp_path)
-    raw["steps"]["best"]["inputs"]["pins"] = {"path": "/mnt/nowhere/fit.json"}
+    raw["steps"]["best"]["inputs"]["pins"] = {"path": "/nonexistent/fit.json"}
     loaded = load_workflow(raw, env, workflow_dir=tmp_path)
-    assert loaded.unchecked_paths == ("best.pins: /mnt/nowhere/fit.json",)
+    assert loaded.unchecked_paths == ("best.pins: /nonexistent/fit.json",)
 
 
 def test_rule_4_key_must_be_declared_by_the_producer(env, tmp_path):
@@ -542,8 +543,8 @@ def test_a_module_script_naming_an_installed_module_declares_no_closure(
     import hashlib
     import sysconfig
 
-    from causalab.protocol import code
-    from causalab.protocol.code import resolve_locator
+    from causalab.protocol import identity as code
+    from causalab.protocol.identity import resolve_locator
 
     stdlib = Path(sysconfig.get_paths()["stdlib"]).resolve()
     parsed: list[Path] = []
@@ -619,7 +620,7 @@ def test_a_module_script_inside_the_package_declares_no_closure(env):
     protocol core moves a shipped workflow's digest. Every shipped script step
     is such a module; the demos are covered by
     `tests/workflow/test_closure_census.py`."""
-    for name in ("weekdays_8b.json", "mean_ablation.json"):
+    for name in ("weekdays.json", "mean_ablation.json", "pca_basis.json"):
         loaded = load_workflow(WEEKDAYS_WF.with_name(name), env)
         for step, entry in loaded.canonical["steps"].items():
             assert "closure" not in entry and "closure_sha256" not in entry, (
@@ -633,7 +634,7 @@ def test_a_module_script_inside_the_package_declares_no_closure(env):
 def test_a_script_importing_nothing_beside_itself_carries_no_closure_keys(
     env, tmp_path
 ):
-    """The valid-work witness for the closure: valid work is not refused and gets
+    """The closure's witness that valid work is not refused and gets
     a stable identity. A `{"path": …}` script with only stdlib imports has an
     empty manifest, and an empty manifest is written as no keys at all — the
     same identity a `{"module": …}` step has, so the two spellings of a
@@ -848,8 +849,7 @@ def test_inner_document_edits_move_the_workflow_digest(env, tmp_path):
     before = load_workflow(raw, env, workflow_dir=tmp_path).digest
     doc = tmp_path / "methods/locate.json"
     inner = json.loads(doc.read_text())
-    # a description is authoring metadata and moves no digest (intervention
-    # protocol spec §7);
+    # a description is authoring metadata and moves no digest (IM spec §7);
     # an edit to the experiment does
     inner["model"]["dtype"] = "bf16"
     doc.write_text(json.dumps(inner))
@@ -870,7 +870,7 @@ def test_the_closure_manifest_names_the_file_that_moved(env, tmp_path):
     entry. A stub that hashed the file alone has no manifest to consult."""
     import hashlib
 
-    from causalab.protocol.code import closure_sha256
+    from causalab.protocol.identity import closure_sha256
 
     raw, helper = _closure_workflow(tmp_path)
     before = load_workflow(raw, env, workflow_dir=tmp_path).canonical["steps"]["reduce"]
@@ -922,18 +922,18 @@ def test_weekdays_example_loads_with_the_spec_schedule(env):
         "fit": "authored",
         "apply": "authored",
     }
-    assert len(loaded.inner["locate"].expansion.points) == 64
+    assert len(loaded.inner["locate"].expansion.points) == 56
     assert len(loaded.inner["fit"].expansion.points) == 9
 
 
 def test_rewording_a_deferred_steps_document_moves_no_workflow_digest(env, tmp_path):
     """A deferred step (`fit`, `apply`: its document waits on an earlier step's
     output) is digested as authored, and the header's authoring fields are
-    dropped there as the canonical form drops them (intervention protocol spec
-    §7) — so renaming
+    dropped there as the canonical form drops them (IM spec §7) — so renaming
     or re-describing the document moves neither kind of inner digest."""
     configs = WEEKDAYS_WF.parents[1]
-    shutil.copytree(configs, tmp_path / "configs")
+    for sub in ("protocols", "workflows"):  # not the run trees beside them
+        shutil.copytree(configs / sub, tmp_path / "configs" / sub)
     copied = tmp_path / "configs" / "workflows" / WEEKDAYS_WF.name
     before = load_workflow(copied, env)
     assert before.inner_digest_kind["fit"] == "authored"

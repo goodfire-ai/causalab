@@ -1,47 +1,57 @@
-"""How many rows one forward of a fit may cover (spec §8, ``fit_rows``).
+"""Choose the row budget for a fit's forward and backward passes.
 
-A cohort's optimizer step is one forward over the concatenation of its
-members' minibatches (§4 "Cohorts"), and its eval pass one forward over the
-members' eval rows; the rows a window may hold trade peak memory for time: a
-forward's activations are close to linear in rows, the step is launch-bound,
-so the largest window that fits the device is the fastest one. The grad
-forwards are the ones measured — the probe is a member's forward *and
-backward* — and the eval passes pack under the same bound unless
-``batch_rows`` is authored (``train._advance_eval_budget``), so one number pins
-both. No constant is right for every model, sequence length, ``pairs``
-and device, which is why the bound is the author's (``fit_rows``) — and why,
-when the author sets none, the engine **measures** it instead of guessing:
+An authored ``fit_rows`` is fixed. It packs whole member minibatches and
+propagates allocation failures. An automatic CUDA budget probes the first
+member's forward and backward, estimates bytes per row, and reserves
+``MARGIN`` of available memory. Automatic budgets remain unbounded off CUDA.
+Evaluation shares the resolved bound unless ``batch_rows`` is explicit.
 
-* **fixed** — an authored ``fit_rows``: members are packed under it, a
-  member's own minibatch never split, and it is never probed or shrunk, so a
-  pinned run stays pinned;
-* **auto** — the cohort's first step runs its first member **alone** as a
-  probe under CUDA peak-memory tracking; bytes per row from that one window
-  and the device's free memory (with :data:`MARGIN` held back) give the
-  bound the rest of that step and every later step pack under. Off CUDA
-  there is nothing to read, so auto stays unbounded, as before.
+An automatic window that runs out of memory clears gradients and allocator
+cache, halves its bound, and retries before updating members. The bound
+stops at one member's minibatch; failure there propagates. Receipts record
+``fit_rows_resolved`` so an author can pin the measured value. Available
+device memory affects the automatic choice.
 
-Either way a window that still runs out of memory is **retried**: the
-window's members have not stepped, so their gradients are zeroed, the
-allocator's cache released, the bound halved (never below one member's
-minibatch) and the window re-packed — the same shape as an executable
-batch-size search, one halving at a time. A single member that does not fit
-is re-raised: nothing smaller exists.
-
-The bound a cohort ran under is reported (``TrainOutcome.fit_rows``, the
-step receipt's ``execution.fit_rows_resolved``) so an author can read it
-once and pin it: the measured number depends on what else occupied the
-device at that moment, and pinning is the reproducible path.
+Only a collective-free body can retry: tensor, expert, pipeline, and context
+parallel bodies contain collectives, so their out-of-memory failures abort
+the distributed run. Restart with fewer minibatch rows or a smaller authored
+``fit_rows``.
 """
 
 from __future__ import annotations
 
 import dataclasses
-from typing import Callable, Protocol, Sequence, TypeVar
+from enum import Enum
+from typing import Callable, NoReturn, Protocol, Sequence, TypeVar
 
 import torch
 
-__all__ = ["MARGIN", "Meter", "RowBudget", "cuda_meter"]
+from causalab.neural.shared.devices import DeviceMap
+from causalab.neural.shared.parallel import heartbeat
+from causalab.neural.shared.parallel.agreements import Agreements
+from causalab.neural.shared.parallel.collective import SOLO, Collective
+from causalab.neural.shared.parallel.placement import Axis
+from causalab.protocol.parallel import ParallelGeometry
+
+__all__ = [
+    "DistributedOutOfMemory",
+    "LOCKSTEP_AXES",
+    "MARGIN",
+    "Meter",
+    "OOMPolicy",
+    "RowBudget",
+    "abort_distributed",
+    "cuda_meter",
+]
+
+#: The axes a budget agrees over unless told otherwise: every axis whose
+#: ranks run the same windows in lockstep — the model-parallel group, the
+#: pipeline stages (each runs its part of every window and the same number
+#: of them, or the stage forward's sends and receives would not pair up;
+#: §6.5) and the context group (§8.4). Data parallelism over rows adds the
+#: data axis (``rows.RowSplit.budget_axes``), whose replicas run the same
+#: windows too; over points they do not, and must not be agreed.
+LOCKSTEP_AXES: tuple[Axis, ...] = ("model", "pipeline", "context")
 
 #: The share of the device's available memory the auto bound leaves unused:
 #: the probe's bytes-per-row is one window's slope, and a later window with
@@ -49,6 +59,47 @@ __all__ = ["MARGIN", "Meter", "RowBudget", "cuda_meter"]
 MARGIN = 0.10
 
 _T = TypeVar("_T")
+
+
+class OOMPolicy(Enum):
+    """Retry only bodies whose forward and backward contain no collectives."""
+
+    RETRY = "retry"
+    ABORT = "abort"
+
+    @classmethod
+    def for_geometry(cls, geometry: ParallelGeometry) -> "OOMPolicy":
+        if geometry.model > 1 or geometry.pipeline > 1 or geometry.context > 1:
+            return cls.ABORT
+        return cls.RETRY
+
+
+class DistributedOutOfMemory(torch.OutOfMemoryError):
+    """A collective-bearing window failed; its distributed run must end."""
+
+
+def abort_distributed(error: torch.OutOfMemoryError, where: str) -> NoReturn:
+    """End the distributed run over ``error``, which happened ``where`` — a
+    model window or one of the graphs that serve it — telling blocked peers
+    first.
+
+    Raises:
+        DistributedOutOfMemory: always — ``error`` itself when it already is
+            one (a graph holder's abort inside a window's body: the peers
+            were told), else a new one from it.
+    """
+    if isinstance(error, DistributedOutOfMemory):
+        raise error
+    watch = heartbeat.running()
+    if watch is not None:
+        # A direct API caller may catch the exception without leaving its
+        # process group. Tell blocked peers that this run has failed now.
+        watch.finish(1)
+    raise DistributedOutOfMemory(
+        f"out of memory {where}; its collective sequence cannot be retried "
+        "safely. The run was aborted; reduce train.batch.pairs or --fit-rows "
+        "before restarting"
+    ) from error
 
 
 class Meter(Protocol):
@@ -61,31 +112,40 @@ class Meter(Protocol):
 
 @dataclasses.dataclass
 class _CudaMeter:
-    device: torch.device
+    """One meter over every CUDA device the model is placed on. A window
+    runs on all of them, so the slope that binds is the **worst** device's
+    (the largest peak any device saw) and the room that binds is the
+    **tightest** device's (the least any device has left): the bound is one
+    number, and it has to hold on every device at once."""
+
+    devices: tuple[torch.device, ...]
 
     def measure(self, run: Callable[[], None]) -> tuple[int, int]:
-        torch.cuda.synchronize(self.device)
-        torch.cuda.reset_peak_memory_stats(self.device)
-        before = torch.cuda.memory_allocated(self.device)
+        for device in self.devices:
+            torch.cuda.synchronize(device)
+            torch.cuda.reset_peak_memory_stats(device)
+        before = {d: torch.cuda.memory_allocated(d) for d in self.devices}
         run()
-        torch.cuda.synchronize(self.device)
-        peak = torch.cuda.max_memory_allocated(self.device) - before
-        free, _total = torch.cuda.mem_get_info(self.device)
-        # the caching allocator's reserved-but-unused bytes are ours too
-        cached = torch.cuda.memory_reserved(self.device) - torch.cuda.memory_allocated(
-            self.device
-        )
-        return max(peak, 0), max(free + cached, 0)
+        peaks: list[int] = []
+        room: list[int] = []
+        for device in self.devices:
+            torch.cuda.synchronize(device)
+            peaks.append(torch.cuda.max_memory_allocated(device) - before[device])
+            free, _total = torch.cuda.mem_get_info(device)
+            # the caching allocator's reserved-but-unused bytes are ours too
+            cached = torch.cuda.memory_reserved(device) - torch.cuda.memory_allocated(
+                device
+            )
+            room.append(free + cached)
+        return max(max(peaks), 0), max(min(room), 0)
 
 
-def cuda_meter(model: torch.nn.Module) -> Meter | None:
-    """The meter for the device ``model``'s weights are on — ``None`` off
-    CUDA, where the auto bound has nothing to read."""
-    for parameter in model.parameters():
-        if parameter.device.type == "cuda":
-            return _CudaMeter(parameter.device)
-        return None
-    return None
+def cuda_meter(devices: DeviceMap) -> Meter | None:
+    """The meter over the CUDA devices of ``devices`` (`_CudaMeter`:
+    max peak, min room) — ``None`` off CUDA, where the auto bound has nothing
+    to read. The map refuses mixing, so a tower is on CUDA whole or not."""
+    cuda = tuple(sorted((d for d in devices.devices if d.type == "cuda"), key=str))
+    return _CudaMeter(cuda) if cuda else None
 
 
 @dataclasses.dataclass
@@ -106,14 +166,57 @@ class RowBudget:
     #: the eval budget packing under the same bound reach the receipt together
     #: (``fit_rows_shrinks``)
     shrinks: int = 0
+    #: the two host-side agreements a budget makes over the lockstep axes
+    #: (``docs/model_parallelism.md`` §3): the probe's bound is the ``min``
+    #: over the group, an out-of-memory window is ``any`` rank's. The
+    #: world-1 default agrees nothing and calls nothing.
+    agreements: Agreements = dataclasses.field(default_factory=lambda: Agreements(SOLO))
+    #: the axes those agreements fold over, in order: the model, pipeline and
+    #: context axes, and the data axis too under data parallelism over rows (§8.3)
+    axes: tuple[Axis, ...] = LOCKSTEP_AXES
+    oom_policy: OOMPolicy = OOMPolicy.RETRY
 
     @classmethod
-    def of(cls, fit_rows: int | None, meter: Meter | None) -> "RowBudget":
+    def of(
+        cls,
+        fit_rows: int | None,
+        meter: Meter | None,
+        collective: Collective = SOLO,
+        axes: tuple[Axis, ...] = LOCKSTEP_AXES,
+        *,
+        oom_policy: OOMPolicy = OOMPolicy.RETRY,
+    ) -> "RowBudget":
         """An authored bound is fixed; none is auto — measured through
-        ``meter`` when there is one, unbounded when there is not."""
+        ``meter`` when there is one, unbounded when there is not. The
+        budget's agreements run through ``collective`` over ``axes``."""
+        agreements = Agreements(collective)
         if fit_rows is not None:
-            return cls(bound=fit_rows, fixed=True)
-        return cls(bound=None, fixed=False, meter=meter, resolved=meter is None)
+            return cls(
+                bound=fit_rows,
+                fixed=True,
+                agreements=agreements,
+                axes=axes,
+                oom_policy=oom_policy,
+            )
+        return cls(
+            bound=None,
+            fixed=False,
+            meter=meter,
+            resolved=meter is None,
+            agreements=agreements,
+            axes=axes,
+            oom_policy=oom_policy,
+        )
+
+    def _min(self, value: int) -> int:
+        for axis in self.axes:
+            value = self.agreements.min(value, axis)
+        return value
+
+    def _any(self, value: bool) -> bool:
+        for axis in self.axes:
+            value = self.agreements.any(value, axis)
+        return value
 
     @property
     def probing(self) -> bool:
@@ -138,13 +241,19 @@ class RowBudget:
                 break
             window.append(item)
             used += size
-        return window, list(pending[len(window) :])
+        # Uneven data-row slices can fit different numbers of members. Agree
+        # membership, not merely a row bound, before any rank runs the window.
+        count = self._min(len(window))
+        return list(pending[:count]), list(pending[count:])
+
+    def _abort(self, error: torch.OutOfMemoryError) -> NoReturn:
+        abort_distributed(error, "inside a distributed model window")
 
     def run(self, rows: int, body: Callable[[], None], unit: int | None = None) -> None:
         """Run one window's ``body``. While probing — the first grad window of
         an auto budget, a member's forward and backward — run it under the
         meter and set the bound from what it peaked: the rows the available
-        memory holds at that slope with :data:`MARGIN` held back, never fewer
+        memory holds at that slope with [`MARGIN`][] held back, never fewer
         than the probe's own rows, and floored to a multiple of ``unit`` — the
         smallest window any member of the fit will bring, so that with equal
         minibatches the bound is whole members and small free-memory drift
@@ -155,26 +264,59 @@ class RowBudget:
         probe, when only that member's optimizer state is resident, so it
         overstates what the other members leave by their states; the margin
         and the retry absorb that. A resolved or fixed budget just runs the
-        body."""
+        body.
+
+        Under a world above 1 the bound is the **minimum** over the lockstep
+        axes' ranks (§3): every rank ran the same probe on its own device,
+        and one bound has to hold on all of them — and over the data
+        replicas too when ``axes`` names them (rows mode, §8.3)."""
         if not self.probing or self.meter is None:
-            body()
+            try:
+                body()
+            except torch.OutOfMemoryError as error:
+                if self.oom_policy is OOMPolicy.ABORT:
+                    self._abort(error)
+                raise
             return
-        peak, available = self.meter.measure(body)
+        failure: torch.OutOfMemoryError | None = None
+        reading: tuple[int, int] | None = None
+        try:
+            reading = self.meter.measure(body)
+        except torch.OutOfMemoryError as error:
+            if self.oom_policy is OOMPolicy.ABORT:
+                self._abort(error)
+            failure = error.with_traceback(None)
+        # A failed rank cannot skip directly to the window's OOM reduction
+        # while a successful rank reduces its probe bound.
+        if self.out_of_memory(failure is not None):
+            if failure is not None:
+                raise failure
+            raise torch.OutOfMemoryError("a peer ran the budget probe out of memory")
+        assert reading is not None
+        peak, available = reading
         per_row = max(peak, 1) / max(rows, 1)
         fits = int(available * (1.0 - MARGIN) / per_row)
         member = max(unit if unit is not None else rows, 1)
-        self.bound = max(rows, (fits // member) * member)
+        self.bound = self._min(max(rows, (fits // member) * member))
         self.probe = (int(per_row), available)
         self.resolved = True
+
+    def out_of_memory(self, failed: bool) -> bool:
+        """Whether **any** rank of the group ran this window out of memory
+        (§3; the lockstep axes, and the data replicas too under ``axes`` that
+        name them) — the one decision the retry may branch on, so that a
+        rank that did not fail abandons and re-packs the window with the
+        ranks that did. The value itself at world 1."""
+        return self._any(failed)
 
     def can_shrink(self, window_rows: int, largest_member: int) -> bool:
         """Whether a smaller window than ``window_rows`` exists: not for a
         fixed bound, and not below one member's minibatch."""
-        return not self.fixed and window_rows > largest_member
+        return bool(self._min(int(not self.fixed and window_rows > largest_member)))
 
     def shrink(self, window_rows: int, largest_member: int) -> None:
-        """Halve the bound after a window of ``window_rows`` ran out of
-        memory, never below ``largest_member``."""
-        self.bound = max(largest_member, window_rows // 2)
+        """Agree the smallest rank's halved bound. A member remains indivisible
+        even when another rank's bound is below its local size."""
+        self.bound = self._min(max(largest_member, window_rows // 2))
         self.resolved = True
         self.shrinks += 1

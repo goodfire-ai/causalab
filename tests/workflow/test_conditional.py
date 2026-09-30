@@ -1,17 +1,17 @@
-"""Typed decisions and conditional steps (workflow spec §2.8, §5 rule 18) — on
-CPU, with no engine.
+"""Typed decisions and conditional steps (``docs/workflow_protocol.md`` §2.8,
+§5 rule 18; T10–T14 and the censuses) — on CPU, with no engine.
 
 * **The censuses.** Five step kinds; `MAX_RULE` is 18 and §5 numbers it; the
   closed vocabularies — comparators, predicate comparators, scopes, receipt
   outcomes, decision fields, dispositions — are §2.8's and §8's tables member
-  for member; the new prose and this layer's module never use the word that
-  is ambiguous with a Git ref.
+  for member; the new prose and this layer's module never use the word
+  that also names a kind of Git ref (``AMBIGUOUS``).
 * **The closure guard.** ``causalab/workflow/conditional.py`` is a member of
   no hashed script's closure and of ``SHARED``, reaches no engine module, and
   loading the fixture chain imports no torch — digest-neutral because nothing
   digest-bearing changed (both pins hold, T13).
-* **Refusals, each beside its valid twin**, every one naming the field: the
-  decision's `values` and `rule`, the conditional's
+* **Refusals, each beside its valid twin**, every one
+  naming the field: the decision's `values` and `rule`, the conditional's
   `predicate`, `on_true` / `on_false` and `scope`, and `requires_receipt`.
 * **T10.** One workflow, two runs differing only in the measured input: one
   publishes `fit` and skips `probe`, the other the reverse, transitively; the
@@ -48,10 +48,11 @@ import pytest
 from causalab.cli import main as cli_main
 from causalab.io.events import EVENTS_FILE, read_events, terminal
 from causalab.io.step_record import SIDECAR, read_sidecar
-from causalab.protocol.code import import_closure
-from causalab.protocol.engine import Engine, ExecutionRequest, RunResult
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.identity import import_closure
+from causalab.protocol.compiled import CompiledProtocol
+from causalab.protocol.engine import Engine, RunContext, RunResult
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.protocol.schema import COMPONENTS
 from causalab.workflow import conditional as cond
 from causalab.workflow import manifest as mf
@@ -185,10 +186,10 @@ def _run(
     loaded: LoadedWorkflow,
     root: Path,
     out: Path,
-    engines: list[Any] | None = None,
+    engine: Any = None,
     **kw: Any,
 ) -> Any:
-    return run_workflow(loaded, _env(root), out, engines or [], **kw)
+    return run_workflow(loaded, _env(root), out, engine, **kw)
 
 
 def _statuses(result: Any) -> dict[str, str]:
@@ -330,14 +331,11 @@ def test_the_skipped_by_fields_are_the_spec_entry() -> None:
 
 
 def test_the_new_prose_never_uses_the_word_ambiguous_with_a_git_ref() -> None:
-    """Work on separate sides of a graph is easily confused with Git refs, so
-    §2.8, item 18, §8, this layer's module and its tests say `side` and never
-    the other word. A tree-wide ban is not viable (58
-    files use it legitimately); this is section-scoped."""
+    """Keep graph-side terminology consistent in conditional workflow sections."""
     texts = {
         "§2.8": _section(SECTION_28),
         "§5 item 18": re.search(
-            r"^18\. (.+?)(?=^\d+\. |\*\*Two v1)",
+            r"^18\. (.+?)(?=^\d+\. |\Z)",
             _section("## 5. Validation"),
             re.M | re.S,
         ).group(1),  # type: ignore[union-attr]
@@ -345,11 +343,11 @@ def test_the_new_prose_never_uses_the_word_ambiguous_with_a_git_ref() -> None:
         MODULE: (REPO / MODULE).read_text(),
         "this file": Path(__file__).read_text(),
         "the smoke test": SMOKE_TEST.read_text(),
-        # the fan-out layer (§2.9, item 19, fan_out.py and its two test files)
-        # inherits the ban — one census, extended rather than copied
+        # §2.9, item 19, fan_out.py and its two test files inherit
+        # the ban — one census, extended rather than copied
         "§2.9": _section("### 2.9 `fan_out` — a declared fan-out and its join"),
         "§5 item 19": re.search(
-            r"^19\. (.+?)(?=^\d+\. |\*\*Two v1)",
+            r"^19\. (.+?)(?=^\d+\. |\Z)",
             _section("## 5. Validation"),
             re.M | re.S,
         ).group(1),  # type: ignore[union-attr]
@@ -358,11 +356,11 @@ def test_the_new_prose_never_uses_the_word_ambiguous_with_a_git_ref() -> None:
         "the fan-out smoke test": (
             REPO / "tests/neural/engines/pytorch_hooks/test_fan_out_run.py"
         ).read_text(),
-        # the nested layer (§2.10, item 20, nested.py and its two test files)
-        # inherits the ban the same way
+        # §2.10, item 20, nested.py and its two test files inherit
+        # the ban the same way
         "§2.10": _section("### 2.10 `workflow` — a nested reusable workflow"),
         "§5 item 20": re.search(
-            r"^20\. (.+?)(?=^\d+\. |\*\*Two v1)",
+            r"^20\. (.+?)(?=^\d+\. |\Z)",
             _section("## 5. Validation"),
             re.M | re.S,
         ).group(1),  # type: ignore[union-attr]
@@ -392,16 +390,21 @@ def test_conditional_is_in_no_hashed_closure() -> None:
 
 
 def test_conditional_reaches_no_engine_module() -> None:
+    """Engine-free: the one member under ``neural/`` is the torch-free
+    enumerator the workflow layer reads the steps through
+    (``neural/shared/sweep.py``), never an engine."""
     members = import_closure(REPO / MODULE, root=REPO)
     assert members, "the closure walk found nothing"
-    assert not [m for m in members if m.startswith("causalab/neural/")]
+    assert [m for m in members if m.startswith("causalab/neural/")] == [
+        "causalab/neural/shared/sweep.py"
+    ]
 
 
 _PROBE = """
 import json, sys
 from pathlib import Path
 import causalab.workflow.conditional
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.workflow.document import load_workflow
 root = Path(sys.argv[1])
 env = ResolutionEnv(datasets=FileDatasets(root=root), artifacts=FileArtifacts(root=root))
@@ -499,6 +502,8 @@ def test_explain_prints_both_kinds(
         cli_main(
             [
                 "explain",
+                "--engine",
+                "auto",
                 str(root / "gate.json"),
                 "--data-root",
                 str(root),
@@ -743,8 +748,8 @@ CONDITIONAL_REFUSALS: dict[str, tuple[dict[str, Any], int, str, str]] = {
         "cycle",
         "cycle",
     ),
-    # `per_target` / `per_variable` execute over a declared fan-out (§2.9);
-    # over the chain's *unfanned* decision producer they are rule-19
+    # `per_target` / `per_variable` execute over a declared fan-out
+    # (§2.9); over the chain's *unfanned* decision producer they are rule-19
     # refusals naming the producer — their twins run in test_fan_out.py
     "scope_for_the_fan_out": (
         {"scope": "per_target"},
@@ -1143,7 +1148,7 @@ def test_an_unreached_skip_inherits_the_decision_fields(
 
 
 def test_the_decision_step_writes_the_six_fields_and_no_split(tmp_path: Path) -> None:
-    """`select`'s values object wrapped, not replaced — the record binds
+    """I16: `select`'s values object wrapped, not replaced — the record binds
     to the values file's bytes and its producer's identity."""
     root = _tree(tmp_path)
     result = _run(_load(root), root, tmp_path / "runs")
@@ -1272,7 +1277,7 @@ class _Stub(Engine):
         self.writable_components = frozenset(COMPONENTS)
         self.is_local = True
 
-    def execute(self, request: ExecutionRequest) -> RunResult:
+    def execute(self, compiled: CompiledProtocol, run: RunContext) -> RunResult:
         raise AssertionError("executed — the engine was reached")
 
 
@@ -1300,7 +1305,7 @@ def _receipt_raw(root: Path, outcome: str = "pass") -> dict[str, Any]:
 
 
 def _sentinels(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The `test_legality_before_weights.py` pattern: the reference
+    """The pattern of `test_legality_before_weights.py`: the reference
     engine's `load_model` and the runner's `route_engine` both raise — neither
     may be entered before the receipt refuses."""
     from causalab.neural.engines.pytorch_hooks import engine as hooks_engine
@@ -1324,7 +1329,7 @@ def test_t11_a_failed_receipt_prevents_allocation(
     assert loaded.dependencies["fit"] == ("gate_k",)  # the derived edge
     _sentinels(monkeypatch)
     with pytest.raises(WorkflowError) as err:
-        _run(loaded, root, tmp_path / "runs", [_Stub()])
+        _run(loaded, root, tmp_path / "runs", _Stub())
     assert err.value.rule == CONDITIONAL_RULE
     message = str(err.value)
     assert "steps.fit.requires_receipt" in message
@@ -1362,7 +1367,7 @@ def test_t11_a_missing_receipt_is_a_distinct_refusal(
     monkeypatch.setattr(runner, "_boundary", vanish)
     _sentinels(monkeypatch)
     with pytest.raises(WorkflowError) as err:
-        _run(loaded, root, tmp_path / "runs", [_Stub()])
+        _run(loaded, root, tmp_path / "runs", _Stub())
     assert err.value.rule == CONDITIONAL_RULE
     message = str(err.value)
     assert "steps.fit.requires_receipt" in message
@@ -1393,7 +1398,7 @@ def test_t11_the_pass_twin_reaches_the_engine(tmp_path: Path) -> None:
     root = _receipt_tree(tmp_path, score=0.9)
     loaded = _load(root, _receipt_raw(root))
     with pytest.raises(AssertionError, match="executed"):
-        _run(loaded, root, tmp_path / "runs", [_Stub()])
+        _run(loaded, root, tmp_path / "runs", _Stub())
     run_root = tmp_path / "runs" / "gated"
     assert (run_root / mf.ATTEMPTS_DIR / "fit").is_dir()  # allocated this time
 
@@ -1401,7 +1406,7 @@ def test_t11_the_pass_twin_reaches_the_engine(tmp_path: Path) -> None:
 def test_t11_the_check_precedes_route_engine_even_for_a_pass(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The second mutation, moving the check after `route_engine`: with
+    """T11's second mutation, moving the check after `route_engine`: with
     the receipt failing and `route_engine` a sentinel, the refusal must be
     the receipt's, never the sentinel's."""
     root = _receipt_tree(tmp_path, score=0.1)
@@ -1412,7 +1417,7 @@ def test_t11_the_check_precedes_route_engine_even_for_a_pass(
 
     monkeypatch.setattr(runner, "route_engine", no_route)
     with pytest.raises(WorkflowError, match="not allocated"):
-        _run(loaded, root, tmp_path / "runs", [_Stub()])
+        _run(loaded, root, tmp_path / "runs", _Stub())
 
 
 def _receipt_only_raw(root: Path) -> dict[str, Any]:
@@ -1479,7 +1484,7 @@ def test_t11_a_receipt_that_flipped_to_fail_refuses_a_resume_reuse(
 
 
 def test_t11_an_unchanged_pass_receipt_is_reused_under_resume(tmp_path: Path) -> None:
-    """The twin of the flipped-receipt case: the receipt still says `pass`, so
+    """The flipped-receipt test's twin: the receipt still says `pass`, so
     `--resume` reuses the receipt-bearing step — the clause refuses a flipped
     receipt, not a receipt."""
     root = _tree(tmp_path, score=0.9)
@@ -1613,7 +1618,6 @@ def test_t13_the_population_is_non_empty() -> None:
     documents = [
         path
         for pattern in (
-            "causalab/configs/**/*.json",
             "demos/**/*.json",
             "tests/protocols/*.json",
             "tests/golden/**/*.json",
@@ -1666,7 +1670,7 @@ def test_t14_step_identity_is_unchanged_for_every_existing_kind(
     env: Any, tmp_path: Path
 ) -> None:
     kinds: set[str] = set()
-    for name in ("mean_ablation.json", "weekdays_8b.json"):
+    for name in ("mean_ablation.json", "weekdays.json"):
         kinds |= _identity_kinds(load_workflow(WORKFLOWS / name, env))
     kinds |= _identity_kinds(_load(_tree(tmp_path)))
     assert kinds == {"intervention_protocol", "script", "decision", "conditional"}
@@ -1709,17 +1713,22 @@ def test_t14_a_published_script_record_gains_disposition_and_nothing_else(
     root = _tree(tmp_path)
     loaded = _load(root)
     out = tmp_path / "runs"
+    # Every script reads a file reference: `measure` an external path,
+    # `fit` and `report` upstream files. Their records carry `input_digests`
+    # (§8), independently of the conditional layer.
+    base = {
+        name: BASE_SCRIPT_RECORD_KEYS | {"input_digests"}
+        for name in ("measure", "fit", "report")
+    }
     first = _run(loaded, root, out)
-    for name in ("measure", "fit", "report"):
+    for name, keys in base.items():
         record = json.loads((first.run_root / name / SIDECAR).read_text())
-        assert set(record) == BASE_SCRIPT_RECORD_KEYS | {"disposition"}, name
+        assert set(record) == keys | {"disposition"}, name
         assert record["disposition"] == "accepted"
-        assert set(first.manifest["steps"][name]) == BASE_SCRIPT_RECORD_KEYS | {
-            "disposition"
-        }, name
+        assert set(first.manifest["steps"][name]) == keys | {"disposition"}, name
     second = _run(loaded, root, out)
-    for name in ("measure", "fit", "report"):
-        assert set(second.manifest["steps"][name]) == BASE_SCRIPT_RECORD_KEYS | {
+    for name, keys in base.items():
+        assert set(second.manifest["steps"][name]) == keys | {
             "disposition",
             "superseded",
         }, name
@@ -1729,7 +1738,7 @@ def test_t14_a_reused_entry_lists_the_same_superseded_units_as_a_fresh_run(
     tmp_path: Path,
 ) -> None:
     """The skip and the publish path attach the
-    step's retained prior units (`superseded`); the reuse path did not, so a
+    step's retained prior units (`superseded`); the reuse path once did not, so a
     `--resume` over the same tree silently dropped them from `workflow.json`.
     Run → rerun (supersedes every published unit) → `--resume`: the reused
     entries list what the rerun's did."""
@@ -1758,7 +1767,7 @@ def test_t14_a_reused_entry_lists_the_same_superseded_units_as_a_fresh_run(
         )
 
 
-def test_risk_a_moved_evidence_re_evaluates_the_conditional_under_resume(
+def test_moved_evidence_re_evaluates_the_conditional_under_resume(
     tmp_path: Path,
 ) -> None:
     """The producer re-ran (its values file was gone) and its

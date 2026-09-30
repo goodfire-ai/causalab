@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.tables import read_table
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.io.tables import read_table
 from causalab.workflow.document import load_workflow
 from causalab.workflow.runner import run_workflow
 
@@ -67,7 +67,7 @@ def test_an_isolated_step_runs_in_a_subprocess(wf_dir, tmp_path, env):
 
     document = _document(wf_dir, deps=["packaging"])
     loaded = load_workflow(document, env, workflow_dir=wf_dir)
-    result = run_workflow(loaded, env, tmp_path / "runs", [])
+    result = run_workflow(loaded, env, tmp_path / "runs", None)
     rows = read_table(result.run_root / "count" / "count.json")
     assert rows, "the isolated step produced no output"
     assert rows[0]["n"] != os.getpid(), (
@@ -95,5 +95,5 @@ def test_a_tensor_input_cannot_cross_the_boundary(wf_dir, tmp_path, env):
     }
     loaded = load_workflow(document, env, workflow_dir=wf_dir)
     with pytest.raises(ProtocolError) as err:
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     assert "cross a process boundary" in str(err.value)

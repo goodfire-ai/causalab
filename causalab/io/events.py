@@ -1,46 +1,13 @@
-"""The local append-only event stream (workflow spec §4.3).
+"""Read and append the local ``events.jsonl`` stream.
 
-A run leaves two kinds of file behind. The **scientific outputs** — the metric
-tables, the tensors, the run receipt ``protocol.json`` or the run manifest
-``workflow.json`` — are immutable once written and are what every digest, stamp
-and ``--resume`` decision reads. The **event stream** is the other kind: a
-mutable sidecar, ``events.jsonl``, one JSON line per event, appended to while
-the run is in flight and never rewritten. It says what happened and when; it
-is an input to no reuse decision and no identity — the one thing read from it
-is the manifest's status words, which :mod:`causalab.workflow.derived`
-derives from the lines a run appended. That split — a tracker sidecar written
-after a manifest was captured must not be able to break the manifest's
-checksum — is stated as a file layout: the stream sits
-*beside* the receipt or manifest, never inside a step's output directory.
+Each event has a monotonically increasing sequence number and one of the
+kinds in ``EVENTS``. Execution records its starting offset so status derivation
+reads that run's events. The workflow manifest derives its status values from
+this stream.
 
-**The identities it carries are the ones that exist.** There is no campaign
-layer; the spec's own reading is "document digest = campaign, point digest =
-provenance unit" (intervention protocol spec §7), so a protocol run's lines carry the
-``document_digest`` and the ``--points`` shard it ran, with each point's
-``point_digest`` in the payload. A workflow run has no run-level identity —
-its identities are its steps' (workflow spec §7) — so its lines carry none,
-and name the step in the payload. Nothing in a payload is an identity-bearing
-fact the run receipt does not already carry.
-
-**Seven events, closed.** :data:`EVENTS` is the vocabulary; the spec's §4.3
-table lists the same seven and a census holds the two together, so an eighth
-name cannot appear in code without a row saying what it means. An unknown
-name is refused at :meth:`EventLog.emit` (``ValueError`` naming the
-vocabulary) rather than written, because a reader of the stream must be able
-to trust that every ``event`` field is one of seven words.
-
-**Local first, remote optional — as code.** :data:`EventSink` is the adapter
-seam: a callable handed each line *after* it is on disk. No remote
-implementation ships. What ships is the contract that a sink **cannot change
-scientific execution**: any exception it raises becomes a ``warning`` line
-(``reason: sink_failed``) written locally and not re-delivered, and the run
-proceeds exactly as it would with no sink — byte for byte, which is what
-``tests/protocol/test_events_run.py`` checks.
-
-Stdlib only, on purpose. ``causalab.protocol.run`` reaches this module through
-a function-local import and must stay torch-free; nothing in a shipped script's
-import closure imports it (`tests/workflow/test_closure_census.py`).
-"""
+Event delivery through a sink is separate from scientific execution. Delivery
+failures produce warning events. Experiment identity and reuse checks use the
+recorded documents and artifacts."""
 
 from __future__ import annotations
 
@@ -63,10 +30,11 @@ __all__ = [
 #: line rather than guessing at its shape.
 SCHEMA_VERSION = 1
 
-#: The closed vocabulary of ``event``, in the order the spec's table lists it.
-#: ``campaign_terminal`` keeps its name with campaign = document (intervention
-#: protocol spec §7). A run that did not finish leaves a stream
-#: without one — that absence is what "did not finish" reads as.
+#: The closed vocabulary of ``event``, in the order the event table of the
+#: workflow spec (``docs/workflow_protocol.md`` §4.3) lists it.
+#: ``campaign_terminal`` keeps its name, with a campaign read as one document
+#: run. A run that did not finish leaves a stream without one — that absence
+#: is what "did not finish" reads as.
 EVENTS: tuple[str, ...] = (
     "phase_started",
     "progress",
@@ -125,7 +93,7 @@ def _parse_line(line: str, path: Path, number: int) -> dict[str, Any]:
 def read_events(path: Path) -> list[dict[str, Any]]:
     """Every line of the stream at ``path``, in order; ``[]`` if there is no
     file. A line that does not parse, carries another schema version, names
-    an event outside :data:`EVENTS` or breaks the ``seq`` sequence (``0, 1,
+    an event outside [`EVENTS`][] or breaks the ``seq`` sequence (``0, 1,
     2, …`` — a deleted or duplicated line) raises ``ValueError`` naming the
     line."""
     path = Path(path)
@@ -175,7 +143,7 @@ class EventLog:
 
     ``identity`` is the run's — ``{"document_digest", "points"}`` for a
     protocol run, ``{}`` for a workflow run, whose identities are per step —
-    and is copied into every line. ``sink`` is the optional adapter (:data:`EventSink`).
+    and is copied into every line. ``sink`` is the optional adapter ([`EventSink`][]).
 
     Opening a log over an existing stream **continues** it: ``seq`` picks up
     after the last line, so a ``--resume`` run appends to the first run's
@@ -185,10 +153,10 @@ class EventLog:
     (A well-formed foreign line with no ``seq`` cannot come from this writer;
     the reader refuses it as out of sequence rather than inventing a number.)
 
-    :attr:`opened_at` is the ``seq`` this opening's first line gets, so
+    [`opened_at`][] is the ``seq`` this opening's first line gets, so
     ``[r for r in read_events(path) if r["seq"] >= log.opened_at]`` is exactly
     what this opening wrote — the lines one run appended, which is what the
-    manifest's statuses are derived from (:mod:`causalab.workflow.derived`).
+    manifest's statuses are derived from (`causalab.workflow.derived`).
     """
 
     def __init__(

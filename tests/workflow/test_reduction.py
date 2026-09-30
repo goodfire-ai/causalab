@@ -1,11 +1,11 @@
 """The reduction contract (workflow spec §2.6, checklist rule 12).
 
-The defect: a number published from a table carried eight undeclared
+Without the contract, a number published from a table carries eight undeclared
 decisions — statistical unit, grouping, weighting, missing-value policy,
 uncertainty procedure, resampling unit, repetitions, seed. These tests hold the
 contract that makes them declared, digest-covered and reproducible:
 
-* **T1** (ROME): a declared fact-level percentile bootstrap, 2,000
+* **T1** (a ROME-style reduction): a declared fact-level percentile bootstrap, 2,000
   repetitions, seed 42, is **byte identical** across two independent runs, and
   removing any one of the eight fields fails **at load naming the field**.
 * **T2** (reused prompts): `unit: row` and `unit: pair`, where
@@ -40,7 +40,7 @@ import pytest
 
 from causalab.io.step_io import StepError
 from causalab.io.step_record import aggregate, implied_reduction
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 from causalab.workflow.document import (
     MAX_RULE,
     WorkflowError,
@@ -88,10 +88,10 @@ def fact_table(n_facts: int = 12, layers: tuple[int, ...] = (3, 5)) -> list[dict
 
 
 def reused_prompt_table() -> list[dict]:
-    """Counterfactual pairs whose roles **reuse prompts**. Prompt 0 is the
-    base of four pairs, prompt 4 the counterfactual of one; every pair holds a
-    base row and a counterfactual row. Mean over rows, over pairs and over
-    prompts are three different numbers."""
+    """Counterfactual pairs whose roles **reuse
+    prompts**. Prompt 0 is the base of four pairs, prompt 4 the counterfactual
+    of one; every pair holds a base row and a counterfactual row. Mean over
+    rows, over pairs and over prompts are three different numbers."""
     pairs = [(0, 1), (0, 2), (0, 3), (0, 4), (1, 2), (3, 4)]
     rows: list[dict] = []
     for pair_id, (base, counterfactual) in enumerate(pairs):
@@ -165,12 +165,12 @@ def reduce_workflow(table: Path, reduction: dict[str, Any] | None) -> dict[str, 
 
 def _run(raw: dict[str, Any], env, out_root: Path) -> Path:
     loaded = load_workflow(raw, env, workflow_dir=out_root)
-    result = run_workflow(loaded, env, out_root, engines=[])
+    result = run_workflow(loaded, env, out_root, engine=None)
     return result.run_root / "facts" / "reduced.json"
 
 
 # --------------------------------------------------------------------------- #
-# T1 — ROME's fact-level bootstrap
+# T1 — a ROME-style fact-level bootstrap
 # --------------------------------------------------------------------------- #
 
 
@@ -238,7 +238,7 @@ def test_t1_the_seed_governs_the_interval():
 
 
 # --------------------------------------------------------------------------- #
-# T2 — pattern 8: row, pair and prompt are not interchangeable
+# T2 — reused prompts: row, pair and prompt are not interchangeable
 # --------------------------------------------------------------------------- #
 
 
@@ -286,7 +286,7 @@ def test_t2_row_and_pair_give_different_intervals_and_digests(env, tmp_path):
 def test_t2_prompt_as_the_unit_changes_the_estimate_itself():
     """Where roles reuse prompts, the prompt-level mean weighs prompt 0 once
     rather than four times: not just a different interval, a different
-    number. This is the whole of pattern 8."""
+    number."""
     df = pd.DataFrame(reused_prompt_table())
     by_row = reduce_frame(
         df, parse_reduction(_pattern8({"kind": "row"})), "value", what="t"
@@ -383,10 +383,9 @@ def test_t3_error_has_a_legitimate_twin():
             "n_unmatched": 0,
             "n_excluded": 0,
             # the record's identity: an unlabelled table has an
-            # unknown unit and no single point; the estimator names itself
+            # unknown unit; the estimator names itself
             "unit": None,
             "estimand_version": "mean/v1",
-            "produced_by": None,
         }
     ]
 
@@ -407,7 +406,6 @@ def test_t3_exclude_reduces_without_the_null_and_records_the_count():
             "n_excluded": 2,
             "unit": None,
             "estimand_version": "mean/v1",
-            "produced_by": None,
         }
     ]
 
@@ -603,7 +601,6 @@ def test_the_script_reduces_and_writes_one_row_per_group(tmp_path):
         "n_excluded",
         "unit",
         "estimand_version",
-        "produced_by",
         "lower",
         "upper",
     }
@@ -995,7 +992,7 @@ def test_the_bootstrap_resamples_clusters_not_rows():
 
 
 # --------------------------------------------------------------------------- #
-# curve estimators — `auc` and `cpr` (G16 / M16; workflow §2.6 "Curve estimators")
+# curve estimators — `auc` and `cpr` (workflow §2.6 "Curve estimators")
 # --------------------------------------------------------------------------- #
 
 #: gpt2's MIB node count with the `input` node: 12·12 heads + 12 MLPs + 1.
@@ -1388,8 +1385,8 @@ def test_the_built_in_runs_a_cpr_block_end_to_end(env, tmp_path):
 
 
 # --------------------------------------------------------------------------- #
-# what the parser guarantees, the run time need not assume — and the one hunk
-# on the scalar path, pinned to a number
+# what the parser guarantees, the run time need not
+# assume — and the one hunk on the scalar path, pinned to a number
 # --------------------------------------------------------------------------- #
 
 
@@ -1397,9 +1394,9 @@ def test_the_scalar_bootstrap_interval_is_pinned():
     """A characterization test for the one hunk that reaches the scalar path
     (the estimator became a callable on the resamplers): ROME's fact-level
     percentile bootstrap over `fact_table()` — 2,000 repetitions, seed 42 —
-    gave these bounds before the change and must give them after. The
-    relational assertions (two intervals differ, the seed governs) would let a
-    drifted draw sequence through; a number does not."""
+    gave these bounds before the estimator became a callable and must give
+    them after. The relational assertions (two intervals differ, the seed
+    governs) would let a drifted draw sequence through; a number does not."""
     df = pd.DataFrame(fact_table())
     out = reduce_frame(df, parse_reduction(ROME_REDUCTION), "value", what="t")
     by_layer = {row["sites.target.layers"]: row for row in out}

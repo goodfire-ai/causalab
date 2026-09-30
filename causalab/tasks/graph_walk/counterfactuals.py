@@ -5,7 +5,7 @@ from __future__ import annotations
 import random
 from typing import Any
 
-from causalab.causal.causal_model import CausalModel
+from causalab.causal.model import CausalModel
 
 
 def generate_graph_walk_dataset(
@@ -22,9 +22,13 @@ def generate_graph_walk_dataset(
     coords = causal_model.values["node_coordinates"]
     for i in range(n_examples):
         coord = coords[i % len(coords)]
-        input_trace = causal_model.new_trace({"node_coordinates": coord})
+        input_trace = causal_model.new_trace(
+            {"node_coordinates": coord, "walk_seed": rng.randrange(2**32)}
+        )
         cf_coord = rng.choice([c for c in coords if c != coord])
-        cf_trace = causal_model.new_trace({"node_coordinates": cf_coord})
+        cf_trace = causal_model.new_trace(
+            {"node_coordinates": cf_coord, "walk_seed": rng.randrange(2**32)}
+        )
         examples.append(
             {
                 "input": input_trace,

@@ -1,0 +1,514 @@
+[
+  {
+    "example_id": "0",
+    "metric": "said",
+    "value": "{\"indices\": [1207], \"probs\": [0.8354871869087219], \"tokens\": [\" Q\"], \"values\": [23.75]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "said",
+    "value": "{\"indices\": [422], \"probs\": [0.3919146656990051], \"tokens\": [\" D\"], \"values\": [23.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "said",
+    "value": "{\"indices\": [467], \"probs\": [0.9478177428245544], \"tokens\": [\" W\"], \"values\": [26.25]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "said",
+    "value": "{\"indices\": [467], \"probs\": [0.9733632206916809], \"tokens\": [\" W\"], \"values\": [25.5]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "said",
+    "value": "{\"indices\": [362], \"probs\": [0.9627286195755005], \"tokens\": [\" A\"], \"values\": [25.625]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "said",
+    "value": "{\"indices\": [809], \"probs\": [0.8233687877655029], \"tokens\": [\" Y\"], \"values\": [24.0]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "said",
+    "value": "{\"indices\": [328], \"probs\": [0.6047830581665039], \"tokens\": [\" S\"], \"values\": [24.25]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "said",
+    "value": "{\"indices\": [444], \"probs\": [0.9655110239982605], \"tokens\": [\" L\"], \"values\": [25.25]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "said",
+    "value": "{\"indices\": [431], \"probs\": [0.5291196703910828], \"tokens\": [\" R\"], \"values\": [24.0]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "said",
+    "value": "{\"indices\": [434], \"probs\": [0.8901405334472656], \"tokens\": [\" F\"], \"values\": [25.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "said",
+    "value": "{\"indices\": [425], \"probs\": [0.9714733362197876], \"tokens\": [\" B\"], \"values\": [25.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "said",
+    "value": "{\"indices\": [479], \"probs\": [0.9285702705383301], \"tokens\": [\" G\"], \"values\": [25.375]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "said",
+    "value": "{\"indices\": [444], \"probs\": [0.9142937064170837], \"tokens\": [\" L\"], \"values\": [24.25]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "said",
+    "value": "{\"indices\": [479], \"probs\": [0.9604502320289612], \"tokens\": [\" G\"], \"values\": [25.75]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "said",
+    "value": "{\"indices\": [434], \"probs\": [0.6536193490028381], \"tokens\": [\" F\"], \"values\": [23.875]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "said",
+    "value": "{\"indices\": [467], \"probs\": [0.8832796216011047], \"tokens\": [\" W\"], \"values\": [25.25]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "said",
+    "value": "{\"indices\": [451], \"probs\": [0.5776915550231934], \"tokens\": [\" N\"], \"values\": [24.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "said",
+    "value": "{\"indices\": [2518], \"probs\": [0.34891343116760254], \"tokens\": [\" red\"], \"values\": [22.0]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "said",
+    "value": "{\"indices\": [362], \"probs\": [0.5450212359428406], \"tokens\": [\" A\"], \"values\": [23.5]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "said",
+    "value": "{\"indices\": [425], \"probs\": [0.7534291744232178], \"tokens\": [\" B\"], \"values\": [24.375]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "said",
+    "value": "{\"indices\": [434], \"probs\": [0.661522626876831], \"tokens\": [\" F\"], \"values\": [24.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "said",
+    "value": "{\"indices\": [647], \"probs\": [0.7879789471626282], \"tokens\": [\" V\"], \"values\": [23.5]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "said",
+    "value": "{\"indices\": [467], \"probs\": [0.9801210165023804], \"tokens\": [\" W\"], \"values\": [25.75]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "said",
+    "value": "{\"indices\": [356], \"probs\": [0.9162148833274841], \"tokens\": [\" C\"], \"values\": [25.0]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "said",
+    "value": "{\"indices\": [444], \"probs\": [0.7415404319763184], \"tokens\": [\" L\"], \"values\": [24.0]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "said",
+    "value": "{\"indices\": [647], \"probs\": [0.9902980923652649], \"tokens\": [\" V\"], \"values\": [26.0]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "said",
+    "value": "{\"indices\": [467], \"probs\": [0.9008591175079346], \"tokens\": [\" W\"], \"values\": [24.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "said",
+    "value": "{\"indices\": [350], \"probs\": [0.9647271037101746], \"tokens\": [\" T\"], \"values\": [26.625]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "said",
+    "value": "{\"indices\": [431], \"probs\": [0.949015200138092], \"tokens\": [\" R\"], \"values\": [26.375]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "said",
+    "value": "{\"indices\": [619], \"probs\": [0.5569043159484863], \"tokens\": [\" J\"], \"values\": [24.625]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "said",
+    "value": "{\"indices\": [362], \"probs\": [0.7921042442321777], \"tokens\": [\" A\"], \"values\": [25.625]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "said",
+    "value": "{\"indices\": [362], \"probs\": [0.8613685965538025], \"tokens\": [\" A\"], \"values\": [25.75]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "said",
+    "value": "{\"indices\": [422], \"probs\": [0.9837343692779541], \"tokens\": [\" D\"], \"values\": [26.375]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "said",
+    "value": "{\"indices\": [358], \"probs\": [0.8813385963439941], \"tokens\": [\" I\"], \"values\": [25.0]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "said",
+    "value": "{\"indices\": [356], \"probs\": [0.8777194619178772], \"tokens\": [\" C\"], \"values\": [25.625]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "said",
+    "value": "{\"indices\": [350], \"probs\": [0.9244351983070374], \"tokens\": [\" T\"], \"values\": [25.75]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "said",
+    "value": "{\"indices\": [362], \"probs\": [0.5752778053283691], \"tokens\": [\" A\"], \"values\": [23.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "said",
+    "value": "{\"indices\": [1599], \"probs\": [0.9191514253616333], \"tokens\": [\" X\"], \"values\": [25.0]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "said",
+    "value": "{\"indices\": [468], \"probs\": [0.5732182860374451], \"tokens\": [\" E\"], \"values\": [25.0]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "said",
+    "value": "{\"indices\": [431], \"probs\": [0.5396829843521118], \"tokens\": [\" R\"], \"values\": [24.5]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "said",
+    "value": "{\"indices\": [444], \"probs\": [0.8076501488685608], \"tokens\": [\" L\"], \"values\": [24.375]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "said",
+    "value": "{\"indices\": [422], \"probs\": [0.9317703247070312], \"tokens\": [\" D\"], \"values\": [25.375]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "said",
+    "value": "{\"indices\": [1863], \"probs\": [0.7404784560203552], \"tokens\": [\" Z\"], \"values\": [24.375]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "said",
+    "value": "{\"indices\": [422], \"probs\": [0.4600470960140228], \"tokens\": [\" D\"], \"values\": [23.875]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "said",
+    "value": "{\"indices\": [328], \"probs\": [0.3519212603569031], \"tokens\": [\" S\"], \"values\": [23.5]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "said",
+    "value": "{\"indices\": [619], \"probs\": [0.952026903629303], \"tokens\": [\" J\"], \"values\": [26.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "said",
+    "value": "{\"indices\": [362], \"probs\": [0.8342270255088806], \"tokens\": [\" A\"], \"values\": [25.625]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "said",
+    "value": "{\"indices\": [425], \"probs\": [0.9856694936752319], \"tokens\": [\" B\"], \"values\": [26.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "said",
+    "value": "{\"indices\": [444], \"probs\": [0.8931185603141785], \"tokens\": [\" L\"], \"values\": [25.25]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "said",
+    "value": "{\"indices\": [467], \"probs\": [0.8411397933959961], \"tokens\": [\" W\"], \"values\": [25.75]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "said",
+    "value": "{\"indices\": [479], \"probs\": [0.930321216583252], \"tokens\": [\" G\"], \"values\": [25.5]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "said",
+    "value": "{\"indices\": [619], \"probs\": [0.9745395183563232], \"tokens\": [\" J\"], \"values\": [25.875]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "said",
+    "value": "{\"indices\": [431], \"probs\": [0.6057533621788025], \"tokens\": [\" R\"], \"values\": [24.25]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "said",
+    "value": "{\"indices\": [13753], \"probs\": [0.7184032797813416], \"tokens\": [\" yellow\"], \"values\": [23.5]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "said",
+    "value": "{\"indices\": [422], \"probs\": [0.7206907272338867], \"tokens\": [\" D\"], \"values\": [23.75]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "said",
+    "value": "{\"indices\": [547], \"probs\": [0.8511379361152649], \"tokens\": [\" U\"], \"values\": [23.75]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "said",
+    "value": "{\"indices\": [730], \"probs\": [0.4796459674835205], \"tokens\": [\" K\"], \"values\": [23.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "said",
+    "value": "{\"indices\": [425], \"probs\": [0.932936429977417], \"tokens\": [\" B\"], \"values\": [24.25]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "said",
+    "value": "{\"indices\": [434], \"probs\": [0.6413539052009583], \"tokens\": [\" F\"], \"values\": [23.5]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "said",
+    "value": "{\"indices\": [647], \"probs\": [0.3135729432106018], \"tokens\": [\" V\"], \"values\": [22.875]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "said",
+    "value": "{\"indices\": [425], \"probs\": [0.986458957195282], \"tokens\": [\" B\"], \"values\": [27.75]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "said",
+    "value": "{\"indices\": [422], \"probs\": [0.9125485420227051], \"tokens\": [\" D\"], \"values\": [25.5]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "said",
+    "value": "{\"indices\": [350], \"probs\": [0.9066540598869324], \"tokens\": [\" T\"], \"values\": [25.375]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "said",
+    "value": "{\"indices\": [451], \"probs\": [0.9048445224761963], \"tokens\": [\" N\"], \"values\": [24.125]}",
+    "unit": null,
+    "estimand_version": "top_k/v1",
+    "eligible": true
+  }
+]

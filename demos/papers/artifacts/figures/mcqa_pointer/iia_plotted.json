@@ -1,0 +1,290 @@
+{
+ "model": "Qwen2.5-1.5B-Instruct",
+ "chance": 0.5,
+ "clean": {
+  "base_accuracy": 0.875,
+  "counterfactual_accuracy": 0.828125,
+  "unpatched_label_rate": 0.0
+ },
+ "das": [
+  {
+   "layer": 0,
+   "test_iia": 0.03125,
+   "train_iia": 0.0078125
+  },
+  {
+   "layer": 1,
+   "test_iia": 0.03125,
+   "train_iia": 0.0078125
+  },
+  {
+   "layer": 2,
+   "test_iia": 0.03125,
+   "train_iia": 0.0078125
+  },
+  {
+   "layer": 3,
+   "test_iia": 0.03125,
+   "train_iia": 0.0078125
+  },
+  {
+   "layer": 4,
+   "test_iia": 0.015625,
+   "train_iia": 0.015625
+  },
+  {
+   "layer": 5,
+   "test_iia": 0.03125,
+   "train_iia": 0.0625
+  },
+  {
+   "layer": 6,
+   "test_iia": 0.03125,
+   "train_iia": 0.0546875
+  },
+  {
+   "layer": 7,
+   "test_iia": 0.046875,
+   "train_iia": 0.0859375
+  },
+  {
+   "layer": 8,
+   "test_iia": 0.03125,
+   "train_iia": 0.125
+  },
+  {
+   "layer": 9,
+   "test_iia": 0.03125,
+   "train_iia": 0.1484375
+  },
+  {
+   "layer": 10,
+   "test_iia": 0.03125,
+   "train_iia": 0.125
+  },
+  {
+   "layer": 11,
+   "test_iia": 0.03125,
+   "train_iia": 0.1484375
+  },
+  {
+   "layer": 12,
+   "test_iia": 0.03125,
+   "train_iia": 0.1640625
+  },
+  {
+   "layer": 13,
+   "test_iia": 0.03125,
+   "train_iia": 0.15625
+  },
+  {
+   "layer": 14,
+   "test_iia": 0.0625,
+   "train_iia": 0.1640625
+  },
+  {
+   "layer": 15,
+   "test_iia": 0.078125,
+   "train_iia": 0.2578125
+  },
+  {
+   "layer": 16,
+   "test_iia": 0.1875,
+   "train_iia": 0.5546875
+  },
+  {
+   "layer": 17,
+   "test_iia": 0.265625,
+   "train_iia": 0.625
+  },
+  {
+   "layer": 18,
+   "test_iia": 0.703125,
+   "train_iia": 0.953125
+  },
+  {
+   "layer": 19,
+   "test_iia": 0.796875,
+   "train_iia": 0.984375
+  },
+  {
+   "layer": 20,
+   "test_iia": 0.765625,
+   "train_iia": 0.96875
+  },
+  {
+   "layer": 21,
+   "test_iia": 0.796875,
+   "train_iia": 0.9765625
+  },
+  {
+   "layer": 22,
+   "test_iia": 0.328125,
+   "train_iia": 0.7734375
+  },
+  {
+   "layer": 23,
+   "test_iia": 0.109375,
+   "train_iia": 0.4375
+  },
+  {
+   "layer": 24,
+   "test_iia": 0.078125,
+   "train_iia": 0.2734375
+  },
+  {
+   "layer": 25,
+   "test_iia": 0.109375,
+   "train_iia": 0.2890625
+  },
+  {
+   "layer": 26,
+   "test_iia": 0.03125,
+   "train_iia": 0.203125
+  },
+  {
+   "layer": 27,
+   "test_iia": 0.046875,
+   "train_iia": 0.453125
+  }
+ ],
+ "full_patch": [
+  {
+   "layer": 0,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 1,
+   "test_iia": 0.03125
+  },
+  {
+   "layer": 2,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 3,
+   "test_iia": 0.03125
+  },
+  {
+   "layer": 4,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 5,
+   "test_iia": 0.03125
+  },
+  {
+   "layer": 6,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 7,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 8,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 9,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 10,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 11,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 12,
+   "test_iia": 0.03125
+  },
+  {
+   "layer": 13,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 14,
+   "test_iia": 0.03125
+  },
+  {
+   "layer": 15,
+   "test_iia": 0.03125
+  },
+  {
+   "layer": 16,
+   "test_iia": 0.046875
+  },
+  {
+   "layer": 17,
+   "test_iia": 0.046875
+  },
+  {
+   "layer": 18,
+   "test_iia": 0.078125
+  },
+  {
+   "layer": 19,
+   "test_iia": 0.078125
+  },
+  {
+   "layer": 20,
+   "test_iia": 0.0625
+  },
+  {
+   "layer": 21,
+   "test_iia": 0.546875
+  },
+  {
+   "layer": 22,
+   "test_iia": 0.0625
+  },
+  {
+   "layer": 23,
+   "test_iia": 0.046875
+  },
+  {
+   "layer": 24,
+   "test_iia": 0.03125
+  },
+  {
+   "layer": 25,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 26,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 27,
+   "test_iia": 0.015625
+  }
+ ],
+ "chosen_layer": 19,
+ "dbm": {
+  "learned_rank": 57,
+  "theta": 0.44313088059425354,
+  "width": 128,
+  "test_iia": 0.796875
+ },
+ "control": {
+  "k": 32,
+  "test_iia_by_seed": {
+   "0": 0.015625,
+   "1": 0.015625,
+   "2": 0.03125
+  },
+  "test_iia_mean": 0.020833333333333332
+ },
+ "control_dbm": {
+  "k": 57,
+  "test_iia_by_seed": {
+   "0": 0.015625,
+   "1": 0.0,
+   "2": 0.015625
+  },
+  "test_iia_mean": 0.010416666666666666
+ }
+}

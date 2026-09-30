@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.sweep import coordinate_label, expand, find_axes
+from causalab.protocol.rules.errors import ValidationError
+from causalab.neural.shared.sweep import expand
+from causalab.protocol.lowering import coordinate_label, find_axes
 
-from tests.protocol._docs import base_doc, in_order
+from tests.protocol._docs import LOGIT_DIFF, base_doc, in_order, term
 
 pytestmark = pytest.mark.unit
 
@@ -104,7 +105,7 @@ def test_a_named_objective_terms_weight_is_one_axis():
     raw = base_doc()
     raw["method"]["train"] = {
         "objective": {
-            "fit": {"weight": 1.0, "metric": "ld"},
+            "fit": term("logits", "patched", dict(LOGIT_DIFF), weight=1.0),
             "sparsity": {"weight": {"sweep": [0.001, 0.01, 0.1]}, "l1": ["g0", "g1"]},
         },
         "params": ["g0", "g1"],

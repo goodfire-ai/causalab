@@ -1,6 +1,6 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "The gated fixture (workflow spec §2.9): scan.json's interchange with the swept site named `probe` over two layers — four points on positions.tap x sites.probe.layers — so a per_target conditional over the behavioral fixture probe.json (fanned out over the same axis id, sites.probe.layers) gates this step child for child."
   },
   "model": {"key": "gpt2", "revision": "main"},
@@ -9,43 +9,33 @@
     "counterfactual": {"dataset": "weekdays/data#train", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "positions": {
       "tap": {
-        "sweep": [
-          {"index": -1},
-          {"index": -2}
-        ]
+        "sweep": [{"index": -1}, {"index": -2}]
       }
     },
     "sites": {
       "probe": {
         "component": "block_output",
-        "layers": {
-          "sweep": [0, 1]
-        }
+        "layers": {"sweep": [0, 1]}
       },
       "lm_head": {"component": "lm_head"}
     },
-    "reads": {
-      "v_cf": {"site": "probe", "pos": "tap", "model": "original", "input": "counterfactual"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
-    },
+    "reads": {"v_cf": {"site": "probe", "pos": "tap"}, "logits": {"site": "lm_head", "pos": -1}},
     "writes": {
       "patch": {"site": "probe", "pos": "tap", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"}
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      }
     ]
   }
 }

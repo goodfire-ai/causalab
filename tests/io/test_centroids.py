@@ -7,7 +7,7 @@ crashing the spline-fitting path (activation_manifold) and producing a cryptic
 skip warning in the viz paths (subspace / output_manifold).
 
 These tests pin the fix: the chokepoint raises a clear
-:class:`CategoricalParameterError` (a ``ValueError`` subclass, so existing
+[`CategoricalParameterError`][causalab.io.centroids.CategoricalParameterError] (a ``ValueError`` subclass, so existing
 ``except`` viz handlers still skip gracefully) naming the variable and the
 ``EMBEDDINGS`` remedy; the embedding escape hatch still works; a model-side
 embedding is never silently ignored when a partial ``embeddings`` dict is
@@ -20,8 +20,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from causalab.causal.causal_model import CausalModel
-from causalab.causal.trace import Mechanism, input_var
+from causalab.causal import Dom, V, mechanism
+from causalab.causal.model import CausalModel
 from causalab.io.centroids import (
     CategoricalParameterError,
     coerce_param_to_float,
@@ -39,17 +39,14 @@ def _ord_embed(v: str) -> list[float]:
 
 def _categorical_model(embeddings: dict | None = None) -> CausalModel:
     """A 1-input ``letter`` model whose target is a categorical string."""
-    values = {"letter": ["A", "B", "C"], "raw_input": None, "raw_output": None}
-    mechanisms = {
-        "letter": input_var(["A", "B", "C"]),
-        "raw_input": Mechanism(
-            parents=["letter"], compute=lambda t: f"L={t['letter']}"
-        ),
-        "raw_output": Mechanism(parents=["letter"], compute=lambda t: t["letter"]),
-    }
-    return CausalModel(
-        mechanisms, values, id="categorical_letter", embeddings=embeddings
-    )
+
+    @mechanism
+    def equations(letter: Dom(["A", "B", "C"])):
+        raw_input = V(f"L={letter}", domain=Dom(str))  # noqa: F841
+        raw_output = V(letter, domain=Dom(str))
+        return raw_output
+
+    return CausalModel(equations, id="categorical_letter", embeddings=embeddings)
 
 
 def _dataset(model: CausalModel, var: str, vals: list) -> list[dict]:
@@ -61,13 +58,14 @@ def _dataset(model: CausalModel, var: str, vals: list) -> list[dict]:
 def _tuple_categorical_dataset() -> list[dict]:
     """Dataset whose target is a tuple of strings (exercises the tuple branch)."""
     pairs = [("A", "B"), ("C", "D")]
-    values = {"pair": pairs, "raw_input": None, "raw_output": None}
-    mechanisms = {
-        "pair": input_var(pairs),
-        "raw_input": Mechanism(parents=["pair"], compute=lambda t: str(t["pair"])),
-        "raw_output": Mechanism(parents=["pair"], compute=lambda t: str(t["pair"])),
-    }
-    model = CausalModel(mechanisms, values, id="pair_categorical")
+
+    @mechanism
+    def equations(pair: Dom(pairs)):
+        raw_input = V(str(pair), domain=Dom(str))  # noqa: F841
+        raw_output = V(str(pair), domain=Dom(str))
+        return raw_output
+
+    model = CausalModel(equations, id="pair_categorical")
     return _dataset(model, "pair", pairs)
 
 

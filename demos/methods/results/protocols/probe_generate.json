@@ -1,0 +1,24 @@
+{
+  "document": "protocols/probe_generate.json",
+  "document_digest": "091edf86ef0e66c4a28f89c8f0ac5b439d16b1c3bc39076312155fc92d3014f8",
+  "run_digest": "091edf86ef0e66c4a28f89c8f0ac5b439d16b1c3bc39076312155fc92d3014f8",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 44.9,
+  "metrics": {
+    "probe": {
+      "metric": "probe",
+      "rows": 30,
+      "matched_rows": 30,
+      "numeric": false,
+      "commonest_top1": {
+        " this": 28,
+        ".": 1,
+        " Saturday": 1
+      }
+    }
+  }
+}

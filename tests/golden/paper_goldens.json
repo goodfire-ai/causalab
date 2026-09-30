@@ -117,7 +117,7 @@
         "where": "paper Fig 2 (value read off the figure, not stated in text)",
         "quote": "A U-shaped curve emerges: first and last indices rely more on the positional mechanism"
       },
-      "notes": "The 80% center is figure-eyeballed (the paper text is only qualitative), hence confidence: low; a [60, 100] band would exceed the metric's range at the top, so the intent is one-sided and is encoded as a floor at 60. Attribution is candidate-relative (each mechanism's predicted genre vs the original answer, largest positive logit shift wins) at layer 18, the paper's own intervention layer for gemma-2-2b-it - past retrieval (L20+) the patch carries the counterfactual's finished answer and reflexive sweeps to ~100%. An H100 run corroborated: pooled edges ~78% at L18 (first 90%, last 65%), tracking the figure-read 80%."
+      "notes": "The 80% center is figure-eyeballed (the paper text is only qualitative), hence confidence: low; a [60, 100] band would exceed the metric's range at the top, so the intent is one-sided and is encoded as a floor at 60. Attribution is candidate-relative (each mechanism's predicted genre vs the original answer, largest positive logit shift wins) at layer 18, the paper's own intervention layer for gemma-2-2b-it - past retrieval (L20+) the patch carries the counterfactual's finished answer and reflexive sweeps to ~100%. H100 corroboration (one run of test_mixing_positional_shares): pooled edges ~78% at L18 (first 90%, last 65%), tracking the figure-read 80%."
     },
     "mixing.positional_share_middle": {
       "paper": "Mixing Mechanisms, arXiv:2510.06182",
@@ -138,7 +138,7 @@
         "where": "paper section on positional mechanism",
         "quote": "In middle entity groups, however, its effect becomes minimal, accounting only for 20% of the model's behavior"
       },
-      "notes": "The paper pins no dataset size; this test pins its own seeded N (150 rows per position bucket). Candidate-relative attribution at layer 18 (see the edges entry). An H100 run corroborated: middle 17% at L18, tracking the paper's stated 20%."
+      "notes": "The paper pins no dataset size; this test pins its own seeded N (150 rows per position bucket). Candidate-relative attribution at layer 18 (see the edges entry). H100 corroboration (one run of test_mixing_positional_shares): middle 17% at L18, tracking the paper's stated 20%."
     },
     "arithmetic.hours_baseline_acc": {
       "paper": "Arithmetic in the Wild: Llama uses Base-10 Addition to Reason About Cyclic Concepts, arXiv:2605.01148",

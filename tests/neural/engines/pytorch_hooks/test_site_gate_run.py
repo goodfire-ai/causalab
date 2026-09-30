@@ -24,9 +24,10 @@ from safetensors.torch import save_file
 from causalab.cli import main
 from tests.neural.engines.pytorch_hooks.conftest import TINY_QWEN35_MOE
 from tests.protocol._env import FIXTURES
+from tests._helpers.paths import PROTOCOLS_DIR
 
 REPO = Path(__file__).resolve().parents[4]
-PROTOCOLS = REPO / "causalab/configs/protocols"
+PROTOCOLS = PROTOCOLS_DIR
 PINS = {
     "model.key": TINY_QWEN35_MOE,
     "model.dtype": "fp32",
@@ -65,21 +66,18 @@ def _apply_document(gate: dict | None, *, base_metric: bool = False) -> dict:
     else:
         method["featurizers"]["gate"] = {"kind": "gate", "group": "site", **gate}
     if base_metric:
-        method["reads"]["logits_base"] = {
-            "site": "lm_head",
-            "pos": -1,
-            "model": "original",
+        # the same margin on the un-intervened model, read on base (§2.9)
+        method["reads"]["logits_base"] = {"site": "lm_head", "pos": -1}
+        method["intervened_models"]["original_base"] = {
             "input": "base",
+            "reads": ["logits_base"],
         }
-        method["metrics"]["iia_base"] = {
-            **method["metrics"]["iia"],
-            "of": "logits_base",
-        }
+        (iia,) = [e for e in method["save"] if e["file_path"] == "iia.json"]
         method["save"].append(
             {
-                "value": "iia_base",
-                "model": "original",
-                "input": "base",
+                "read": "logits_base",
+                "model": "original_base",
+                "aggregation": iia["aggregation"],
                 "file_path": "iia_base.json",
             }
         )
@@ -106,6 +104,8 @@ def _run(tmp_path: Path, steps: dict[str, tuple[dict, dict]], out: str) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),

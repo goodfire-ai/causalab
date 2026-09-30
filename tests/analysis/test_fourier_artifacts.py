@@ -1,6 +1,5 @@
 """Verify native Fourier files before downstream analysis consumes them."""
 
-import hashlib
 import json
 
 import numpy as np
@@ -43,7 +42,7 @@ def load(directory):
     return load_fit(directory, directory / "acts.safetensors", directory / "rows.json")
 
 
-def test_complete_native_fit_and_input_digests(saved):
+def test_complete_native_fit(saved):
     loaded = load(saved)
     assert loaded["acts"].shape == (300, 2, 8)
     assert loaded["truth"].shape == (300, 3, 2)
@@ -51,13 +50,6 @@ def test_complete_native_fit_and_input_digests(saved):
     assert len(loaded["scores"]) == 6
     assert len(loaded["rows"]) == 300
     assert loaded["identity"] == {}
-    assert len(loaded["artifacts"]) == 9
-    for name, artifact in loaded["artifacts"].items():
-        path = saved / {"acts": "acts.safetensors", "rows": "rows.json"}.get(name, name)
-        assert artifact == {
-            "path": str(path.resolve()),
-            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-        }
 
 
 @pytest.mark.parametrize(
@@ -114,7 +106,7 @@ def test_refuses_inconsistent_scores(saved, problem):
 def test_refuses_inconsistent_tensor_files(saved, problem):
     if problem == "identity":
         stamp_tensor(
-            saved / "bias.safetensors", {"produced_by": "another-fit"}, what="test"
+            saved / "bias.safetensors", {"model_key": "test/another-fit"}, what="test"
         )
     elif problem == "model":
         for name in ("weight", "bias", "plane", "calibration", "predictions"):

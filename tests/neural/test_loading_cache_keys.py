@@ -6,6 +6,7 @@ import pytest
 
 from causalab.neural.engines.pytorch_hooks import loading as hooks
 from causalab.neural.engines.nnsight_tracing import loading as tracing
+from causalab.neural.shared.devices import DeviceMap
 
 pytestmark = pytest.mark.unit
 
@@ -24,7 +25,10 @@ def loader(request, monkeypatch):
             requires_grad_=lambda value: None,
         )
 
-    monkeypatch.setattr(module, "model_info_from_hf_config", lambda *args: object())
+    # the registry entry the loaders read the tower depth off (`DeviceMap.parse`)
+    monkeypatch.setattr(
+        module, "model_info_from_hf_config", lambda *args: SimpleNamespace(num_layers=1)
+    )
     monkeypatch.setattr(module, "register_model", lambda info: None)
     monkeypatch.setattr(module, "bind_kernel_path", lambda *args, **kwargs: None)
     if module is hooks:
@@ -32,6 +36,16 @@ def loader(request, monkeypatch):
 
         monkeypatch.setattr(module, "load_pretrained", construct)
         monkeypatch.setattr(module, "_bitsandbytes_config", lambda config: config)
+        # the quantized path reads the checkpoint's config for its depth
+        # before bitsandbytes builds the model; the stand-in has no checkpoint
+        monkeypatch.setattr(module, "_config_of", lambda *args: object())
+        # the placement is read off a real model's parameters through the
+        # family's tree; the stand-in has none, so it is the requested device
+        monkeypatch.setattr(
+            module,
+            "_placement_of",
+            lambda model, requested=None, **_: DeviceMap.parse(requested or "cpu", 1),
+        )
         monkeypatch.setattr(
             transformers.AutoModelForCausalLM, "from_pretrained", construct
         )

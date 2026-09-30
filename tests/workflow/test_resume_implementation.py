@@ -1,20 +1,20 @@
 """``--resume`` refuses reuse when the implementation identity differs
 (workflow spec §7, §8).
 
-Two capabilities are held here: resuming a workflow, and refusing to resume
-under code that is not the code that produced the step.
-"Same code" has two halves. :func:`causalab.provenance.runtime_identity`
+Two capabilities are tested here: resuming a workflow, and
+refusing to resume under code that is not the code that produced the step.
+"Same code" has two halves. [`causalab.provenance.runtime_identity`][]
 gives the bytes of the ``causalab`` package that ran — its ``tree_digest`` is
 what a step record now carries in its ``implementation`` block and what the
-reuse check compares. The other half identifies a step's *user* code by content: a
-script step's ``script_sha256`` and an intervention step's §2.8.1 ``code``
+reuse check compares. The step identity covers a step's *user* code by
+content: a script step's ``script_sha256`` and an intervention step's §2.8.1 ``code``
 references' ``source_sha256`` are already inside the identity the record
 compares, so that half is proved here rather than re-implemented.
 
-Every refusal is bound to a proof that valid work still passes, and a dirty
-tree is valid work: only ``tree_digest`` is compared, never ``dirty``. The
-guardrail — moving the run tree alone must not bust reuse — is what stops the
-record from hashing paths.
+Every refusal is bound to a proof that valid work still passes: only
+``tree_digest`` is compared, and equal digests are the same bytes whatever
+tree they came from. The guardrail — moving the run tree alone must not bust
+reuse — is what stops the record from hashing paths.
 
 Without the change, T1 and T2 fail the same way: every step is ``reused``,
 because nothing compared the implementation.
@@ -94,7 +94,7 @@ def fresh_identity() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# T1 — refused when the implementation differs; dirty alone never refuses
+# T1 — refused when the implementation differs
 # --------------------------------------------------------------------------- #
 
 
@@ -125,51 +125,16 @@ def test_a_different_tree_digest_re_executes_every_step(
     assert _run(loaded, env, out, resume=True) == {n: "reused" for n in DECLARED}
 
 
-def test_a_flipped_dirty_flag_alone_still_reuses(wf_dir, tmp_path, env, monkeypatch):
-    """A dirty tree is legitimate work. The
-    tree digest is the comparison — a dirty tree that differs has a different
-    digest already; equal digests are the same bytes whatever ``dirty`` says."""
-    loaded = _load(wf_dir, env)
-    out = tmp_path / "runs"
-    run_root = out / "chain"
-    assert _run(loaded, env, out) == {n: "completed" for n in DECLARED}
-    before = _snapshot(run_root)
-    real = runtime_identity()
-
-    for flipped in (True, False, None):
-        if flipped == real.dirty:
-            continue
-        _stand_in(monkeypatch, dataclasses.replace(real, dirty=flipped))
-        assert _run(loaded, env, out, resume=True) == {n: "reused" for n in DECLARED}, (
-            f"dirty={flipped!r} refused reuse of the same bytes"
-        )
-        assert _snapshot(run_root) == before
-
-
-def test_the_other_recorded_fields_are_not_compared(wf_dir, tmp_path, env, monkeypatch):
-    """``version`` and ``resolved_revision`` are recorded for a reader, not
-    compared: a re-tag or a commit that changes no byte under the package is
-    the same code."""
-    loaded = _load(wf_dir, env)
-    out = tmp_path / "runs"
-    assert _run(loaded, env, out) == {n: "completed" for n in DECLARED}
-    real = runtime_identity()
-    _stand_in(
-        monkeypatch,
-        dataclasses.replace(real, version="9.9.9", resolved_revision="f" * 40),
-    )
-    assert _run(loaded, env, out, resume=True) == {n: "reused" for n in DECLARED}
-
-
 # --------------------------------------------------------------------------- #
 # T2 — a record without an implementation block is not reused
 # --------------------------------------------------------------------------- #
 
 
 def test_a_record_without_an_implementation_block_is_not_reused(wf_dir, tmp_path, env):
-    """An older record: files, digests, checks, no ``implementation``.
-    It cannot say what code wrote it, so it is re-executed — and only it; the
-    other units still carry the running package's digest and are reused."""
+    """A record from before the implementation block: files, digests, checks,
+    no ``implementation``. It cannot say what code wrote it, so it is
+    re-executed — and only it; the other units still carry the running
+    package's digest and are reused."""
     loaded = _load(wf_dir, env)
     out = tmp_path / "runs"
     run_root = out / "chain"
@@ -210,10 +175,9 @@ def test_a_malformed_implementation_block_is_not_reused(wf_dir, tmp_path, env):
 def test_a_clean_run_then_resume_reuses_every_step_and_records_the_implementation(
     wf_dir, tmp_path, env
 ):
-    """The twin of `test_attempt_publish.py`'s clean-run test, extended: every
-    record carries the running package's identity in the closed field set, the
-    reused entries in the manifest are the earlier records, and no byte
-    moves."""
+    """The twin of the clean-run test, extended: every record carries the
+    running package's identity in the closed field set, the reused entries in
+    the manifest are the earlier records, and no byte moves."""
     loaded = _load(wf_dir, env)
     out = tmp_path / "runs"
     run_root = out / "chain"
@@ -222,15 +186,10 @@ def test_a_clean_run_then_resume_reuses_every_step_and_records_the_implementatio
     for name in DECLARED:
         block = _record(run_root, name)["implementation"]
         assert tuple(block) == IMPLEMENTATION_FIELDS
-        assert block == {
-            "tree_digest": real.tree_digest,
-            "version": real.version,
-            "resolved_revision": real.resolved_revision,
-            "dirty": real.dirty,
-        }
+        assert block == {"tree_digest": real.tree_digest}
     before = _snapshot(run_root)
 
-    result = runner.run_workflow(loaded, env, out, [], resume=True)
+    result = runner.run_workflow(loaded, env, out, None, resume=True)
     statuses = {n: e["status"] for n, e in result.manifest["steps"].items()}
     assert statuses == {n: "reused" for n in DECLARED}
     assert _snapshot(run_root) == before
@@ -295,7 +254,7 @@ def test_moving_the_run_tree_alone_does_not_bust_reuse(wf_dir, tmp_path, env):
 
 
 # --------------------------------------------------------------------------- #
-# T5 — the other half, proved on this base: user code by content
+# T5 — the user-code half: user code by content
 # --------------------------------------------------------------------------- #
 
 
@@ -335,7 +294,7 @@ def test_editing_a_code_reference_moves_a_protocol_steps_compared_identity(
 ):
     """(b) An intervention step whose document carries a §2.8.1 ``code``
     reference: the referenced module's ``source_sha256`` is in the canonical
-    form, so it is in ``inner.document_digest`` — which is
+    form, so it is in ``inner.compiled.digests.document`` — which is
     ``_step_identity`` for a protocol step, the value the record's
     ``identity`` compares. Proved at the identity level: running the step
     needs an engine, and this tier has none."""
@@ -353,8 +312,8 @@ def test_editing_a_code_reference_moves_a_protocol_steps_compared_identity(
     step = loaded.document.steps["probe"]
     before = runner._step_identity(loaded, "probe", step)  # pyright: ignore[reportPrivateUsage]
     inner = loaded.inner["probe"]
-    assert before == loaded.inner_digests["probe"] == inner.document_digest
-    assert inner.canonical_document["method"]["code"]["corrupt"]["source_sha256"] == (
+    assert before == loaded.inner_digests["probe"] == inner.compiled.digests.document
+    assert inner.compiled.canonical["method"]["code"]["corrupt"]["source_sha256"] == (
         hashlib.sha256(module.read_bytes()).hexdigest()
     )
     # the guard against the guard: the same tree loads to the same identity
@@ -371,7 +330,7 @@ def test_editing_a_code_reference_moves_a_protocol_steps_compared_identity(
     after = runner._step_identity(edited, "probe", step)  # pyright: ignore[reportPrivateUsage]
     assert after != before, "an edited referenced function left the identity alone"
     assert (
-        edited.inner["probe"].canonical_document["method"]["code"]["corrupt"][
+        edited.inner["probe"].compiled.canonical["method"]["code"]["corrupt"][
             "source_sha256"
         ]
         == hashlib.sha256(module.read_bytes()).hexdigest()
@@ -383,8 +342,12 @@ def test_editing_a_code_reference_moves_a_protocol_steps_compared_identity(
 # --------------------------------------------------------------------------- #
 
 
-def _section(heading: str) -> str:
-    text = SPEC.read_text().split(heading, 1)[1]
+#: The spec's published companion page on the runner's implementation.
+INTERNALS = SPEC.with_name("workflow_protocol_internals.md")
+
+
+def _section(heading: str, spec: Path = SPEC) -> str:
+    text = spec.read_text().split(heading, 1)[1]
     return re.split(r"^## ", text, maxsplit=1, flags=re.M)[0]
 
 
@@ -405,17 +368,22 @@ def test_the_spec_names_the_check_and_the_recorded_fields():
     (The spec tabulates no ``_step.json`` field list, so none is invented.)"""
     seven = _section("## 7. Canonical form, digests, and `--resume`")
     resume_paragraph = next(
-        p for p in seven.split("\n\n") if p.startswith("**`--resume`**")
+        p for p in seven.split("\n\n") if p.startswith("Reuse requires ")
     )
     assert "`tree_digest`" in resume_paragraph
-    assert "never reused" in resume_paragraph
+    assert "SHA-256" in resume_paragraph and "`input_digests`" in resume_paragraph
+    assert (
+        "Missing identity or digest records cause execution again" in resume_paragraph
+    )
 
-    eight = _section("## 8. Runner contract")
+    # The service rows are the runner contract; the status table stays in the spec.
+    eight = _section("## 8. Runner contract", INTERNALS)
     assert "`implementation.tree_digest`" in _row(eight, "resume")
     stamping = _row(eight, "stamping")
     assert "`implementation`" in stamping
     for field in IMPLEMENTATION_FIELDS:
         assert f"`{field}`" in stamping, f"§8 stamping row does not list {field!r}"
-    assert "`implementation`" in _row(eight, "`reused`")
+    statuses = _section("## 8. Runner contract")
+    assert "`implementation`" in _row(statuses, "`reused`")
     assert IMPLEMENTATION_FIELDS[0] == "tree_digest"
-    assert len(set(IMPLEMENTATION_FIELDS)) == len(IMPLEMENTATION_FIELDS) == 4
+    assert len(set(IMPLEMENTATION_FIELDS)) == len(IMPLEMENTATION_FIELDS) == 1

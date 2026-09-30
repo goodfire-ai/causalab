@@ -1,4 +1,4 @@
-"""The behavioral runner on the tiny fixture (workflow spec §2.7).
+"""The behavioral runner on the tiny fixture (``docs/workflow_protocol.md`` §2.7; T5–T7).
 
 The declarative half — parsing, rule 17, the censuses, the identity facts —
 is ``tests/workflow/test_behavioral.py``. This file is the run: one
@@ -8,7 +8,7 @@ four terminal outcomes from four forced-logit rows, each asserted on its own
 (T6); and the decode's reproducibility contract — deterministic twice is
 byte-identical, sampled under one seed twice is byte-identical, two seeds
 differ, and both records say which seed ran (T7). The last test is the
-``golden`` canary for the reproducibility risk: sampled decoding on a real model under one
+``golden`` canary for batch geometry: sampled decoding on a real model under one
 seed and one ``--batch-rows`` is byte-identical, and a differing geometry is
 *recorded*, never gated.
 
@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -32,14 +33,12 @@ from causalab.cli import main
 from causalab.neural.engines.pytorch_hooks import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.protocol.engine import CONTINUATIONS_FILE
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
-from causalab.protocol.tables import read_table
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.tables import read_table
 from causalab.workflow import run_workflow
 from causalab.workflow.behavioral import DECISION_FILE, OUTCOMES, OUTCOMES_FILE
 from causalab.workflow.document import BehavioralStep, WorkflowError, load_workflow
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
-
-pytestmark = pytest.mark.smoke
 
 REPO = Path(__file__).resolve().parents[4]
 FIXTURES = REPO / "tests" / "workflow" / "fixtures" / "behavioral"
@@ -94,6 +93,8 @@ def _run_cli(root: Path, workflow: Path, out: Path, *extra: str) -> int:
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(workflow),
             "--data-root",
             str(root),
@@ -125,6 +126,7 @@ def t5_run(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, Path]:
     return out / OUTPUT_DIR, root
 
 
+@pytest.mark.smoke
 def test_t5_one_command_publishes_the_step(t5_run: tuple[Path, Path]) -> None:
     """The step's outputs are the document's own `save` files plus the three
     behavioral files, each verified and content-digested into the record."""
@@ -147,6 +149,7 @@ def test_t5_one_command_publishes_the_step(t5_run: tuple[Path, Path]) -> None:
     assert manifest["steps"][STEP]["status"] == "completed"
 
 
+@pytest.mark.smoke
 def test_t5_no_experiment_code_anywhere(t5_run: tuple[Path, Path]) -> None:
     """A free-form generation task executes without experiment-specific
     generation or scoring code: the workflow has one step and it is
@@ -157,6 +160,7 @@ def test_t5_no_experiment_code_anywhere(t5_run: tuple[Path, Path]) -> None:
     assert not list(root.rglob("*.py"))
 
 
+@pytest.mark.smoke
 def test_t5_the_record_carries_the_behavioral_facts(t5_run: tuple[Path, Path]) -> None:
     out, _root = t5_run
     sidecar = out / STEP / "_step.json"
@@ -165,7 +169,12 @@ def test_t5_the_record_carries_the_behavioral_facts(t5_run: tuple[Path, Path]) -
     # one recorder, the decode spec beside them (§8)
     assert record["execution"]["model_source"] == "loaded"
     assert record["execution"]["batch_rows"] is None
+    assert record["execution"]["device"] == "cpu"  # the CLI's default placement
     assert record["execution"]["decoding"] == {"mode": "deterministic"}
+    # the commit the loader resolved `main` to, beside the execution block
+    (model,) = record["models"]
+    assert (model["key"], model["revision"]) == (TINY_LLAMA, "main")
+    assert re.fullmatch(r"[0-9a-f]{40}", model["resolved_revision"])
     # the checker's string mode is read from the spec, never authored
     assert record["checker"]["string_mode"] == "exact"
     assert record["checker"]["task"] == "natural_domains_arithmetic"
@@ -174,7 +183,8 @@ def test_t5_the_record_carries_the_behavioral_facts(t5_run: tuple[Path, Path]) -
     assert counts["n"] == len(DEVELOPMENT)
     assert sum(counts[outcome] for outcome in OUTCOMES) == counts["n"]
     assert counts["correct"] <= counts["valid"]
-    # the cohort default is recorded and warned, not refused
+    # a cohort below the default minimum size is recorded and warned about,
+    # not refused
     assert record["cohort"] == {
         "default_min_examples": 10_000,
         "n": len(DEVELOPMENT),
@@ -190,6 +200,7 @@ def test_t5_the_record_carries_the_behavioral_facts(t5_run: tuple[Path, Path]) -
     assert record["decision"] == DECISION_FILE
 
 
+@pytest.mark.smoke
 def test_t5_the_decision_record_has_the_six_fields(t5_run: tuple[Path, Path]) -> None:
     """The `DecisionRecord`, produced here: six fields plus `split` and
     `step`; the rule is the thresholds block verbatim, the outcome follows
@@ -226,6 +237,7 @@ def test_t5_the_decision_record_has_the_six_fields(t5_run: tuple[Path, Path]) ->
     assert identity == record["identity"]
 
 
+@pytest.mark.smoke
 def test_t5_mutation_a_checker_less_workflow_fails_at_load_not_at_generation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -246,11 +258,6 @@ def test_t5_mutation_a_checker_less_workflow_fails_at_load_not_at_generation(
     assert err.value.rule == 17 and "checker" in str(err.value)
     assert _run_cli(root, workflow, tmp_path / "runs") == 1
     assert "W17" in capsys.readouterr().err
-    # and a mismatched binding is the same refusal, naming both digests
-    workflow = _workflow(root, checker={**CHECKER, "scoring_digest": "0" * 64})
-    with pytest.raises(WorkflowError) as err:
-        load_workflow(workflow, _env(root))
-    assert err.value.rule == 17 and "ScoringSpec" in str(err.value)
 
 
 # --------------------------------------------------------------------------- #
@@ -262,6 +269,7 @@ def _ids(tokenizer: Any, text: str) -> list[int]:
     return tokenizer.encode(text, add_special_tokens=False)
 
 
+@pytest.mark.smoke
 def test_t6_the_four_outcomes_from_four_forced_rows(tmp_path: Path) -> None:
     """Row 0 says "maybe Friday" — the answer appears but the string is not a
     declared form under `exact`: `invalid_format`. Row 1 never emits EOS
@@ -304,7 +312,7 @@ def test_t6_the_four_outcomes_from_four_forced_rows(tmp_path: Path) -> None:
     engine = PytorchHooksEngine(bundle=bundle)  # caller-owned, so the wrap is seen
     bundle.model.forward = forced  # type: ignore[method-assign]
     try:
-        run_workflow(loaded, _env(root), tmp_path / "runs", [engine])
+        run_workflow(loaded, _env(root), tmp_path / "runs", engine)
     finally:
         bundle.model.forward = original  # type: ignore[method-assign]
     step_dir = tmp_path / "runs" / OUTPUT_DIR / STEP
@@ -341,12 +349,13 @@ def _run_under(
     continuation file and the step record."""
     workflow = _workflow(root, decoding=decoding, retain={"generations": "all"})
     loaded = load_workflow(workflow, _env(root))
-    run_workflow(loaded, _env(root), out, [engine])
+    run_workflow(loaded, _env(root), out, engine)
     step_dir = out / OUTPUT_DIR / STEP
     record = json.loads((step_dir / "_step.json").read_text())
     return _sha256(step_dir / CONTINUATIONS_FILE), record
 
 
+@pytest.mark.smoke
 def test_t7_deterministic_twice_and_sampled_under_one_seed_are_byte_identical(
     tmp_path: Path,
 ) -> None:
@@ -372,11 +381,13 @@ def test_t7_deterministic_twice_and_sampled_under_one_seed_are_byte_identical(
             "temperature": 1.0,
             "top_p": 1.0,
         }
-        assert "batch_rows" in record["execution"]  # beside the geometry
+        # the batch geometry is recorded beside the decode spec
+        assert "batch_rows" in record["execution"]
     # a sampled step is another step: its identity carries the seed (§7)
     assert record_a["identity"] == record_b["identity"] != record_c["identity"]
 
 
+@pytest.mark.smoke
 def test_t7_a_sampled_decode_is_not_the_greedy_one(tmp_path: Path) -> None:
     """Sanity on the sampler: at temperature 1 over a random-weight vocabulary
     the draw differs from the argmax, so `sampled` really samples."""
@@ -390,7 +401,7 @@ def test_t7_a_sampled_decode_is_not_the_greedy_one(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# the golden canary — written here, run on the accelerator tier
+# the golden canary — written here, run on a CUDA host
 # --------------------------------------------------------------------------- #
 
 CANARY_MODEL = "Qwen/Qwen3-4B"
@@ -405,7 +416,7 @@ def test_golden_same_seed_same_geometry_is_byte_identical_on_a_real_model(
     fixture, on the accelerator. A third run under another geometry is
     **recorded** in `canary.json` beside the runs, never asserted: sampled
     decoding is not bit-reproducible across batch geometries on a GPU
-    (a different geometry can flip a top-1 token), and that is a fact a reader of two receipts
+    (batch-dependent kernels can flip the top-1 token), and that is a fact a reader of two receipts
     sees, not something a run refuses over.
 
     Run as: ``uv run pytest -m golden

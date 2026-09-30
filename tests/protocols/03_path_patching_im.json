@@ -1,14 +1,24 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "Path patching (IOI): sender -> receiver with off-path attention frozen; the receiver value is harvested in the patched intervened model and injected into an otherwise clean run."
   },
-  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main"},
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
   "data": {
     "base": {"dataset": "ioi/test", "field": "input"},
     "counterfactual": {"dataset": "ioi/test", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_sender"]},
+      "original_base": {"input": "base", "reads": ["v_a10", "v_a11"]},
+      "patched": {
+        "input": "base",
+        "reads": ["v_receiver"],
+        "writes": ["swap_sender", "freeze_10", "freeze_11"]
+      },
+      "final": {"input": "base", "reads": ["logits"], "writes": ["inject"]}
+    },
     "sites": {
       "sender": {"component": "attention_premix", "layers": [9], "head": 9},
       "receiver": {"component": "block_input", "layers": [12]},
@@ -17,11 +27,11 @@
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "v_sender": {"site": "sender", "pos": -1, "model": "original", "input": "counterfactual"},
-      "v_a10": {"site": "a10", "pos": -1, "model": "original", "input": "base"},
-      "v_a11": {"site": "a11", "pos": -1, "model": "original", "input": "base"},
-      "v_receiver": {"site": "receiver", "pos": -1, "model": "patched", "input": "base"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "final", "input": "base"}
+      "v_sender": {"site": "sender", "pos": -1},
+      "v_a10": {"site": "a10", "pos": -1},
+      "v_a11": {"site": "a11", "pos": -1},
+      "v_receiver": {"site": "receiver", "pos": -1},
+      "logits": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "swap_sender": {"site": "sender", "pos": -1, "do": {"swap": "v_sender"}},
@@ -29,24 +39,11 @@
       "freeze_11": {"site": "a11", "pos": -1, "do": {"swap": "v_a11"}},
       "inject": {"site": "receiver", "pos": -1, "do": {"swap": "v_receiver"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["swap_sender", "freeze_10", "freeze_11"]},
-      "final": {"input": "base", "writes": ["inject"]}
-    },
-    "metrics": {
-      "logit_diff": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "answer",
-        "b": "cf_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
       {
-        "value": "logit_diff",
+        "read": "logits",
         "model": "final",
-        "input": "base",
+        "aggregation": {"kind": "logit_diff", "a": "answer", "b": "cf_answer"},
         "file_path": "logit_diff.json"
       }
     ]

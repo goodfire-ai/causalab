@@ -1,0 +1,102 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Held-out scoring of the 48-head masks of addition_heads_dbm_fit_all.json on Qwen/Qwen3.5-2B: load one L1 weight's six fitted head gates (30 here; the workflow sets the entry for each weight), swap the kept heads' attention_premix from the counterfactual problem at '=' with no training, and save how often the next token is the counterfactual's tens digit (iia) or the base's (null), which workflows/scripts/addition_heads_dbm/heads_figure.py draws; the bundles fit_all/gate_<layer>.safetensors are run-tree paths that only the workflow resolves, so this document does not validate on its own."
+  },
+  "model": {"key": "Qwen/Qwen3.5-2B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "addition_heads_dbm/data#test", "field": "input"},
+    "counterfactual": {"dataset": "addition_heads_dbm/data#test", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {
+        "input": "counterfactual",
+        "reads": ["v_cf_3", "v_cf_7", "v_cf_11", "v_cf_15", "v_cf_19", "v_cf_23"]
+      },
+      "masked": {
+        "input": "base",
+        "reads": ["logits"],
+        "writes": ["mask_3", "mask_7", "mask_11", "mask_15", "mask_19", "mask_23"]
+      }
+    },
+    "sites": {
+      "l3": {"component": "attention_premix", "layers": [3]},
+      "l7": {"component": "attention_premix", "layers": [7]},
+      "l11": {"component": "attention_premix", "layers": [11]},
+      "l15": {"component": "attention_premix", "layers": [15]},
+      "l19": {"component": "attention_premix", "layers": [19]},
+      "l23": {"component": "attention_premix", "layers": [23]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "gate_3": {
+        "kind": "gate",
+        "group": "head",
+        "file_path": "fit_all/gate_3.safetensors",
+        "entry": {"objective.sparsity.weight": 30.0}
+      },
+      "gate_7": {
+        "kind": "gate",
+        "group": "head",
+        "file_path": "fit_all/gate_7.safetensors",
+        "entry": {"objective.sparsity.weight": 30.0}
+      },
+      "gate_11": {
+        "kind": "gate",
+        "group": "head",
+        "file_path": "fit_all/gate_11.safetensors",
+        "entry": {"objective.sparsity.weight": 30.0}
+      },
+      "gate_15": {
+        "kind": "gate",
+        "group": "head",
+        "file_path": "fit_all/gate_15.safetensors",
+        "entry": {"objective.sparsity.weight": 30.0}
+      },
+      "gate_19": {
+        "kind": "gate",
+        "group": "head",
+        "file_path": "fit_all/gate_19.safetensors",
+        "entry": {"objective.sparsity.weight": 30.0}
+      },
+      "gate_23": {
+        "kind": "gate",
+        "group": "head",
+        "file_path": "fit_all/gate_23.safetensors",
+        "entry": {"objective.sparsity.weight": 30.0}
+      }
+    },
+    "reads": {
+      "v_cf_3": {"site": "l3", "pos": -1, "featurizer": "gate_3"},
+      "v_cf_7": {"site": "l7", "pos": -1, "featurizer": "gate_7"},
+      "v_cf_11": {"site": "l11", "pos": -1, "featurizer": "gate_11"},
+      "v_cf_15": {"site": "l15", "pos": -1, "featurizer": "gate_15"},
+      "v_cf_19": {"site": "l19", "pos": -1, "featurizer": "gate_19"},
+      "v_cf_23": {"site": "l23", "pos": -1, "featurizer": "gate_23"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask_3": {"site": "l3", "pos": -1, "featurizer": "gate_3", "do": {"swap": "v_cf_3"}},
+      "mask_7": {"site": "l7", "pos": -1, "featurizer": "gate_7", "do": {"swap": "v_cf_7"}},
+      "mask_11": {"site": "l11", "pos": -1, "featurizer": "gate_11", "do": {"swap": "v_cf_11"}},
+      "mask_15": {"site": "l15", "pos": -1, "featurizer": "gate_15", "do": {"swap": "v_cf_15"}},
+      "mask_19": {"site": "l19", "pos": -1, "featurizer": "gate_19", "do": {"swap": "v_cf_19"}},
+      "mask_23": {"site": "l23", "pos": -1, "featurizer": "gate_23", "do": {"swap": "v_cf_23"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms"},
+        "file_path": "null.json"
+      }
+    ]
+  }
+}

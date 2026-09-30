@@ -8,7 +8,7 @@ files called ``train`` and ``test`` asserted their relationship in their names.
 This file is the fourth refusal, and its fail-closed twins.
 
 The fixture tables are built, not hand-written: the two-fold ``weekdays/data``
-comes from :func:`causalab.tasks.splits.generate_split_dataset`, whose folds are
+comes from [`causalab.tasks.splits.generate_split_dataset`][], whose folds are
 group-disjoint by construction, and the one-split tables beside it are its
 folds re-labelled — plus one deliberately broken copy with a single row carried
 across tables, which is the whole of what the refusal has to catch.
@@ -25,10 +25,12 @@ from typing import Any
 import pytest
 
 from causalab.cli import main
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.fit_splits import HELD_OUT_ROLE, check_fit_splits, fit_roles
-from causalab.protocol.loader import LoadedProtocol, check_data_columns, load
-from causalab.protocol.resolve import (
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.rules.data import HELD_OUT_ROLE, check_fit_splits, fit_roles
+from causalab.protocol.compiled import CompiledProtocol
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.rules.data import check_data_columns
+from causalab.io.env import (
     FileArtifacts,
     FileDatasets,
     ResolutionEnv,
@@ -36,23 +38,27 @@ from causalab.protocol.resolve import (
 )
 from causalab.protocol.schema import parse_document
 from causalab.tasks import TASKS_ROOT
-from causalab.protocol.validate import validate_document
+from causalab.protocol.rules.document import validate_document
 from causalab.tables import table_bytes
 from causalab.tasks.loader import load_task
 from causalab.tasks.natural_domains_arithmetic.config import NaturalDomainConfig
 from causalab.tasks.serialize import serialize_examples, write_dataset_table
 from causalab.tasks.splits import generate_split_dataset
 
-from tests.protocol._docs import base_doc, in_order
-from tests.protocol._env import CORPUS_DIR, FIXTURES
+from tests.protocol._docs import LOGIT_DIFF, base_doc, in_order, term
+from tests.protocol._env import CORPUS_DIR, FIXTURES, steps_of
 from tests.protocol.test_protocol_presets import RUN_TREE_ONLY
+from tests._helpers.paths import PROTOCOLS_DIR
+
+from tests._helpers.demos import data_root, demo_protocols
+
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
-PROTOCOLS = REPO / "causalab/configs/protocols"
+PROTOCOLS = PROTOCOLS_DIR
 SPEC = REPO / "docs/intervention_protocol.md"
-DEMO_FITS = sorted((REPO / "demos").glob("*/protocols/*_fit.json"))
+DEMO_FITS = [path for path in demo_protocols() if path.name.endswith("_fit.json")]
 
 #: the two-fold table the group-disjoint builder writes — `#train` / `#test`
 TABLE = "weekdays/data"
@@ -60,8 +66,8 @@ TABLE = "weekdays/data"
 #: two *files* whose disjointness only the bytes can vouch for
 POOL = "weekdays/pool"
 HELD = "weekdays/held"
-#: HELD plus the first row of POOL — the hand-broken twin ("known signal and
-#: controls", shrunk to the one leak that matters)
+#: HELD plus the first row of POOL — the hand-broken twin, shrunk to the one
+#: leak that matters
 LEAKY = "weekdays/leaky"
 
 
@@ -120,7 +126,7 @@ def fit_doc(training: str, held_out: str | None) -> dict[str, Any]:
     doc["method"]["reads"]["v_cf"]["featurizer"] = "rot"
     doc["method"]["writes"]["patch"]["featurizer"] = "rot"
     doc["method"]["train"] = {
-        "objective": [[1.0, "ld"]],
+        "objective": [[1.0, term("logits", "patched", dict(LOGIT_DIFF))]],
         "params": ["rot"],
         "optimizer": {"name": "adamw", "lr": 0.01},
         "steps": {"epochs": 1},
@@ -130,7 +136,7 @@ def fit_doc(training: str, held_out: str | None) -> dict[str, Any]:
         doc["method"]["train"]["eval"] = {
             "every": {"epochs": 1},
             "split": held_out,
-            "metrics": ["ld"],
+            "aggregations": {"ld": term("logits", "patched", dict(LOGIT_DIFF))},
         }
     doc["method"]["save"].append(
         {"value": "rot", "site": "tgt", "file_path": "rot.safetensors"}
@@ -215,18 +221,13 @@ def test_the_refusal_comes_before_any_executor_is_built(
     the executor factory: no executor, so no encoded batch, no forward group
     and no minibatch. The factory and the train loop here fail if reached."""
     from causalab.neural.shared.execution import execute_request
-    from causalab.protocol.engine import ExecutionRequest
+    from causalab.protocol.engine import RunContext
 
-    loaded = load(fit_doc(POOL, LEAKY), env)  # the compile itself is fine
-    request = ExecutionRequest(
-        points=tuple(point.raw for point in loaded.expansion.points),
-        canonical=loaded.canonical_points,
-        digests=loaded.point_digests,
-        coords=tuple(point.coords for point in loaded.expansion.points),
-        document_digest=loaded.document_digest,
-        env=env,
-        output_dir=tmp_path,
-    )
+    loaded = compile_protocol(
+        fit_doc(POOL, LEAKY), env=env
+    )  # the compile itself is fine
+    # a workflow door's context: the engine records nothing beside the outputs
+    run = RunContext(output_dir=tmp_path, env=env, record=False)
     built: list[Any] = []
 
     def factory(*args: Any) -> Any:
@@ -238,7 +239,11 @@ def test_the_refusal_comes_before_any_executor_is_built(
 
     with pytest.raises(ValidationError) as err:
         execute_request(
-            request, engine_name="none", executor_factory=factory, train_runner=trainer
+            loaded,
+            run,
+            engine_name="none",
+            executor_factory=factory,
+            train_runner=trainer,
         )
     assert err.value.rule == 22 and err.value.rule_id == "split_declaration"
     assert built == []
@@ -254,15 +259,19 @@ def test_validate_data_refuses_the_leaky_fit_and_passes_its_twin(
     leaky = tmp_path / "leaky.json"
     leaky.write_text(json.dumps(fit_doc(POOL, LEAKY)))
     args = ["--data", "--data-root", str(root), "--artifacts-root", str(root)]
-    assert main(["validate", str(leaky), *args]) == 1
+    assert main(["validate", "--engine", "auto", str(leaky), *args]) == 1
     err = capsys.readouterr().err
     assert "[V22]" in err and "leak across tables" in err and LEAKY in err
 
     clean = tmp_path / "clean.json"
     clean.write_text(json.dumps(fit_doc(f"{TABLE}#train", f"{TABLE}#test")))
-    assert main(["validate", str(clean), *args]) == 0
-    # and without --data the pure load does not read rows, as before
-    assert main(["validate", str(leaky), "--data-root", str(root)]) == 0
+    assert main(["validate", "--engine", "auto", str(clean), *args]) == 0
+    # `validate` runs the data rules by default (`--data` names
+    # the default), so the bare verb refuses the leaky fit too
+    assert (
+        main(["validate", "--engine", "auto", str(leaky), "--data-root", str(root)])
+        == 1
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -276,12 +285,14 @@ def test_two_splits_of_one_table_pass(env: ResolutionEnv):
     fourth agrees — through the check and through the whole --data pass."""
     doc = parsed(fit_doc(f"{TABLE}#train", f"{TABLE}#test"))
     check_fit_splits(doc, env.datasets)
-    check_data_columns(load(fit_doc(f"{TABLE}#train", f"{TABLE}#test"), env), env)
+    check_data_columns(
+        compile_protocol(fit_doc(f"{TABLE}#train", f"{TABLE}#test"), env=env), env
+    )
 
 
 def test_the_same_ref_twice_is_the_visible_ablation_and_passes(datasets: FileDatasets):
     """(ii) Naming one ref for both roles is how a deliberate train-equals-test
-    ablation is spelled (`resolve._check_splits_are_disjoint`). Every prompt
+    ablation is spelled (`env._check_splits_are_disjoint`). Every prompt
     is shared, and nothing is refused — even on the broken table."""
     for ref in (POOL, LEAKY, f"{TABLE}#train"):
         check_fit_splits(parsed(fit_doc(ref, ref)), datasets)
@@ -328,7 +339,7 @@ def _shipped_fits() -> list[tuple[str, Path, Path]]:
             out.append((f"corpus/{path.name}", path, FIXTURES / "data"))
     for path in DEMO_FITS:
         out.append(
-            (f"{path.parents[1].name}/{path.name}", path, path.parents[1] / "data")
+            (f"{path.parents[1].name}/{path.name}", path, data_root(path.parents[1]))
         )
     return out
 
@@ -361,9 +372,9 @@ def test_every_shipped_fit_passes(
         datasets=FileDatasets(root=data_root, fallback_roots=(TASKS_ROOT,)),
         artifacts=FileArtifacts(root=artifacts_root),
     )
-    loaded: LoadedProtocol = load(document, env)
+    loaded: CompiledProtocol = compile_protocol(document, env=env)
     assert loaded.document.train is not None
-    for point in loaded.point_documents:
+    for point in steps_of(loaded, env).documents:
         check_fit_splits(point, env.datasets)
 
 
@@ -384,23 +395,23 @@ def test_the_fixture_train_and_test_tables_share_no_endpoint():
 
 
 # --------------------------------------------------------------------------- #
-# two fits differing only in their training split — no new field
+# T13: content identity covers the fold half — no new field
 # --------------------------------------------------------------------------- #
 
 
-def test_two_fits_differing_only_in_their_training_split_have_different_identities(
+def test_t13_two_fits_differing_only_in_their_training_split_have_different_identities(
     env: ResolutionEnv,
 ):
-    """Method identity is the fit document's digest plus its fold tables'
-    digests, and the content identity already supplies the
+    """T13: method identity is the fit document's digest plus its fold
+    tables' digests, and the data's content identity already supplies the
     fold half. Two documents identical except for which fold their training
     ref selects canonicalize to different digests, and the *only* difference
     in their canonical forms is the `data` entries' rows digest. No field
     names a fold, a group key or a control family."""
-    a = load(fit_doc(f"{TABLE}#train", None), env)
-    b = load(fit_doc(f"{TABLE}#test", None), env)
-    assert a.point_digests[0] != b.point_digests[0]
-    ca, cb = a.canonical_points[0], b.canonical_points[0]
+    a = compile_protocol(fit_doc(f"{TABLE}#train", None), env=env)
+    b = compile_protocol(fit_doc(f"{TABLE}#test", None), env=env)
+    assert steps_of(a, env).digests[0] != steps_of(b, env).digests[0]
+    ca, cb = steps_of(a, env).canonical[0], steps_of(b, env).canonical[0]
     assert {k: v for k, v in ca.items() if k != "data"} == {
         k: v for k, v in cb.items() if k != "data"
     }
@@ -424,10 +435,12 @@ def test_t13_mutation_the_digest_is_the_rows_not_the_ref_string(
     A whole-table ref and its `#all` fragment select the same rows and carry
     the same data digest, which is the sha256 of exactly those rows' bytes;
     the two folds of one table carry two."""
-    whole = load(fit_doc(POOL, None), env).canonical_points[0]["data"]["base"]["digest"]
-    fragment = load(fit_doc(f"{POOL}#all", None), env).canonical_points[0]["data"][
-        "base"
-    ]["digest"]
+    whole = steps_of(compile_protocol(fit_doc(POOL, None), env=env), env).canonical[0][
+        "data"
+    ]["base"]["digest"]
+    fragment = steps_of(
+        compile_protocol(fit_doc(f"{POOL}#all", None), env=env), env
+    ).canonical[0]["data"]["base"]["digest"]
     assert (
         whole
         == fragment
@@ -437,11 +450,11 @@ def test_t13_mutation_the_digest_is_the_rows_not_the_ref_string(
 
 
 # --------------------------------------------------------------------------- #
-# the builder's folds pass, a broken copy fails
+# T14, shrunk: the builder's folds pass, a broken copy fails
 # --------------------------------------------------------------------------- #
 
 
-def test_the_builders_folds_are_group_disjoint_and_pass(datasets: FileDatasets):
+def test_t14_the_builders_folds_are_group_disjoint_and_pass(datasets: FileDatasets):
     """ "Require group-disjoint folds": `causalab.tasks.splits` partitions the
     unique inputs into groups before pairing, so the two folds share no
     endpoint — a fact rule 22's third refusal re-checks on every read, and the
@@ -472,20 +485,18 @@ def test_t14_a_hand_broken_copy_of_the_test_fold_is_refused(datasets: FileDatase
 # --------------------------------------------------------------------------- #
 
 
-def _rule_22_bullets() -> list[str]:
-    section = SPEC.read_text().split("## 5. Validation")[1].split("\n## ")[0]
-    item = section.split("\n22. **split_declaration**")[1].split("\n23. **")[0]
-    return re.findall(r"^    - \*\*(.+?)\*\*", item, re.M)
-
-
-def test_the_spec_lists_the_fourth_refusal_under_rule_22():
-    """No new rule number (26 and 27 are contended by open PRs): the check is
-    §2.2's endpoint-disjointness generalized from one table to the tables one
-    fit names, so it is rule 22's fourth bullet — and the census in
-    `test_validation_rules.py` still sees one item, one slug."""
-    bullets = _rule_22_bullets()
-    assert len(bullets) == 4, bullets
-    assert bullets[3] == "A fit's splits are endpoint-disjoint across tables."
+def test_the_spec_documents_split_requirements():
+    """Rule 22 documents table splits and the training/evaluation boundary."""
     text = SPEC.read_text()
-    assert "asked *across* the tables one fit names" in text  # §2.2
-    assert "rule 22's fourth\n  refusal, checked by `validate --data`" in text  # §2.11
+    section = text.split("## 5. Validation")[1].split("\n## ")[0]
+    rule = section.split("\n22. **split_declaration**")[1].split("\n23. **")[0]
+    rule = " ".join(rule.split())
+    for field in ("`split`", "`#<split>`", "`train.eval.split`"):
+        assert field in rule, field
+    assert "both endpoints" in rule
+    assert "different references" in rule
+    assert "same reference" in rule
+    assert "disjoint endpoints" in text.split("### 2.2 `data`")[1].split("### 2.2.1")[0]
+    assert (
+        "disjoint endpoints" in text.split("### 2.11 `train`")[1].split("### 2.12")[0]
+    )

@@ -8,9 +8,9 @@
 //! size takes it without another `cudaHostAlloc`. Pinning is a heavy driver
 //! call that serializes across the processes of a node: eight ranks each
 //! staging 128-384 MiB per read job spent 0.1-0.2 s of every job in
-//! `cudaHostAlloc`/`cudaFreeHost` (reno-gpu-5, 2026-09-15). Every range is checked
-//! against both buffers before any call crosses into the library, so an
-//! overrun is a [`CudaError::Overrun`] and never a CUDA fault.
+//! `cudaHostAlloc`/`cudaFreeHost` (measured on one eight-GPU node). Every
+//! range is checked against both buffers before any call crosses into the
+//! library, so an overrun is a [`CudaError::Overrun`] and never a CUDA fault.
 //!
 //! `cudaSetDevice` is per host thread, so it is re-applied before each call:
 //! the copier is shared across a thread pool whose threads never chose a

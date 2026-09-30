@@ -2,7 +2,7 @@
 
 A *task numerical pin* is the symbolic output of a task's
 ``generate_dataset(model, n, seed)`` at a fixed seed sequence
-(:data:`tests._helpers.task_pins.TASK_SEEDS`). One sidecar per task at
+(`tests._helpers.task_pins.TASK_SEEDS`). One sidecar per task at
 ``tests/tasks/<task>/pinned_samples.json``, consumed by the per-task
 test at ``tests/tasks/<task>/test_<task>_numerical.py``.
 

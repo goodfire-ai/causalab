@@ -1,0 +1,23 @@
+{
+  "document": "protocols/pca_harvest.json",
+  "document_digest": "3bbeba1343535b277ff95c82644bce513d8ab4522bdce769d3f6e9a74950b459",
+  "run_digest": "3bbeba1343535b277ff95c82644bce513d8ab4522bdce769d3f6e9a74950b459",
+  "ran_as": "workflows/pca_basis.json#harvest",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "pytorch_hooks",
+  "device": "cuda",
+  "dtype": "bf16",
+  "date": "2026-09-28",
+  "elapsed_s": null,
+  "metrics": {
+    "saved_tensors": {
+      "acts.safetensors": {
+        "acts": [
+          30,
+          1,
+          3584
+        ]
+      }
+    }
+  }
+}

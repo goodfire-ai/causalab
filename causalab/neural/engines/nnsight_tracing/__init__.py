@@ -1,16 +1,8 @@
-"""The nnsight tracing engine: compiled interventions over nnsight 0.8.
+"""Execute compiled interventions through nnsight traces.
 
-The second implementation of the protocol's engine contract: the same
-shared services, site map and
-write math as the reference engine, executed through ``model.trace`` on
-envoys instead of registered hooks. Its reason to exist is the surface
-*beyond* module boundaries — the ``.source`` interiors of the Qwen3.6
-hookpoints (DeltaNet state, expert interiors, attention internals) — which
-land in stages; this skeleton serves the module-boundary
-vocabulary and proves itself against the reference engine's answers.
-
-Requires the ``nnsight`` extra (``pip install 'causalab[nnsight]'``), pinned
-to the 0.8-branch rev verified on Qwen3.6-35B-A3B.
+The engine uses the shared site map and write math for module boundaries
+and addresses supported function interiors through ``.source``.
+Install the ``nnsight`` extra to use it.
 """
 
 from causalab.neural.engines.nnsight_tracing.engine import NnsightEngine

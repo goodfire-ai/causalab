@@ -1,0 +1,326 @@
+{
+  "version": "1",
+  "description": "Figure 4 (weekdays column) of Wurgaft et al. 2026 (arXiv:2605.05115): read the un-intervened weekday probabilities of the 49-prompt pool and fit the behavior manifold to them; harvest the layer-28 activations, fit 48 principal components and a periodic cubic spline through the seven weekday centroids (the activation manifold); steer the 21 centroid pairs along the spline and along the chord over the paper code's 16 base prompts; and score both trajectories' cumulative Bhattacharyya energy against the behavior manifold. Every edge is a reference to an earlier step's output. scripts/manifold_fig4/fig4_figure.py draws the figure from the manifold_path, behavior and energy steps.",
+  "output_dir": "manifold_fig4",
+  "steps": {
+    "baseline": {
+      "type": "intervention_protocol",
+      "document": "../protocols/manifold_fig4_baseline.json"
+    },
+    "harvest_l28": {
+      "type": "intervention_protocol",
+      "document": "../protocols/manifold_fig4_harvest.json"
+    },
+    "pca48": {
+      "type": "script",
+      "script": {
+        "module": "causalab.analysis.fit_pca"
+      },
+      "inputs": {
+        "acts": {
+          "step": "harvest_l28",
+          "file": "acts.safetensors"
+        },
+        "k": 48
+      },
+      "outputs": {
+        "weight": "basis.safetensors",
+        "mean": "mean.safetensors",
+        "spectrum": {
+          "file": "spectrum.json",
+          "columns": {
+            "pc": "int64",
+            "explained_variance": "float64",
+            "explained_variance_ratio": "float64"
+          }
+        }
+      }
+    },
+    "manifold_path": {
+      "type": "script",
+      "script": {
+        "path": "scripts/manifold_fig4/manifold_path.py"
+      },
+      "inputs": {
+        "acts": {
+          "step": "harvest_l28",
+          "file": "acts.safetensors"
+        },
+        "weight": {
+          "step": "pca48",
+          "file": "basis.safetensors"
+        },
+        "mean": {
+          "step": "pca48",
+          "file": "mean.safetensors"
+        },
+        "table": {
+          "path": "../artifacts/data/manifold_fig4/data.json"
+        },
+        "steps": 50
+      },
+      "outputs": {
+        "waypoints_Monday_Tuesday": "waypoints_Monday_Tuesday.safetensors",
+        "waypoints_Monday_Wednesday": "waypoints_Monday_Wednesday.safetensors",
+        "waypoints_Monday_Thursday": "waypoints_Monday_Thursday.safetensors",
+        "waypoints_Monday_Friday": "waypoints_Monday_Friday.safetensors",
+        "waypoints_Monday_Saturday": "waypoints_Monday_Saturday.safetensors",
+        "waypoints_Monday_Sunday": "waypoints_Monday_Sunday.safetensors",
+        "waypoints_Tuesday_Wednesday": "waypoints_Tuesday_Wednesday.safetensors",
+        "waypoints_Tuesday_Thursday": "waypoints_Tuesday_Thursday.safetensors",
+        "waypoints_Tuesday_Friday": "waypoints_Tuesday_Friday.safetensors",
+        "waypoints_Tuesday_Saturday": "waypoints_Tuesday_Saturday.safetensors",
+        "waypoints_Tuesday_Sunday": "waypoints_Tuesday_Sunday.safetensors",
+        "waypoints_Wednesday_Thursday": "waypoints_Wednesday_Thursday.safetensors",
+        "waypoints_Wednesday_Friday": "waypoints_Wednesday_Friday.safetensors",
+        "waypoints_Wednesday_Saturday": "waypoints_Wednesday_Saturday.safetensors",
+        "waypoints_Wednesday_Sunday": "waypoints_Wednesday_Sunday.safetensors",
+        "waypoints_Thursday_Friday": "waypoints_Thursday_Friday.safetensors",
+        "waypoints_Thursday_Saturday": "waypoints_Thursday_Saturday.safetensors",
+        "waypoints_Thursday_Sunday": "waypoints_Thursday_Sunday.safetensors",
+        "waypoints_Friday_Saturday": "waypoints_Friday_Saturday.safetensors",
+        "waypoints_Friday_Sunday": "waypoints_Friday_Sunday.safetensors",
+        "waypoints_Saturday_Sunday": "waypoints_Saturday_Sunday.safetensors",
+        "chord_Monday_Tuesday": "chord_Monday_Tuesday.safetensors",
+        "chord_Monday_Wednesday": "chord_Monday_Wednesday.safetensors",
+        "chord_Monday_Thursday": "chord_Monday_Thursday.safetensors",
+        "chord_Monday_Friday": "chord_Monday_Friday.safetensors",
+        "chord_Monday_Saturday": "chord_Monday_Saturday.safetensors",
+        "chord_Monday_Sunday": "chord_Monday_Sunday.safetensors",
+        "chord_Tuesday_Wednesday": "chord_Tuesday_Wednesday.safetensors",
+        "chord_Tuesday_Thursday": "chord_Tuesday_Thursday.safetensors",
+        "chord_Tuesday_Friday": "chord_Tuesday_Friday.safetensors",
+        "chord_Tuesday_Saturday": "chord_Tuesday_Saturday.safetensors",
+        "chord_Tuesday_Sunday": "chord_Tuesday_Sunday.safetensors",
+        "chord_Wednesday_Thursday": "chord_Wednesday_Thursday.safetensors",
+        "chord_Wednesday_Friday": "chord_Wednesday_Friday.safetensors",
+        "chord_Wednesday_Saturday": "chord_Wednesday_Saturday.safetensors",
+        "chord_Wednesday_Sunday": "chord_Wednesday_Sunday.safetensors",
+        "chord_Thursday_Friday": "chord_Thursday_Friday.safetensors",
+        "chord_Thursday_Saturday": "chord_Thursday_Saturday.safetensors",
+        "chord_Thursday_Sunday": "chord_Thursday_Sunday.safetensors",
+        "chord_Friday_Saturday": "chord_Friday_Saturday.safetensors",
+        "chord_Friday_Sunday": "chord_Friday_Sunday.safetensors",
+        "chord_Saturday_Sunday": "chord_Saturday_Sunday.safetensors",
+        "centroids": {
+          "file": "centroids.json",
+          "columns": {
+            "day": "string",
+            "n": "int64",
+            "theta": "float64",
+            "pc1": "float64",
+            "pc2": "float64",
+            "pc3": "float64",
+            "norm": "float64"
+          }
+        },
+        "points": {
+          "file": "points.json",
+          "columns": {
+            "example_id": "string",
+            "day": "string",
+            "pc1": "float64",
+            "pc2": "float64",
+            "pc3": "float64"
+          }
+        },
+        "spline": {
+          "file": "spline.json",
+          "columns": {
+            "theta": "float64",
+            "pc1": "float64",
+            "pc2": "float64",
+            "pc3": "float64"
+          }
+        },
+        "path": {
+          "file": "path.json",
+          "columns": {
+            "pair": "string",
+            "step": "int64",
+            "t": "float64",
+            "theta": "float64",
+            "direction": "int64",
+            "manifold_pc1": "float64",
+            "manifold_pc2": "float64",
+            "manifold_pc3": "float64",
+            "linear_pc1": "float64",
+            "linear_pc2": "float64",
+            "linear_pc3": "float64",
+            "manifold_linear_distance": "float64"
+          }
+        }
+      }
+    },
+    "behavior": {
+      "type": "script",
+      "script": {
+        "path": "scripts/manifold_fig4/behavior_manifold.py"
+      },
+      "inputs": {
+        "space": {
+          "step": "baseline",
+          "file": "day_probs_space.json"
+        },
+        "bare": {
+          "step": "baseline",
+          "file": "day_probs_bare.json"
+        },
+        "lower": {
+          "step": "baseline",
+          "file": "day_probs_lower.json"
+        },
+        "table": {
+          "path": "../artifacts/data/manifold_fig4/data.json"
+        },
+        "samples": 1050
+      },
+      "outputs": {
+        "centroids": {
+          "file": "behavior_centroids.json",
+          "columns": {
+            "day": "string",
+            "n": "int64",
+            "theta": "float64",
+            "Monday": "float64",
+            "Tuesday": "float64",
+            "Wednesday": "float64",
+            "Thursday": "float64",
+            "Friday": "float64",
+            "Saturday": "float64",
+            "Sunday": "float64",
+            "other": "float64"
+          }
+        },
+        "points": {
+          "file": "behavior_points.json",
+          "columns": {
+            "example_id": "string",
+            "day": "string",
+            "Monday": "float64",
+            "Tuesday": "float64",
+            "Wednesday": "float64",
+            "Thursday": "float64",
+            "Friday": "float64",
+            "Saturday": "float64",
+            "Sunday": "float64",
+            "other": "float64"
+          }
+        },
+        "spline": {
+          "file": "behavior_spline.json",
+          "columns": {
+            "theta": "float64",
+            "Monday": "float64",
+            "Tuesday": "float64",
+            "Wednesday": "float64",
+            "Thursday": "float64",
+            "Friday": "float64",
+            "Saturday": "float64",
+            "Sunday": "float64",
+            "other": "float64"
+          }
+        }
+      }
+    },
+    "steer": {
+      "type": "intervention_protocol",
+      "document": "../protocols/manifold_fig4_steer.json"
+    },
+    "energy": {
+      "type": "script",
+      "script": {
+        "path": "scripts/manifold_fig4/energy.py"
+      },
+      "inputs": {
+        "linear_space": {
+          "step": "steer",
+          "file": "linear_space.json"
+        },
+        "linear_bare": {
+          "step": "steer",
+          "file": "linear_bare.json"
+        },
+        "linear_lower": {
+          "step": "steer",
+          "file": "linear_lower.json"
+        },
+        "manifold_space": {
+          "step": "steer",
+          "file": "manifold_space.json"
+        },
+        "manifold_bare": {
+          "step": "steer",
+          "file": "manifold_bare.json"
+        },
+        "manifold_lower": {
+          "step": "steer",
+          "file": "manifold_lower.json"
+        },
+        "behavior_centroids": {
+          "step": "behavior",
+          "file": "behavior_centroids.json"
+        },
+        "behavior_spline": {
+          "step": "behavior",
+          "file": "behavior_spline.json"
+        },
+        "pair_axis": "axes.pair",
+        "step_axis": "axes.path"
+      },
+      "outputs": {
+        "trajectory": {
+          "file": "trajectory.json",
+          "columns": {
+            "method": "string",
+            "pair": "string",
+            "step": "int64",
+            "t": "float64",
+            "n": "int64",
+            "Monday": "float64",
+            "Tuesday": "float64",
+            "Wednesday": "float64",
+            "Thursday": "float64",
+            "Friday": "float64",
+            "Saturday": "float64",
+            "Sunday": "float64",
+            "other": "float64",
+            "band_Monday": "float64",
+            "band_Tuesday": "float64",
+            "band_Wednesday": "float64",
+            "band_Thursday": "float64",
+            "band_Friday": "float64",
+            "band_Saturday": "float64",
+            "band_Sunday": "float64",
+            "band_other": "float64",
+            "bc_to_manifold": "float64"
+          }
+        },
+        "energy": {
+          "file": "energy.json",
+          "columns": {
+            "method": "string",
+            "pair": "string",
+            "n_prompts": "int64",
+            "energy_sum": "float64",
+            "energy_sum_dense": "float64"
+          }
+        },
+        "summary": {
+          "file": "summary.json",
+          "keys": {
+            "n_pairs": 21,
+            "manifold_energy": 0.0,
+            "manifold_energy_se": 0.0,
+            "linear_energy": 0.0,
+            "linear_energy_se": 0.0,
+            "paired_t": 0.0,
+            "paired_p": 0.0,
+            "manifold_energy_dense": 0.0,
+            "linear_energy_dense": 0.0
+          }
+        }
+      }
+    }
+  }
+}

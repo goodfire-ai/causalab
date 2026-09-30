@@ -20,9 +20,10 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from causalab.causal.causal_model import CausalModel, build_output_tokens
-from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import Mechanism, input_var
+from causalab.causal import Dom, V, mechanism
+from causalab.causal.compiler import ConfigurationCopier
+from causalab.causal.model import CausalModel
+from causalab.causal.scoring import ScoringSpec, build_output_tokens
 
 from .config import SubjectObjectRelationsConfig
 
@@ -54,7 +55,7 @@ def _coerce_config(config: Any) -> SubjectObjectRelationsConfig:
 
 def create_causal_model(config: Any) -> CausalModel:
     """Create the causal model for one relation."""
-    config = _coerce_config(config)
+    config = ConfigurationCopier()(_coerce_config(config))
 
     subjects = config.subjects
     subject_to_object = config.subject_to_object
@@ -62,28 +63,12 @@ def create_causal_model(config: Any) -> CausalModel:
     template = config.templates[0]
     output_prefix = config.output_prefix
 
-    values: dict[str, list | None] = {
-        "subject": subjects,
-        "object": objects,
-        "raw_input": None,
-        "raw_output": None,
-    }
-
-    mechanisms = {
-        "subject": input_var(subjects),
-        "object": Mechanism(
-            parents=["subject"],
-            compute=lambda t: subject_to_object[t["subject"]],
-        ),
-        "raw_input": Mechanism(
-            parents=["subject"],
-            compute=lambda t: template.replace(_SUBJECT_PLACEHOLDER, t["subject"]),
-        ),
-        "raw_output": Mechanism(
-            parents=["object"],
-            compute=lambda t: output_prefix + t["object"],
-        ),
-    }
+    @mechanism
+    def equations(subject: Dom(subjects)):
+        object = V(subject_to_object[subject], domain=Dom(objects))
+        raw_input = V(template.replace(_SUBJECT_PLACEHOLDER, subject), domain=Dom(str))  # noqa: F841
+        raw_output = V(output_prefix + object, domain=Dom(str))  # noqa: F841
+        return object
 
     subject_to_idx = {s: i for i, s in enumerate(subjects)}
     object_to_idx = {o: i for i, o in enumerate(objects)}
@@ -96,8 +81,7 @@ def create_causal_model(config: Any) -> CausalModel:
     # Objects may be multi-token, so grade prefix-aware (first-token match for
     # a single-token generation; startswith for a longer generation).
     model = CausalModel(
-        mechanisms,
-        values,
+        equations,
         id=f"subject_object_relations_{config.relation}",
         embeddings=embeddings,
         scoring=ScoringSpec(

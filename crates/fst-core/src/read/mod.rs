@@ -18,10 +18,10 @@
 //! memory with no staging; host pieces still go through the `Storage`, since
 //! GDS only ever targets device memory.
 //!
-//! cuFile fallback. GDS can fail per file at run time — on some block-device
-//! layouts (an xfs volume over md RAID, for one) `cuFileHandleRegister`
-//! refuses every file — and a wrong planning decision must cost a slow path,
-//! never a failed load. So under a `CuFile` plan: a piece whose cuFile read fails
+//! cuFile fallback. GDS can fail per file at run time — on an H100 host
+//! whose `/tmp` is xfs over md RAID, `cuFileHandleRegister` refuses every
+//! file there — and a wrong planning decision must cost a slow path, never a
+//! failed load. So under a `CuFile` plan: a piece whose cuFile read fails
 //! with [`CudaError::Register`] is re-read through pread and staging, and
 //! the file stays on pread for the rest of the job (one [`Fallback`] naming
 //! the file); [`CudaError::Unavailable`] — `libcufile` itself is gone —

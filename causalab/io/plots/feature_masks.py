@@ -4,11 +4,11 @@ Visualization functions for feature count heatmaps (DBM with tie_masks=False).
 These visualizations show feature counts (number of selected features) for
 mask-based interventions where each grid cell can select a subset of features.
 
-Cells arrive as structured :class:`~causalab.io.plots.grid_cells.GridCell`
+Cells arrive as structured [`GridCell`][]
 records — component/layer/head/position joined from the grid's own specs by
-:func:`~causalab.io.plots.grid_cells.cells_from_site_grid`. The
+`cells_from_site_grid`. The
 legacy path parsed these coordinates out of unit-id strings
-(:mod:`causalab.io.plots.unit_id`, retired); post-migration the per-key dicts
+(`causalab.io.plots.unit_id`, retired); post-migration the per-key dicts
 are keyed by opaque ``spec.key`` strings that nothing may parse.
 
 Component types:
@@ -248,10 +248,10 @@ def plot_feature_counts(
     Plot feature counts for structured grid cells.
 
     Grid dimensions come from the cells' structural fields (via
-    :func:`~causalab.io.plots.grid_cells.cell_grid_dimensions`); the
+    [`cell_grid_dimensions`][]); the
     ``component_type`` is the caller's structural detection — typically the
     first element of
-    :func:`~causalab.io.plots.grid_cells.cells_from_site_grid`'s return.
+    `cells_from_site_grid`'s return.
 
     Args:
         component_type: One of ``"attention_head"``, ``"residual_stream"``,

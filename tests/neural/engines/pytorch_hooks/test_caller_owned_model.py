@@ -17,7 +17,8 @@ already holds. The contract it is held to here:
 * the same weights loaded and handed in write byte-identical files, and run
   receipts that differ in ``execution.model_source`` and nowhere else.
 
-Every refusal has its valid-work twin in this file.
+Every refusal has its valid-work twin in this file, so a check that refuses
+everything cannot pass.
 """
 
 from __future__ import annotations
@@ -35,13 +36,14 @@ from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
 from causalab.io.events import EVENTS_FILE
 from causalab.protocol import RUN_RECORD_NAME, run_protocol
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_GPT2, TINY_LLAMA
-from tests.protocol._docs import base_doc, in_order
+from tests.protocol._docs import UNWRITTEN, base_doc, in_order
 from tests.protocol._env import CORPUS_DIR, FIXTURES
+
 
 pytestmark = pytest.mark.smoke
 
@@ -86,7 +88,6 @@ def _from_model(model: Any, tokenizer: Any, **fields: Any) -> ModelBundle:
     fields = {
         "key": TINY_LLAMA,
         "revision": "main",
-        "device": "cpu",
         "dtype": "fp32",
         **fields,
     }
@@ -144,7 +145,7 @@ def env(tmp_path_factory: pytest.TempPathFactory) -> ResolutionEnv:
 
 @pytest.fixture(scope="module")
 def loaded_02(env: ResolutionEnv):
-    return load(DOCUMENT, env, overrides=OVERRIDES)
+    return compile_protocol(DOCUMENT, env=env, overrides=OVERRIDES)
 
 
 # --------------------------------------------------------------------------- #
@@ -154,8 +155,8 @@ def loaded_02(env: ResolutionEnv):
 
 class TestFromModelRefusesUnpreparedModels:
     """Each refusal asserts the *refusal* and the un-mutated state, never a
-    resulting mode: were ``from_model`` to call ``.eval()`` itself (the
-    mutation), ``pytest.raises`` fails and the mode assertion after it would
+    resulting mode: were ``from_model`` to call ``.eval()`` itself (mutating the
+    caller's model), ``pytest.raises`` fails and the mode assertion after it would
     never have been the guard."""
 
     def test_a_train_mode_model_is_refused_naming_eval(self) -> None:
@@ -235,12 +236,19 @@ class TestFromModelAcceptsAPreparedModel:
         bundle = _from_model(model, tokenizer)
         assert load_model.cache_info() == before, "from_model touched the loader"
         assert bundle.model is model and bundle.tokenizer is tokenizer
-        assert (bundle.key, bundle.revision, bundle.device, bundle.dtype) == (
+        assert (
+            bundle.key,
+            bundle.revision,
+            bundle.devices.requested,
+            bundle.dtype,
+        ) == (
             TINY_LLAMA,
             "main",
             "cpu",
             "fp32",
         )
+        # the map is read off the model's own parameters, not asserted
+        assert bundle.devices == load_model(TINY_LLAMA).devices
         assert bundle.quantization is None
         # the tap table reads the registry row: it is the loader's row exactly
         assert bundle.info == load_model(TINY_LLAMA).info
@@ -272,7 +280,7 @@ class TestTheEngineChecksTheRealization:
         counter = _ForwardCounter(engine.bundle.model)
         try:
             with pytest.raises(ProtocolError) as err:
-                run_protocol(loaded, env, [engine], out)
+                run_protocol(loaded, env, engine, out)
         finally:
             counter.remove()
         assert counter.calls == 0, "the model ran before the realization check"
@@ -291,9 +299,9 @@ class TestTheEngineChecksTheRealization:
     def test_an_attention_disagreement_is_refused_before_any_forward(
         self, env, tmp_path
     ) -> None:
-        loaded = load(
+        loaded = compile_protocol(
             DOCUMENT,
-            env,
+            env=env,
             overrides={**OVERRIDES, "model.attn_implementation": "sdpa"},
         )
         model, tokenizer = _prepared_llama()
@@ -322,7 +330,7 @@ class TestTheEngineChecksTheRealization:
 
     def test_a_device_disagreement_is_refused(self, loaded_02, env, tmp_path) -> None:
         model, tokenizer = _prepared_llama()
-        bundle = _from_model(model, tokenizer, device="cpu")
+        bundle = _from_model(model, tokenizer)
         err = self._refused(
             loaded_02, env, PytorchHooksEngine(device="cuda:1", bundle=bundle), tmp_path
         )
@@ -339,11 +347,13 @@ class TestACallerModelIsTheSameRun:
     def both_runs(self, loaded_02, env, tmp_path_factory) -> tuple[Path, Path]:
         base = tmp_path_factory.mktemp("same-run")
         via_loader, via_caller = base / "loaded", base / "caller"
-        run_protocol(loaded_02, env, [PytorchHooksEngine()], via_loader)
+        run_protocol(loaded_02, env, PytorchHooksEngine(), via_loader, record=True)
         model, tokenizer = _prepared_llama()
         bundle = _from_model(model, tokenizer)
         before = load_model.cache_info()
-        run_protocol(loaded_02, env, [PytorchHooksEngine(bundle=bundle)], via_caller)
+        run_protocol(
+            loaded_02, env, PytorchHooksEngine(bundle=bundle), via_caller, record=True
+        )
         assert load_model.cache_info() == before, "the caller run loaded a model"
         return via_loader, via_caller
 
@@ -364,13 +374,35 @@ class TestACallerModelIsTheSameRun:
         caller = json.loads((via_caller / RUN_RECORD_NAME).read_text())
         assert loaded["execution"] == {
             "batch_rows": None,
+            "device": "cpu",
             "fit_rows": None,
             "model_source": "loaded",
+            "parallel": {
+                "data": 1,
+                "data_mode": "points",
+                "pipeline": 1,
+                "context": 1,
+                "tensor": 1,
+                "expert": 1,
+                "world": 1,
+                "launcher": "solo",
+            },
         }
         assert caller["execution"] == {
             "batch_rows": None,
+            "device": "cpu",
             "fit_rows": None,
             "model_source": "caller",
+            "parallel": {
+                "data": 1,
+                "data_mode": "points",
+                "pipeline": 1,
+                "context": 1,
+                "tensor": 1,
+                "expert": 1,
+                "world": 1,
+                "launcher": "solo",
+            },
         }
         # execution provenance, not identity: in no canonical form, no digest
         assert "model_source" not in json.dumps(loaded["canonical"])
@@ -389,11 +421,12 @@ class TestACallerModelIsTheSameRun:
 def _raising_write_doc() -> dict[str, Any]:
     """`base_doc` retargeted at tiny Llama with its write a declared
     `pytorch_fn` that raises: no counterfactual role, since the swap is gone
-    and a dead read would be refused (§5.11)."""
+    and a dead read — and the model nobody reads — would be refused (§2.9)."""
     doc = base_doc()
     doc["model"]["key"] = TINY_LLAMA
     doc["method"]["sites"]["tgt"]["layers"] = 1
     del doc["method"]["reads"]["v_cf"]
+    del doc["method"]["intervened_models"][UNWRITTEN]
     del doc["data"]["counterfactual"]
     doc["method"]["code"] = {"boom": {"locator": f"{__name__}.raise_mid_forward"}}
     doc["method"]["writes"]["patch"]["do"] = {"pytorch_fn": {"code": "boom"}}
@@ -403,7 +436,7 @@ def _raising_write_doc() -> dict[str, Any]:
 def test_raising_mid_forward_removes_every_hook_and_unloads_nothing(
     env, tmp_path
 ) -> None:
-    """The §7 acceptance, measured from outside the hook scopes:
+    """The cleanup contract, measured from outside the hook scopes:
     after a `pytorch_fn` write raises inside the forward, no module carries a
     forward or pre-forward hook, the model is the same object on the same
     device with the same parameters, and the loader's cache saw nothing.
@@ -418,9 +451,9 @@ def test_raising_mid_forward_removes_every_hook_and_unloads_nothing(
     checksum, device = _checksum(model), next(model.parameters()).device
     cache_before = load_model.cache_info()
 
-    loaded = load(_raising_write_doc(), env, engine_is_local=True)
+    loaded = compile_protocol(_raising_write_doc(), env=env)
     with pytest.raises(RuntimeError, match=BOOM):
-        run_protocol(loaded, env, [PytorchHooksEngine(bundle=bundle)], tmp_path)
+        run_protocol(loaded, env, PytorchHooksEngine(bundle=bundle), tmp_path)
 
     assert _modules_with_hooks(model) == [], "a hook survived the raise"
     assert bundle.model is model
@@ -436,12 +469,13 @@ def test_the_same_document_runs_when_the_write_does_not_raise(env, tmp_path) -> 
     model, tokenizer = _prepared_llama()
     doc = _raising_write_doc()
     doc["method"]["code"]["boom"]["locator"] = f"{__name__}.identity"
-    loaded = load(doc, env, engine_is_local=True)
+    loaded = compile_protocol(doc, env=env)
     result = run_protocol(
         loaded,
         env,
-        [PytorchHooksEngine(bundle=_from_model(model, tokenizer))],
+        PytorchHooksEngine(bundle=_from_model(model, tokenizer)),
         tmp_path,
+        record=True,
     )
     assert result.files
     record = json.loads((tmp_path / RUN_RECORD_NAME).read_text())

@@ -31,7 +31,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from causalab.protocol.tables import write_table
+from causalab.io.tables import write_table
 
 from tests.golden.drift._extract import (
     DOCS,
@@ -81,8 +81,8 @@ def _value(layer: int, example: int) -> float:
 
 
 def _scan_rows(axis: str, *, excluded: int) -> list[dict[str, Any]]:
-    """3 layers × 2 examples in the drift table's column set — the pinned
-    eligibility set (tests/neural/shared/test_metric_eligibility.py) plus the
+    """3 layers × 2 examples in the drift table's column set — the
+    eligibility record's pinned set (tests/neural/shared/test_metric_eligibility.py) plus the
     ``point`` and ``name`` columns the drift run carries. ``excluded`` of
     ``EXCLUDED_LAYER``'s rows (the first ``excluded`` examples) are excluded
     measurements: ``eligible: false``, a ``reason_code``, a ``null`` value."""
@@ -93,7 +93,6 @@ def _scan_rows(axis: str, *, excluded: int) -> list[dict[str, Any]]:
                 {
                     "example_id": str(example),
                     "point": f"point-{layer}",
-                    "produced_by": "0" * 64,
                     "metric": "iia",
                     "name": "iia",
                     "unit": "fraction",
@@ -194,7 +193,7 @@ def test_the_eligibility_record_is_not_a_scan_axis(tmp_path: Path, excluded: int
 
 
 def test_the_labels_are_byte_identical_with_and_without_the_record(tmp_path: Path):
-    # before the helper existed the reduction was inline
+    # the helper did not exist where the reduction was inline
     from tests.golden.drift._extract import (
         _scan_labels,  # pyright: ignore[reportPrivateUsage]
     )
@@ -216,7 +215,7 @@ def test_the_labels_are_byte_identical_with_and_without_the_record(tmp_path: Pat
 
     # the refactor changes nothing for a table without the record …
     assert _scan_labels(pre) == _inline_form(pre)
-    # … and the record changes nothing for one that carries it
+    # … and the record changes nothing for a table with it
     assert _scan_labels(post) == _scan_labels(pre)
     assert set(_scan_labels(post)) == {f"{axis}={n}" for n in LAYERS}
 
@@ -225,7 +224,7 @@ def test_the_meta_columns_spell_the_writers_eligibility_record():
     # the writer's constants are torch-side, so _extract.py keeps literals and
     # this census couples the two spellings (the import is fine in a CPU test:
     # tests/neural/shared/test_metric_eligibility.py already makes it)
-    from causalab.neural.shared.outputs import ELIGIBLE_COLUMN, REASON_CODE_COLUMN
+    from causalab.neural.shared.results import ELIGIBLE_COLUMN, REASON_CODE_COLUMN
 
     assert (ELIGIBLE_COLUMN, REASON_CODE_COLUMN) == ELIGIBILITY_RECORD
     assert {ELIGIBLE_COLUMN, REASON_CODE_COLUMN} <= _META_COLUMNS
@@ -240,13 +239,13 @@ def test_every_writer_column_that_is_not_a_coordinate_is_a_meta_column():
     ``MetricTable`` round trip through both writers — ``add`` with an eligible
     and an excluded value, ``add_windowed`` with a scored and an unmatched
     example — and every column it wrote that is not a coordinate is a meta
-    column. Before the windowed-read columns joined ``_META_COLUMNS`` this
-    failed with ``['matched', 'step']``; it would have caught the eligibility
-    record and the record identity the same way, each the moment its writer
-    landed."""
-    from causalab.neural.shared.outputs import MetricTable
+    column. Fails with ``['matched', 'step']`` if the windowed-read columns
+    leave ``_META_COLUMNS``; it would equally have caught the eligibility
+    record and the record identity before either was added there, each one
+    nightly early."""
+    from causalab.neural.shared.results import MetricTable
     from causalab.protocol.estimand import metric_record_identity
-    from causalab.protocol.resolution import Unavailable
+    from causalab.protocol.results import Unavailable
 
     coords = {"sites.target.layer": 6}
     # the row's `metric` column is the authored name (iia, ld); its identity
@@ -258,12 +257,11 @@ def test_every_writer_column_that_is_not_a_coordinate_is_a_meta_column():
         reason=EXCLUDED_REASON, detail="row 1: no answer", denominator_key="match"
     )
     table = MetricTable()
-    table.add("iia", [0.5, excluded], coords, "0" * 64, identity=iia)
+    table.add("iia", [0.5, excluded], coords, identity=iia)
     table.add_windowed(
         "ld",
         [[0.1, 0.2], []],
         coords,
-        "0" * 64,
         identity=ld,
         steps=[[0, 1], []],
         matched=[True, False],

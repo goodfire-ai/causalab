@@ -1,0 +1,128 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Exact head swaps on Qwen/Qwen3.5-2B at the readout token '=' of NN+MM=, no featurizer, held out: the whole attention_premix of all six full-attention layers and of layer 15 (the ceilings), layer 15's heads {1, 2, 4} (the set the masks keep), {1, 2}, and the complement {0, 3, 5, 6, 7}; saves how often the next token is the counterfactual's tens digit (iia) or the base's (null) per swap, which workflows/scripts/addition_heads_dbm/heads_figure.py draws beside the random masks."
+  },
+  "model": {"key": "Qwen/Qwen3.5-2B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "addition_heads_dbm/data#test", "field": "input"},
+    "counterfactual": {"dataset": "addition_heads_dbm/data#test", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {
+        "input": "counterfactual",
+        "reads": ["v_cf_all", "v_cf_l15", "v_cf_h0", "v_cf_h1", "v_cf_h2", "v_cf_h3", "v_cf_h4", "v_cf_h5", "v_cf_h6", "v_cf_h7"]
+      },
+      "all_attn": {"input": "base", "reads": ["logits_all_attn"], "writes": ["patch_all"]},
+      "l15": {"input": "base", "reads": ["logits_l15"], "writes": ["patch_l15"]},
+      "s124": {"input": "base", "reads": ["logits_s124"], "writes": ["patch_h1", "patch_h2", "patch_h4"]},
+      "s12": {"input": "base", "reads": ["logits_s12"], "writes": ["patch_h1", "patch_h2"]},
+      "s03567": {"input": "base", "reads": ["logits_s03567"], "writes": ["patch_h0", "patch_h3", "patch_h5", "patch_h6", "patch_h7"]}
+    },
+    "sites": {
+      "attn": {"component": "attention_premix", "layers": [3, 7, 11, 15, 19, 23]},
+      "layer15": {"component": "attention_premix", "layers": [15]},
+      "h0": {"component": "attention_premix", "layers": [15], "head": 0},
+      "h1": {"component": "attention_premix", "layers": [15], "head": 1},
+      "h2": {"component": "attention_premix", "layers": [15], "head": 2},
+      "h3": {"component": "attention_premix", "layers": [15], "head": 3},
+      "h4": {"component": "attention_premix", "layers": [15], "head": 4},
+      "h5": {"component": "attention_premix", "layers": [15], "head": 5},
+      "h6": {"component": "attention_premix", "layers": [15], "head": 6},
+      "h7": {"component": "attention_premix", "layers": [15], "head": 7},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_cf_all": {"site": "attn", "pos": -1},
+      "v_cf_l15": {"site": "layer15", "pos": -1},
+      "v_cf_h0": {"site": "h0", "pos": -1},
+      "v_cf_h1": {"site": "h1", "pos": -1},
+      "v_cf_h2": {"site": "h2", "pos": -1},
+      "v_cf_h3": {"site": "h3", "pos": -1},
+      "v_cf_h4": {"site": "h4", "pos": -1},
+      "v_cf_h5": {"site": "h5", "pos": -1},
+      "v_cf_h6": {"site": "h6", "pos": -1},
+      "v_cf_h7": {"site": "h7", "pos": -1},
+      "logits_all_attn": {"site": "lm_head", "pos": -1},
+      "logits_l15": {"site": "lm_head", "pos": -1},
+      "logits_s124": {"site": "lm_head", "pos": -1},
+      "logits_s12": {"site": "lm_head", "pos": -1},
+      "logits_s03567": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "patch_all": {"site": "attn", "pos": -1, "do": {"swap": "v_cf_all"}},
+      "patch_l15": {"site": "layer15", "pos": -1, "do": {"swap": "v_cf_l15"}},
+      "patch_h0": {"site": "h0", "pos": -1, "do": {"swap": "v_cf_h0"}},
+      "patch_h1": {"site": "h1", "pos": -1, "do": {"swap": "v_cf_h1"}},
+      "patch_h2": {"site": "h2", "pos": -1, "do": {"swap": "v_cf_h2"}},
+      "patch_h3": {"site": "h3", "pos": -1, "do": {"swap": "v_cf_h3"}},
+      "patch_h4": {"site": "h4", "pos": -1, "do": {"swap": "v_cf_h4"}},
+      "patch_h5": {"site": "h5", "pos": -1, "do": {"swap": "v_cf_h5"}},
+      "patch_h6": {"site": "h6", "pos": -1, "do": {"swap": "v_cf_h6"}},
+      "patch_h7": {"site": "h7", "pos": -1, "do": {"swap": "v_cf_h7"}}
+    },
+    "save": [
+      {
+        "read": "logits_all_attn",
+        "model": "all_attn",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia_all_attn.json"
+      },
+      {
+        "read": "logits_all_attn",
+        "model": "all_attn",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms"},
+        "file_path": "null_all_attn.json"
+      },
+      {
+        "read": "logits_l15",
+        "model": "l15",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia_l15.json"
+      },
+      {
+        "read": "logits_l15",
+        "model": "l15",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms"},
+        "file_path": "null_l15.json"
+      },
+      {
+        "read": "logits_s124",
+        "model": "s124",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia_s124.json"
+      },
+      {
+        "read": "logits_s124",
+        "model": "s124",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms"},
+        "file_path": "null_s124.json"
+      },
+      {
+        "read": "logits_s12",
+        "model": "s12",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia_s12.json"
+      },
+      {
+        "read": "logits_s12",
+        "model": "s12",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms"},
+        "file_path": "null_s12.json"
+      },
+      {
+        "read": "logits_s03567",
+        "model": "s03567",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia_s03567.json"
+      },
+      {
+        "read": "logits_s03567",
+        "model": "s03567",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms"},
+        "file_path": "null_s03567.json"
+      }
+    ]
+  }
+}

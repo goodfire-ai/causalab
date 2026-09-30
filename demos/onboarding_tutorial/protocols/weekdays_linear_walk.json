@@ -1,0 +1,57 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "RQ4 -- what does the model say from the points between two answers? Interpolate the located cell's activation from the base row's value to the counterfactual row's, alpha in 11 steps, and read the probability mass on each of the seven weekday tokens. alpha=0 is the un-intervened model and alpha=1 is the full interchange of RQ2, so the two endpoints are results this demo already has: the sweep is the straight line between them."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "weekdays_geometry/data", "field": "input"},
+    "counterfactual": {"dataset": "weekdays_geometry/data", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "walked": {"input": "base", "reads": ["logits"], "writes": ["walk"]}
+    },
+    "positions": {"best": {"index": -1}},
+    "sites": {
+      "target": {"component": "block_output", "layers": [18]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": "best"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "walk": {
+        "site": "target",
+        "pos": "best",
+        "do": {
+          "lerp": {
+            "op": "v_cf",
+            "alpha": {"sweep": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]}
+          }
+        }
+      }
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "walked",
+        "aggregation": {
+          "kind": "class_probs",
+          "groups": {
+            "Monday": [" Monday"],
+            "Tuesday": [" Tuesday"],
+            "Wednesday": [" Wednesday"],
+            "Thursday": [" Thursday"],
+            "Friday": [" Friday"],
+            "Saturday": [" Saturday"],
+            "Sunday": [" Sunday"]
+          }
+        },
+        "file_path": "day_probs.json"
+      }
+    ]
+  }
+}

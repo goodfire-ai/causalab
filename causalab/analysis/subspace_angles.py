@@ -147,7 +147,7 @@ def _read(source: Any, what: str):
 
     from causalab.io.step_io import entry_table
     from causalab.protocol.bundles import parse_entry_key
-    from causalab.protocol.resolve import read_safetensors_metadata
+    from causalab.io.env import read_safetensors_metadata
 
     if not isinstance(source, (str, Path)):
         raise StepError(f"subspace_angles: {what!r} must be a bundle path")

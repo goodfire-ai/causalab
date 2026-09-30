@@ -1,14 +1,18 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "The matched-k random-subspace control a localization result needs at every cell, which no preset provided until this one. An UNTRAINED `subspace` featurizer is already a random orthonormal rank-k basis: Subspace.__init__ takes qr(randn(width, k, generator=manual_seed(seed))), and build_stack constructs it from k + seed with no `train` section and no `file_path`. So the control is this document with `k` matched to the fitted DAS and `seed` swept, and the sweep IS the control distribution: three random rank-8 subspaces at the same cell, scored the same way as the fit. A single random draw is an anecdote; the spread is what says whether the fit's IIA is about the subspace or about the rank."
+    "protocol_version": "4",
+    "description": "The matched-k random-subspace control for a fitted DAS cell, which no preset provided. An UNTRAINED `subspace` featurizer is already a random orthonormal rank-k basis: Subspace.__init__ takes qr(randn(width, k, generator=manual_seed(seed))), and build_stack constructs it from k + seed with no `train` section and no `file_path`. So the control is this document with `k` matched to the fitted DAS and `seed` swept, and the sweep IS the control distribution: three random rank-8 subspaces at the same cell, scored the same way as the fit. A single random draw is an anecdote; the spread is what says whether the fit's IIA is about the subspace or about the rank."
   },
-  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main"},
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
   "data": {
     "base": {"dataset": "weekdays/data#test", "field": "input"},
     "counterfactual": {"dataset": "weekdays/data#test", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "sites": {
       "target": {"component": "block_output", "layers": [18]},
       "lm_head": {"component": "lm_head"}
@@ -22,30 +26,19 @@
       }
     },
     "reads": {
-      "v_cf": {
-        "site": "target",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": "rot"
-      },
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
+      "v_cf": {"site": "target", "pos": -1, "featurizer": "rot"},
+      "logits": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "patch": {"site": "target", "pos": -1, "featurizer": "rot", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia.json"
       }
-    },
-    "save": [{"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"}]
+    ]
   }
 }

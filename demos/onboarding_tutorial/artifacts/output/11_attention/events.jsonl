@@ -1,0 +1,16 @@
+{"schema_version": 1, "event": "phase_started", "seq": 0, "ts": "2026-09-28T12:48:41.694362+00:00", "payload": {"step": "pattern_scan", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 1, "ts": "2026-09-28T12:48:45.088458+00:00", "payload": {"step": "pattern_scan", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 2, "ts": "2026-09-28T12:48:45.088521+00:00", "payload": {"step": "pattern_scan", "status": "completed", "forwards": 9}}
+{"schema_version": 1, "event": "phase_started", "seq": 3, "ts": "2026-09-28T12:48:45.088578+00:00", "payload": {"step": "pattern_curve", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 4, "ts": "2026-09-28T12:48:45.292755+00:00", "payload": {"step": "pattern_curve", "files": ["11_attention_pattern_iia.json", "11_attention_pattern_iia.png"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 5, "ts": "2026-09-28T12:48:45.292823+00:00", "payload": {"step": "pattern_curve", "status": "completed"}}
+{"schema_version": 1, "event": "phase_started", "seq": 6, "ts": "2026-09-28T12:48:45.292881+00:00", "payload": {"step": "result_scan", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 7, "ts": "2026-09-28T12:48:49.642936+00:00", "payload": {"step": "result_scan", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 8, "ts": "2026-09-28T12:48:49.643002+00:00", "payload": {"step": "result_scan", "status": "completed", "forwards": 97}}
+{"schema_version": 1, "event": "phase_started", "seq": 9, "ts": "2026-09-28T12:48:49.643056+00:00", "payload": {"step": "grid", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 10, "ts": "2026-09-28T12:48:49.701426+00:00", "payload": {"step": "grid", "files": ["11_attention_head_iia.json", "11_attention_head_iia.png"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 11, "ts": "2026-09-28T12:48:49.701481+00:00", "payload": {"step": "grid", "status": "completed"}}
+{"schema_version": 1, "event": "phase_started", "seq": 12, "ts": "2026-09-28T12:48:49.701531+00:00", "payload": {"step": "best", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 13, "ts": "2026-09-28T12:48:49.709538+00:00", "payload": {"step": "best", "files": ["values.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 14, "ts": "2026-09-28T12:48:49.709601+00:00", "payload": {"step": "best", "status": "completed"}}
+{"schema_version": 1, "event": "campaign_terminal", "seq": 15, "ts": "2026-09-28T12:48:49.710111+00:00", "payload": {"outcome": "completed", "steps": {"pattern_scan": "completed", "pattern_curve": "completed", "result_scan": "completed", "grid": "completed", "best": "completed"}}}

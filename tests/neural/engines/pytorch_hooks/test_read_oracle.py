@@ -13,6 +13,7 @@ from causalab.neural.shared.encoding import encode
 from tests.neural.engines.pytorch_hooks import hook_oracle_lib as oracle_lib
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import BASE_TEXT, OracleShim
+from tests.protocol._docs import saved
 
 pytestmark = pytest.mark.unit
 
@@ -24,59 +25,40 @@ def _inputs(bundle):
     return {"input_ids": batch.input_ids, "attention_mask": batch.attention_mask}
 
 
-def harvest_doc() -> dict:
+def original_doc(
+    sites: dict[str, dict], reads: dict[str, dict], **method: dict
+) -> dict:
+    """A harvest: every read taken on the un-intervened network on base
+    (``original``, §2.9) and saved as a tensor under its own name."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
-            "sites": {
-                "s_in0": {"component": "block_input", "layers": [0]},
-                "s_out0": {"component": "block_output", "layers": [0]},
-                "s_out1": {"component": "block_output", "layers": [1]},
+            "intervened_models": {
+                "original": {"input": "base", "reads": list(reads)},
             },
-            "reads": {
-                "r_in0": {
-                    "site": "s_in0",
-                    "pos": {"index": 0},
-                    "model": "original",
-                    "input": "base",
-                },
-                "r_out0": {
-                    "site": "s_out0",
-                    "pos": {"index": 1},
-                    "model": "original",
-                    "input": "base",
-                },
-                "r_out1": {
-                    "site": "s_out1",
-                    "pos": {"index": 2},
-                    "model": "original",
-                    "input": "base",
-                },
-            },
-            "save": [
-                {
-                    "value": "r_in0",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                },
-                {
-                    "value": "r_out0",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "b.safetensors",
-                },
-                {
-                    "value": "r_out1",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "c.safetensors",
-                },
-            ],
+            **method,
+            "sites": sites,
+            "reads": reads,
+            "save": [saved(name, "original", f"{name}.safetensors") for name in reads],
         },
     }
+
+
+def harvest_doc() -> dict:
+    return original_doc(
+        {
+            "s_in0": {"component": "block_input", "layers": [0]},
+            "s_out0": {"component": "block_output", "layers": [0]},
+            "s_out1": {"component": "block_output", "layers": [1]},
+        },
+        {
+            "r_in0": {"site": "s_in0", "pos": {"index": 0}},
+            "r_out0": {"site": "s_out0", "pos": {"index": 1}},
+            "r_out1": {"site": "s_out1", "pos": {"index": 2}},
+        },
+    )
 
 
 def test_reads_match_oracle_captures(bundle, oracle: OracleShim):
@@ -105,30 +87,7 @@ def test_every_component_matches_oracle(bundle, oracle: OracleShim, component: s
     site: dict = {"component": component}
     if component != "embeddings":
         site["layers"] = 0
-    doc = {
-        "header": {"protocol_version": "3"},
-        "model": {"key": "test", "revision": "main"},
-        "data": base_data_section(with_counterfactual=False),
-        "method": {
-            "sites": {"tap": site},
-            "reads": {
-                "r": {
-                    "site": "tap",
-                    "pos": {"index": 1},
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "r.safetensors",
-                }
-            ],
-        },
-    }
+    doc = original_doc({"tap": site}, {"r": {"site": "tap", "pos": {"index": 1}}})
     executor = executor_for(doc, bundle, base_texts=[BASE_TEXT])
     module, kind = oracle_lib.component_module(oracle, 0, component)
     want = oracle_lib.capture_component(oracle, module, kind, _inputs(bundle))[:, 1, :]
@@ -138,30 +97,10 @@ def test_every_component_matches_oracle(bundle, oracle: OracleShim, component: s
 def test_head_value_read_matches_oracle(llama_bundle):
     """attention_premix head H == the oracle's o_proj-input column slice
     (test_collect_hook_oracle.py's head case)."""
-    doc = {
-        "header": {"protocol_version": "3"},
-        "model": {"key": "test", "revision": "main"},
-        "data": base_data_section(with_counterfactual=False),
-        "method": {
-            "sites": {"h": {"component": "attention_premix", "layers": [0], "head": 1}},
-            "reads": {
-                "r": {
-                    "site": "h",
-                    "pos": {"index": 1},
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "r.safetensors",
-                }
-            ],
-        },
-    }
+    doc = original_doc(
+        {"h": {"component": "attention_premix", "layers": [0], "head": 1}},
+        {"r": {"site": "h", "pos": {"index": 1}}},
+    )
     shim = OracleShim(hf_model=llama_bundle.model)
     executor = executor_for(doc, llama_bundle, base_texts=[BASE_TEXT])
     batch = encode(llama_bundle.tokenizer, [BASE_TEXT])
@@ -175,30 +114,10 @@ def test_head_value_read_matches_oracle(llama_bundle):
 
 
 def test_lm_head_read_is_the_model_logits(bundle, oracle: OracleShim):
-    doc = {
-        "header": {"protocol_version": "3"},
-        "model": {"key": "test", "revision": "main"},
-        "data": base_data_section(with_counterfactual=False),
-        "method": {
-            "sites": {"lm_head": {"component": "lm_head"}},
-            "reads": {
-                "logits": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "save": [
-                {
-                    "value": "logits",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "l.safetensors",
-                }
-            ],
-        },
-    }
+    doc = original_doc(
+        {"lm_head": {"component": "lm_head"}},
+        {"logits": {"site": "lm_head", "pos": {"index": -1}}},
+    )
     executor = executor_for(doc, bundle, base_texts=[BASE_TEXT])
     want = oracle_lib.next_token_logits(oracle, _inputs(bundle))
     torch.testing.assert_close(executor.read_value("logits")[:, 0, :], want, **TOL)
@@ -208,26 +127,11 @@ def test_variable_position_reads_the_substring_tokens(llama_bundle):
     """A {"variable": x} position addresses exactly the tokens of the row's
     value for x — decoded back, the gathered ids spell the value."""
     text = "the quick brown fox jumps"
-    doc = {
-        "header": {"protocol_version": "3"},
-        "model": {"key": "test", "revision": "main"},
-        "data": base_data_section(with_counterfactual=False),
-        "method": {
-            "positions": {"v": {"variable": "animal"}},
-            "sites": {"emb": {"component": "embeddings"}},
-            "reads": {
-                "r": {"site": "emb", "pos": "v", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "r.safetensors",
-                }
-            ],
-        },
-    }
+    doc = original_doc(
+        {"emb": {"component": "embeddings"}},
+        {"r": {"site": "emb", "pos": "v"}},
+        positions={"v": {"variable": "animal"}},
+    )
     executor = executor_for(
         doc, llama_bundle, base_texts=[text], extra_columns={"animal": ["brown fox"]}
     )
@@ -258,51 +162,22 @@ def logit_lens_grid_doc() -> dict:
     """The grid the all spelling exists for: the residual stream at every
     layer (the sweep axis) × every token (the all spec), alongside the
     model's own logits at every token."""
-    return {
-        "header": {"protocol_version": "3"},
-        "model": {"key": "test", "revision": "main"},
-        "data": base_data_section(with_counterfactual=False),
-        "method": {
-            "sites": {
-                "resid": {"component": "block_output", "layers": {"sweep": [0, 1]}},
-                "lm_head": {"component": "lm_head"},
-            },
-            "reads": {
-                "r_resid": {
-                    "site": "resid",
-                    "pos": "all",  # bare-string sugar
-                    "model": "original",
-                    "input": "base",
-                },
-                "r_logits": {
-                    "site": "lm_head",
-                    "pos": {"all": True},  # the explicit anchor
-                    "model": "original",
-                    "input": "base",
-                },
-            },
-            "save": [
-                {
-                    "value": "r_resid",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "resid.safetensors",
-                },
-                {
-                    "value": "r_logits",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "logits.safetensors",
-                },
-            ],
+    return original_doc(
+        {
+            "resid": {"component": "block_output", "layers": {"sweep": [0, 1]}},
+            "lm_head": {"component": "lm_head"},
         },
-    }
+        {
+            "r_resid": {"site": "resid", "pos": "all"},  # bare-string sugar
+            "r_logits": {"site": "lm_head", "pos": {"all": True}},  # the anchor
+        },
+    )
 
 
 def test_all_positions_grid_matches_oracle(bundle, oracle: OracleShim):
     """Every point of the swept grid loads, validates, executes, and the
     read is the oracle's full-sequence capture — not just its last column."""
-    from causalab.protocol.sweep import expand
+    from causalab.neural.shared.sweep import expand
 
     from tests.protocol._docs import in_order
 
@@ -328,7 +203,7 @@ def test_all_positions_grid_matches_oracle(bundle, oracle: OracleShim):
 def test_all_positions_lm_head_matches_the_models_logits(bundle):
     """The other half of a logit lens: the whole logit sequence, not the
     single next-token column every other read takes."""
-    from causalab.protocol.sweep import expand
+    from causalab.neural.shared.sweep import expand
 
     from tests.protocol._docs import in_order
 
@@ -346,25 +221,9 @@ def test_all_positions_is_ragged_across_rows(llama_bundle):
     from causalab.neural.engines.pytorch_hooks.executor import RaggedValue
 
     texts = ["one two three", "a much longer sentence right here"]
-    doc = {
-        "header": {"protocol_version": "3"},
-        "model": {"key": "test", "revision": "main"},
-        "data": base_data_section(with_counterfactual=False),
-        "method": {
-            "sites": {"emb": {"component": "embeddings"}},
-            "reads": {
-                "r": {"site": "emb", "pos": "all", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "r.safetensors",
-                }
-            ],
-        },
-    }
+    doc = original_doc(
+        {"emb": {"component": "embeddings"}}, {"r": {"site": "emb", "pos": "all"}}
+    )
     executor = executor_for(doc, llama_bundle, base_texts=texts)
     value = executor.read_value("r")
     assert isinstance(value, RaggedValue)

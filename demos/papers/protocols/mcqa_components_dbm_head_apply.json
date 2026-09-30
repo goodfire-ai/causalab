@@ -1,0 +1,43 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Score the fitted head mask of mcqa_components_dbm_head_fit.json on the 64 held-out pairs: the gate loads its per-head theta and runs as the hard theta > 0 mask over the 12 heads of layer 22; figures.py quotes the IIA."
+  },
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "mcqa_components_dbm/data#test", "field": "input"},
+    "counterfactual": {
+      "dataset": "mcqa_components_dbm/data#test",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]}
+    },
+    "positions": {"slot": {"index": -1}},
+    "sites": {
+      "target": {"component": "attention_premix", "layers": [22]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "gate": {"kind": "gate", "group": "head", "file_path": "head_fit/gate.safetensors"}
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": "slot", "featurizer": "gate"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask": {"site": "target", "pos": "slot", "featurizer": "gate", "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      }
+    ]
+  }
+}

@@ -136,7 +136,7 @@ def save_nested(
 
     The structure is split into a flat tensor dict (safetensors) and a JSON
     skeleton that references each tensor by flat key. Round-trips with
-    :func:`load_nested` for any combination of dict/list/tuple/tensor/scalar.
+    [`load_nested`][] for any combination of dict/list/tuple/tensor/scalar.
     """
     flat_tensors: dict[str, torch.Tensor] = {}
     skeleton = _flatten(payload, "", flat_tensors)
@@ -152,7 +152,7 @@ def save_nested(
 
 
 def load_nested(output_dir: str, stem: str) -> tuple[Any, dict[str, Any]]:
-    """Inverse of :func:`save_nested`. Returns ``(payload, meta)``."""
+    """Inverse of [`save_nested`][]. Returns ``(payload, meta)``."""
     flat_tensors, meta = load_tensors_with_meta(output_dir, stem)
     skeleton = meta["skeleton"]
     return _unflatten(skeleton, flat_tensors), meta

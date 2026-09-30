@@ -1,0 +1,352 @@
+{
+  "version": "1",
+  "description": "Desiderata-based masking (Davies et al. 2023, arXiv:2307.03637) over the attention heads of Qwen/Qwen3.5-2B at the readout token '=' of NN+MM=. swaps gives the ceilings and the check sets by exact head swaps; fit_all fits one head mask per L1 weight over all 48 heads of the six full-attention layers and apply_all_<w> scores each; fit_l15 and apply_l15_<w> do the same over layer 15's 8 heads; random_<s> draws five random 3-head masks at layer 15 and apply_random_<s> scores them. Every score is on the held-out split. scripts/addition_heads_dbm/heads_figure.py draws the figure from the run tree.",
+  "output_dir": "addition_heads_dbm",
+  "steps": {
+    "swaps": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_swaps.json"
+    },
+    "fit_all": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_fit_all.json"
+    },
+    "apply_all_w0p3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_all.json",
+      "set": {
+        "featurizers.gate_3.entry": {
+          "objective.sparsity.weight": 0.3
+        },
+        "featurizers.gate_7.entry": {
+          "objective.sparsity.weight": 0.3
+        },
+        "featurizers.gate_11.entry": {
+          "objective.sparsity.weight": 0.3
+        },
+        "featurizers.gate_15.entry": {
+          "objective.sparsity.weight": 0.3
+        },
+        "featurizers.gate_19.entry": {
+          "objective.sparsity.weight": 0.3
+        },
+        "featurizers.gate_23.entry": {
+          "objective.sparsity.weight": 0.3
+        }
+      }
+    },
+    "apply_all_w1": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_all.json",
+      "set": {
+        "featurizers.gate_3.entry": {
+          "objective.sparsity.weight": 1.0
+        },
+        "featurizers.gate_7.entry": {
+          "objective.sparsity.weight": 1.0
+        },
+        "featurizers.gate_11.entry": {
+          "objective.sparsity.weight": 1.0
+        },
+        "featurizers.gate_15.entry": {
+          "objective.sparsity.weight": 1.0
+        },
+        "featurizers.gate_19.entry": {
+          "objective.sparsity.weight": 1.0
+        },
+        "featurizers.gate_23.entry": {
+          "objective.sparsity.weight": 1.0
+        }
+      }
+    },
+    "apply_all_w3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_all.json",
+      "set": {
+        "featurizers.gate_3.entry": {
+          "objective.sparsity.weight": 3.0
+        },
+        "featurizers.gate_7.entry": {
+          "objective.sparsity.weight": 3.0
+        },
+        "featurizers.gate_11.entry": {
+          "objective.sparsity.weight": 3.0
+        },
+        "featurizers.gate_15.entry": {
+          "objective.sparsity.weight": 3.0
+        },
+        "featurizers.gate_19.entry": {
+          "objective.sparsity.weight": 3.0
+        },
+        "featurizers.gate_23.entry": {
+          "objective.sparsity.weight": 3.0
+        }
+      }
+    },
+    "apply_all_w10": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_all.json",
+      "set": {
+        "featurizers.gate_3.entry": {
+          "objective.sparsity.weight": 10.0
+        },
+        "featurizers.gate_7.entry": {
+          "objective.sparsity.weight": 10.0
+        },
+        "featurizers.gate_11.entry": {
+          "objective.sparsity.weight": 10.0
+        },
+        "featurizers.gate_15.entry": {
+          "objective.sparsity.weight": 10.0
+        },
+        "featurizers.gate_19.entry": {
+          "objective.sparsity.weight": 10.0
+        },
+        "featurizers.gate_23.entry": {
+          "objective.sparsity.weight": 10.0
+        }
+      }
+    },
+    "apply_all_w30": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_all.json",
+      "set": {
+        "featurizers.gate_3.entry": {
+          "objective.sparsity.weight": 30.0
+        },
+        "featurizers.gate_7.entry": {
+          "objective.sparsity.weight": 30.0
+        },
+        "featurizers.gate_11.entry": {
+          "objective.sparsity.weight": 30.0
+        },
+        "featurizers.gate_15.entry": {
+          "objective.sparsity.weight": 30.0
+        },
+        "featurizers.gate_19.entry": {
+          "objective.sparsity.weight": 30.0
+        },
+        "featurizers.gate_23.entry": {
+          "objective.sparsity.weight": 30.0
+        }
+      }
+    },
+    "apply_all_w100": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_all.json",
+      "set": {
+        "featurizers.gate_3.entry": {
+          "objective.sparsity.weight": 100.0
+        },
+        "featurizers.gate_7.entry": {
+          "objective.sparsity.weight": 100.0
+        },
+        "featurizers.gate_11.entry": {
+          "objective.sparsity.weight": 100.0
+        },
+        "featurizers.gate_15.entry": {
+          "objective.sparsity.weight": 100.0
+        },
+        "featurizers.gate_19.entry": {
+          "objective.sparsity.weight": 100.0
+        },
+        "featurizers.gate_23.entry": {
+          "objective.sparsity.weight": 100.0
+        }
+      }
+    },
+    "fit_l15": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_fit_l15.json"
+    },
+    "apply_l15_w0p01": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.entry": {
+          "objective.sparsity.weight": 0.01
+        }
+      }
+    },
+    "apply_l15_w0p1": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.entry": {
+          "objective.sparsity.weight": 0.1
+        }
+      }
+    },
+    "apply_l15_w0p3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.entry": {
+          "objective.sparsity.weight": 0.3
+        }
+      }
+    },
+    "apply_l15_w1": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.entry": {
+          "objective.sparsity.weight": 1.0
+        }
+      }
+    },
+    "apply_l15_w3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.entry": {
+          "objective.sparsity.weight": 3.0
+        }
+      }
+    },
+    "apply_l15_w10": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.entry": {
+          "objective.sparsity.weight": 10.0
+        }
+      }
+    },
+    "random_0": {
+      "type": "script",
+      "script": {
+        "module": "causalab.analysis.random_mask"
+      },
+      "inputs": {
+        "gate": {
+          "step": "fit_l15",
+          "file": "gate.safetensors"
+        },
+        "seed": 0,
+        "top_k": 3,
+        "entry": {
+          "objective.sparsity.weight": 3.0
+        }
+      },
+      "outputs": {
+        "gate": "gate.safetensors"
+      }
+    },
+    "apply_random_0": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.file_path": "random_0/gate.safetensors"
+      }
+    },
+    "random_1": {
+      "type": "script",
+      "script": {
+        "module": "causalab.analysis.random_mask"
+      },
+      "inputs": {
+        "gate": {
+          "step": "fit_l15",
+          "file": "gate.safetensors"
+        },
+        "seed": 1,
+        "top_k": 3,
+        "entry": {
+          "objective.sparsity.weight": 3.0
+        }
+      },
+      "outputs": {
+        "gate": "gate.safetensors"
+      }
+    },
+    "apply_random_1": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.file_path": "random_1/gate.safetensors"
+      }
+    },
+    "random_2": {
+      "type": "script",
+      "script": {
+        "module": "causalab.analysis.random_mask"
+      },
+      "inputs": {
+        "gate": {
+          "step": "fit_l15",
+          "file": "gate.safetensors"
+        },
+        "seed": 2,
+        "top_k": 3,
+        "entry": {
+          "objective.sparsity.weight": 3.0
+        }
+      },
+      "outputs": {
+        "gate": "gate.safetensors"
+      }
+    },
+    "apply_random_2": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.file_path": "random_2/gate.safetensors"
+      }
+    },
+    "random_3": {
+      "type": "script",
+      "script": {
+        "module": "causalab.analysis.random_mask"
+      },
+      "inputs": {
+        "gate": {
+          "step": "fit_l15",
+          "file": "gate.safetensors"
+        },
+        "seed": 3,
+        "top_k": 3,
+        "entry": {
+          "objective.sparsity.weight": 3.0
+        }
+      },
+      "outputs": {
+        "gate": "gate.safetensors"
+      }
+    },
+    "apply_random_3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.file_path": "random_3/gate.safetensors"
+      }
+    },
+    "random_4": {
+      "type": "script",
+      "script": {
+        "module": "causalab.analysis.random_mask"
+      },
+      "inputs": {
+        "gate": {
+          "step": "fit_l15",
+          "file": "gate.safetensors"
+        },
+        "seed": 4,
+        "top_k": 3,
+        "entry": {
+          "objective.sparsity.weight": 3.0
+        }
+      },
+      "outputs": {
+        "gate": "gate.safetensors"
+      }
+    },
+    "apply_random_4": {
+      "type": "intervention_protocol",
+      "document": "../protocols/addition_heads_dbm_apply_l15.json",
+      "set": {
+        "featurizers.gate.file_path": "random_4/gate.safetensors"
+      }
+    }
+  }
+}

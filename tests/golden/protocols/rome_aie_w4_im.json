@@ -1,11 +1,16 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "ROME causal tracing, hidden-state restoration AIE, width-4 shard (Meng et al. 2022, arXiv:2202.05262; see gen_counterfact.py for the equal-subject-width sharding): corrupt subject embeddings of gpt2-xl with seeded Gaussian noise (3*sigma = 0.144681), then restore the clean block_output hidden state at the LAST subject token, swept over every third layer. AIE(l) = mean over facts and seeds of P_restored(l) - P_corrupted, computed post-hoc from cross_entropy tables; the corrupted forward sits off the layer axis and interns per seed. Golden: peak AIE in [4.7, 12.7] percentage points (paper Fig 2a: 8.7% at layer 15), peak layer in the first two-thirds of the 48 layers."
   },
   "model": {"key": "gpt2-xl", "revision": "main", "dtype": "fp32"},
   "data": {"base": {"dataset": "counterfact/facts_w4", "field": "input"}},
   "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["v_clean"]},
+      "corrupted": {"input": "base", "reads": ["logits_corr"], "writes": ["noise"]},
+      "restored": {"input": "base", "reads": ["logits_rest"], "writes": ["noise", "restore"]}
+    },
     "positions": {
       "last_subject": {"index": -1, "scope": {"variable": "subject"}}
     },
@@ -20,9 +25,9 @@
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "v_clean": {"site": "hidden", "pos": "last_subject", "model": "original", "input": "base"},
-      "logits_corr": {"site": "lm_head", "pos": -1, "model": "corrupted", "input": "base"},
-      "logits_rest": {"site": "lm_head", "pos": -1, "model": "restored", "input": "base"}
+      "v_clean": {"site": "hidden", "pos": "last_subject"},
+      "logits_corr": {"site": "lm_head", "pos": -1},
+      "logits_rest": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "noise": {
@@ -38,35 +43,17 @@
       },
       "restore": {"site": "hidden", "pos": "last_subject", "do": {"swap": "v_clean"}}
     },
-    "intervened_models": {
-      "corrupted": {"input": "base", "writes": ["noise"]},
-      "restored": {"input": "base", "writes": ["noise", "restore"]}
-    },
-    "metrics": {
-      "ce_corr": {
-        "kind": "cross_entropy",
-        "of": "logits_corr",
-        "target": "answer",
-        "token_form": "space_prefixed"
-      },
-      "ce_rest": {
-        "kind": "cross_entropy",
-        "of": "logits_rest",
-        "target": "answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
       {
-        "value": "ce_corr",
+        "read": "logits_corr",
         "model": "corrupted",
-        "input": "base",
+        "aggregation": {"kind": "cross_entropy", "target": "answer"},
         "file_path": "ce_corr.json"
       },
       {
-        "value": "ce_rest",
+        "read": "logits_rest",
         "model": "restored",
-        "input": "base",
+        "aggregation": {"kind": "cross_entropy", "target": "answer"},
         "file_path": "ce_rest.json"
       }
     ]

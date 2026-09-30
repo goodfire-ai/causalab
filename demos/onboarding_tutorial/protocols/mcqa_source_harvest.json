@@ -1,23 +1,19 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Read the answer-slot residual of the SOURCE checkpoint -- Llama-3.2-1B, the pretrained sibling of the instruction-tuned model every other demo here runs -- on the counterfactual half of each pair. Same architecture, same tokenizer, same 2048-wide stream, different weights. The tensor this saves is the only thing that crosses between the two models: the sole role is 'base' because a document's roles name inputs, not sides of a contrast, and this one has a single forward; a document names exactly one model.key, so a cross-model experiment is two documents and a file, never one document with two networks."
+    "protocol_version": "4",
+    "description": "Save the residual stream at block 26's answer slot of Qwen2.5-1.5B on the 64 counterfactual prompts, as the source of a cross-model graft."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B", "revision": "main", "dtype": "bf16"},
   "data": {"base": {"dataset": "mcqa/pairs_n64_s0", "field": "counterfactual_inputs[0]"}},
   "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["acts"]}
+    },
     "positions": {"slot": {"index": -1}},
     "sites": {
-      "target": {"component": "block_output", "layers": [14]}
+      "target": {"component": "block_output", "layers": [26]}
     },
-    "reads": {"acts": {"site": "target", "pos": "slot", "model": "original", "input": "base"}},
-    "save": [
-      {
-        "value": "acts",
-        "model": "original",
-        "input": "base",
-        "file_path": "acts.safetensors"
-      }
-    ]
+    "reads": {"acts": {"site": "target", "pos": "slot"}},
+    "save": [{"read": "acts", "model": "original", "file_path": "acts.safetensors"}]
   }
 }

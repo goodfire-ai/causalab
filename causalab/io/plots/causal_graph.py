@@ -8,7 +8,7 @@ Two output families:
 
 Only the first family needs Dash, and Dash is a `notebook` extra rather than
 a core dependency, so it is imported inside the functions that build an app
-(:func:`_require_dash`). Importing this module — and importing
+(`_require_dash`). Importing this module — and importing
 ``causalab.io.plots``, which re-exports it — costs nothing extra.
 
 Each family is factored into pure builders that return data/objects and thin
@@ -30,8 +30,7 @@ if TYPE_CHECKING:
     from dash import Dash
     from matplotlib.figure import Figure
 
-    from causalab.causal.causal_model import CausalModel
-    from causalab.causal.trace import CausalTrace
+    from causalab.causal.model import CausalModel, CausalTrace
 
 #: What to say when the interactive half is asked for and is not installed.
 #: A bare ``No module named 'dash'`` does not tell a reader that this module's
@@ -61,8 +60,8 @@ def _require_dash() -> None:
     """Refuse with the install hint rather than a bare ``ModuleNotFoundError``.
 
     Dash and dash-cytoscape are a `notebook` extra, not core dependencies: a
-    headless install — a network-less venv on a compute node — has no reason
-    to carry a web-app server. They are
+    headless install — a batch job's environment with no display and no
+    network — has no reason to carry a web-app server. They are
     therefore imported inside the four functions that build an app, so that
     importing this module (and, through ``causalab.io.plots.__init__``,
     everything that reaches it) works without them.
@@ -284,6 +283,30 @@ def build_stylesheet(
 # --------------------------------------------------------------------------- #
 
 
+def displayed_values(model: "CausalModel", trace: "CausalTrace") -> dict[str, Any]:
+    """The value label of every variable a view draws.
+
+    ``trace.snapshot()`` holds only cached values, and a lazy variable such as
+    graph_walk's ``raw_input`` is not cached until something reads it. Each
+    missing variable is therefore computed on a copy, so the viewed trace keeps
+    its cache as it was. A variable whose equation raises is labelled
+    ``error: <exception type>``: a view shows every node, and the label says
+    why this one has no value.
+    """
+    values = trace.snapshot()
+    probe = trace.copy()
+    for name in model.variables:
+        if name in values:
+            continue
+        try:
+            values[name] = probe[name]
+        # Equations are user code, so any exception type can surface here. The
+        # view reports it on the node instead of refusing to draw the graph.
+        except Exception as error:  # noqa: BLE001
+            values[name] = f"error: {type(error).__name__}"
+    return values
+
+
 def make_forward_pass_onload(
     model: "CausalModel",
     *,
@@ -335,11 +358,17 @@ def make_interchange_onload(
     """Onload callback for the interchange view.
 
     Labels both the base DAG and each per-key source DAG. Base-DAG class
-    assignment uses :func:`classify_forward_node` with ``intervention =
+    assignment uses [`classify_forward_node`][] with ``intervention =
     counterfactual_inputs``.
     """
     intervention_only = _get_descendants(model, counterfactual_inputs)
     counterfactual = _get_descendants(model, counterfactual_inputs, strict=False)
+    # Computed once, like the base DAG's `outputs`: onload runs on every page
+    # load or trigger, and displayed_values evaluates lazy equations.
+    source_values = {
+        cf_key: displayed_values(model, source_trace)
+        for cf_key, source_trace in cf_traces.items()
+    }
 
     def onload(
         _: str, elements: list[dict[str, Any]]
@@ -348,8 +377,8 @@ def make_interchange_onload(
         elements_by_id = {e["data"]["id"]: e for e in elements}
 
         # Per-key source DAGs.
-        for i, (cf_key, source_trace) in enumerate(cf_traces.items()):
-            source_outputs = source_trace.to_dict()
+        for i, cf_key in enumerate(cf_traces):
+            source_outputs = source_values[cf_key]
             original_inputs = counterfactual_inputs[cf_key]
             for variable, value in source_outputs.items():
                 classes = (
@@ -487,9 +516,8 @@ def build_forward_pass_app(
         intervention = {}
 
     trace = model.new_trace(inputs)
-    for var, val in intervention.items():
-        trace.intervene(var, val)
-    outputs = trace.to_dict()
+    trace.intervene_many(intervention)
+    outputs = displayed_values(model, trace)
 
     elements = build_variable_nodes(model) + build_edges(model)
     stylesheet = build_stylesheet(
@@ -547,10 +575,8 @@ def build_interchange_app(
             model.new_trace(cf_input) if isinstance(cf_input, dict) else cf_input
         )
 
-    result_trace = input_trace.copy()
-    for var, cf_trace in cf_traces.items():
-        result_trace.intervene(var, cf_trace[var])
-    outputs = result_trace.to_dict()
+    result_trace = model.run_interchange(input_trace, cf_traces)
+    outputs = displayed_values(model, result_trace)
 
     base_nodes = build_variable_nodes(model)
     base_edges = build_edges(model)

@@ -1,0 +1,21 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "The harvest das_pca_init.json's basis is fitted over: block_output at the located cell (block 23, the answer slot), one un-intervened forward over the 30 training pairs. The basis's rank is 16, not the 32 the Llama-era document asked for: a PCA cannot hold more components than it has rows, and 30 pairs bound it below 32 - so das_pca_init.json's widest rank is 16 here too. No writes, hence no intervened_models; the tensor it saves is what workflows/pca_basis.json hands to causalab.analysis.fit_pca, whose output is then placed at artifacts/weekdays/qwen25_7b/pca/block_output_L23.safetensors for das_pca_init.json to start from (scripts/run_all.py does the placing)."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"}
+  },
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["acts"]}
+    },
+    "positions": {"best": {"index": -1}},
+    "sites": {
+      "target": {"component": "block_output", "layers": [23]}
+    },
+    "reads": {"acts": {"site": "target", "pos": "best"}},
+    "save": [{"read": "acts", "model": "original", "file_path": "acts.safetensors"}]
+  }
+}

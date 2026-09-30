@@ -1,5 +1,5 @@
 {
- "base": "7c28470e",
+ "base": "the resolver before rows",
  "fixtures": {
   "hf-internal-testing/tiny-random-gpt2": {
    "family": "gpt2",
@@ -1579,7 +1579,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here — the model's own softmax runs after the edit, so rows still sum to 1 by construction."
+       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here: the model's own softmax runs after the edit, so rows still sum to 1 by construction."
       },
       "feature_slice": null,
       "layer": 0,
@@ -1637,7 +1637,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here — the model's own softmax runs after the edit, so rows still sum to 1 by construction."
+       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here: the model's own softmax runs after the edit, so rows still sum to 1 by construction."
       },
       "feature_slice": null,
       "layer": 4,
@@ -2623,7 +2623,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 0,
@@ -2670,7 +2670,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 0,
@@ -2717,7 +2717,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 4,
@@ -2764,7 +2764,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 4,
@@ -5221,7 +5221,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here — the model's own softmax runs after the edit, so rows still sum to 1 by construction."
+       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here: the model's own softmax runs after the edit, so rows still sum to 1 by construction."
       },
       "feature_slice": null,
       "layer": 0,
@@ -5279,7 +5279,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here — the model's own softmax runs after the edit, so rows still sum to 1 by construction."
+       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here: the model's own softmax runs after the edit, so rows still sum to 1 by construction."
       },
       "feature_slice": null,
       "layer": 1,
@@ -6265,7 +6265,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 0,
@@ -6312,7 +6312,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 0,
@@ -6359,7 +6359,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 1,
@@ -6406,7 +6406,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 1,
@@ -7864,7 +7864,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "It is the fused [q | k | v] projection, widths 128/128/256 — unequal, so it has no head axis. The per-head faces are the kernel-boundary components ('delta_query'/'delta_key'/'delta_value')."
+       "note": "It is the fused [q | k | v] projection, widths 128/128/256: unequal, so it has no head axis. The per-head faces are the kernel-boundary components ('delta_query'/'delta_key'/'delta_value')."
       },
       "feature_slice": null,
       "layer": 0,
@@ -7906,7 +7906,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "It is the fused [q | k | v] projection, widths 128/128/256 — unequal, so it has no head axis. The per-head faces are the kernel-boundary components ('delta_query'/'delta_key'/'delta_value')."
+       "note": "It is the fused [q | k | v] projection, widths 128/128/256: unequal, so it has no head axis. The per-head faces are the kernel-boundary components ('delta_query'/'delta_key'/'delta_value')."
       },
       "feature_slice": null,
       "layer": 1,
@@ -7948,7 +7948,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "It is the fused [q | k | v] projection, widths 128/128/256 — unequal, so it has no head axis. The per-head faces are the kernel-boundary components ('delta_query'/'delta_key'/'delta_value')."
+       "note": "It is the fused [q | k | v] projection, widths 128/128/256: unequal, so it has no head axis. The per-head faces are the kernel-boundary components ('delta_query'/'delta_key'/'delta_value')."
       },
       "feature_slice": null,
       "layer": 2,
@@ -9402,7 +9402,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "One scalar gate per head per position — sigmoid(in_proj_b), in (0, 1)."
+       "note": "One scalar gate per head per position: sigmoid(in_proj_b), in (0, 1)."
       },
       "feature_slice": null,
       "layer": 0,
@@ -9444,7 +9444,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "One scalar gate per head per position — sigmoid(in_proj_b), in (0, 1)."
+       "note": "One scalar gate per head per position: sigmoid(in_proj_b), in (0, 1)."
       },
       "feature_slice": [
        0,
@@ -9490,7 +9490,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "One scalar gate per head per position — sigmoid(in_proj_b), in (0, 1)."
+       "note": "One scalar gate per head per position: sigmoid(in_proj_b), in (0, 1)."
       },
       "feature_slice": null,
       "layer": 1,
@@ -9532,7 +9532,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "One scalar gate per head per position — sigmoid(in_proj_b), in (0, 1)."
+       "note": "One scalar gate per head per position: sigmoid(in_proj_b), in (0, 1)."
       },
       "feature_slice": [
        0,
@@ -9578,7 +9578,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "One scalar gate per head per position — sigmoid(in_proj_b), in (0, 1)."
+       "note": "One scalar gate per head per position: sigmoid(in_proj_b), in (0, 1)."
       },
       "feature_slice": null,
       "layer": 2,
@@ -9620,7 +9620,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "One scalar gate per head per position — sigmoid(in_proj_b), in (0, 1)."
+       "note": "One scalar gate per head per position: sigmoid(in_proj_b), in (0, 1)."
       },
       "feature_slice": [
        0,
@@ -9688,7 +9688,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "The log-decay g — negative reals (the state multiplies by exp(g) per step), not a probability."
+       "note": "The log-decay g: negative reals (the state multiplies by exp(g) per step), not a probability."
       },
       "feature_slice": null,
       "layer": 0,
@@ -9730,7 +9730,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "The log-decay g — negative reals (the state multiplies by exp(g) per step), not a probability."
+       "note": "The log-decay g: negative reals (the state multiplies by exp(g) per step), not a probability."
       },
       "feature_slice": [
        0,
@@ -9776,7 +9776,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "The log-decay g — negative reals (the state multiplies by exp(g) per step), not a probability."
+       "note": "The log-decay g: negative reals (the state multiplies by exp(g) per step), not a probability."
       },
       "feature_slice": null,
       "layer": 1,
@@ -9818,7 +9818,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "The log-decay g — negative reals (the state multiplies by exp(g) per step), not a probability."
+       "note": "The log-decay g: negative reals (the state multiplies by exp(g) per step), not a probability."
       },
       "feature_slice": [
        0,
@@ -9864,7 +9864,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "The log-decay g — negative reals (the state multiplies by exp(g) per step), not a probability."
+       "note": "The log-decay g: negative reals (the state multiplies by exp(g) per step), not a probability."
       },
       "feature_slice": null,
       "layer": 2,
@@ -9906,7 +9906,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "The log-decay g — negative reals (the state multiplies by exp(g) per step), not a probability."
+       "note": "The log-decay g: negative reals (the state multiplies by exp(g) per step), not a probability."
       },
       "feature_slice": [
        0,
@@ -12321,7 +12321,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here — the model's own softmax runs after the edit, so rows still sum to 1 by construction."
+       "note": "Read it whole at pos: \"all\". Unlike 'attention_probs', every write mechanism is legal here: the model's own softmax runs after the edit, so rows still sum to 1 by construction."
       },
       "feature_slice": null,
       "layer": 3,
@@ -14307,7 +14307,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist — the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
+       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist: the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
       },
       "feature_slice": null,
       "layer": 0,
@@ -14354,7 +14354,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist — the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
+       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist: the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
       },
       "feature_slice": null,
       "layer": 0,
@@ -14401,7 +14401,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist — the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
+       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist: the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
       },
       "feature_slice": null,
       "layer": 1,
@@ -14448,7 +14448,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist — the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
+       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist: the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
       },
       "feature_slice": null,
       "layer": 1,
@@ -14495,7 +14495,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist — the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
+       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist: the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
       },
       "feature_slice": null,
       "layer": 2,
@@ -14542,7 +14542,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist — the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
+       "note": "Its position axis is the kernel's 64-token chunk index: read it whole (pos: \"all\") or at an integer chunk index. Per-token prefill state does not exist: the recurrent kernel runs only in single-token decode (the modeling code's own dispatch)."
       },
       "feature_slice": null,
       "layer": 2,
@@ -16093,7 +16093,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 3,
@@ -16140,7 +16140,7 @@
        "fused_index": null,
        "integral": false,
        "ranking": false,
-       "note": "Round 1 exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
+       "note": "The read exposes the whole pattern, which is what an interchange on attention needs: read it at pos: \"all\", without a featurizer and without 'dims'."
       },
       "feature_slice": null,
       "layer": 3,

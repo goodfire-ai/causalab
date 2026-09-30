@@ -1,31 +1,38 @@
-"""Prepared multi-token predictions agree across both execution engines."""
+"""Multi-token target readouts over prepare_sequence rows agree across both
+execution engines — each encodes the row's text the same way."""
 
 import pytest
 import torch
 
+from causalab.analysis.sequences import pair_sequences, prepare_sequence
 from causalab.neural.engines.nnsight_tracing.executor import TracePointExecutor
-from causalab.neural.sequences import pair_sequences, prepare_sequence
 from causalab.protocol.schema import parse_document
-from tests.neural.test_sequence_analysis import document, executor
+
+from tests._helpers.engines import raising_loader
+from tests.analysis.test_sequence_analysis import document, executor
+
 
 pytestmark = pytest.mark.smoke
 
 
 @pytest.mark.parametrize("patch", [False, True])
-def test_prepared_targets_match_hooks(hooks_llama, trace_llama, patch):
+def test_sequence_targets_match_hooks(hooks_llama, trace_llama, patch):
+    # continuation IDs must round-trip through the tokenizer (their decoded
+    # text encodes back to the same IDs): whole word pieces of the tiny llama
+    # vocabulary — " over", " the", " lazy" — do; byte-fallback IDs do not
     rows = [
         pair_sequences(
             prepare_sequence(
                 hooks_llama.tokenizer,
                 prompt,
-                [100, 200, 300],
+                [975, 278, 17366],
                 example_id=f"base-{i}",
                 split="eval",
             ),
             prepare_sequence(
                 hooks_llama.tokenizer,
                 "the green turtle",
-                [200, 100, 300],
+                [278, 975, 17366],
                 example_id=f"donor-{i}",
                 split="eval",
             ),
@@ -43,7 +50,7 @@ def test_prepared_targets_match_hooks(hooks_llama, trace_llama, patch):
         trace_llama,
         role_rows=roles,
         role_fields=fields,
-        load_tensors=lambda path: None,
+        load_tensors=raising_loader,
     )
     for target in range(3):
         torch.testing.assert_close(

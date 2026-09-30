@@ -45,7 +45,7 @@ def pinned_samples_path(test_file: str | Path) -> Path:
 
 
 def walk_task_samples(task_name: str) -> dict[str, Any]:
-    """Walk a task's ``generate_dataset(model, n, seed)`` at :data:`TASK_SEEDS`.
+    """Walk a task's ``generate_dataset(model, n, seed)`` at `TASK_SEEDS`.
 
     Every shipped task exposes ``generate_dataset`` in its
     ``counterfactuals.py`` per the loader convention (see

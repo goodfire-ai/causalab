@@ -1,50 +1,45 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Write the SOURCE checkpoint's answer-slot activation into the TARGET checkpoint and ask what it then answers. The source tensor enters as a params constant, which is the one channel a value has for crossing a model boundary: reads live inside one model's forward, and this document's forward is the instruction-tuned model's. Whether the constant is broadcast over rows or aligned row-by-row is the whole experiment -- see the demo's Results."
+    "protocol_version": "4",
+    "description": "Swap a saved answer-slot activation into block 26 of Qwen2.5-1.5B-Instruct on the 64 original prompts. Measure how often the model gives the counterfactual answer, keeps its own answer, and which token it gives."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {"base": {"dataset": "mcqa/pairs_n64_s0", "field": "input"}},
   "method": {
+    "intervened_models": {
+      "grafted": {"input": "base", "reads": ["logits"], "writes": ["graft"]}
+    },
     "positions": {"slot": {"index": -1}},
     "sites": {
-      "target": {"component": "block_output", "layers": [14]},
+      "target": {"component": "block_output", "layers": [26]},
       "lm_head": {"component": "lm_head"}
     },
     "params": {
       "v_src": {"file_path": "source/acts.safetensors", "entry": {"slot": "acts"}}
     },
-    "reads": {"logits": {"site": "lm_head", "pos": -1, "model": "grafted", "input": "base"}},
+    "reads": {"logits": {"site": "lm_head", "pos": -1}},
     "writes": {
       "graft": {"site": "target", "pos": "slot", "do": {"swap": "v_src"}}
     },
-    "intervened_models": {
-      "grafted": {"input": "base", "writes": ["graft"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "survived": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "base_answer",
-        "token_form": "space_prefixed"
-      },
-      "said": {"kind": "top_k", "of": "logits", "k": 1, "by": "prob"}
-    },
     "save": [
-      {"value": "iia", "model": "grafted", "input": "base", "file_path": "iia.json"},
       {
-        "value": "survived",
+        "read": "logits",
         "model": "grafted",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "grafted",
+        "aggregation": {"kind": "match", "expected": "base_answer"},
         "file_path": "survived.json"
       },
-      {"value": "said", "model": "grafted", "input": "base", "file_path": "said.json"}
+      {
+        "read": "logits",
+        "model": "grafted",
+        "aggregation": {"kind": "top_k", "k": 1, "by": "prob"},
+        "file_path": "said.json"
+      }
     ]
   }
 }

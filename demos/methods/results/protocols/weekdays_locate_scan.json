@@ -1,0 +1,45 @@
+{
+  "document": "protocols/weekdays_locate_scan.json",
+  "document_digest": "633cffc755706117dd6028f6e8e7ef8b34ca0f4b32a3f2f519abc48e03cfdd17",
+  "run_digest": "633cffc755706117dd6028f6e8e7ef8b34ca0f4b32a3f2f519abc48e03cfdd17",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 36.7,
+  "metrics": {
+    "iia": {
+      "metric": "iia",
+      "unit": "fraction",
+      "rows": 1680,
+      "eligible_rows": 1680,
+      "mean": 0.2595,
+      "cells": 56,
+      "best_cell": {
+        "positions.tap": {
+          "index": -1
+        },
+        "sites.target.layers": 23
+      },
+      "best_mean": 0.8667,
+      "worst_mean": 0.1667
+    },
+    "logit_diff": {
+      "metric": "logit_diff",
+      "unit": "logit",
+      "rows": 1680,
+      "eligible_rows": 1680,
+      "mean": -0.566,
+      "cells": 56,
+      "best_cell": {
+        "positions.tap": {
+          "index": -1
+        },
+        "sites.target.layers": 23
+      },
+      "best_mean": 3.5479,
+      "worst_mean": -2.6236
+    }
+  }
+}

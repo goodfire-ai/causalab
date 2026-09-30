@@ -1,5 +1,5 @@
 {
-  "_role": "Value pins of the chat-coherent drift tier: run-to-run drift detection on a real model, successor to the retired tests/end_to_end goldens. Unlike tests/golden/paper_goldens.json (paper-provenance values), these ARE pinned from a reviewed run of this stack on cuda - that is their job.",
+  "_role": "Value pins of the chat-coherent drift tier: run-to-run drift detection on a real model, successor to the retired tests/end_to_end goldens. Unlike tests/golden/paper_goldens.json (paper-provenance values), these ARE pinned from a reviewed run of this stack on the canonical GPU - that is their job.",
   "model": {
     "key": "Qwen/Qwen3-4B-Instruct-2507",
     "revision": "main"

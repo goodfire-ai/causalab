@@ -1,0 +1,28 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Half one of mean replacement: harvest one site over the train split and reduce it to the corpus mean AT SAVE TIME (`reduce: mean`), so the un-reduced activations never reach disk. The output is one vector, which the ablation half loads as a `params` constant."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"}
+  },
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["acts"]}
+    },
+    "positions": {"tap": {"index": -1}},
+    "sites": {
+      "target": {"component": "block_output", "layers": [23]}
+    },
+    "reads": {"acts": {"site": "target", "pos": "tap"}},
+    "save": [
+      {
+        "read": "acts",
+        "model": "original",
+        "file_path": "acts.safetensors",
+        "reduce": "mean"
+      }
+    ]
+  }
+}

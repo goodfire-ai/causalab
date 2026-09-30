@@ -14,14 +14,14 @@ owner into one bounded byte buffer, which also carries quantized/float8 dtypes
 that a collective backend may not support directly.
 
 A tensor named in ``shards`` is not replicated: each rank receives only its
-own :class:`~causalab.io.fastersafetensors._select.Shard` of it, so the memory bounds count
+own `Shard` of it, so the memory bounds count
 it at shard size and no rank ever holds it whole. A shard along the outer
 dimension is one contiguous run, read by the rank that wants it inside its
-chunk jobs (:class:`Direct`). A shard along an inner dimension is one short run
+chunk jobs (`Direct`). A shard along an inner dimension is one short run
 per leading index — on network storage many short reads, or reading every
 rank through the whole tensor — so instead every rank reads a block of whole
 rows (``1/world`` of the bytes, one run) and one all-to-all hands each rank
-the piece of every row it wants (:class:`Exchange`).
+the piece of every row it wants (`Exchange`).
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ from .errors import PlanError, ReadError, SelectError
 def _env_optional_int(name: str, *, minimum: int = 0) -> int | None:
     """An integer tuning knob from the environment; unset (or empty) is
     ``None``. A value that is not an integer or is below ``minimum`` is a
-    :class:`PlanError` naming the variable and the value, raised when the
+    [`PlanError`][] naming the variable and the value, raised when the
     module is imported: a bare ``int()`` error names neither, and for the
     knobs in the request signature a wrong value on one node is a refusal
     someone has to diagnose from the message. ``minimum`` is 1 for counts and
@@ -104,7 +104,7 @@ before its turn, the read is spread over every rank's storage link, and the
 only memory beyond the destination is what the consumer still references.
 A selection narrowed or stepped above that size is not the file's bytes in
 order, so its owner reads it and broadcasts it: it enters this window, and a
-request whose window does not fit beside the model is a :class:`PlanError`
+request whose window does not fit beside the model is a [`PlanError`][]
 from the fit check rather than a load that runs.
 Nemotron-Ultra-253B has 14 FFN weights of 13-14 GB before tensor-parallel
 narrowing beside 30 GB of parameters per rank on 80 GB GPUs; owner-broadcast
@@ -326,7 +326,7 @@ class ShardLayout:
     @classmethod
     def of(cls, shape: Sequence[int], itemsize: int, shard: Shard) -> ShardLayout:
         """The layout of ``shard`` over a tensor of ``shape``; a cut that does
-        not divide, or a ``dim`` outside the shape, is a :class:`SelectError`."""
+        not divide, or a ``dim`` outside the shape, is a [`SelectError`][]."""
         shard.ranges(shape)  # the core's validation: dim, rank, divisibility
         axis = shard.axis(len(shape))
         cols = prod(shape[axis:])
@@ -656,7 +656,7 @@ def check_shards(
     present: set[str],
 ) -> dict[str, Shard]:
     """The entries of ``shards`` this request loads: a name that is present
-    but outside ``keys``, or also in ``select``, is a :class:`SelectError`;
+    but outside ``keys``, or also in ``select``, is a [`SelectError`][];
     a name in no file of the request is left to the caller."""
     both = sorted(set(shards) & set(select or {}))
     if both:
@@ -1186,7 +1186,7 @@ def stream_files(
     Every member passes the same requests; the collectives stay on the
     calling thread, in the same order on every rank, and a read error on any
     rank surfaces on all. ``shards`` applies to whichever request loads each
-    name; a name no request loads is a :class:`SelectError` at the end."""
+    name; a name no request loads is a [`SelectError`][] at the end."""
     unseen = set(shards)
     with ThreadPoolExecutor(max_workers=READ_WORKERS) as pool:
         reads: _Reads | None = None

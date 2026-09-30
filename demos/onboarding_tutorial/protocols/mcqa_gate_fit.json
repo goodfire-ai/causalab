@@ -1,67 +1,63 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "How many of the component's dimensions are needed? A gate featurizer splits the site into sigma(theta)*x and its complement, so a plain swap through it interchanges only the gated dimensions and leaves the rest of the base activation in place. Training theta under an L1 penalty, with the sigmoid's temperature annealed toward a hard 0/1, turns 'which dimensions carry the variable' into an optimization whose answer is a mask. The site is set by the workflow from the scan's argmax, so this document trains where the scan pointed and nowhere else."
+    "protocol_version": "4",
+    "description": "Train a per-dimension gate on the answer-slot interchange under an L1 penalty. Save the gate and its training-split scores."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {
-    "base": {"dataset": "mcqa/data#train", "field": "input"},
-    "counterfactual": {"dataset": "mcqa/data#train", "field": "counterfactual_inputs[0]"}
+    "base": {"dataset": "mcqa/train_n128_s1", "field": "input"},
+    "counterfactual": {"dataset": "mcqa/train_n128_s1", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]}
+    },
     "positions": {"slot": {"index": -1}},
     "sites": {
-      "target": {"component": "block_output", "layers": [14]},
+      "target": {"component": "block_output", "layers": [26]},
       "lm_head": {"component": "lm_head"}
     },
     "featurizers": {"gate": {"kind": "gate"}},
     "reads": {
-      "v_cf": {
-        "site": "target",
-        "pos": "slot",
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": "gate"
-      },
-      "logits": {"site": "lm_head", "pos": -1, "model": "masked", "input": "base"}
+      "v_cf": {"site": "target", "pos": "slot", "featurizer": "gate"},
+      "logits": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "mask": {"site": "target", "pos": "slot", "featurizer": "gate", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "masked": {"input": "base", "writes": ["mask"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "ce": {
-        "kind": "cross_entropy",
-        "of": "logits",
-        "target": "label",
-        "token_form": "space_prefixed"
-      }
-    },
     "train": {
-      "objective": [
-        [1.0, "ce"],
-        [0.01, {"l1": "gate"}]
-      ],
+      "objective": {
+        "ce": {
+          "weight": 1.0,
+          "read": "logits",
+          "model": "masked",
+          "aggregation": {"kind": "cross_entropy", "target": "label"}
+        },
+        "l1": {"weight": 0.01, "l1": "gate"}
+      },
       "params": ["gate"],
       "optimizer": {"name": "adamw", "lr": 0.001, "weight_decay": 0.0},
       "steps": {"epochs": 20},
       "batch": {"pairs": 32},
       "anneal": {"gate.theta.temperature": [1.0, 0.01, 0.5]},
       "precision": {"feature": "fp32", "loss": "fp32"},
-      "eval": {"every": {"epochs": 1}, "split": "mcqa/data#test", "metrics": ["iia"]},
+      "eval": {
+        "every": {"epochs": 1},
+        "split": "mcqa/test_n64_s2",
+        "aggregations": {
+          "iia": {
+            "read": "logits",
+            "model": "masked",
+            "aggregation": {"kind": "match", "expected": "cf_answer"}
+          }
+        }
+      },
       "seed": 0
     },
     "save": [
-      {"value": "iia", "model": "masked", "input": "base", "file_path": "iia.json"},
-      {"value": "ce", "model": "masked", "input": "base", "file_path": "ce.json"},
+      {"train": "iia", "file_path": "iia.json"},
+      {"train": "ce", "file_path": "ce.json"},
       {"value": "gate", "site": "target", "file_path": "gate.safetensors"}
     ]
   }

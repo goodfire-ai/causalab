@@ -24,9 +24,9 @@ from causalab.neural.shared.metrics import (
     GATHERED_KINDS,
     compute_metric,
     gathered_metric,
-    metric_token_ids,
 )
-from causalab.protocol.resolution import Unavailable
+from causalab.protocol.answers import metric_token_ids
+from causalab.protocol.results import Unavailable
 from causalab.protocol.schema import METRIC_KINDS
 
 pytestmark = pytest.mark.property

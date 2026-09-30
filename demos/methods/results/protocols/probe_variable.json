@@ -1,0 +1,41 @@
+{
+  "document": "protocols/probe_variable.json",
+  "document_digest": "d8761a7c147dd15ea4f35d87eeec807df96e0bee5ea2dd60380592e4513772f4",
+  "run_digest": "d8761a7c147dd15ea4f35d87eeec807df96e0bee5ea2dd60380592e4513772f4",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 45.1,
+  "metrics": {
+    "per_step": {
+      "metric": "per_step",
+      "rows": 240,
+      "matched_rows": 240,
+      "numeric": false,
+      "commonest_top1": {
+        "\n": 30,
+        "Ex": 29,
+        "plain": 29
+      }
+    },
+    "said": {
+      "metric": "said",
+      "rows": 30,
+      "matched_rows": 30,
+      "numeric": false
+    },
+    "saved_tensors": {
+      "where.safetensors": {
+        "where.widths": [
+          30
+        ],
+        "where": [
+          20,
+          3584
+        ]
+      }
+    }
+  }
+}

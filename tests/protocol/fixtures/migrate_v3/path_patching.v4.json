@@ -1,0 +1,51 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "migrate_v3 fixture: path_patching (trimmed from causalab/configs/protocols/path_patching.json)"
+  },
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "IOI/data/default", "field": "input"},
+    "counterfactual": {"dataset": "IOI/data/default", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_sender"]},
+      "original_base": {"input": "base", "reads": ["v_a10", "v_a11"]},
+      "patched": {
+        "input": "base",
+        "reads": ["v_receiver"],
+        "writes": ["swap_sender", "freeze_10", "freeze_11"]
+      },
+      "final": {"input": "base", "reads": ["logits"], "writes": ["inject"]}
+    },
+    "sites": {
+      "sender": {"component": "attention_premix", "layers": [9], "head": 9},
+      "receiver": {"component": "block_input", "layers": [12]},
+      "a10": {"component": "attention_output", "layers": [10]},
+      "a11": {"component": "attention_output", "layers": [11]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_sender": {"site": "sender", "pos": -1},
+      "v_a10": {"site": "a10", "pos": -1},
+      "v_a11": {"site": "a11", "pos": -1},
+      "v_receiver": {"site": "receiver", "pos": -1},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "swap_sender": {"site": "sender", "pos": -1, "do": {"swap": "v_sender"}},
+      "freeze_10": {"site": "a10", "pos": -1, "do": {"swap": "v_a10"}},
+      "freeze_11": {"site": "a11", "pos": -1, "do": {"swap": "v_a11"}},
+      "inject": {"site": "receiver", "pos": -1, "do": {"swap": "v_receiver"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "final",
+        "aggregation": {"kind": "logit_diff", "a": "base_answer", "b": "cf_answer"},
+        "file_path": "logit_diff.json"
+      }
+    ]
+  }
+}

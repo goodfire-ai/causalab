@@ -1,8 +1,9 @@
-"""Opt-in CUDA replay for the validated Qwen3/Qwen3.6 last-token DBM/DAS path.
+"""CUDA replay for supported Qwen3/Qwen3.6 last-token fits.
 
-Graphs belong to an execution request, never to the process-global model cache.
-Unsupported documents use PointExecutor unchanged. Unexpected capture errors
-are surfaced, rather than silently masking an execution or CUDA error.
+Captures belong to the execution request. ``GraphPool`` belongs to the
+engine and retains allocator segments across fits and requests.
+Unsupported documents use PointExecutor. Unexpected capture errors
+propagate. See ``docs/cuda_graphs.md`` for support and memory rules.
 """
 
 from __future__ import annotations
@@ -14,11 +15,13 @@ import contextlib
 import copy
 import gc
 import logging
+import time
 import weakref
 from typing import Any, Callable, Iterator
 
 import torch
 
+from causalab.neural.engines.pytorch_hooks.budget import OOMPolicy, abort_distributed
 from causalab.neural.engines.pytorch_hooks.executor import (
     PointExecutor,
     _resumed,
@@ -26,11 +29,18 @@ from causalab.neural.engines.pytorch_hooks.executor import (
 )
 from causalab.neural.shared.featurizers import Gate, Stage, featurizer_cache
 from causalab.neural.shared.head import HEAD_INPUT
-from causalab.neural.shared.mechanisms import operand_names
-from causalab.neural.shared.services import input_roles
+from causalab.neural.shared.parallel import heartbeat
+from causalab.neural.shared.parallel.collective import SOLO, Collective
+from causalab.neural.shared.parallel.deadline import REPLAY
+from causalab.neural.shared.parallel.fragments import Fragments
+from causalab.neural.shared.parallel.placement import Axis
+from causalab.neural.shared.plan import is_unwritten, write_names
+from causalab.protocol.positions.roles import input_roles
 from causalab.neural.shared.sites import resolve_site
 from torch.utils._pytree import tree_map
-from causalab.protocol.schema import Document, PositionSpec
+from causalab.protocol.schema import Document, PositionSpec, ReadRef, operand_reads
+
+_log = logging.getLogger(__name__)
 
 
 def stage_layout(stage: Stage) -> tuple[Any, ...]:
@@ -86,9 +96,66 @@ def copy_executor_stages(target: PointExecutor, source: PointExecutor) -> None:
         copy_stage_state(stage, source.stage(name))
 
 
-def unsupported_reason(doc: Document, bundle: Any) -> str | None:
-    """Conservative eligibility; this is an execution option, not protocol data."""
-    if torch.device(bundle.device).type != "cuda":
+def graph_device(bundle: Any) -> torch.device:
+    """The one device a graph executor's bundle is on. A bundle spanning
+    devices was refused by [`unsupported_reason`][] before a
+    [`GraphExecutor`][] was built, so reaching one here is a broken
+    promise, not a user error. (A CPU bundle can reach here: the eligibility
+    tests build a [`GraphExecutor`][] by hand and run its eager paths.)"""
+    single = bundle.devices.single
+    if single is None:
+        raise AssertionError(
+            "CUDA graphs run on one device; the bundle is placed on "
+            f"{bundle.devices.spelling}"
+        )
+    return single
+
+
+#: Axes whose groups a captured graph cannot serve: pipeline stages agree on
+#: the host after each forward, and context chunks exchange state inside it
+#: (docs/cuda_graphs.md "Multi-rank execution").
+UNCAPTURED_AXES: tuple[Axis, ...] = ("pipeline", "context")
+
+#: Where a graph holder's out-of-memory failure happened, for the abort
+#: under ``OOMPolicy.ABORT`` (`TrainingGraphs`, ``graph_cohort``).
+IN_GRAPH = "inside a captured CUDA graph of a distributed model window"
+
+
+def unsupported_reason(
+    doc: Document, bundle: Any, collective: Collective = SOLO
+) -> str | None:
+    """Conservative eligibility; this is an execution option, not protocol data.
+    ``collective`` is the world the executor runs over; a data axis above one
+    reads its mode off the geometry the bundle was loaded under."""
+    refused = [axis for axis in UNCAPTURED_AXES if collective.size(axis) > 1]
+    if refused:
+        # the run falls back to the eager executor, naming the axes
+        return (
+            "CUDA graphs run under tensor, expert and data parallelism; the "
+            f"collective spans more than one rank on the {' and '.join(refused)} "
+            + ("axes" if len(refused) > 1 else "axis")
+        )
+    geometry = getattr(bundle, "geometry", None)
+    if (
+        collective.size("data") > 1
+        and getattr(geometry, "data_mode", "points") == "rows"
+    ):
+        # the eager step weighs each replica's loss by its rows' share of the
+        # minibatch before the gradients are summed over the replicas
+        # (rows.py); the captured objective takes no such share
+        return (
+            "CUDA graphs do not serve data parallelism over rows: the captured "
+            "training step lacks each replica's share of the loss"
+        )
+    single = bundle.devices.single
+    if single is None:
+        # graphs are single-device (docs/model_parallelism.md §11): the run
+        # falls back to the eager executor, as for every reason here
+        return (
+            "CUDA graphs are single-device; the bundle places its layers on "
+            f"{bundle.devices.spelling}"
+        )
+    if single.type != "cuda":
         return "CUDA graphs require a CUDA device"
     if doc.train is not None and doc.train.phases:
         return "phased training requires eager execution"
@@ -111,12 +178,9 @@ def unsupported_reason(doc: Document, bundle: Any) -> str | None:
         # cannot follow. An apply document reads the fixed `eval` member at
         # one width and rebuilds nothing — capturable.
         return "a drawn role rebuilds its minibatch executors each epoch"
-    if any(metric.kind == "js" for metric in doc.metrics.values()):
+    if any(agg.spec.kind == "js" for agg in doc.aggregations()):
         return "JS objectives require eager execution"
-    if doc.train is not None and any(
-        term.metric is not None and doc.metrics[term.metric].kind == "soft_accuracy"
-        for term in doc.train.objective
-    ):
+    if any(agg.spec.kind == "soft_accuracy" for agg in doc.objective_aggregations()):
         return "soft accuracy objectives require eager execution"
     config = bundle.model.config
     if (
@@ -149,11 +213,8 @@ def unsupported_reason(doc: Document, bundle: Any) -> str | None:
     if len(doc.writes) > 1:
         return "only one swap write is supported"
     for write in doc.writes.values():
-        if (
-            write.do.mechanism != "swap"
-            or not isinstance(write.do.payload, str)
-            or write.do.payload not in doc.reads
-        ):
+        # the parser binds a read operand to `ReadRef` (§2.7)
+        if write.do.mechanism != "swap" or not operand_reads(doc, write.do):
             return "only a swap from another read is supported"
     if len(doc.featurizers) > 1:
         return "only one featurizer is supported"
@@ -184,9 +245,16 @@ def make_executor(
     *,
     cuda_graphs: bool = False,
     decoding: Any = None,
+    collective: Collective = SOLO,
     **kwargs: Any,
 ) -> PointExecutor:
-    reason = unsupported_reason(doc, bundle) if cuda_graphs else None
+    """The executor for one point: a [`GraphExecutor`][] when CUDA graphs
+    are asked for and every eligibility rule holds, else the eager
+    [`PointExecutor`][]. ``collective`` is the engine's
+    (``docs/model_parallelism.md`` §3): the executor's ``whole`` / ``fragment``
+    run over it, and a pipeline, context or rows-split world refuses graphs
+    by name ([`unsupported_reason`][])."""
+    reason = unsupported_reason(doc, bundle, collective) if cuda_graphs else None
     if cuda_graphs and decoding is not None:
         reason = "continuation decoding requires eager execution"
     bound = kwargs.get("batch_rows")
@@ -212,17 +280,25 @@ def make_executor(
     if cuda_graphs and reason is not None:
         logging.getLogger(__name__).info("CUDA graphs disabled: %s", reason)
     cls = GraphExecutor if cuda_graphs and reason is None else PointExecutor
-    return cls(doc, bundle, **kwargs)
+    executor = cls(doc, bundle, **kwargs)
+    if collective is not SOLO:
+        executor.fragments = Fragments(collective)
+    return executor
+
+
+def _device_allocations(device: torch.device) -> int | None:
+    """Count device allocations, including private pools; return None off CUDA."""
+    if device.type != "cuda":
+        return None
+    return int(torch.cuda.memory_stats(device).get("num_device_alloc", 0))
 
 
 def captured_pass(work: Callable[[], Any]) -> Callable[[], Any]:
-    """``work`` as a captured pass runs it: under its own, isolated
-    :func:`featurizer_cache` scope, so every featurizer the pass touches is
-    evaluated inside the pass — once, and inside the graph when the pass is
-    the capture. A scope spanning the warmup pass and the capture, or one
-    open in the eager code around them, would hand the capture a value
-    computed outside it: the graph would replay that stale tensor forever,
-    while the parameters it should be a function of move every step."""
+    """Run ``work`` with a fresh, isolated [`featurizer_cache`][causalab.neural.shared.featurizers.sharing.featurizer_cache] scope.
+
+    Each featurizer runs once within the pass. Reusing eager or warm-up cache
+    entries during capture would record stale values as parameters change.
+    """
 
     def run() -> Any:
         with featurizer_cache(isolated=True):
@@ -232,67 +308,51 @@ def captured_pass(work: Callable[[], Any]) -> Callable[[], Any]:
 
 
 class GraphPool:
-    """The allocator pool every graph of one fit is captured into.
+    """Share one allocator pool and capture stream across an engine's graphs.
 
-    A graph captured without a pool keeps a private one, and a private pool
-    holds the graph's whole working set — every intermediate of the forward
-    and backward — for the graph's lifetime. A fit captures several graphs:
-    one training bucket per padded shape and mask, its held-out inference
-    replays, and for a cohort the step graph and the evaluation graph. On one
-    pool they hand the same segments back and forth, so the fit's footprint
-    is one working set plus each graph's live outputs, not one working set
-    per graph (the reason the training bank used to stop at two buckets).
+    Training buckets and evaluation graphs reuse intermediate storage. Captures
+    share a stream because the allocator caches blocks per stream. Warm-up uses
+    [`allocating`][] to cache the working set before capture; the allocator
+    cannot reclaim memory under pressure during capture.
 
-    The pool comes with **one capture stream**: the allocator caches blocks
-    per stream, so a capture on a stream of its own would never see the
-    blocks an earlier graph freed, pool or not — three buckets on one pool
-    but three streams reserve exactly what three private pools do.
+    A ``torch.cuda.MemPool`` retains the pool across fits and requests, even with
+    no live graphs. Each ``Replay`` keeps its pool alive. The owner must close all
+    graph holders before [`close`][] to avoid PyTorch's destructor assertion.
+    Closing warns about and resets remaining graphs; later captures use private
+    pools.
 
-    A ``torch.cuda.MemPool`` keeps the pool registered between captures, so a
-    pool whose graphs have all been released takes the next capture. The
-    allocator aborts the process if that object dies while a graph still
-    holds the pool (``MemPool::~MemPool`` asserts its use count), so the pool
-    is released by the fit's owner — the training loop, or the fit cache that
-    keeps a bank across compatible fits — after every graph holder has closed
-    (:meth:`close`); a graph still alive at that point is a closing-order bug,
-    logged as a warning, and is reset first so it cannot replay again. Every
-    ``Replay`` holds its pool, so the pool object cannot be collected before
-    its graphs. The pool's segments return to the allocator with the pool,
-    not when its last graph is gone. A closed pool hands out no more handles:
-    a capture after the fit keeps a private pool, as one off a fit always did.
+    ``use_on_oom=True`` lets eager allocations borrow free pool blocks on OOM.
+    After a capture or replay OOM, call [`close_if_unused`][] after the failed
+    frame unwinds, so its traceback no longer retains a graph. Release requires
+    no live graphs in the engine, including fit-cache banks. Otherwise, eager
+    fallback can borrow free blocks, but the pool retains its segments. Borrowed
+    tensors and library workspaces do not prevent closure and remain allocated
+    until freed.
 
-    Out of memory is the one time the working set matters to eager code. The
-    pool is opened with ``use_on_oom=True``, so an eager allocation that
-    would otherwise fail may take the pool's free blocks; and a graph holder
-    whose capture or replay ran out of memory releases the pool outright
-    (:meth:`close_if_unused`) when no other graph holds it, so the eager
-    remainder of the fit gets the working set back, as it did when every
-    graph had a private pool. That release runs after the failed frame has
-    unwound (the traceback keeps the failed capture's graph alive until then)
-    and sees only graphs already captured: a training OOM before the fit's
-    held-out replays are captured closes the pool, and those replays then
-    keep private pools, as they did before. Eager tensors that borrowed the
-    pool's blocks under ``use_on_oom`` are not graph holders and do not stop
-    the release: the allocator counts capture registrations in the use count
-    the destructor asserts, and a private pool whose blocks are still
-    borrowed is destroyed once they are freed rather than while in use.
+    Replaying one graph may overwrite another's outputs. Every replay site must:
 
-    Sharing has one hazard. A later capture may place its outputs in blocks an
-    earlier graph's intermediates used, so replaying the earlier graph
-    overwrites them. Two rules keep it safe, checked at every replay site and
-    stated in ``docs/cuda_graphs.md``: graphs on one pool replay one at a time
-    on the current stream, and every value a replay produces is consumed —
-    the optimizer step reads the gradients, inference clones its captures,
-    evaluation scores its reads and releases them — before another graph on
-    the pool replays. Everything a replay reads that is not produced by the graph
-    (tokens, masks, labels, staged operands, frozen sources, the prefix
-    buffer) is allocated outside capture, so it never sits in the pool.
+    * Replay graphs serially on the current stream.
+    * Consume or clone every output before another graph replays: the optimizer
+      consumes gradients, inference clones captures, and evaluation scores and
+      releases reads.
+
+    Inputs not produced by a graph (tokens, masks, labels, staged operands,
+    frozen sources and prefix buffers) must be allocated outside the pool.
+    These rules span fits and requests. Fit-owned holders close in ``finally``;
+    retained fit-cache banks replay only within their active fit, and the engine
+    serves one request at a time. See ``docs/cuda_graphs.md``.
+
+    [`allocating`][] also routes unrelated device allocations from other
+    threads into the pool during warm-up.
     """
 
     def __init__(self) -> None:
         self._pool: Any = None
         self._stream: Any = None
         self.device: torch.device | None = None
+        #: Resolve with the handle so an unindexed ``cuda`` device cannot drift
+        #: with the current device between capture and warm-up.
+        self._index: int | None = None
         self.closed = False
         #: the graphs captured into the pool that are still alive
         self._graphs: weakref.WeakSet[Any] = weakref.WeakSet()
@@ -308,6 +368,7 @@ class GraphPool:
                 # fail: the OOM fallback runs eagerly beside the pool
                 self._pool = torch.cuda.MemPool(use_on_oom=True)
                 self._stream = torch.cuda.Stream(device=device)
+                self._index = torch.cuda.current_device()
             self.device = device
         elif self.device != device:
             raise ValueError(f"graph pool is on {self.device}, capture on {device}")
@@ -318,6 +379,37 @@ class GraphPool:
         if self.handle(device) is None:
             raise ValueError("a closed graph pool has no capture stream")
         return self._stream
+
+    @contextlib.contextmanager
+    def allocating(self, device: torch.device) -> Iterator[None]:
+        """Route all device allocations into the pool; no-op after closure.
+
+        Warm-up uses the capture stream so capture can reuse its freed blocks.
+        Routing covers every thread, including autograd; ``torch.cuda.use_mem_pool``
+        routes only the calling thread and would miss backward allocations.
+
+        Pool routing prevents the allocator from reclaiming its ordinary cache
+        under pressure, so empty that cache first. Pool blocks remain cached.
+        Leave cycle collection to ``torch.cuda.graph`` on capture entry; blocks
+        still held by cycles cannot be reclaimed by the allocator anyway.
+        """
+        handle = self.handle(device)
+        if handle is None:
+            yield
+            return
+        allocator: Any = torch._C
+        index = self._index
+        assert index is not None  # resolved with the handle
+        torch.cuda.empty_cache()
+        # Begin/end control device-wide routing; release balances begin's pool
+        # registration. MemPool retains its own registration and cached blocks
+        # until close, when its destructor requires that registration to be last.
+        allocator._cuda_beginAllocateToPool(index, handle)
+        try:
+            yield
+        finally:
+            allocator._cuda_endAllocateToPool(index, handle)
+            allocator._cuda_releasePool(index, handle)
 
     def captured(self, graph: Any) -> None:
         """Note a graph captured into the pool (``Replay``)."""
@@ -342,7 +434,7 @@ class GraphPool:
             return
         if self._graphs:
             assert self.device is not None
-            logging.getLogger(__name__).warning(
+            _log.warning(
                 "graph pool released with %d live graph(s): a holder outlived "
                 "its pool; the graphs are reset and cannot replay",
                 len(self._graphs),
@@ -353,6 +445,7 @@ class GraphPool:
         self._graphs.clear()
         self._pool = None
         self._stream = None
+        self._index = None
         self.device = None
 
     def __del__(self) -> None:
@@ -362,6 +455,46 @@ class GraphPool:
             self.close()
         except BaseException:  # noqa: BLE001 — a finalizer must not raise
             pass
+
+
+class _Recorded:
+    """An event recorded after a replay, as the replay deadline's
+    [`Completion`][causalab.neural.shared.parallel.deadline.Completion]. The
+    heartbeat thread queries it under the replay's device, since that thread's
+    current device is ``cuda:0``. ``Event.query`` never waits."""
+
+    def __init__(self, event: torch.cuda.Event, device: torch.device) -> None:
+        self.event = event
+        self.device = device
+
+    def query(self) -> bool:
+        with torch.cuda.device(self.device):
+            return self.event.query()
+
+
+def capture_window() -> contextlib.AbstractContextManager[None]:
+    """Pause the replay deadline for a capture about to begin
+    ([`Outstanding.capturing`][causalab.neural.shared.parallel.deadline.Outstanding.capturing]).
+    Open it after draining the device, so a stuck earlier replay is still
+    refused. A no-op without a running heartbeat."""
+    beat = heartbeat.running()
+    if beat is None:
+        return contextlib.nullcontext()
+    return beat.outstanding.capturing()
+
+
+def bound_replay(device: torch.device) -> None:
+    """Register the replay just enqueued on ``device`` with the replay
+    deadline (``docs/cuda_graphs.md`` "Hung replays"). A no-op without a
+    running heartbeat: world 1, or a process that never joined a group."""
+    beat = heartbeat.running()
+    if beat is None:
+        return
+    stream = torch.cuda.current_stream(device)
+    event = torch.cuda.Event()
+    event.record(stream)
+    on = torch.device("cuda", stream.device_index)
+    beat.enqueued((on.index, stream.cuda_stream), REPLAY, _Recorded(event, on))
 
 
 class Replay:
@@ -379,21 +512,23 @@ class Replay:
         device: torch.device,
         parameters: list[torch.nn.Parameter] | None = None,
         pool: GraphPool | None = None,
+        warmup: bool = True,
     ) -> None:
-        """``pool`` is the fit's :class:`GraphPool` for this capture to
-        allocate from; by default (or once the pool is closed) the capture
-        gets a private pool of its own. PyTorch's documented condition for a
-        shared pool is that the graphs replay in the order they were
-        captured. The eval capture of ``graph_cohort.EvaluationGraphs``
-        deliberately steps outside it — captured after the training graph,
-        replayed between its replays — on the narrower condition that gives
-        the same guarantee (the two rules :class:`GraphPool` states): the two
-        replay on one stream, never concurrently, and each one's outputs are
-        consumed before the other replays (the gradients by the optimizer
-        step; the eval reads by the scorer, which releases them before the
-        next training replay, ``train._evaluate``). Only a GPU checks it:
-        the goldens in ``tests/golden/test_graph_cohort.py`` are the pins."""
+        """Capture ``work`` in the supplied pool, or a private pool if unavailable.
+
+        PyTorch documents shared-pool replay in capture order. Evaluation
+        graphs interleave with training under the [`GraphPool`][] rules:
+        replay serially on one stream and consume outputs before the next
+        replay. GPU coverage lives in ``tests/golden/test_graph_cohort.py``.
+
+        ``warmup`` runs ``work`` eagerly on the capture stream to initialize
+        kernels, libraries and autograd, and populate the pool's working set.
+        Set it to ``False`` only after an equivalent eager pass on the same
+        storage, as in ``graph_cohort.EvaluationGraphs``. Capture then reuses
+        cached blocks or grows the pool as needed.
+        """
         self.parameters = parameters or []
+        self.device = device
         self.temperatures = [
             (stage, stage.theta.new_tensor(stage.temperature))
             for stage in stages.values()
@@ -405,26 +540,57 @@ class Replay:
         # the pool so it cannot be collected while this graph is alive.
         self.pool = pool
         handle: Any = None if pool is None else pool.handle(device)
+        # the pool while it is open; a closed one leaves the capture private
+        shared = pool if handle is not None else None
+        debug = _log.isEnabledFor(logging.DEBUG)
+        allocations = _device_allocations(device) if debug else None
+        started = time.perf_counter()
         with torch.cuda.device(device), self._temperatures():
             stream = (
-                torch.cuda.Stream(device=device)
-                if pool is None or handle is None
-                else pool.stream(device)
+                shared.stream(device)
+                if shared is not None
+                else torch.cuda.Stream(device=device)
             )
             stream.wait_stream(torch.cuda.current_stream(device))
-            with torch.cuda.stream(stream):
-                for _ in range(self.warmup_steps):
-                    self._clear_grad()
-                    run()
+            if warmup:
+                # into the pool, so the capture below finds the working set
+                # cached on its stream (GraphPool.allocating)
+                routing = (
+                    shared.allocating(device)
+                    if shared is not None
+                    else contextlib.nullcontext()
+                )
+                with torch.cuda.stream(stream), routing:
+                    for _ in range(self.warmup_steps):
+                        self._clear_grad()
+                        run()
             torch.cuda.current_stream(device).wait_stream(stream)
             torch.cuda.synchronize(device)
             self._clear_grad()
+            warmed = time.perf_counter()
             self.graph = torch.cuda.CUDAGraph()
-            if pool is not None and handle is not None:
-                pool.captured(self.graph)
-            with torch.cuda.graph(self.graph, stream=stream, pool=handle):
+            if shared is not None:
+                shared.captured(self.graph)
+            # after the drain above, so a stuck replay is still refused by name
+            with (
+                capture_window(),
+                torch.cuda.graph(self.graph, stream=stream, pool=handle),
+            ):
                 self.output = run()
             self.gradients = [p.grad for p in self.parameters]
+        if debug:
+            after = _device_allocations(device)
+            # the first span is the warm-up pass(es) plus the wait for the
+            # device to drain what was queued before this capture
+            _log.debug(
+                "graph captured: warm-up and drain %.1f ms (%d pass(es)), capture "
+                "%.1f ms, pool %s, device allocations %s",
+                (warmed - started) * 1e3,
+                self.warmup_steps if warmup else 0,
+                (time.perf_counter() - warmed) * 1e3,
+                "shared" if shared is not None else "private",
+                None if allocations is None or after is None else after - allocations,
+            )
         self.replays = 0
 
     def _clear_grad(self) -> None:
@@ -450,6 +616,7 @@ class Replay:
         for parameter, gradient in zip(self.parameters, self.gradients):
             parameter.grad = gradient
         self.graph.replay()
+        bound_replay(self.device)
         self.replays += 1
         return self.output
 
@@ -467,7 +634,8 @@ class GraphExecutor(PointExecutor):
     #: cache instead
     keep_store = False
     #: the pool this executor's inference replays are captured into — the
-    #: fit's, set by train.py on the fit's eval executor when it is built
+    #: one the fit's graphs share (the engine's, or one the loop opened), set
+    #: by train.py on the fit's eval executor when it is built
     #: (``_eval_executor``); None (one-shot inference, a point off a fit, the
     #: point executor itself) keeps a private pool per graph
     graph_pool: GraphPool | None = None
@@ -490,7 +658,7 @@ class GraphExecutor(PointExecutor):
     def close(self) -> None:
         """Release fit-owned evaluation captures before the next fit starts."""
         if self._inference_graphs:
-            torch.cuda.synchronize(self.bundle.device)
+            torch.cuda.synchronize(graph_device(self.bundle))
         self.reset_reads()
         self._inference_graphs.clear()
         self._inference_calls.clear()
@@ -503,13 +671,12 @@ class GraphExecutor(PointExecutor):
         # Resolve and bounds-check the ordinary positions outside capture.
         # An empty token sequence must still fail through the normal resolver.
         self.check_write_widths()
-        for read in self.doc.reads.values():
-            role = str(read.input)
+        for ref in self.doc.read_refs():
+            model, role = self.doc.group_of(ref)
             batch = self._batch(role)
-            super()._positions(read.pos, batch, role)
-            if read.model != "original":
-                for name in self.doc.intervened_models[str(read.model)].writes:
-                    super()._positions(self.doc.writes[name].pos, batch, role)
+            super()._positions(self.doc.reads[ref.read].pos, batch, role)
+            for name in write_names(self.doc, model) or ():
+                super()._positions(self.doc.writes[name].pos, batch, role)
         for entry in (*self.doc.reads.values(), *self.doc.writes.values()):
             if isinstance(entry.featurizer, str):
                 self.stage(entry.featurizer)
@@ -524,8 +691,7 @@ class GraphExecutor(PointExecutor):
         hands the model for ``batch``, computed eagerly — outside capture, so
         a replay reads them from fixed storage. A cohort's captured frame
         (``graph_cohort.py``) is prepared through here and registered under
-        its own id. The masks are :func:`~causalab.neural.engines.pytorch_hooks
-        .executor.prompt_masks`, the eager executor's own."""
+        its own id. The masks are [`prompt_masks`][], the eager executor's own."""
         with torch.no_grad():
             position_ids = batch.position_ids()
             masks = prompt_masks(
@@ -533,7 +699,11 @@ class GraphExecutor(PointExecutor):
             )
         return masks, position_ids
 
-    def _model_forward(self, batch, depth, window=None):
+    def _model_forward(
+        self, batch, depth, window=None, start: int = 0, *, backward: bool = False
+    ):
+        # `backward` is the stage forward's (stages.py): graphs run at world 1,
+        # one stage, where the model call is its own backward's graph
         assert depth == 0, "CUDA graphs require prompt-only execution"
         assert window is None or (window.start, window.stop) == (
             0,
@@ -546,8 +716,8 @@ class GraphExecutor(PointExecutor):
             # a batch this executor did not prepare — an eager cohort's
             # concatenated frame (cohort.py builds one per forward), whose id
             # is transient but whose masks depend only on its shape and on
-            # where each row's real tokens start under encoding.py's
-            # always-left-padding invariant (a row has at least one). The
+            # where each row's real tokens start under the position frame's
+            # always-left-padding invariant (protocol/positions/encoding.py) (a row has at least one). The
             # frame carries those indices, so the signature costs no host
             # read: the launches below queue behind the device's backlog
             # instead of the CPU waiting for it to drain here. Repeated
@@ -594,9 +764,9 @@ class GraphExecutor(PointExecutor):
                 ename, write, site, value, rows=rows, routing=routing
             ).to(tensor.dtype)
 
-    def _publish(self, digest, label, capture, routing):
+    def _publish(self, key, label, capture, routing):
         if not self._recording:
-            super()._publish(digest, label, capture, routing)
+            super()._publish(key, label, capture, routing)
 
     def _clear_frozen(self) -> None:
         self._frozen = {"sources": {}, "prefixes": {}}
@@ -674,7 +844,7 @@ class GraphExecutor(PointExecutor):
             return self._run_forward_group(model, input_role, **kwargs)
         self._check_frozen_inputs()
         key = (model, input_role)
-        if model == "original":
+        if is_unwritten(self.doc, model):
             if key not in self._frozen["sources"]:
                 result = self._run_forward_group(model, input_role, **kwargs)
                 self._frozen["sources"][key] = tree_map(
@@ -706,7 +876,7 @@ class GraphExecutor(PointExecutor):
         model,
         input_role,
         *,
-        digest,
+        shared_key,
         capture_sites,
         depth,
         gen_capture_sites=None,
@@ -722,7 +892,7 @@ class GraphExecutor(PointExecutor):
             return super()._forward_group(
                 model,
                 input_role,
-                digest=digest,
+                shared_key=shared_key,
                 capture_sites=capture_sites,
                 depth=depth,
                 gen_capture_sites=gen_capture_sites or {},
@@ -730,13 +900,12 @@ class GraphExecutor(PointExecutor):
             )
         # Resolve operands before capture. Each replay stages fresh values in
         # fixed storage, including operands served from the forward cache.
-        operands: dict[str, torch.Tensor] = {}
-        if model != "original":
-            writes = self.doc.intervened_models[model].writes
-            assert isinstance(writes, tuple)
-            for name in writes:
-                for operand in operand_names(self.doc.writes[name].do.payload):
-                    operands[operand] = self.dense_value(operand).to(self.bundle.device)
+        operands: dict[ReadRef, torch.Tensor] = {}
+        names = write_names(self.doc, model)
+        assert names is not None
+        for name in names:
+            for ref in operand_reads(self.doc, self.doc.writes[name].do):
+                operands[ref] = self.dense_value(ref).to(graph_device(self.bundle))
         modes = tuple(
             (name, s.training, getattr(s, "hard_eval", None))
             for name, s in self.stage_cache.items()
@@ -748,7 +917,7 @@ class GraphExecutor(PointExecutor):
             return super()._forward_group(
                 model,
                 input_role,
-                digest=digest,
+                shared_key=shared_key,
                 capture_sites=capture_sites,
                 depth=depth,
                 gen_capture_sites=gen_capture_sites or {},
@@ -758,12 +927,12 @@ class GraphExecutor(PointExecutor):
             # Drop old modes rather than retaining train/eval variants forever.
             old_modes = [old for old in self._inference_graphs if old[:2] == key[:2]]
             if old_modes:
-                torch.cuda.synchronize(self.bundle.device)
+                torch.cuda.synchronize(graph_device(self.bundle))
                 for old in old_modes:
                     del self._inference_graphs[old]
-            static = {name: value.detach().clone() for name, value in operands.items()}
+            static = {ref: value.detach().clone() for ref, value in operands.items()}
             saved_reads = self._read_values
-            self._read_values = dict(saved_reads, **static)
+            self._read_values = {**saved_reads, **static}
             self._recording = True
             try:
 
@@ -772,7 +941,7 @@ class GraphExecutor(PointExecutor):
                         capture, routing, _ = super(GraphExecutor, self)._forward_group(
                             model,
                             input_role,
-                            digest=digest,
+                            shared_key=shared_key,
                             capture_sites=capture_sites,
                             depth=0,
                             gen_capture_sites={},
@@ -782,7 +951,7 @@ class GraphExecutor(PointExecutor):
                 replay = Replay(
                     work,
                     self.stage_cache,
-                    device=torch.device(self.bundle.device),
+                    device=graph_device(self.bundle),
                     pool=self.graph_pool,
                 )
             finally:
@@ -790,8 +959,8 @@ class GraphExecutor(PointExecutor):
                 self._read_values = saved_reads
             self._inference_graphs[key] = replay, static
         replay, static = self._inference_graphs[key]
-        for name, value in operands.items():
-            static[name].copy_(value)
+        for ref, value in operands.items():
+            static[ref].copy_(value)
         capture, routing = replay()
         # ForwardCache and consumers own their tensors. Later replays must
         # never overwrite an earlier point's saved activations — and on the
@@ -800,7 +969,7 @@ class GraphExecutor(PointExecutor):
         capture = {key: value.detach().clone() for key, value in capture.items()}
         routing = {key: value.detach().clone() for key, value in routing.items()}
         self._publish(
-            digest,
+            shared_key,
             f"{model}/{input_role}",
             {key: value for key, value in capture.items() if value.numel()},
             routing,
@@ -813,21 +982,26 @@ class TrainingGraphs:
 
     Matching batches stage tokens and labels into their bucket's executor.
     Masks are part of the key: no stale padding or position IDs on replay.
-    Every bucket is captured into the bank's :class:`GraphPool`, so a new
-    bucket costs its own live outputs — the gradients and the loss — while
-    the working set is the pool's, shared with the buckets before it. The
-    fit's held-out inference replays share the pool too, so :meth:`close`
-    releases the buckets and leaves the pool to the owner that closes the
-    fit's last graph holder (``train.run_cohort_training``, or the
-    ``FitGraphCache`` that keeps the bank across compatible fits). An
-    allocation that runs out of memory, in a capture or a replay, releases
-    the bank and keeps the rest of that fit eager.
+    Buckets retain their gradients and loss but share intermediate storage
+    through [`GraphPool`][]. Held-out inference uses the same pool.
+    [`close`][] releases the buckets; the pool owner releases the pool after
+    all graph holders close. ``FitGraphCache`` may retain banks across fits.
+    An allocation OOM during capture or replay releases the bank and runs the
+    remainder of the fit eagerly. Under ``OOMPolicy.ABORT`` (a geometry whose
+    windows carry collectives) the run ends instead
+    ([`abort_distributed`][causalab.neural.engines.pytorch_hooks.budget.abort_distributed]),
+    since this rank alone turning eager would desynchronize its peers.
     """
 
     def __init__(
-        self, parameters: list[torch.nn.Parameter], *, pool: GraphPool | None = None
+        self,
+        parameters: list[torch.nn.Parameter],
+        *,
+        pool: GraphPool | None = None,
+        oom_policy: OOMPolicy = OOMPolicy.RETRY,
     ) -> None:
         self.parameters = parameters
+        self.oom_policy = oom_policy
         # a pool the bank opened itself is the bank's to release; one handed
         # in belongs to the fit's owner, which closes every holder first
         self._owns_pool = pool is None
@@ -839,8 +1013,10 @@ class TrainingGraphs:
     def backward(self, executor: PointExecutor, objective: Any) -> bool:
         try:
             return self._backward(executor, objective)
-        except torch.OutOfMemoryError:
-            torch.cuda.synchronize(executor.bundle.device)
+        except torch.OutOfMemoryError as error:
+            if self.oom_policy is OOMPolicy.ABORT:
+                abort_distributed(error, IN_GRAPH)
+            torch.cuda.synchronize(graph_device(executor.bundle))
             # The failed worker/capture frame must unwind before releasing
             # cached pools. Do not swallow capture-invalidated CUDA errors.
             self._release()
@@ -884,7 +1060,7 @@ class TrainingGraphs:
             )
         key = self.keys[id(executor)][1]
         if key not in self.buckets:
-            device = torch.device(executor.bundle.device)
+            device = graph_device(executor.bundle)
             # All buckets keep the first capture's storage, including after
             # a compatible fit supplies a new optimizer and parameters.
             captured = next(iter(self.buckets.values()), None)
@@ -966,7 +1142,7 @@ class TrainingGraphs:
         """Release the buckets and their gradients, leaving the pool: the
         OOM fallback hands it back only once the failed frame has unwound."""
         for worker, _, _ in self.buckets.values():
-            torch.cuda.synchronize(worker.bundle.device)
+            torch.cuda.synchronize(graph_device(worker.bundle))
             worker.close()
         self.buckets.clear()
         self.keys.clear()

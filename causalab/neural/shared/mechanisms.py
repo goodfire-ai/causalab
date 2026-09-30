@@ -1,13 +1,9 @@
-"""The closed ``do`` mechanism set (spec §2.8), applied in feature space.
+"""Apply the protocol's mechanisms in feature space.
 
-Per (site, overlapping pos, model): the absolute write (if any) applies
-first, then additive deltas sum — the class order that makes write sets
-order-free. ``dims`` scatter and the error-term contract live in the
-executor (the mechanism sees the feature slice it writes).
-
-``gaussian`` realizes the RNG contract the parity goldens pin: the draw is
-``torch.Generator().manual_seed(seed)`` → ``randn((batch, n_pos, width))``,
-made **outside** the model, once per write application.
+At an address, the absolute write applies first and additive deltas sum.
+The executor handles dimension selection and the pre-write error term.
+A Gaussian write draws ``(batch, positions, width)`` once per application
+from a locally seeded Torch generator outside the model.
 """
 
 from __future__ import annotations
@@ -17,7 +13,7 @@ from typing import Any, Callable, Mapping, Sequence
 
 import torch
 
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.schema import ADDITIVE_MECHANISMS, CodeSpec, Do
 
 __all__ = ["apply_absolute", "apply_delta", "is_additive", "row_role_bounds"]

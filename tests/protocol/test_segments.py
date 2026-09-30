@@ -1,5 +1,5 @@
 """The ``segments`` section, rule 27, the ``location_ledger`` save kind and the
-ledger's digest (spec §2.2.1, §2.12, §6, §7, §8) — the pure half.
+ledger's rows (spec §2.2.1, §2.12, §6, §7) — the pure half.
 
 * ``segments`` is an optional top-level section right after ``data``; its
   parse, its closed vocabularies (``frame``, the chat segment names, the
@@ -13,16 +13,13 @@ ledger's digest (spec §2.2.1, §2.12, §6, §7, §8) — the pure half.
   canonicalize to their pinned digests — the proof the section is optional and
   digest-neutral;
 * the ``location_ledger`` save kind parses, is opt-in, and rule 10 holds it
-  to one JSON entry; the ledger digest is recomputable from the documented
-  construction and **changes when only a token id changes** (T1's mutation);
-  ``location_ledger_sha256`` is an identity key that is stamped and recorded,
-  never compared.
+  to one JSON entry; the ledger records an address once and refuses a
+  contradiction at the same address.
 """
 
 from __future__ import annotations
 
 import ast
-import hashlib
 import json
 import re
 from pathlib import Path
@@ -30,22 +27,15 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import (
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import (
     REASON_CODES,
     RULES,
     ParseError,
     ValidationError,
 )
-from causalab.protocol.ledger import (
-    LEDGER_COLUMNS,
-    LEDGER_IDENTITY_KEY,
-    LedgerRow,
-    LocationLedger,
-    ledger_digest,
-)
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import ARTIFACT_IDENTITY_KEYS
+from causalab.protocol.positions.ledger import LEDGER_COLUMNS, LedgerRow, LocationLedger
+from causalab.protocol.pipeline import compile_protocol
 from causalab.protocol.schema import SAVE_KINDS, SECTION_ORDER, parse_document
 from causalab.protocol.segments import (
     CHAT_SEGMENTS,
@@ -54,16 +44,18 @@ from causalab.protocol.segments import (
     SegmentsSpec,
     parse_segments,
 )
-from causalab.protocol.validate import validate_document
+from causalab.protocol.rules.document import validate_document
 
-from tests.protocol._docs import base_doc, in_order
-from tests.protocol._env import CORPUS_DIR
+from tests.protocol._docs import base_doc, in_order, saved
+from tests.protocol._env import CORPUS_DIR, steps_of
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
 SPEC = REPO / "docs" / "intervention_protocol.md"
-SHIPPED_LOCATE_SCAN = REPO / "causalab/configs/protocols/weekdays_locate_scan.json"
+INTERNALS = REPO / "docs" / "intervention_protocol_internals.md"
+SHIPPED_LOCATE_SCAN = PROTOCOLS_DIR / "weekdays_locate_scan.json"
 PINS = json.loads((Path(__file__).parent / "corpus_digests.json").read_text())
 
 
@@ -84,8 +76,13 @@ def _chat_doc(position: Any, **segments: Any) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 
-def test_segments_is_the_section_after_data() -> None:
-    assert SECTION_ORDER.index("segments") == SECTION_ORDER.index("data") + 1
+def test_segments_is_the_first_section_after_the_models() -> None:
+    """`intervened_models` opens the method (§1); `segments` follows it,
+    ahead of every section that can name a segment."""
+    assert SECTION_ORDER.index("intervened_models") == SECTION_ORDER.index("data") + 1
+    assert (
+        SECTION_ORDER.index("segments") == SECTION_ORDER.index("intervened_models") + 1
+    )
     assert SECTION_ORDER.index("segments") < SECTION_ORDER.index("positions")
 
 
@@ -133,9 +130,9 @@ def test_the_section_is_parsed_onto_the_document() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _section(heading: str) -> str:
+def _section(heading: str, spec: Path = SPEC) -> str:
     depth = len(heading) - len(heading.lstrip("#"))
-    body = SPEC.read_text().split(heading, 1)
+    body = spec.read_text().split(heading, 1)
     assert len(body) == 2, f"{heading!r} is not in the spec"
     end = re.compile(rf"^#{{1,{depth}}} ", re.M).search(body[1])
     return body[1][: end.start()] if end else body[1]
@@ -190,7 +187,7 @@ def test_the_chat_template_reason_code_is_in_the_vocabulary() -> None:
 
 
 def test_the_ledger_columns_are_the_spec_row() -> None:
-    section = _section("## 6. Derived — never authored")
+    section = _section("## 6. Derived: never authored", INTERNALS)
     assert (
         "(example, edit group, constituent, side, token index, token id, decoded token)"
         in section
@@ -207,7 +204,7 @@ def test_the_ledger_columns_are_the_spec_row() -> None:
 
 
 def test_the_new_protocol_modules_are_torch_free() -> None:
-    for name in ("spans.py", "segments.py", "ledger.py"):
+    for name in ("positions/spans.py", "segments.py", "positions/ledger.py"):
         tree = ast.parse((REPO / "causalab/protocol" / name).read_text())
         modules = {
             (node.module or "").split(".")[0]
@@ -315,20 +312,12 @@ def _generated_doc(position: Any) -> dict[str, Any]:
     doc = base_doc()
     doc["method"]["segments"] = {"frame": "chat"}
     doc["method"]["positions"] = {"g": position}
-    doc["method"]["reads"]["gen"] = {
-        "site": "lm_head",
-        "pos": "g",
-        "model": "original",
+    doc["method"]["reads"]["gen"] = {"site": "lm_head", "pos": "g"}
+    doc["method"]["intervened_models"]["original_base"] = {
         "input": "base",
+        "reads": ["gen"],
     }
-    doc["method"]["save"].append(
-        {
-            "value": "gen",
-            "model": "original",
-            "input": "base",
-            "file_path": "gen.safetensors",
-        }
-    )
+    doc["method"]["save"].append(saved("gen", "original_base", "gen.safetensors"))
     return doc
 
 
@@ -396,18 +385,18 @@ def test_twin_a_plain_frame_declares_column_segments() -> None:
 
 @pytest.mark.parametrize("name", sorted(PINS))
 def test_t3_every_corpus_document_authors_no_segments_and_keeps_its_pin(env, name):
-    loaded = load(CORPUS_DIR / name, env)
+    loaded = compile_protocol(CORPUS_DIR / name, env=env)
     assert loaded.document.segments is None
-    assert "segments" not in loaded.canonical_document
-    assert loaded.document_digest == PINS[name]["document"]
-    assert list(loaded.point_digests) == PINS[name]["points"]
+    assert "segments" not in loaded.canonical
+    assert loaded.digests.document == PINS[name]["document"]
+    assert list(steps_of(loaded, env).digests) == PINS[name]["points"]
 
 
 def test_t3_the_shipped_locate_scan_loads_with_no_segments(env) -> None:
-    loaded = load(SHIPPED_LOCATE_SCAN, env)
+    loaded = compile_protocol(SHIPPED_LOCATE_SCAN, env=env)
     assert loaded.document.segments is None
-    assert "segments" not in loaded.canonical_document
-    assert len(loaded.point_digests) == 64
+    assert "segments" not in loaded.canonical
+    assert len(steps_of(loaded, env).digests) == 56  # 28 layers x 2 positions
 
 
 def test_the_section_is_copied_through_canonicalization_only_when_authored(env):
@@ -432,7 +421,7 @@ def test_the_ledger_save_kind_parses_and_validates() -> None:
     validate_document(parsed)
     entry = parsed.save[-1]
     assert entry.kind == "location_ledger" and entry.value == "location_ledger"
-    assert entry.model is None and entry.input is None and entry.site is None
+    assert entry.read is None and entry.site is None
 
 
 def test_a_document_without_the_entry_asks_for_no_ledger() -> None:
@@ -477,7 +466,7 @@ def test_rule_10_holds_the_ledger_to_one_entry() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# the ledger digest and the stamp
+# the ledger rows
 # --------------------------------------------------------------------------- #
 
 
@@ -495,36 +484,6 @@ def _row(**over: Any) -> LedgerRow:
     return LedgerRow(**base)
 
 
-def test_the_digest_is_recomputable_from_the_documented_construction() -> None:
-    ledger = LocationLedger()
-    ledger.add(_row())
-    ledger.add(_row(example=1, token_index=7, token_id=13, decoded_token="."))
-    lines = sorted(
-        json.dumps(r, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-        for r in ledger.records()
-    )
-    by_hand = hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
-    assert ledger.digest == by_hand == ledger_digest(ledger.records())
-    # the saved table's extra columns (point, coords) never enter it
-    assert (
-        ledger_digest([{**r, "point": "x", "coords": {}} for r in ledger.records()])
-        == by_hand
-    )
-
-
-def test_t1_mutation_the_digest_reads_the_token_id_and_the_decoded_piece() -> None:
-    """Make the ledger ignore token ids and this fails: the same index with a
-    different token there is a different ledger."""
-    same_index = LocationLedger()
-    same_index.add(_row())
-    other_token = LocationLedger()
-    other_token.add(_row(token_id=13, decoded_token="."))
-    assert same_index.digest != other_token.digest
-    only_id = LocationLedger()
-    only_id.add(_row(token_id=13))
-    assert same_index.digest != only_id.digest
-
-
 def test_the_ledger_records_an_address_once_and_refuses_a_contradiction() -> None:
     ledger = LocationLedger()
     ledger.add(_row())
@@ -532,8 +491,3 @@ def test_the_ledger_records_an_address_once_and_refuses_a_contradiction() -> Non
     assert len(ledger) == 1
     with pytest.raises(AssertionError, match="recorded twice"):
         ledger.add(_row(token_id=1))
-
-
-def test_the_identity_key_is_in_the_schema() -> None:
-    assert LEDGER_IDENTITY_KEY == "location_ledger_sha256"
-    assert LEDGER_IDENTITY_KEY in ARTIFACT_IDENTITY_KEYS

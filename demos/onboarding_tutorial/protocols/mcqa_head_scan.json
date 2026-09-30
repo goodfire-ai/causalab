@@ -1,54 +1,45 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Does the attention PATTERN carry the answer symbol? A point interchanges one layer's whole post-softmax pattern -- every head, every query, every key -- from the counterfactual into the base, and asks whether the model then answers the counterfactual's symbol. The pattern must be read at pos 'all': a row of it is a distribution over key positions, and a single query position is not the object an interchange on attention moves. The sweep is over layers only, not heads: sites.<name>.head does not reach an attention_probs write on the reference engine, so a head axis here would expand to points that are the same experiment under different names (see the demo's Limits). The band is layers 12-15, which is 06's result rather than a budget."
+    "protocol_version": "4",
+    "description": "Interchange each layer's whole attention pattern at layers 20 to 27 on 64 MCQA pairs. Save per-pair answer matches and logit differences."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {
     "base": {"dataset": "mcqa/pairs_n64_s0", "field": "input"},
     "counterfactual": {"dataset": "mcqa/pairs_n64_s0", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["p_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "sites": {
       "pattern": {
         "component": "attention_probs",
         "layers": {
-          "sweep": {"range": [12, 16]}
+          "sweep": {"range": [20, 28]}
         }
       },
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "p_cf": {"site": "pattern", "pos": "all", "model": "original", "input": "counterfactual"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
+      "p_cf": {"site": "pattern", "pos": "all"},
+      "logits": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "patch": {"site": "pattern", "pos": "all", "do": {"swap": "p_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "logit_diff": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
       {
-        "value": "logit_diff",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
         "file_path": "logit_diff.json"
       }
     ]

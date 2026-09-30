@@ -1,0 +1,75 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Figure 3b of Wang et al. 2022 (arXiv:2211.00593), layers 0-10: swap one GPT-2 small head's output at the last token for its value on the three-name prompt, hold every later attention layer at its clean value, and save the logit difference IO - S of the clean and patched runs; workflows/scripts/ioi_fig3b/fig3b_figure.py draws the relative change of their means."
+  },
+  "model": {"key": "gpt2", "revision": "607a30d783dfa663caf39e06633721c8d4cfcd7e", "dtype": "fp32"},
+  "data": {
+    "base": {"dataset": "ioi_fig3b/data", "field": "input"},
+    "counterfactual": {"dataset": "ioi_fig3b/data", "field": "counterfactual_inputs[0]"}
+  },
+  "axes": {
+    "sender": {
+      "rows": [
+        {"layers": 0, "freeze": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]},
+        {"layers": 1, "freeze": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]},
+        {"layers": 2, "freeze": [3, 4, 5, 6, 7, 8, 9, 10, 11]},
+        {"layers": 3, "freeze": [4, 5, 6, 7, 8, 9, 10, 11]},
+        {"layers": 4, "freeze": [5, 6, 7, 8, 9, 10, 11]},
+        {"layers": 5, "freeze": [6, 7, 8, 9, 10, 11]},
+        {"layers": 6, "freeze": [7, 8, 9, 10, 11]},
+        {"layers": 7, "freeze": [8, 9, 10, 11]},
+        {"layers": 8, "freeze": [9, 10, 11]},
+        {"layers": 9, "freeze": [10, 11]},
+        {"layers": 10, "freeze": [11]}
+      ],
+      "key": "layers"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_sender"]},
+      "original_base": {"input": "base", "reads": ["v_downstream", "logits_clean"]},
+      "patched": {
+        "input": "base",
+        "reads": ["logits_patched"],
+        "writes": ["swap_sender", "freeze"]
+      }
+    },
+    "sites": {
+      "sender": {
+        "component": "attention_premix",
+        "layers": {"axis": "sender.layers"},
+        "head": {
+          "sweep": {"range": [0, 12]}
+        }
+      },
+      "downstream": {"component": "attention_output", "layers": {"axis": "sender.freeze"}},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_sender": {"site": "sender", "pos": -1},
+      "v_downstream": {"site": "downstream", "pos": -1},
+      "logits_clean": {"site": "lm_head", "pos": -1},
+      "logits_patched": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "swap_sender": {"site": "sender", "pos": -1, "do": {"swap": "v_sender"}},
+      "freeze": {"site": "downstream", "pos": -1, "do": {"swap": "v_downstream"}}
+    },
+    "save": [
+      {
+        "read": "logits_clean",
+        "model": "original_base",
+        "aggregation": {"kind": "logit_diff", "a": "base_answer", "b": "s_answer"},
+        "file_path": "ld_clean.json"
+      },
+      {
+        "read": "logits_patched",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "base_answer", "b": "s_answer"},
+        "file_path": "ld_patched.json"
+      }
+    ]
+  }
+}

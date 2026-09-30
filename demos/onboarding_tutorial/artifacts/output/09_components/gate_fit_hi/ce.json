@@ -1,0 +1,1026 @@
+[
+  {
+    "example_id": "0",
+    "metric": "ce",
+    "value": 0.4464833736419678,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "ce",
+    "value": 0.33635401725769043,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "ce",
+    "value": 0.1359434723854065,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "ce",
+    "value": 2.257218360900879,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "ce",
+    "value": 0.08411009609699249,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "ce",
+    "value": 0.5564457774162292,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "ce",
+    "value": 0.7310073971748352,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "ce",
+    "value": 0.0444236695766449,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "ce",
+    "value": 2.1473255157470703,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "ce",
+    "value": 1.2844700813293457,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "ce",
+    "value": 0.2552235722541809,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "ce",
+    "value": 1.0423330068588257,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "ce",
+    "value": 0.8608347773551941,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "ce",
+    "value": 0.354051798582077,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "ce",
+    "value": 0.9404363036155701,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "ce",
+    "value": 0.6257430911064148,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "ce",
+    "value": 0.7352357506752014,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "ce",
+    "value": 0.4441898763179779,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "ce",
+    "value": 0.5769760012626648,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "ce",
+    "value": 0.2323366403579712,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "ce",
+    "value": 1.5087110996246338,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "ce",
+    "value": 0.9786363244056702,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "ce",
+    "value": 0.14277710020542145,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "ce",
+    "value": 1.3134791851043701,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "ce",
+    "value": 0.31116169691085815,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "ce",
+    "value": 1.1384221315383911,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "ce",
+    "value": 0.39067792892456055,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "ce",
+    "value": 0.3354164958000183,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "ce",
+    "value": 0.32366815209388733,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "ce",
+    "value": 1.2768034934997559,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "ce",
+    "value": 0.21236927807331085,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "ce",
+    "value": 0.22640419006347656,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "ce",
+    "value": 0.36524075269699097,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "ce",
+    "value": 0.5191394686698914,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "ce",
+    "value": 0.38071200251579285,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "ce",
+    "value": 0.2902194559574127,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "ce",
+    "value": 0.34232297539711,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "ce",
+    "value": 0.6247219443321228,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "ce",
+    "value": 0.050579946488142014,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "ce",
+    "value": 0.6662381887435913,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "ce",
+    "value": 1.3088905811309814,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "ce",
+    "value": 0.32624638080596924,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "ce",
+    "value": 5.032426357269287,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "ce",
+    "value": 0.5390634536743164,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "ce",
+    "value": 0.07108382135629654,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "ce",
+    "value": 0.7622802257537842,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "ce",
+    "value": 0.09900999814271927,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "ce",
+    "value": 0.153006911277771,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "ce",
+    "value": 0.09910576790571213,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "ce",
+    "value": 1.3034396171569824,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "ce",
+    "value": 0.48926088213920593,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "ce",
+    "value": 0.2675004005432129,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "ce",
+    "value": 0.5992759466171265,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "ce",
+    "value": 1.1296851634979248,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "ce",
+    "value": 0.293251633644104,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "ce",
+    "value": 1.0151209831237793,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "ce",
+    "value": 0.06892852485179901,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "ce",
+    "value": 0.06048189848661423,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "ce",
+    "value": 1.095963954925537,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "ce",
+    "value": 0.43596315383911133,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "ce",
+    "value": 0.45048922300338745,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "ce",
+    "value": 1.126939058303833,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "ce",
+    "value": 0.28617867827415466,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "ce",
+    "value": 0.5581027269363403,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "64",
+    "metric": "ce",
+    "value": 0.04646351560950279,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "65",
+    "metric": "ce",
+    "value": 0.4089494049549103,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "66",
+    "metric": "ce",
+    "value": 0.18429335951805115,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "67",
+    "metric": "ce",
+    "value": 0.6986268758773804,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "68",
+    "metric": "ce",
+    "value": 1.328526496887207,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "69",
+    "metric": "ce",
+    "value": 0.1456078290939331,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "70",
+    "metric": "ce",
+    "value": 0.41840800642967224,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "71",
+    "metric": "ce",
+    "value": 0.3932909369468689,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "72",
+    "metric": "ce",
+    "value": 0.5749576091766357,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "73",
+    "metric": "ce",
+    "value": 0.15213322639465332,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "74",
+    "metric": "ce",
+    "value": 0.11009224504232407,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "75",
+    "metric": "ce",
+    "value": 0.38542282581329346,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "76",
+    "metric": "ce",
+    "value": 1.0621602535247803,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "77",
+    "metric": "ce",
+    "value": 0.05603884160518646,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "78",
+    "metric": "ce",
+    "value": 1.7052252292633057,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "79",
+    "metric": "ce",
+    "value": 0.5021430253982544,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "80",
+    "metric": "ce",
+    "value": 0.2184315174818039,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "81",
+    "metric": "ce",
+    "value": 0.567058265209198,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "82",
+    "metric": "ce",
+    "value": 0.12917093932628632,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "83",
+    "metric": "ce",
+    "value": 0.40183377265930176,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "84",
+    "metric": "ce",
+    "value": 0.08810552954673767,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "85",
+    "metric": "ce",
+    "value": 0.16692198812961578,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "86",
+    "metric": "ce",
+    "value": 0.3383781909942627,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "87",
+    "metric": "ce",
+    "value": 0.4136201739311218,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "88",
+    "metric": "ce",
+    "value": 0.3209613561630249,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "89",
+    "metric": "ce",
+    "value": 0.37515226006507874,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "90",
+    "metric": "ce",
+    "value": 0.8011910915374756,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "91",
+    "metric": "ce",
+    "value": 0.12750127911567688,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "92",
+    "metric": "ce",
+    "value": 0.06733555346727371,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "93",
+    "metric": "ce",
+    "value": 0.8775147199630737,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "94",
+    "metric": "ce",
+    "value": 0.7787185907363892,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "95",
+    "metric": "ce",
+    "value": 0.654533326625824,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "96",
+    "metric": "ce",
+    "value": 1.1521883010864258,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "97",
+    "metric": "ce",
+    "value": 0.15038049221038818,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "98",
+    "metric": "ce",
+    "value": 0.2527883052825928,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "99",
+    "metric": "ce",
+    "value": 0.7885389924049377,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "100",
+    "metric": "ce",
+    "value": 0.11819250136613846,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "101",
+    "metric": "ce",
+    "value": 0.9959936141967773,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "102",
+    "metric": "ce",
+    "value": 0.4987161159515381,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "103",
+    "metric": "ce",
+    "value": 0.511271595954895,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "104",
+    "metric": "ce",
+    "value": 0.2136995941400528,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "105",
+    "metric": "ce",
+    "value": 0.13632747530937195,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "106",
+    "metric": "ce",
+    "value": 0.10538706183433533,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "107",
+    "metric": "ce",
+    "value": 0.5288358926773071,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "108",
+    "metric": "ce",
+    "value": 0.21108777821063995,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "109",
+    "metric": "ce",
+    "value": 0.10851447284221649,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "110",
+    "metric": "ce",
+    "value": 0.03320801258087158,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "111",
+    "metric": "ce",
+    "value": 0.064218670129776,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "112",
+    "metric": "ce",
+    "value": 0.1043919250369072,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "113",
+    "metric": "ce",
+    "value": 0.10411491990089417,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "114",
+    "metric": "ce",
+    "value": 1.2141876220703125,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "115",
+    "metric": "ce",
+    "value": 0.3332304358482361,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "116",
+    "metric": "ce",
+    "value": 0.46826255321502686,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "117",
+    "metric": "ce",
+    "value": 0.6777044534683228,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "118",
+    "metric": "ce",
+    "value": 0.03660772740840912,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "119",
+    "metric": "ce",
+    "value": 0.3153686225414276,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "120",
+    "metric": "ce",
+    "value": 0.7630488276481628,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "121",
+    "metric": "ce",
+    "value": 0.4058949649333954,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "122",
+    "metric": "ce",
+    "value": 0.0964602380990982,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "123",
+    "metric": "ce",
+    "value": 0.2554856240749359,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "124",
+    "metric": "ce",
+    "value": 0.5369990468025208,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "125",
+    "metric": "ce",
+    "value": 0.15917421877384186,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "126",
+    "metric": "ce",
+    "value": 0.12835796177387238,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "127",
+    "metric": "ce",
+    "value": 0.41366666555404663,
+    "unit": "nat",
+    "estimand_version": "cross_entropy/v1",
+    "eligible": true
+  }
+]

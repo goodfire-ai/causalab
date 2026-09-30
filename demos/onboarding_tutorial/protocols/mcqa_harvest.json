@@ -1,23 +1,19 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Read the residual stream at the located cell (L14, answer slot) on 128 base prompts and write it out. No writes, hence no intervened_models: this is the one un-intervened forward every geometric question starts from, and the tensor it saves is what fit_pca reduces."
+    "protocol_version": "4",
+    "description": "Save the residual stream at block 26's answer slot on the 128 original training prompts, for fitting a principal basis."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
-  "data": {"base": {"dataset": "mcqa/data#train", "field": "input"}},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
+  "data": {"base": {"dataset": "mcqa/train_n128_s1", "field": "input"}},
   "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["acts"]}
+    },
     "positions": {"best": {"index": -1}},
     "sites": {
-      "target": {"component": "block_output", "layers": [14]}
+      "target": {"component": "block_output", "layers": [26]}
     },
-    "reads": {"acts": {"site": "target", "pos": "best", "model": "original", "input": "base"}},
-    "save": [
-      {
-        "value": "acts",
-        "model": "original",
-        "input": "base",
-        "file_path": "acts.safetensors"
-      }
-    ]
+    "reads": {"acts": {"site": "target", "pos": "best"}},
+    "save": [{"read": "acts", "model": "original", "file_path": "acts.safetensors"}]
   }
 }

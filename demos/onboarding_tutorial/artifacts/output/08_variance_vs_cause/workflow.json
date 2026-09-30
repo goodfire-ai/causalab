@@ -1,0 +1,247 @@
+{
+  "output_dir": "08_variance_vs_cause",
+  "steps": {
+    "harvest": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "5a9a3cf132d966b111422e012bce05b93c4f218e9832378c9250b0083ffc172f",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_harvest.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "5a9a3cf132d966b111422e012bce05b93c4f218e9832378c9250b0083ffc172f",
+      "points": 1,
+      "point_digests": [
+        "5a9a3cf132d966b111422e012bce05b93c4f218e9832378c9250b0083ffc172f"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "acts.safetensors"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 1,
+      "digests": {
+        "acts.safetensors": "01e6df83598d648e9cb5c90c4833cdbe7fbdb8496203e5eea9de54e12b8c0120"
+      },
+      "checks": {
+        "acts.safetensors": "safetensors-header"
+      },
+      "disposition": "accepted"
+    },
+    "pca1": {
+      "type": "script",
+      "status": "completed",
+      "identity": "a853a378ea98163bca8f225d8b4317d3d94afcd579b022aa0dd978f694b8d290",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.analysis.fit_pca",
+      "script_sha256": "68d83de1f90b8905aeb39a2a7780ca73715a943f91c964f168b908a1684d485a",
+      "digest": "a853a378ea98163bca8f225d8b4317d3d94afcd579b022aa0dd978f694b8d290",
+      "is_deterministic": true,
+      "inputs": {
+        "acts": "harvest/acts.safetensors",
+        "k": 1
+      },
+      "input_digests": {
+        "acts": "01e6df83598d648e9cb5c90c4833cdbe7fbdb8496203e5eea9de54e12b8c0120"
+      },
+      "axes": [],
+      "files": [
+        "basis.safetensors",
+        "spectrum.json"
+      ],
+      "digests": {
+        "basis.safetensors": "b84aed5d143493ccfdd8bd2508a899ec66548f4450b6238681d23a16e96bba96",
+        "spectrum.json": "090f85105407e6f8a3c0d05a166b7107cf162c84975d30e7a7b009a597904107"
+      },
+      "checks": {
+        "basis.safetensors": "safetensors-header",
+        "spectrum.json": "json-table"
+      },
+      "disposition": "accepted"
+    },
+    "pca32": {
+      "type": "script",
+      "status": "completed",
+      "identity": "ac945cb11882711c445117ef93dd48f2a734e6d5ba9117bea71c99237c2d3751",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.analysis.fit_pca",
+      "script_sha256": "68d83de1f90b8905aeb39a2a7780ca73715a943f91c964f168b908a1684d485a",
+      "digest": "ac945cb11882711c445117ef93dd48f2a734e6d5ba9117bea71c99237c2d3751",
+      "is_deterministic": true,
+      "inputs": {
+        "acts": "harvest/acts.safetensors",
+        "k": 32
+      },
+      "input_digests": {
+        "acts": "01e6df83598d648e9cb5c90c4833cdbe7fbdb8496203e5eea9de54e12b8c0120"
+      },
+      "axes": [],
+      "files": [
+        "basis.safetensors",
+        "spectrum.json"
+      ],
+      "digests": {
+        "basis.safetensors": "b715a1343b72ae271bf1b6ec1e3a71735fff572a8c7e308c0b112056c6ebb84b",
+        "spectrum.json": "e1f9fd6619b217212ff281e4ca0cf1be5c379410273dc05d355ca3ef64e5ac5a"
+      },
+      "checks": {
+        "basis.safetensors": "safetensors-header",
+        "spectrum.json": "json-table"
+      },
+      "disposition": "accepted"
+    },
+    "apply1": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "6752d88917f5ea202cdcf61c2ba40075a51eadf6122129d7e47b6d877c827297",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_pca_apply.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "6752d88917f5ea202cdcf61c2ba40075a51eadf6122129d7e47b6d877c827297",
+      "points": 1,
+      "point_digests": [
+        "6752d88917f5ea202cdcf61c2ba40075a51eadf6122129d7e47b6d877c827297"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "iia.json": "b8133595610cc52623b7391594ff6d1a61e874a8447b3db8ebe40be7f215f42a",
+        "logit_diff.json": "d09a912035912b2252d66a55ccd14d6f7ce9fd3b72688558f70a97eded74dd0b"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "apply32": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "3111a7d9de1327bd8e2940eaa395ca6fc5f1784b7dd00f2f372b71d6d6644604",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_pca_apply.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "3111a7d9de1327bd8e2940eaa395ca6fc5f1784b7dd00f2f372b71d6d6644604",
+      "points": 1,
+      "point_digests": [
+        "3111a7d9de1327bd8e2940eaa395ca6fc5f1784b7dd00f2f372b71d6d6644604"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "iia.json": "df05227f56f89a89674129d875d35e37f22aadc938cfa030a7f7da32224a989e",
+        "logit_diff.json": "7c04a46593852e117f3d22630f181b509b642342877ed4a48cad5e35e3be130b"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "spectrum_curve": {
+      "type": "script",
+      "status": "completed",
+      "identity": "295ea708f3c709574cc36f2cf66f3842819c91a4cd268c531fc95c443a6ff3cf",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.io.plots.workflow_figures",
+      "script_sha256": "0de1b7ca714ef474db3ab9f3c7a879e000d5d314d214bea4221e88a361cd81a4",
+      "digest": "295ea708f3c709574cc36f2cf66f3842819c91a4cd268c531fc95c443a6ff3cf",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "pca32/spectrum.json",
+        "plot": "lines",
+        "x": "pc",
+        "value": "explained_variance_ratio"
+      },
+      "input_digests": {
+        "table": "e1f9fd6619b217212ff281e4ca0cf1be5c379410273dc05d355ca3ef64e5ac5a"
+      },
+      "axes": [],
+      "files": [
+        "08_variance_vs_cause_pca_spectrum.json",
+        "08_variance_vs_cause_pca_spectrum.png"
+      ],
+      "digests": {
+        "08_variance_vs_cause_pca_spectrum.json": "e1f9fd6619b217212ff281e4ca0cf1be5c379410273dc05d355ca3ef64e5ac5a",
+        "08_variance_vs_cause_pca_spectrum.png": "0ccc86d7f22dfc5d42c0ed8ac93f90d275c2bf9fe757c3dfe3704b5643348dd8"
+      },
+      "checks": {
+        "08_variance_vs_cause_pca_spectrum.json": "json",
+        "08_variance_vs_cause_pca_spectrum.png": "png-signature"
+      },
+      "disposition": "accepted"
+    }
+  }
+}

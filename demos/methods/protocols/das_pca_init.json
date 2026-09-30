@@ -1,0 +1,78 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "DAS from a PCA start: the rank sweep [1, 2, 4, 8, 16] x three seeds, every fit initialised from the first k principal components of a basis fitted at the same site (init.file_path - a causalab.analysis.fit_pca output over a harvest of block_output L23; its ArtifactIdentity must match this model realization and site, and its own rank and dataset are its own). Before the first step the featurized read is exactly P_k^T x; the seed completes P_k to a full basis and orders the batches, so the three seeds are three trajectories from one start rather than three starts. Flat on purpose: methods/das.json is the random-start method, and a fit whose starting point is an artifact is a different method with a different record (init_* in the saved rot.safetensors). k=16 is the widest rank the report needs - and the widest a basis fitted on the 30 training pairs can hold (pca_harvest.json); the tiny fixture the smoke test retargets this to is 16 wide, so it sweeps k over [1, 2, 4] there."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#train",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "sites": {
+      "target": {"component": "block_output", "layers": [23]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "rot": {
+        "kind": "subspace",
+        "k": {"sweep": [1, 2, 4, 8, 16]},
+        "parametrization": "cayley",
+        "init": {"file_path": "artifacts/weekdays/qwen25_7b/pca/block_output_L23.safetensors"}
+      }
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "featurizer": "rot"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "patch": {"site": "target", "pos": -1, "featurizer": "rot", "do": {"swap": "v_cf"}}
+    },
+    "train": {
+      "objective": {
+        "ce": {
+          "weight": 1.0,
+          "read": "logits",
+          "model": "patched",
+          "aggregation": {"kind": "cross_entropy", "target": "label"}
+        }
+      },
+      "params": ["rot"],
+      "optimizer": {"name": "adamw", "lr": 0.001, "weight_decay": 0.0},
+      "steps": {"epochs": 10},
+      "batch": {"pairs": 16},
+      "precision": {"feature": "fp32", "loss": "fp32"},
+      "eval": {
+        "every": {"epochs": 1},
+        "split": "natural_domains_arithmetic/data/weekdays#test",
+        "aggregations": {
+          "iia": {
+            "read": "logits",
+            "model": "patched",
+            "aggregation": {"kind": "match", "expected": "cf_answer"}
+          }
+        }
+      },
+      "early_stop": {"on": "iia", "patience": 3, "mode": "max"},
+      "seed": {"sweep": [0, 1, 2]}
+    },
+    "save": [
+      {"train": "iia", "file_path": "iia.json"},
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "logit_diff.json"
+      },
+      {"train": "ce", "file_path": "ce.json"},
+      {"value": "rot", "site": "target", "file_path": "rot.safetensors"}
+    ]
+  }
+}

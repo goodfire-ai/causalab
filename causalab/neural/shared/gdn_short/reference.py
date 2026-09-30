@@ -1,25 +1,15 @@
-"""Reference forms of the gated delta rule, in plain float32 torch.
+"""Float32 Torch references for the gated delta rule.
 
-Two functions, both differentiable by autograd and both the numerics oracle
-for the single-chunk kernel beside them (``triton_kernel.py``):
+``recurrent_gated_delta_rule_reference`` follows the token recurrence.
+``single_chunk_gated_delta_rule_torch`` evaluates the closed form for one
+chunk with zero initial state. Both support autograd and serve as numerical
+oracles for the Triton kernel.
 
-* :func:`recurrent_gated_delta_rule_reference` — the recurrence itself, one
-  sequential step per token on the ``[K, V]`` state, exactly as transformers'
-  ``torch_recurrent_gated_delta_rule`` spells it (``modeling_qwen3_5_moe.py``)
-  but for a whole sequence and with the grouped-head layout FLA takes. Slow,
-  obviously right, and the oracle every other form is measured against.
-* :func:`single_chunk_gated_delta_rule_torch` — the closed form the kernel
-  computes, for a sequence that fits one chunk with no initial state. It is
-  the chunked algorithm with its inter-chunk half removed (module docstring
-  of ``triton_kernel.py``), written as a handful of batched matmuls.
-
-Layout is FLA's: ``q, k [B, T, H, K]``, ``v [B, T, HV, V]``, ``g, beta
-[B, T, HV]`` with ``H | HV`` (a value head ``h`` reads key head
-``h // (HV // H)``). transformers' mixer repeats q/k to ``HV`` heads before
-the call, so in the model ``H == HV``; the grouped layout is kept so the
-kernel can take the un-repeated tensors one day. ``g`` is the log-space
-decay (non-positive), ``beta`` the post-sigmoid write gate. Outputs are
-float32 whatever the inputs were: an oracle rounds nothing away.
+Layouts follow FLA: q/k ``[B,T,H,K]``, v ``[B,T,HV,V]``, and g/beta
+``[B,T,HV]``, with ``H`` dividing ``HV``. Value head h uses key head
+``h // (HV // H)``. The model repeats q/k heads before the call, making
+``H == HV`` there. ``g`` is nonpositive log decay; ``beta`` is the sigmoid
+gate. Reference outputs remain float32.
 """
 
 from __future__ import annotations

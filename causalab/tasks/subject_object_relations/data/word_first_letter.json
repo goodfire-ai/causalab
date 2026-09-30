@@ -26,7 +26,6 @@
    "U"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CONSTRUCTION"
@@ -58,7 +57,6 @@
    "S"
   ],
   "object": "R",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "RUN"
@@ -90,7 +88,6 @@
    "P"
   ],
   "object": "U",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "UGLY"
@@ -122,7 +119,6 @@
    "P"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BRING"
@@ -154,7 +150,6 @@
    "P"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "ATTACK"
@@ -186,7 +181,6 @@
    "A"
   ],
   "object": "Q",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "QUESTION"
@@ -218,7 +212,6 @@
    "P"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DISH"
@@ -250,7 +243,6 @@
    "P"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SPEAK"
@@ -282,7 +274,6 @@
    "E"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LOSE"
@@ -314,7 +305,6 @@
    "F"
   ],
   "object": "I",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "INCREASE"
@@ -346,7 +336,6 @@
    "C"
   ],
   "object": "J",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "JUMP"
@@ -378,7 +367,6 @@
    "D"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LEND"
@@ -410,7 +398,6 @@
    "W"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CLOSE"
@@ -442,7 +429,6 @@
    "Q"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HARD"
@@ -474,7 +460,6 @@
    "W"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CHANGE"
@@ -506,7 +491,6 @@
    "O"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HONEST"
@@ -538,7 +522,6 @@
    "B"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FULL"
@@ -570,7 +553,6 @@
    "W"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FIERCE"
@@ -602,7 +584,6 @@
    "W"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FORGIVE"
@@ -634,7 +615,6 @@
    "U"
   ],
   "object": "T",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "TINY"
@@ -666,7 +646,6 @@
    "Y"
   ],
   "object": "U",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "UP"
@@ -698,7 +677,6 @@
    "H"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DANCE"
@@ -730,7 +708,6 @@
    "W"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "ATTRACT"
@@ -762,7 +739,6 @@
    "D"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SMART"
@@ -794,7 +770,6 @@
    "D"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FILM"
@@ -826,7 +801,6 @@
    "S"
   ],
   "object": "Q",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "QUIET"
@@ -858,7 +832,6 @@
    "B"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LONG"
@@ -890,7 +863,6 @@
    "T"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LEAVE"
@@ -922,7 +894,6 @@
    "H"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FALL"
@@ -954,7 +925,6 @@
    "F"
   ],
   "object": "Q",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "QUESTION"
@@ -986,7 +956,6 @@
    "A"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SOFTWARE"
@@ -1018,7 +987,6 @@
    "D"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "AIRPLANE"
@@ -1050,7 +1018,6 @@
    "S"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DAY"
@@ -1082,7 +1049,6 @@
    "S"
   ],
   "object": "R",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "RISE"
@@ -1114,7 +1080,6 @@
    "S"
   ],
   "object": "M",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "MESSY"
@@ -1146,7 +1111,6 @@
    "B"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DULL"
@@ -1178,7 +1142,6 @@
    "T"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SMART"
@@ -1210,7 +1173,6 @@
    "D"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CONNECT"
@@ -1242,7 +1204,6 @@
    "H"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LIKE"
@@ -1274,7 +1235,6 @@
    "D"
   ],
   "object": "E",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "EAT"
@@ -1306,7 +1266,6 @@
    "C"
   ],
   "object": "R",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "RICH"
@@ -1338,7 +1297,6 @@
    "S"
   ],
   "object": "M",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "MACHINE"
@@ -1370,7 +1328,6 @@
    "F"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SOUR"
@@ -1402,7 +1359,6 @@
    "L"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HEAR"
@@ -1434,7 +1390,6 @@
    "T"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HEAR"
@@ -1466,7 +1421,6 @@
    "W"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BORROW"
@@ -1498,7 +1452,6 @@
    "P"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LEARN"
@@ -1530,7 +1483,6 @@
    "C"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HOT"
@@ -1562,7 +1514,6 @@
    "S"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CODE"
@@ -1594,7 +1545,6 @@
    "U"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BELIEVE"
@@ -1626,7 +1576,6 @@
    "T"
   ],
   "object": "Q",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "QUIET"
@@ -1658,7 +1607,6 @@
    "K"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CHANGE"
@@ -1690,7 +1638,6 @@
    "P"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GAME"
@@ -1722,7 +1669,6 @@
    "E"
   ],
   "object": "N",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "NARROW"
@@ -1754,7 +1700,6 @@
    "F"
   ],
   "object": "Q",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "QUICK"
@@ -1786,7 +1731,6 @@
    "S"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HEALTHY"
@@ -1818,7 +1762,6 @@
    "W"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GAME"
@@ -1850,7 +1793,6 @@
    "S"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WET"
@@ -1882,7 +1824,6 @@
    "W"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "AIRPLANE"
@@ -1914,7 +1855,6 @@
    "S"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HEALTHY"
@@ -1946,7 +1886,6 @@
    "S"
   ],
   "object": "P",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "PIANO"
@@ -1978,7 +1917,6 @@
    "S"
   ],
   "object": "E",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "EDUCATION"
@@ -2010,7 +1948,6 @@
    "C"
   ],
   "object": "R",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "RUDE"
@@ -2042,7 +1979,6 @@
    "R"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SCIENCE"
@@ -2074,7 +2010,6 @@
    "T"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GO"
@@ -2106,7 +2041,6 @@
    "S"
   ],
   "object": "T",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "TRY"
@@ -2138,7 +2072,6 @@
    "F"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SWEET"
@@ -2170,7 +2103,6 @@
    "L"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WIDE"
@@ -2202,7 +2134,6 @@
    "C"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LEND"
@@ -2234,7 +2165,6 @@
    "G"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HOT"
@@ -2266,7 +2196,6 @@
    "S"
   ],
   "object": "N",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "NEW"
@@ -2298,7 +2227,6 @@
    "L"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DAY"
@@ -2330,7 +2258,6 @@
    "D"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WEAK"
@@ -2362,7 +2289,6 @@
    "C"
   ],
   "object": "N",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "NEW"
@@ -2394,7 +2320,6 @@
    "S"
   ],
   "object": "Q",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "QUICK"
@@ -2426,7 +2351,6 @@
    "C"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SICK"
@@ -2458,7 +2382,6 @@
    "C"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SIT"
@@ -2490,7 +2413,6 @@
    "N"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LEAVE"
@@ -2522,7 +2444,6 @@
    "S"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BUILD"
@@ -2554,7 +2475,6 @@
    "S"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LAUGH"
@@ -2586,7 +2506,6 @@
    "U"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "START"
@@ -2618,7 +2537,6 @@
    "P"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BRIGHT"
@@ -2650,7 +2568,6 @@
    "T"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SAVE"
@@ -2682,7 +2599,6 @@
    "A"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FARM"
@@ -2714,7 +2630,6 @@
    "N"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CLOCKWISE"
@@ -2746,7 +2661,6 @@
    "W"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "COLD"
@@ -2778,7 +2692,6 @@
    "S"
   ],
   "object": "E",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "EAT"
@@ -2810,7 +2723,6 @@
    "E"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BICYCLE"
@@ -2842,7 +2754,6 @@
    "C"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "START"
@@ -2874,7 +2785,6 @@
    "H"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GENTLE"
@@ -2906,7 +2816,6 @@
    "N"
   ],
   "object": "M",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "MACHINE"
@@ -2938,7 +2847,6 @@
    "C"
   ],
   "object": "E",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "EXPAND"
@@ -2970,7 +2878,6 @@
    "S"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LAZY"
@@ -3002,7 +2909,6 @@
    "L"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CHANGE"
@@ -3034,7 +2940,6 @@
    "E"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SHAKE"
@@ -3066,7 +2971,6 @@
    "D"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WANT"
@@ -3098,7 +3002,6 @@
    "C"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "STRONG"
@@ -3130,7 +3033,6 @@
    "P"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DANCE"
@@ -3162,7 +3064,6 @@
    "N"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LOOK"
@@ -3194,7 +3095,6 @@
    "D"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "ANGRY"
@@ -3226,7 +3126,6 @@
    "P"
   ],
   "object": "I",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "INSIDE"
@@ -3258,7 +3157,6 @@
    "Z"
   ],
   "object": "Y",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "YOUNG"
@@ -3290,7 +3188,6 @@
    "S"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BRAVE"
@@ -3322,7 +3219,6 @@
    "M"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HONEST"
@@ -3354,7 +3250,6 @@
    "K"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FROWN"
@@ -3386,7 +3281,6 @@
    "T"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LIBRARY"
@@ -3418,7 +3312,6 @@
    "D"
   ],
   "object": "M",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "MACHINE"
@@ -3450,7 +3343,6 @@
    "H"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DISH"
@@ -3482,7 +3374,6 @@
    "P"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "STALE"
@@ -3514,7 +3405,6 @@
    "H"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "AIRPLANE"
@@ -3546,7 +3436,6 @@
    "S"
   ],
   "object": "P",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "PUT"
@@ -3578,7 +3467,6 @@
    "R"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SURGERY"
@@ -3610,7 +3498,6 @@
    "L"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FRONT"
@@ -3642,7 +3529,6 @@
    "D"
   ],
   "object": "R",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "RUDE"
@@ -3674,7 +3560,6 @@
    "S"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LIBRARY"
@@ -3706,7 +3591,6 @@
    "S"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WHISPER"
@@ -3738,7 +3622,6 @@
    "C"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HEALTHY"
@@ -3770,7 +3653,6 @@
    "S"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BOOK"
@@ -3802,7 +3684,6 @@
    "B"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FRONT"
@@ -3834,7 +3715,6 @@
    "C"
   ],
   "object": "P",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "PRAISE"
@@ -3866,7 +3746,6 @@
    "P"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DANCE"
@@ -3898,7 +3777,6 @@
    "L"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BRING"
@@ -3930,7 +3808,6 @@
    "G"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SOUR"
@@ -3962,7 +3839,6 @@
    "F"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CATCH"
@@ -3994,7 +3870,6 @@
    "A"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BUY"
@@ -4026,7 +3901,6 @@
    "F"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BOX"
@@ -4058,7 +3932,6 @@
    "U"
   ],
   "object": "O",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "OPEN"
@@ -4090,7 +3963,6 @@
    "S"
   ],
   "object": "P",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "PAST"
@@ -4122,7 +3994,6 @@
    "H"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DANCE"
@@ -4154,7 +4025,6 @@
    "D"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SICK"
@@ -4186,7 +4056,6 @@
    "F"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BRING"
@@ -4218,7 +4087,6 @@
    "L"
   ],
   "object": "M",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "MEAN"
@@ -4250,7 +4118,6 @@
    "S"
   ],
   "object": "U",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "UP"
@@ -4282,7 +4149,6 @@
    "W"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FORGIVE"
@@ -4314,7 +4180,6 @@
    "S"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WANT"
@@ -4346,7 +4211,6 @@
    "D"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FLOAT"
@@ -4378,7 +4242,6 @@
    "F"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "STRAIGHT"
@@ -4410,7 +4273,6 @@
    "L"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WILD"
@@ -4442,7 +4304,6 @@
    "W"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HIGH"
@@ -4474,7 +4335,6 @@
    "Y"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DECIDE"
@@ -4506,7 +4366,6 @@
    "T"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CHEAP"
@@ -4538,7 +4397,6 @@
    "A"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "STALE"
@@ -4570,7 +4428,6 @@
    "L"
   ],
   "object": "Q",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "QUESTION"
@@ -4602,7 +4459,6 @@
    "M"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LARGE"
@@ -4634,7 +4490,6 @@
    "M"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "ASK"
@@ -4666,7 +4521,6 @@
    "M"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BIG"
@@ -4698,7 +4552,6 @@
    "W"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FORGIVE"
@@ -4730,7 +4583,6 @@
    "L"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SAY"
@@ -4762,7 +4614,6 @@
    "D"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SOFTWARE"
@@ -4794,7 +4645,6 @@
    "F"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HATE"
@@ -4826,7 +4676,6 @@
    "N"
   ],
   "object": "T",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "TAKE"
@@ -4858,7 +4707,6 @@
    "F"
   ],
   "object": "T",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "TRY"
@@ -4890,7 +4738,6 @@
    "L"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GYM"
@@ -4922,7 +4769,6 @@
    "A"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SUCCEED"
@@ -4954,7 +4800,6 @@
    "H"
   ],
   "object": "M",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "MEDICINE"
@@ -4986,7 +4831,6 @@
    "F"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LEARN"
@@ -5018,7 +4862,6 @@
    "E"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "STUDY"
@@ -5050,7 +4893,6 @@
    "S"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CUT"
@@ -5082,7 +4924,6 @@
    "N"
   ],
   "object": "K",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "KNOW"
@@ -5114,7 +4955,6 @@
    "S"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HUNGRY"
@@ -5146,7 +4986,6 @@
    "C"
   ],
   "object": "P",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "PUSH"
@@ -5178,7 +5017,6 @@
    "M"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WET"
@@ -5210,7 +5048,6 @@
    "Z"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "COLD"
@@ -5242,7 +5079,6 @@
    "S"
   ],
   "object": "P",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "PAINTING"
@@ -5274,7 +5110,6 @@
    "C"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DESIGN"
@@ -5306,7 +5141,6 @@
    "D"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GIVE"
@@ -5338,7 +5172,6 @@
    "C"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FULL"
@@ -5370,7 +5203,6 @@
    "C"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HIT"
@@ -5402,7 +5234,6 @@
    "T"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DISH"
@@ -5434,7 +5265,6 @@
    "B"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LEARN"
@@ -5466,7 +5296,6 @@
    "W"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LAW"
@@ -5498,7 +5327,6 @@
    "D"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "ANGRY"
@@ -5530,7 +5358,6 @@
    "N"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HIGH"
@@ -5562,7 +5389,6 @@
    "C"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BLESS"
@@ -5594,7 +5420,6 @@
    "P"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BORROW"
@@ -5626,7 +5451,6 @@
    "M"
   ],
   "object": "R",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "RISE"
@@ -5658,7 +5482,6 @@
    "W"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FLOAT"
@@ -5690,7 +5513,6 @@
    "W"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SAY"
@@ -5722,7 +5544,6 @@
    "U"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GO"
@@ -5754,7 +5575,6 @@
    "N"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SAY"
@@ -5786,7 +5606,6 @@
    "P"
   ],
   "object": "T",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "TALK"
@@ -5818,7 +5637,6 @@
    "G"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SHIP"
@@ -5850,7 +5668,6 @@
    "I"
   ],
   "object": "R",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "RISE"
@@ -5882,7 +5699,6 @@
    "A"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CHOOSE"
@@ -5914,7 +5730,6 @@
    "J"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CRAZY"
@@ -5946,7 +5761,6 @@
    "W"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CLOCKWISE"
@@ -5978,7 +5792,6 @@
    "L"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BORROW"
@@ -6010,7 +5823,6 @@
    "L"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WITTY"
@@ -6042,7 +5854,6 @@
    "C"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BRAVE"
@@ -6074,7 +5885,6 @@
    "A"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HONEST"
@@ -6106,7 +5916,6 @@
    "I"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BEND"
@@ -6138,7 +5947,6 @@
    "G"
   ],
   "object": "I",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "INHALE"
@@ -6170,7 +5978,6 @@
    "S"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FULL"
@@ -6202,7 +6009,6 @@
    "E"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WORK"
@@ -6234,7 +6040,6 @@
    "P"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FLY"
@@ -6266,7 +6071,6 @@
    "F"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HOT"
@@ -6298,7 +6102,6 @@
    "D"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "COME"
@@ -6330,7 +6133,6 @@
    "F"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GAME"
@@ -6362,7 +6164,6 @@
    "C"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SMOOTH"
@@ -6394,7 +6195,6 @@
    "A"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GIVE"
@@ -6426,7 +6226,6 @@
    "A"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SWIM"
@@ -6458,7 +6257,6 @@
    "D"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "COME"
@@ -6490,7 +6288,6 @@
    "L"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BEND"
@@ -6522,7 +6319,6 @@
    "S"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "ASK"
@@ -6554,7 +6350,6 @@
    "B"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LEND"
@@ -6586,7 +6381,6 @@
    "W"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SCIENCE"
@@ -6618,7 +6412,6 @@
    "S"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CHEAP"
@@ -6650,7 +6443,6 @@
    "R"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DANCE"
@@ -6682,7 +6474,6 @@
    "R"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "STALE"
@@ -6714,7 +6505,6 @@
    "F"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HATE"
@@ -6746,7 +6536,6 @@
    "G"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SAY"
@@ -6778,7 +6567,6 @@
    "H"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SHORT"
@@ -6810,7 +6598,6 @@
    "S"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BOX"
@@ -6842,7 +6629,6 @@
    "L"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SWEET"
@@ -6874,7 +6660,6 @@
    "L"
   ],
   "object": "D",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "DULL"
@@ -6906,7 +6691,6 @@
    "S"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FRONT"
@@ -6938,7 +6722,6 @@
    "I"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FILM"
@@ -6970,7 +6753,6 @@
    "C"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HEALTHY"
@@ -7002,7 +6784,6 @@
    "W"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BICYCLE"
@@ -7034,7 +6815,6 @@
    "G"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FINISH"
@@ -7066,7 +6846,6 @@
    "T"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CREATE"
@@ -7098,7 +6877,6 @@
    "L"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SHALLOW"
@@ -7130,7 +6908,6 @@
    "H"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CATCH"
@@ -7162,7 +6939,6 @@
    "L"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BICYCLE"
@@ -7194,7 +6970,6 @@
    "E"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SHORT"
@@ -7226,7 +7001,6 @@
    "I"
   ],
   "object": "P",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "PAST"
@@ -7258,7 +7032,6 @@
    "S"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FALSE"
@@ -7290,7 +7063,6 @@
    "W"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BRING"
@@ -7322,7 +7094,6 @@
    "S"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LIGHT"
@@ -7354,7 +7125,6 @@
    "S"
   ],
   "object": "E",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "ENGINE"
@@ -7386,7 +7156,6 @@
    "S"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BRAVE"
@@ -7418,7 +7187,6 @@
    "W"
   ],
   "object": "P",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "PAST"
@@ -7450,7 +7218,6 @@
    "C"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HIT"
@@ -7482,7 +7249,6 @@
    "R"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "STUPID"
@@ -7514,7 +7280,6 @@
    "F"
   ],
   "object": "I",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "INHALE"
@@ -7546,7 +7311,6 @@
    "B"
   ],
   "object": "Z",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "ZESTY"
@@ -7578,7 +7342,6 @@
    "T"
   ],
   "object": "M",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "MEDICINE"
@@ -7610,7 +7373,6 @@
    "R"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "ATTRACT"
@@ -7642,7 +7404,6 @@
    "R"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SAY"
@@ -7674,7 +7435,6 @@
    "L"
   ],
   "object": "W",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "WALK"
@@ -7706,7 +7466,6 @@
    "W"
   ],
   "object": "H",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "HAPPY"
@@ -7738,7 +7497,6 @@
    "B"
   ],
   "object": "T",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "TRUE"
@@ -7770,7 +7528,6 @@
    "W"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CLIMB"
@@ -7802,7 +7559,6 @@
    "F"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LAZY"
@@ -7834,7 +7590,6 @@
    "P"
   ],
   "object": "T",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "THINK"
@@ -7866,7 +7621,6 @@
    "G"
   ],
   "object": "F",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "FRIENDLY"
@@ -7898,7 +7652,6 @@
    "U"
   ],
   "object": "A",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "AIRPLANE"
@@ -7930,7 +7683,6 @@
    "S"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LIVE"
@@ -7962,7 +7714,6 @@
    "I"
   ],
   "object": "S",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "SURGERY"
@@ -7994,7 +7745,6 @@
    "W"
   ],
   "object": "L",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "LAZY"
@@ -8026,7 +7776,6 @@
    "B"
   ],
   "object": "O",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "OLD"
@@ -8058,7 +7807,6 @@
    "H"
   ],
   "object": "T",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "TRUE"
@@ -8090,7 +7838,6 @@
    "L"
   ],
   "object": "P",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "PULL"
@@ -8122,7 +7869,6 @@
    "F"
   ],
   "object": "G",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "GIVE"
@@ -8154,7 +7900,6 @@
    "C"
   ],
   "object": "B",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "BICYCLE"
@@ -8186,7 +7931,6 @@
    "S"
   ],
   "object": "C",
-  "scoring_digest": "6058869f1141d719ceda7d8715ab13fda074e42cbd8b7a1ed72dbfa327bc6239",
   "split": "all",
   "string_mode": "prefix",
   "subject": "CLEAN"

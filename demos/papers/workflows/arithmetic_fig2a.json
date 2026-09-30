@@ -1,0 +1,105 @@
+{
+  "version": "1",
+  "description": "Figure 2a of Feucht et al. 2026 (arXiv:2605.01148), the addition curve: fit one DAS rotation per (sublayer, k) for the first operand of a+b= at the last token of Llama-3.1-8B, apply every rotation to the held-out split, and draw the best-k test IIA per sublayer and the curve of each k. The fit is four steps of eight layers (16 sublayers) each, the same document under a layer-range override, and the apply four steps to match: a failed or interrupted fit re-runs one cohort of 80 members, not all 320. A declared fan_out cannot do this split because the fit saves a bundle.",
+  "output_dir": "arithmetic_fig2a",
+  "steps": {
+    "fit_0": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_fig2a_fit.json",
+      "set": {
+        "sites.target.layers": {"sweep": {"range": [0, 8]}}
+      }
+    },
+    "fit_1": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_fig2a_fit.json",
+      "set": {
+        "sites.target.layers": {"sweep": {"range": [8, 16]}}
+      }
+    },
+    "fit_2": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_fig2a_fit.json",
+      "set": {
+        "sites.target.layers": {"sweep": {"range": [16, 24]}}
+      }
+    },
+    "fit_3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_fig2a_fit.json",
+      "set": {
+        "sites.target.layers": {"sweep": {"range": [24, 32]}}
+      }
+    },
+    "apply_0": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_fig2a_apply.json",
+      "set": {
+        "sites.target.layers": {"sweep": {"range": [0, 8]}},
+        "featurizers.rot.file_path": "fit_0/rot.safetensors"
+      }
+    },
+    "apply_1": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_fig2a_apply.json",
+      "set": {
+        "sites.target.layers": {"sweep": {"range": [8, 16]}},
+        "featurizers.rot.file_path": "fit_1/rot.safetensors"
+      }
+    },
+    "apply_2": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_fig2a_apply.json",
+      "set": {
+        "sites.target.layers": {"sweep": {"range": [16, 24]}},
+        "featurizers.rot.file_path": "fit_2/rot.safetensors"
+      }
+    },
+    "apply_3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_fig2a_apply.json",
+      "set": {
+        "sites.target.layers": {"sweep": {"range": [24, 32]}},
+        "featurizers.rot.file_path": "fit_3/rot.safetensors"
+      }
+    },
+    "figure": {
+      "type": "script",
+      "script": {
+        "path": "scripts/arithmetic_fig2a/fig2a_figure.py"
+      },
+      "inputs": {
+        "iia_0": {
+          "step": "apply_0",
+          "file": "iia.json"
+        },
+        "iia_1": {
+          "step": "apply_1",
+          "file": "iia.json"
+        },
+        "iia_2": {
+          "step": "apply_2",
+          "file": "iia.json"
+        },
+        "iia_3": {
+          "step": "apply_3",
+          "file": "iia.json"
+        }
+      },
+      "outputs": {
+        "replication": "fig2a_replication.png",
+        "ranks": "fig2a_ranks.png",
+        "plotted": {
+          "file": "fig2a_plotted.json",
+          "columns": {
+            "sublayer": "int64",
+            "layer": "int64",
+            "component": "string",
+            "best_k": "int64",
+            "test_iia": "float64"
+          }
+        }
+      }
+    }
+  }
+}

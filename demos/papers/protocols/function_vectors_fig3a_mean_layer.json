@@ -1,0 +1,47 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Input of the DBM documents: the mean over 100 clean 10-shot prompts of GPT-J's attention_premix at layer 0 and the last token, per task; the workflow's mean_L<l> steps set the layer, and the DBM documents swap the 28 means in."
+  },
+  "model": {"key": "EleutherAI/gpt-j-6b", "revision": "float16", "dtype": "fp16"},
+  "data": {"base": {"dataset": {"axis": "task.clean"}, "field": "input"}},
+  "axes": {
+    "task": {
+      "rows": [
+        {"task": "antonym", "clean": "function_vectors_fig3a/clean#antonym"},
+        {"task": "capitalize", "clean": "function_vectors_fig3a/clean#capitalize"},
+        {"task": "capitalize_first_letter", "clean": "function_vectors_fig3a/clean#capitalize_first_letter"},
+        {"task": "country-capital", "clean": "function_vectors_fig3a/clean#country-capital"},
+        {"task": "country-currency", "clean": "function_vectors_fig3a/clean#country-currency"},
+        {"task": "english-french", "clean": "function_vectors_fig3a/clean#english-french"},
+        {"task": "english-german", "clean": "function_vectors_fig3a/clean#english-german"},
+        {"task": "english-spanish", "clean": "function_vectors_fig3a/clean#english-spanish"},
+        {"task": "landmark-country", "clean": "function_vectors_fig3a/clean#landmark-country"},
+        {"task": "lowercase_first_letter", "clean": "function_vectors_fig3a/clean#lowercase_first_letter"},
+        {"task": "national_parks", "clean": "function_vectors_fig3a/clean#national_parks"},
+        {"task": "park-country", "clean": "function_vectors_fig3a/clean#park-country"},
+        {"task": "person-sport", "clean": "function_vectors_fig3a/clean#person-sport"},
+        {"task": "present-past", "clean": "function_vectors_fig3a/clean#present-past"},
+        {"task": "product-company", "clean": "function_vectors_fig3a/clean#product-company"},
+        {"task": "sentiment", "clean": "function_vectors_fig3a/clean#sentiment"},
+        {"task": "singular-plural", "clean": "function_vectors_fig3a/clean#singular-plural"},
+        {"task": "synonym", "clean": "function_vectors_fig3a/clean#synonym"}
+      ],
+      "key": "task"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["value"]}
+    },
+    "sites": {
+      "target": {"component": "attention_premix", "layers": [0]}
+    },
+    "reads": {
+      "value": {"site": "target", "pos": -1}
+    },
+    "save": [
+      {"read": "value", "model": "original", "file_path": "mean.safetensors", "reduce": "mean"}
+    ]
+  }
+}

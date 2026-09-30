@@ -18,8 +18,7 @@
         "task": "natural_domains_arithmetic",
         "task_cfg": {
           "domain_type": "weekdays"
-        },
-        "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb"
+        }
       },
       "split": "development",
       "thresholds": {

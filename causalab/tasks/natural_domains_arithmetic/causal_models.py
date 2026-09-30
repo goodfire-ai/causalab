@@ -6,15 +6,16 @@ All share the DAG: (entity, number) → result → raw_output.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Callable
 
-from causalab.causal.causal_model import CausalModel, build_output_tokens
-from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import CausalTrace, Mechanism, input_var
+from causalab.causal import Dom, V, mechanism
+from causalab.causal.compiler import ConfigurationCopier
+from causalab.causal.model import CausalModel
+from causalab.causal.scoring import ScoringSpec, build_output_tokens
 from causalab.tasks.random_words import get_random_words
 
 from .config import NaturalDomainConfig
-
 
 # ---------------------------------------------------------------------------
 # Factory: create causal model from config
@@ -30,6 +31,7 @@ def create_causal_model(config: NaturalDomainConfig) -> CausalModel:
     Returns:
         CausalModel with variables: entity, number, result, raw_input, raw_output.
     """
+    config = ConfigurationCopier()(config)
     entities = config.entities
     numbers = config.numbers
     number_to_int = config.number_to_int
@@ -43,28 +45,11 @@ def create_causal_model(config: NaturalDomainConfig) -> CausalModel:
     templates = template if isinstance(template, list) else [template]
     multi_template = isinstance(template, list)
 
-    if config.compute_result is not None:
-        _custom_compute = config.compute_result
-        _cfg = config
-
-        def compute_result(t: CausalTrace) -> str:
-            return _custom_compute(t["entity"], t["number"], _cfg)
-    else:
-        modulus = config.modulus
-        assert modulus is not None, "cyclic domains require modulus"
-
-        def compute_result(t: CausalTrace) -> str:
-            idx = (entity_to_index[t["entity"]] + number_to_int[t["number"]]) % modulus
-            return result_entities[idx]
-
-    if multi_template:
-
-        def fill_template(t: CausalTrace) -> str:
-            return t["template"].format(entity=t["entity"], number=t["number"])
-    else:
-
-        def fill_template(t: CausalTrace) -> str:
-            return templates[0].format(entity=t["entity"], number=t["number"])
+    def compute_base(entity, number):
+        if config.compute_result is not None:
+            return config.compute_result(entity, number, config)
+        idx = (entity_to_index[entity] + number_to_int[number]) % config.modulus
+        return result_entities[idx]
 
     # When number_groups is configured with >1 bin, result becomes a tuple
     # (entity_result, group_index) so centroid computation gets 2D structure.
@@ -86,67 +71,36 @@ def create_causal_model(config: NaturalDomainConfig) -> CausalModel:
     else:
         result_values = list(result_entities)
 
-    values: dict[str, list | None] = {
-        "entity": entities,
-        "number": numbers,
-        "result": result_values,
-        "raw_input": None,
-        "raw_output": None,
-    }
+    def compute_result(entity, number):
+        value = compute_base(entity, number)
+        return (value, number_to_group[number]) if has_groups else value
+
     if multi_template:
-        values["template"] = templates
 
-    raw_input_parents = ["entity", "number"]
-    if multi_template:
-        raw_input_parents.append("template")
-
-    if has_groups:
-        _compute_result_base = compute_result  # save the base compute
-
-        def compute_result_grouped(t: CausalTrace) -> tuple:
-            if callable(_compute_result_base):
-                # Custom compute
-                entity_result = _compute_result_base(t)
-            else:
-                entity_result = _compute_result_base(t)
-            group = number_to_group[t["number"]]
-            return (entity_result, group)
-
-        mechanisms = {
-            "entity": input_var(entities),
-            "number": input_var(numbers),
-            "result": Mechanism(
-                parents=["entity", "number"],
-                compute=compute_result_grouped,
-            ),
-            "raw_input": Mechanism(
-                parents=raw_input_parents,
-                compute=fill_template,
-            ),
-            "raw_output": Mechanism(
-                parents=["result"],
-                compute=lambda t: output_prefix + t["result"][0],
-            ),
-        }
+        @mechanism
+        def equations(
+            entity: Dom(entities), number: Dom(numbers), template: Dom(templates)
+        ):
+            result = V(compute_result(entity, number), domain=Dom(result_values))
+            raw_input = V(  # noqa: F841
+                template.format(entity=entity, number=number), domain=Dom(str)
+            )
+            raw_output = V(  # noqa: F841
+                output_prefix + (result[0] if has_groups else result), domain=Dom(str)
+            )
+            return result
     else:
-        mechanisms = {
-            "entity": input_var(entities),
-            "number": input_var(numbers),
-            "result": Mechanism(
-                parents=["entity", "number"],
-                compute=compute_result,
-            ),
-            "raw_input": Mechanism(
-                parents=raw_input_parents,
-                compute=fill_template,
-            ),
-            "raw_output": Mechanism(
-                parents=["result"],
-                compute=lambda t: output_prefix + t["result"],
-            ),
-        }
-    if multi_template:
-        mechanisms["template"] = input_var(templates)
+
+        @mechanism
+        def equations(entity: Dom(entities), number: Dom(numbers)):
+            result = V(compute_result(entity, number), domain=Dom(result_values))
+            raw_input = V(  # noqa: F841
+                templates[0].format(entity=entity, number=number), domain=Dom(str)
+            )
+            raw_output = V(  # noqa: F841
+                output_prefix + (result[0] if has_groups else result), domain=Dom(str)
+            )
+            return result
 
     # Build embeddings
     embeddings: dict[str, Callable[[Any], list[float]]] = {}
@@ -217,13 +171,12 @@ def create_causal_model(config: NaturalDomainConfig) -> CausalModel:
         valid_results = set(result_values)
 
         def _input_filter(trace, _compute=compute_result, _valid=valid_results):
-            return _compute(trace) in _valid
+            return _compute(trace["entity"], trace["number"]) in _valid
 
         input_filter = _input_filter
 
     model = CausalModel(
-        mechanisms,
-        values,
+        equations,
         id=f"natural_domains_arithmetic_{config.domain_type}",
         embeddings=embeddings,
         periods=periods,
@@ -244,83 +197,22 @@ def create_random_causal_model(config: NaturalDomainConfig) -> CausalModel:
 
     Replaces entities with random words and uses cyclic modular arithmetic.
     """
-    n_random = len(config.entities)
-    random_entities = get_random_words(n_random)
-    random_entity_to_index = {e: i for i, e in enumerate(random_entities)}
-
-    numbers = config.numbers
-    number_to_int = config.number_to_int
-    template = config.template
-    templates = template if isinstance(template, list) else [template]
-    multi_template = isinstance(template, list)
-    output_prefix = config.output_prefix
-
-    def compute_result(t: CausalTrace) -> str:
-        idx = (
-            random_entity_to_index[t["entity"]] + number_to_int[t["number"]]
-        ) % n_random
-        return random_entities[idx]
-
-    if multi_template:
-
-        def fill_template(t: CausalTrace) -> str:
-            return t["template"].format(entity=t["entity"], number=t["number"])
-    else:
-
-        def fill_template(t: CausalTrace) -> str:
-            return templates[0].format(entity=t["entity"], number=t["number"])
-
-    raw_input_parents = ["entity", "number"]
-    if multi_template:
-        raw_input_parents.append("template")
-
-    values: dict[str, list[str] | None] = {
-        "entity": random_entities,
-        "number": numbers,
-        "result": list(random_entities),
-        "raw_input": None,
-        "raw_output": None,
-    }
-    if multi_template:
-        values["template"] = templates
-
-    mechanisms = {
-        "entity": input_var(random_entities),
-        "number": input_var(numbers),
-        "result": Mechanism(
-            parents=["entity", "number"],
-            compute=compute_result,
-        ),
-        "raw_input": Mechanism(
-            parents=raw_input_parents,
-            compute=fill_template,
-        ),
-        "raw_output": Mechanism(
-            parents=["result"],
-            compute=lambda t: output_prefix + t["result"],
-        ),
-    }
-    if multi_template:
-        mechanisms["template"] = input_var(templates)
-
-    embeddings: dict[str, Callable[[Any], list[float]]] = {
-        "entity": lambda v, _m=random_entity_to_index: [float(_m[v])],
-        "result": lambda v, _m=random_entity_to_index: [float(_m[v])],
-        "number": lambda v, _m=number_to_int: [float(_m[v])],
-    }
-
-    model = CausalModel(
-        mechanisms,
-        values,
-        id=f"natural_domains_arithmetic_{config.domain_type}_random",
-        embeddings=embeddings,
-        # Random baseline is always 1D (no number_groups): one form group per
-        # random entity, matching the migrated real model.
-        scoring=ScoringSpec(
-            forms={"result": build_output_tokens(list(random_entities))}
-        ),
+    config = ConfigurationCopier()(config)
+    random_entities = get_random_words(len(config.entities))
+    baseline = replace(
+        config,
+        entities=random_entities,
+        result_entities=random_entities,
+        modulus=len(random_entities),
+        cyclic=True,
+        compute_result=None,
+        number_groups=None,
+        entity_embedding=None,
     )
-    model._nda_config = config  # type: ignore[attr-defined]
+    model = create_causal_model(baseline)
+    model.id = f"natural_domains_arithmetic_{config.domain_type}_random"
+    model.periods = {}
+    model._nda_config = config
     return model
 
 

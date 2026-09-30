@@ -1,9 +1,9 @@
 """Eligibility-aware metrics, the pure half (spec §2.10 "Eligibility", §4.1,
 §5 rule 4, §6).
 
-* :class:`~causalab.protocol.resolution.Eligibility` — ``n_eligible`` of
+* [`Eligibility`][causalab.protocol.results.Eligibility] — ``n_eligible`` of
   ``n_considered`` over a metric cell's rows, the excluded rows by reason: the
-  row-level twin of the cell-level ``Denominator``, and a third denominator named
+  row-level twin of ``Denominator``, and a third denominator named
   apart from ``save.reduce: "count"`` and a workflow reduction's ``unit``.
 * ``minimum_count`` — the one authored field: parsed as a positive integer,
   never swept, in the canonical form only when authored, so every document
@@ -33,19 +33,21 @@ from typing import Any
 import pytest
 
 from causalab.cli import main
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ParseError, ValidationError
-from causalab.protocol.loader import (
-    check_data_columns,
-    load,
-    maximum_eligible_count,
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ParseError, ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.rules.data import check_data_columns, maximum_eligible_count
+from causalab.protocol.results import Eligibility, unavailable
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.schema import (
+    MINIMUM_COUNT_FIELD,
+    PROTOCOL_VERSION,
+    parse_document,
 )
-from causalab.protocol.resolution import Eligibility, unavailable
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
-from causalab.protocol.schema import MINIMUM_COUNT_FIELD, parse_document
 
-from tests.protocol._docs import in_order
-from tests.protocol._env import CORPUS_DIR
+from tests.protocol._docs import aggregation, by_label, saved
+from tests.protocol._env import CORPUS_DIR, steps_of
+
 
 pytestmark = pytest.mark.unit
 
@@ -53,9 +55,8 @@ REPO = Path(__file__).resolve().parents[2]
 
 #: Every place a runnable document is committed (T3).
 SHIPPED = (
-    "causalab/configs/protocols/*.json",
-    "causalab/configs/methods/*.json",
     "tests/protocols/*.json",
+    # the shipped method documents under demos/methods/ included
     "demos/*/protocols/*.json",
 )
 
@@ -72,41 +73,20 @@ ROWS_ALL_ANSWERED = [
 
 
 def _doc(ref: str, *, minimum_count: int | None = None) -> dict[str, Any]:
-    metric: dict[str, Any] = {
-        "kind": "token_logit",
-        "of": "logits",
-        "token": "entity",
-        "token_form": "bare",
-    }
+    spec = aggregation("token_logit", token="entity")
     if minimum_count is not None:
-        metric[MINIMUM_COUNT_FIELD] = minimum_count
-    return in_order(
-        {
-            "header": {"protocol_version": "3"},
-            "model": {"key": "gpt2", "revision": "main"},
-            "data": {"base": {"dataset": ref, "field": "input"}},
-            "method": {
-                "sites": {"lm_head": {"component": "lm_head"}},
-                "reads": {
-                    "logits": {
-                        "site": "lm_head",
-                        "pos": -1,
-                        "model": "original",
-                        "input": "base",
-                    }
-                },
-                "metrics": {"tl": metric},
-                "save": [
-                    {
-                        "value": "tl",
-                        "model": "original",
-                        "input": "base",
-                        "file_path": "tl.json",
-                    }
-                ],
-            },
-        }
-    )
+        spec[MINIMUM_COUNT_FIELD] = minimum_count
+    return {
+        "header": {"protocol_version": PROTOCOL_VERSION},
+        "model": {"key": "gpt2", "revision": "main"},
+        "data": {"base": {"dataset": ref, "field": "input"}},
+        "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["logits"]}},
+            "sites": {"lm_head": {"component": "lm_head"}},
+            "reads": {"logits": {"site": "lm_head", "pos": -1}},
+            "save": [saved("logits", "original", "tl.json", spec)],
+        },
+    }
 
 
 def _env_with_rows(tmp_path: Path, rows: list[dict[str, Any]]) -> ResolutionEnv:
@@ -167,22 +147,22 @@ class TestEligibility:
 class TestMinimumCountField:
     def test_parses_as_a_positive_integer(self):
         doc = parse_document(_doc(REF, minimum_count=3))
-        assert doc.metrics["tl"].minimum_count == 3
+        assert by_label(doc)["tl"].minimum_count == 3
 
     def test_absent_is_none(self):
-        assert parse_document(_doc(REF)).metrics["tl"].minimum_count is None
+        assert by_label(parse_document(_doc(REF)))["tl"].minimum_count is None
 
     @pytest.mark.parametrize("bad", [0, -1])
     def test_a_non_positive_threshold_is_refused_at_parse(self, bad):
         with pytest.raises(ParseError) as err:
             parse_document(_doc(REF, minimum_count=bad))
         assert err.value.code == "P2"
-        assert err.value.path == f"metrics.tl.{MINIMUM_COUNT_FIELD}"
+        assert err.value.path == f"save[0].aggregation.{MINIMUM_COUNT_FIELD}"
 
     @pytest.mark.parametrize("bad", ["3", 2.5, True])
     def test_a_non_integer_threshold_is_refused_at_parse(self, bad):
         raw = _doc(REF)
-        raw["method"]["metrics"]["tl"][MINIMUM_COUNT_FIELD] = bad
+        raw["method"]["save"][0]["aggregation"][MINIMUM_COUNT_FIELD] = bad
         with pytest.raises(ParseError) as err:
             parse_document(raw)
         assert err.value.code == "P2"
@@ -190,7 +170,7 @@ class TestMinimumCountField:
     def test_a_threshold_is_not_a_research_variable(self):
         """Never swept: a campaign forks on hypotheses, not on its bar."""
         raw = _doc(REF)
-        raw["method"]["metrics"]["tl"][MINIMUM_COUNT_FIELD] = {"sweep": [2, 3]}
+        raw["method"]["save"][0]["aggregation"][MINIMUM_COUNT_FIELD] = {"sweep": [2, 3]}
         with pytest.raises(ValidationError) as err:
             parse_document(raw)
         assert err.value.rule == 14
@@ -199,8 +179,8 @@ class TestMinimumCountField:
         env = _env_with_rows(tmp_path, ROWS_ALL_ANSWERED)
         plain = canonicalize(_doc(REF), env)
         declared = canonicalize(_doc(REF, minimum_count=2), env)
-        assert MINIMUM_COUNT_FIELD not in plain["method"]["metrics"]["tl"]
-        assert declared["method"]["metrics"]["tl"][MINIMUM_COUNT_FIELD] == 2
+        assert MINIMUM_COUNT_FIELD not in plain["method"]["save"][0]["aggregation"]
+        assert declared["method"]["save"][0]["aggregation"][MINIMUM_COUNT_FIELD] == 2
         assert digest(plain) != digest(declared)
 
     def test_unauthored_the_canonical_form_has_no_such_key(self, tmp_path):
@@ -218,19 +198,16 @@ class TestMinimumCountField:
 
 class TestMaximumEligibleCount:
     def test_a_row_with_no_answer_cannot_be_eligible(self):
-        metric = parse_document(_doc(REF)).metrics["tl"]
+        metric = by_label(parse_document(_doc(REF)))["tl"]
         assert maximum_eligible_count(metric, ROWS_ONE_EMPTY) == (2, {"entity": 1})
         assert maximum_eligible_count(metric, ROWS_ALL_ANSWERED) == (3, {})
 
     def test_an_absent_key_and_an_empty_form_group_count_as_no_answer(self):
         raw = _doc(REF)
-        raw["method"]["metrics"]["tl"] = {
-            "kind": "match",
-            "of": "logits",
-            "expected": "entity",
-            "token_form": "bare",
-        }
-        metric = parse_document(raw).metrics["tl"]
+        raw["method"]["save"][0]["aggregation"] = aggregation(
+            "match", expected="entity"
+        )
+        metric = by_label(parse_document(raw))["tl"]
         rows = [
             {"input": "a", "entity": ["one", " one"], "split": "all"},
             {"input": "b", "entity": [], "split": "all"},
@@ -240,13 +217,8 @@ class TestMaximumEligibleCount:
 
     def test_a_kind_naming_no_column_makes_every_row_eligible(self):
         raw = _doc(REF)
-        raw["method"]["metrics"]["tl"] = {
-            "kind": "top_k",
-            "of": "logits",
-            "k": 2,
-            "by": "prob",
-        }
-        metric = parse_document(raw).metrics["tl"]
+        raw["method"]["save"][0]["aggregation"] = aggregation("top_k", k=2, by="prob")
+        metric = by_label(parse_document(raw))["tl"]
         assert maximum_eligible_count(metric, ROWS_ONE_EMPTY) == (3, {})
 
 
@@ -260,10 +232,12 @@ class TestT2Refusal:
         document through."""
         env = _env_with_rows(tmp_path, ROWS_ONE_EMPTY)
         with pytest.raises(ValidationError) as err:
-            check_data_columns(load(_doc(REF, minimum_count=3), env), env)
+            check_data_columns(
+                compile_protocol(_doc(REF, minimum_count=3), env=env), env
+            )
         assert err.value.rule == 4
         assert err.value.rule_id == "references_resolve"
-        assert err.value.path == f"metrics.tl.{MINIMUM_COUNT_FIELD}"
+        assert err.value.path == f"save[0].aggregation.{MINIMUM_COUNT_FIELD}"
         message = str(err.value)
         assert "[V4]" in message
         assert "minimum_count=3" in message
@@ -272,29 +246,35 @@ class TestT2Refusal:
 
     def test_t2_twin_a_threshold_at_the_maximum_passes(self, tmp_path):
         env = _env_with_rows(tmp_path, ROWS_ONE_EMPTY)
-        assert check_data_columns(load(_doc(REF, minimum_count=2), env), env)
+        assert check_data_columns(
+            compile_protocol(_doc(REF, minimum_count=2), env=env), env
+        )
 
     def test_t2_twin_a_metric_with_no_threshold_makes_no_claim(self, tmp_path):
         env = _env_with_rows(tmp_path, ROWS_ONE_EMPTY)
-        assert check_data_columns(load(_doc(REF), env), env)
+        assert check_data_columns(compile_protocol(_doc(REF), env=env), env)
 
     def test_t2_a_threshold_above_the_row_count_is_refused_on_a_full_table(
         self, tmp_path
     ):
         env = _env_with_rows(tmp_path, ROWS_ALL_ANSWERED)
         with pytest.raises(ValidationError) as err:
-            check_data_columns(load(_doc(REF, minimum_count=4), env), env)
+            check_data_columns(
+                compile_protocol(_doc(REF, minimum_count=4), env=env), env
+            )
         assert err.value.rule == 4
         assert "at most 3 of its 3 rows" in str(err.value)
         # and the twin, at the maximum
-        assert check_data_columns(load(_doc(REF, minimum_count=3), env), env)
+        assert check_data_columns(
+            compile_protocol(_doc(REF, minimum_count=3), env=env), env
+        )
 
     def test_t2_the_bare_load_does_not_read_the_table(self, tmp_path):
         """Like rule 20 and rule 25, the check needs the resolved rows, so it
         is ``validate --data``'s and not the bare load's."""
         env = _env_with_rows(tmp_path, ROWS_ONE_EMPTY)
-        loaded = load(_doc(REF, minimum_count=3), env)  # no raise
-        assert loaded.document.metrics["tl"].minimum_count == 3
+        loaded = compile_protocol(_doc(REF, minimum_count=3), env=env)  # no raise
+        assert by_label(loaded.document)["tl"].minimum_count == 3
 
     def test_t2_through_the_cli(self, tmp_path, capsys):
         env_root = tmp_path
@@ -310,13 +290,14 @@ class TestT2Refusal:
             str(env_root / "artifacts"),
             "--data",
         ]
-        assert main(["validate", str(refused), *argv]) == 1
+        assert main(["validate", "--engine", "auto", str(refused), *argv]) == 1
         err = capsys.readouterr().err
         assert "refused: [V4]" in err and "at most 2" in err
-        assert main(["validate", str(passes), *argv]) == 0
+        assert main(["validate", "--engine", "auto", str(passes), *argv]) == 0
         assert "OK" in capsys.readouterr().out
-        # without --data the bare validate does not read the table
-        assert main(["validate", str(refused), *argv[:-1]]) == 0
+        # `validate` runs the data rules by default, so the bare
+        # verb refuses the same document; `--data` names the default
+        assert main(["validate", "--engine", "auto", str(refused), *argv[:-1]]) == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -356,8 +337,8 @@ def test_t3_no_shipped_document_authors_a_threshold(path):
     "name", sorted(p.name for p in CORPUS_DIR.glob("*_im.json")), ids=str
 )
 def test_t3_every_corpus_document_canonicalizes_without_the_field(name, env):
-    loaded = load(CORPUS_DIR / name, env)
-    for metric in loaded.canonical_document.get("metrics", {}).values():
-        assert MINIMUM_COUNT_FIELD not in metric
-    for point in loaded.point_documents:
-        assert all(m.minimum_count is None for m in point.metrics.values())
+    loaded = compile_protocol(CORPUS_DIR / name, env=env)
+    for entry in loaded.canonical["method"]["save"]:
+        assert MINIMUM_COUNT_FIELD not in entry.get("aggregation", {})
+    for point in steps_of(loaded, env).documents:
+        assert all(m.minimum_count is None for m in by_label(point).values())

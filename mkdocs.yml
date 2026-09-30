@@ -1,0 +1,244 @@
+# The documentation site: every markdown file in the repository plus an API
+# reference generated from docstrings. Build it with `uv run mkdocs build`,
+# preview it with `uv run mkdocs serve`. docs/DOCUMENTATION.md explains the
+# layout; scripts/gen_ref_pages.py adds the README, the demos and the reference
+# pages at build time, so `docs/` stays the only directory mkdocs reads.
+
+site_name: causalab
+site_description: Causal abstraction for mechanistic interpretability
+# The public mirror: this file is published with the tree, and the site's
+# source links must resolve for a reader of the public repository.
+repo_url: https://github.com/goodfire-ai/causalab
+repo_name: goodfire-ai/causalab
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+# Plain `.html` files: `docs/demos.md` and the mirrored `demos/README.md` would
+# both become `demos/index.html` under directory URLs, and a site of plain
+# files opens from a CI artifact without a server.
+use_directory_urls: false
+
+# The docs link to source files (`../causalab/cli.py`) and to files mkdocs does
+# not serve. Those links are correct on GitHub and are the reader's way into the
+# code, so they are not warnings here. A link to a markdown page that does not
+# exist is still reported.
+validation:
+  links:
+    absolute_links: ignore
+    unrecognized_links: ignore
+    not_found: warn
+  nav:
+    omitted_files: warn
+
+theme:
+  name: material
+  # The flame from the Goodfire logo, cropped from the wordmark and set on a
+  # transparent square so it sits on the graphite light header and the crimson
+  # dark header.
+  logo: assets/logo.png
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - content.code.copy
+  palette:
+    # `custom` hands the colors to docs/stylesheets/extra.css, which carries
+    # the whole palette: chrome, backgrounds, links, hover and highlights.
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  # The packages the API reference renders, read by scripts/gen_ref_pages.py.
+  # The reference serves researchers who write documents, causal models, tasks
+  # and analysis scripts. Engines, the compiler, measurement and profiling are
+  # covered by the architecture guide (docs/CODEBASE.md) and their docstrings.
+  # A rendered docstring links only into these packages; the check is in
+  # tests/docs/test_docstring_format.py.
+  api_reference:
+    - causalab.causal
+    - causalab.tasks
+    - causalab.protocol.schema
+    - causalab.analysis
+    - causalab.io
+  # The subsections of Demos > Tutorials, read by scripts/gen_ref_pages.py.
+  # `pages` are glob patterns under demos/, expanded in sorted order and listed
+  # in the order given. `numbering: file` takes each number from the file name,
+  # which the demos cite ("start with 04"); a page with none continues the page
+  # before it with a letter. `numbering: order` counts 01, 02, ... A page under
+  # demos/ that no subsection lists must have a nav entry of its own, or the
+  # build warns that it is omitted.
+  tutorials:
+    - title: Onboarding
+      numbering: file
+      index: onboarding_tutorial/README.md
+      pages:
+        - onboarding_tutorial/0[1-3]_*.md
+        # Saved hypothesis comparisons follows 03: both compare hypotheses
+        # before any network runs.
+        - hypothesis_testing/hypothesis_testing.md
+        - onboarding_tutorial/*.md
+    # The six-page series of docs/paper_replications.md (The series), one
+    # method per page, in series order. A page listed here leaves Papers.
+    - title: Series
+      numbering: order
+      pages:
+        - papers/rome_fig1_knockout.md
+        - papers/rome_fig1.md
+        # Slot 3 goes here: papers/mcqa_symbol.md or papers/mcqa_pointer.md.
+        # Slot 4 goes here: one of papers/mcqa_components_dbm.md,
+        # papers/function_vectors_fig3a_dbm.md, papers/addition_heads_dbm.md,
+        # papers/arithmetic_neurons.md.
+        - papers/ioi_fig3b.md
+        - papers/lookbacks.md
+    - title: Papers
+      numbering: order
+      index: papers/README.md
+      pages:
+        - papers/*.md
+  # Generated section pages: the nav section named on the left gets the page on
+  # the right, a table of the section's pages with each one's opening sentence.
+  # The sentence is the page's own statement of what it is for, so the table
+  # changes when the page does.
+  section_index:
+    Development: development.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  # attr_list, md_in_html and emoji draw the cards on the Demos page:
+  # https://squidfunk.github.io/mkdocs-material/reference/grids/#using-card-grids
+  # md_in_html also renders the Markdown inside a demo's <details> blocks,
+  # which scripts/mkdocs_links.py marks with the `markdown` attribute.
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        # The demos draw causal models as ```mermaid blocks.
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+# Rewrites every page's relative links from the repository's layout to the
+# site's, and points links to source files at GitHub.
+hooks:
+  - scripts/mkdocs_links.py
+
+plugins:
+  - search
+  # Material's offline mode: search reads its index without a web server, so
+  # the built site works opened as files (a shared directory, a CI artifact).
+  - offline
+  - gen-files:
+      scripts:
+        - scripts/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          # Read the package statically from the checkout: no import, so no
+          # compiled extension and no torch are needed to build the site.
+          paths: [.]
+          options:
+            # Docstrings use Google-style sections (docs/STYLE_GUIDE.md).
+            docstring_style: google
+            # Cross-references are autorefs links. A bare [`Name`][] resolves in
+            # the docstring owner's scope (its members, its module's members and
+            # imports); a name out of scope carries its full path.
+            scoped_crossrefs: true
+            # Constants and dataclass fields are documented with `#:` comments,
+            # which griffe does not read on its own.
+            extensions:
+              - scripts/griffe_doc_comments.py:DocComments
+            allow_inspection: false
+            show_source: true
+            show_if_no_docstring: true
+            members_order: source
+            show_root_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            filters: ["!^_"]
+
+nav:
+  - Home: index.md
+  - Demos:
+      - demos_hub.md
+      # demos/SUMMARY.md, written by scripts/gen_ref_pages.py from
+      # extra.tutorials, opens on demos/README.md and lists the subsections.
+      - Tutorials: demos/
+      - How-tos:
+          - howtos.md
+          - Causal models:
+              - Defining causal models: causal-models.md
+              - Task models: demos/causal_models/README.md
+          - General protocol structure:
+              - Running experiments: running_experiments.md
+              - Commands and saved results: cli.md
+              - Intervention protocol: intervention_protocol.md
+              - Workflow protocol: workflow_protocol.md
+          - Interp methods:
+              - methods/README.md
+              - Method library: demos/methods/README.md
+              - DBM: methods/dbm.md
+              - DAS: methods/das.md
+              - PCA: methods/pca.md
+              - SAE: methods/sae.md
+              - Behavioral analysis: behavioral_analysis.md
+              - Multi-token analysis: multi_token_analysis.md
+              - Hypothesis analysis: hypothesis_analysis.md
+          - Performance:
+              - Model parallelism: model_parallelism.md
+              - NDIF: ndif.md
+              - Attention backends: attention_backends.md
+              - CUDA graphs: cuda_graphs.md
+              - Tensor-parallel delivery: tp-narrowed-delivery.md
+              - Weight reader: fastersafetensors.md
+              - Before/after measurements: measurement.md
+              - Speed-of-light references: speed_of_light.md
+              - Speed-of-light assumptions: speed_of_light_assumptions.md
+          - Models:
+              - Qwen3.6-35B-A3B: qwen36_35b_a3b.md
+  - Development:
+      # Generated from this list by scripts/gen_ref_pages.py (extra.section_index).
+      - development.md
+      - Documentation maintenance: DOCUMENTATION.md
+      - Style guides:
+          - General writing: STYLE_GUIDE.md
+          - Writing a tutorial: demos.md
+          - Writing a paper replication: paper_replications.md
+      - Architecture: CODEBASE.md
+      - Tests: TESTS.md
+      - Intervention protocol internals: intervention_protocol_internals.md
+      - Workflow protocol internals: workflow_protocol_internals.md
+      - Measurement harness design: optimization_experiments_design.md
+      - Standalone install: standalone_install.md
+  - API reference: reference/

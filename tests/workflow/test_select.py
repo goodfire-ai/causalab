@@ -214,8 +214,8 @@ def _select_k(table: Path, out: Path, **extra) -> dict:
 
 
 def test_knee_picks_the_smallest_rank_that_is_as_good_as_the_best(saturated, tmp_path):
-    """The protocol says *choose rank from the IIA-versus-k curve, not the
-    highest score*, and `max` cannot express that: here it returns k=32 for
+    """A rank comes from the IIA-versus-k curve, not from the highest score,
+    and `max` cannot express that: here it returns k=32 for
     0.008 more IIA than k=8, which is inside the noise of a fit."""
     assert _select_k(saturated, tmp_path / "max.json", choose="max")["best_k"] == 32
     assert _select_k(saturated, tmp_path / "knee.json", choose="knee")["best_k"] == 8

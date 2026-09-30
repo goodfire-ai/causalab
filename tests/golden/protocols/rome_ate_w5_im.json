@@ -1,15 +1,19 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "ROME causal tracing, total effect (Meng et al. 2022, arXiv:2202.05262): corrupt subject-token embeddings of gpt2-xl with seeded Gaussian noise at scale 3*sigma of the embedding matrix (sigma measured 0.048227 from the public weights by tests/golden/fixtures/generators/gen_counterfact.py, so 3*sigma = 0.144681 - the paper's 3*sigma, not sqrt(3*sigma)). The seed is a 3-value sweep axis standing in for the paper's noise resamples; the clean forward is off-axis and interns to one shared run. Width-5 shard (see gen_counterfact.py: one document per equal subject-token width, pooled by the test). ATE = mean over facts and seeds of P_clean(object) - P_corrupted(object), computed post-hoc from the cross_entropy tables (p = exp(-ce)); golden band [10.6, 26.6] percentage points around the paper's 18.6."
   },
   "model": {"key": "gpt2-xl", "revision": "main", "dtype": "fp32"},
   "data": {"base": {"dataset": "counterfact/facts_w5", "field": "input"}},
   "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["logits_clean"]},
+      "corrupted": {"input": "base", "reads": ["logits_corr"], "writes": ["noise"]}
+    },
     "sites": {"emb": {"component": "embeddings"}, "lm_head": {"component": "lm_head"}},
     "reads": {
-      "logits_clean": {"site": "lm_head", "pos": -1, "model": "original", "input": "base"},
-      "logits_corr": {"site": "lm_head", "pos": -1, "model": "corrupted", "input": "base"}
+      "logits_clean": {"site": "lm_head", "pos": -1},
+      "logits_corr": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "noise": {
@@ -24,34 +28,17 @@
         }
       }
     },
-    "intervened_models": {
-      "corrupted": {"input": "base", "writes": ["noise"]}
-    },
-    "metrics": {
-      "ce_clean": {
-        "kind": "cross_entropy",
-        "of": "logits_clean",
-        "target": "answer",
-        "token_form": "space_prefixed"
-      },
-      "ce_corr": {
-        "kind": "cross_entropy",
-        "of": "logits_corr",
-        "target": "answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
       {
-        "value": "ce_clean",
+        "read": "logits_clean",
         "model": "original",
-        "input": "base",
+        "aggregation": {"kind": "cross_entropy", "target": "answer"},
         "file_path": "ce_clean.json"
       },
       {
-        "value": "ce_corr",
+        "read": "logits_corr",
         "model": "corrupted",
-        "input": "base",
+        "aggregation": {"kind": "cross_entropy", "target": "answer"},
         "file_path": "ce_corr.json"
       }
     ]

@@ -1,0 +1,135 @@
+{
+  "document": "protocols/das_pca_init.json",
+  "document_digest": "ca5eb6b534d56683257a87250200ba995c21f8e84f2ee1fd6a3269c3a5b45cc6",
+  "run_digest": "80793cc983ef1913bebdbf0c6d4540a02f79da7ef9b5ea1f33e4058d74552542",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "bf16",
+  "date": "2026-09-21",
+  "elapsed_s": 18.4,
+  "metrics": {
+    "ce": {
+      "metric": "ce",
+      "unit": "nat",
+      "rows": 450,
+      "eligible_rows": 450,
+      "mean": 1.3189,
+      "cells": 15,
+      "best_cell": {
+        "featurizers.rot.k": 1,
+        "train.seed": 1
+      },
+      "best_mean": 3.3621,
+      "worst_mean": 0.2463
+    },
+    "fit_diagnostics": {
+      "points": 15,
+      "rot": {}
+    },
+    "iia": {
+      "metric": "iia",
+      "unit": "fraction",
+      "rows": 450,
+      "eligible_rows": 450,
+      "mean": 0.6978,
+      "cells": 15,
+      "best_cell": {
+        "featurizers.rot.k": 16,
+        "train.seed": 0
+      },
+      "best_mean": 0.9667,
+      "worst_mean": 0.2
+    },
+    "logit_diff": {
+      "metric": "logit_diff",
+      "unit": "logit",
+      "rows": 450,
+      "eligible_rows": 450,
+      "mean": 2.2885,
+      "cells": 15,
+      "best_cell": {
+        "featurizers.rot.k": 16,
+        "train.seed": 1
+      },
+      "best_mean": 5.1896,
+      "worst_mean": -1.9563
+    },
+    "train_eval": {
+      "metric": "iia",
+      "split": "natural_domains_arithmetic/data/weekdays#test",
+      "selected": "early_stop.best",
+      "points": 15,
+      "best": 0.5789,
+      "best_coords": {
+        "featurizers.rot.k": 16,
+        "train.seed": 0
+      },
+      "worst": 0.1579
+    },
+    "saved_tensors": {
+      "rot.safetensors": {
+        "weight[k=1,seed=0]": [
+          3584,
+          1
+        ],
+        "weight[k=1,seed=1]": [
+          3584,
+          1
+        ],
+        "weight[k=1,seed=2]": [
+          3584,
+          1
+        ],
+        "weight[k=16,seed=0]": [
+          3584,
+          16
+        ],
+        "weight[k=16,seed=1]": [
+          3584,
+          16
+        ],
+        "weight[k=16,seed=2]": [
+          3584,
+          16
+        ],
+        "weight[k=2,seed=0]": [
+          3584,
+          2
+        ],
+        "weight[k=2,seed=1]": [
+          3584,
+          2
+        ],
+        "weight[k=2,seed=2]": [
+          3584,
+          2
+        ],
+        "weight[k=4,seed=0]": [
+          3584,
+          4
+        ],
+        "weight[k=4,seed=1]": [
+          3584,
+          4
+        ],
+        "weight[k=4,seed=2]": [
+          3584,
+          4
+        ],
+        "weight[k=8,seed=0]": [
+          3584,
+          8
+        ],
+        "weight[k=8,seed=1]": [
+          3584,
+          8
+        ],
+        "weight[k=8,seed=2]": [
+          3584,
+          8
+        ]
+      }
+    }
+  }
+}

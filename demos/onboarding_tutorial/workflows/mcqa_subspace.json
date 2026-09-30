@@ -1,8 +1,34 @@
 {
   "version": "1",
-  "description": "The 04_subspace demo end to end: fit a rotation per k on the train split, apply each one to the test split, and draw both curves. The apply step's document names fit/rot.safetensors, and that reference is the whole dependency -- nothing here declares an order.",
-  "output_dir": "mcqa_subspace",
+  "description": "Measure clean accuracy on both splits, fit a rotation per k on the train split, apply each one to the test split, and plot test IIA against k. The full step interchanges the whole residual stream at the same component on the test split, which is the ceiling a subspace is read against.",
+  "output_dir": "07_subspace",
   "steps": {
+    "clean_train": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_clean.json",
+      "set": {
+        "data.base.dataset": "mcqa/train_n128_s1",
+        "data.counterfactual.dataset": "mcqa/train_n128_s1"
+      }
+    },
+    "clean_test": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_clean.json",
+      "set": {
+        "data.base.dataset": "mcqa/test_n64_s2",
+        "data.counterfactual.dataset": "mcqa/test_n64_s2"
+      }
+    },
+    "full": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_locate_scan.json",
+      "set": {
+        "data.base.dataset": "mcqa/test_n64_s2",
+        "data.counterfactual.dataset": "mcqa/test_n64_s2",
+        "sites.target.layers": [26],
+        "positions.tap": {"index": -1}
+      }
+    },
     "fit": {
       "type": "intervention_protocol",
       "document": "../protocols/mcqa_das_fit.json"
@@ -19,7 +45,7 @@
         "plot": "lines",
         "x": "featurizers.rot.k"
       },
-      "outputs": {"figure": "iia_by_k.png", "plotted": {"file": "iia_by_k.json"}}
+      "outputs": {"figure": "07_subspace_iia_by_k.png", "plotted": {"file": "07_subspace_iia_by_k.json"}}
     }
   }
 }

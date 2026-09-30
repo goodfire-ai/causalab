@@ -1,12 +1,12 @@
-"""A declared fan-out on the tiny fixture (workflow spec §2.9) — the engine
-variant of the layer's test.
+"""A declared fan-out on the tiny fixture (workflow spec §2.9; the engine
+variant of T15).
 
 `tests/workflow/test_fan_out.py` proves the join on a CPU stub whose rows are
 a function of the point digest. This file is the real engine: the fan-out
 fixture's scan retargeted to tiny Llama over its two layers runs once whole
 and once as two shards, and the joined tables equal the unsharded ones —
 floats within `test_microbatch`'s fp32 tolerance (a different batch shape may
-take a different kernel path), every `produced_by` stamp and every integer
+take a different kernel path), every coordinate column and every integer
 exactly — under one receipt carrying the full axes and point digests and no
 `engine` or `execution` block.
 """
@@ -61,6 +61,8 @@ def _run_cli(root: Path, workflow: Path, out: Path) -> int:
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(workflow),
             "--data-root",
             str(DATA),

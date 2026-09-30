@@ -1,0 +1,51 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Figure 5b of Prakash et al. 2025 (arXiv:2505.14685): at one layer, swap both drink tokens of the original story (each drink word and its period) for the residual stream of the same word in the counterfactual, which tells the story in the other order, and score the answer against label_forms; workflows/scripts/lookbacks/lookbacks_figure.py draws the curve, over every pair and over the pairs lookbacks_clean_accuracy.json marks correct."
+  },
+  "model": {
+    "key": "meta-llama/Meta-Llama-3-70B-Instruct",
+    "revision": "50fd307e57011801c7833c87efa1984ddf2db42f",
+    "dtype": "fp16"
+  },
+  "data": {
+    "base": {"dataset": "lookbacks/data_reorder#first", "field": "input"},
+    "counterfactual": {"dataset": "lookbacks/data_reorder#first", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_state_a", "v_state_b"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["swap_state_a", "swap_state_b"]}
+    },
+    "positions": {
+      "state_a": {"variable": "state_a_mention"},
+      "state_b": {"variable": "state_b_mention"}
+    },
+    "sites": {
+      "states": {
+        "component": "block_output",
+        "layers": {
+          "sweep": {"range": [0, 80]}
+        }
+      },
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_state_a": {"site": "states", "pos": "state_a"},
+      "v_state_b": {"site": "states", "pos": "state_b"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "swap_state_a": {"site": "states", "pos": "state_a", "do": {"swap": "v_state_a"}},
+      "swap_state_b": {"site": "states", "pos": "state_b", "do": {"swap": "v_state_b"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia_binding.json"
+      }
+    ]
+  }
+}

@@ -1,14 +1,27 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "The Hydra effect (McGrath et al. 2023, arXiv:2307.15771), main experiment: resample-ablate attention layer 13 at the final token, measure downstream layers' direct effects (contribution injected as the final residual, read at lm_head) in both the clean and ablated intervened models. Two probe layers written out; a range axis on a single probe site would fan the whole pattern to the paper's grid."
   },
-  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main"},
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
   "data": {
     "base": {"dataset": "pile/sample", "field": "input"},
     "counterfactual": {"dataset": "pile/sample", "field": "resample_input"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_noise"]},
+      "original_base": {"input": "base", "reads": ["logits_clean", "a14_clean", "a20_clean"]},
+      "ablated": {
+        "input": "base",
+        "reads": ["logits_abl", "a14_abl", "a20_abl"],
+        "writes": ["resample"]
+      },
+      "with_inj14_clean": {"input": "base", "reads": ["de14_clean"], "writes": ["inj14_clean"]},
+      "with_inj20_clean": {"input": "base", "reads": ["de20_clean"], "writes": ["inj20_clean"]},
+      "with_inj14_abl": {"input": "base", "reads": ["de14_abl"], "writes": ["inj14_abl"]},
+      "with_inj20_abl": {"input": "base", "reads": ["de20_abl"], "writes": ["inj20_abl"]}
+    },
     "sites": {
       "abl": {"component": "attention_output", "layers": [13]},
       "probe14": {"component": "attention_output", "layers": [14]},
@@ -17,17 +30,17 @@
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "v_noise": {"site": "abl", "pos": -1, "model": "original", "input": "counterfactual"},
-      "logits_clean": {"site": "lm_head", "pos": -1, "model": "original", "input": "base"},
-      "logits_abl": {"site": "lm_head", "pos": -1, "model": "ablated", "input": "base"},
-      "a14_clean": {"site": "probe14", "pos": -1, "model": "original", "input": "base"},
-      "a20_clean": {"site": "probe20", "pos": -1, "model": "original", "input": "base"},
-      "a14_abl": {"site": "probe14", "pos": -1, "model": "ablated", "input": "base"},
-      "a20_abl": {"site": "probe20", "pos": -1, "model": "ablated", "input": "base"},
-      "de14_clean": {"site": "lm_head", "pos": -1, "model": "with_inj14_clean", "input": "base"},
-      "de20_clean": {"site": "lm_head", "pos": -1, "model": "with_inj20_clean", "input": "base"},
-      "de14_abl": {"site": "lm_head", "pos": -1, "model": "with_inj14_abl", "input": "base"},
-      "de20_abl": {"site": "lm_head", "pos": -1, "model": "with_inj20_abl", "input": "base"}
+      "v_noise": {"site": "abl", "pos": -1},
+      "logits_clean": {"site": "lm_head", "pos": -1},
+      "logits_abl": {"site": "lm_head", "pos": -1},
+      "a14_clean": {"site": "probe14", "pos": -1},
+      "a20_clean": {"site": "probe20", "pos": -1},
+      "a14_abl": {"site": "probe14", "pos": -1},
+      "a20_abl": {"site": "probe20", "pos": -1},
+      "de14_clean": {"site": "lm_head", "pos": -1},
+      "de20_clean": {"site": "lm_head", "pos": -1},
+      "de14_abl": {"site": "lm_head", "pos": -1},
+      "de20_abl": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "resample": {"site": "abl", "pos": -1, "do": {"swap": "v_noise"}},
@@ -36,86 +49,41 @@
       "inj14_abl": {"site": "resid_final", "pos": -1, "do": {"swap": "a14_abl"}},
       "inj20_abl": {"site": "resid_final", "pos": -1, "do": {"swap": "a20_abl"}}
     },
-    "intervened_models": {
-      "ablated": {"input": "base", "writes": ["resample"]},
-      "with_inj14_clean": {"input": "base", "writes": ["inj14_clean"]},
-      "with_inj20_clean": {"input": "base", "writes": ["inj20_clean"]},
-      "with_inj14_abl": {"input": "base", "writes": ["inj14_abl"]},
-      "with_inj20_abl": {"input": "base", "writes": ["inj20_abl"]}
-    },
-    "metrics": {
-      "te_clean": {
-        "kind": "token_logit",
-        "of": "logits_clean",
-        "token": "ml_token",
-        "token_form": "space_prefixed"
-      },
-      "te_abl": {
-        "kind": "token_logit",
-        "of": "logits_abl",
-        "token": "ml_token",
-        "token_form": "space_prefixed"
-      },
-      "de14_c": {
-        "kind": "token_logit",
-        "of": "de14_clean",
-        "token": "ml_token",
-        "token_form": "space_prefixed"
-      },
-      "de20_c": {
-        "kind": "token_logit",
-        "of": "de20_clean",
-        "token": "ml_token",
-        "token_form": "space_prefixed"
-      },
-      "de14_a": {
-        "kind": "token_logit",
-        "of": "de14_abl",
-        "token": "ml_token",
-        "token_form": "space_prefixed"
-      },
-      "de20_a": {
-        "kind": "token_logit",
-        "of": "de20_abl",
-        "token": "ml_token",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
       {
-        "value": "te_clean",
-        "model": "original",
-        "input": "base",
+        "read": "logits_clean",
+        "model": "original_base",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
         "file_path": "te_clean.json"
       },
       {
-        "value": "te_abl",
+        "read": "logits_abl",
         "model": "ablated",
-        "input": "base",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
         "file_path": "te_abl.json"
       },
       {
-        "value": "de14_c",
+        "read": "de14_clean",
         "model": "with_inj14_clean",
-        "input": "base",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
         "file_path": "de14_clean.json"
       },
       {
-        "value": "de20_c",
+        "read": "de20_clean",
         "model": "with_inj20_clean",
-        "input": "base",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
         "file_path": "de20_clean.json"
       },
       {
-        "value": "de14_a",
+        "read": "de14_abl",
         "model": "with_inj14_abl",
-        "input": "base",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
         "file_path": "de14_abl.json"
       },
       {
-        "value": "de20_a",
+        "read": "de20_abl",
         "model": "with_inj20_abl",
-        "input": "base",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
         "file_path": "de20_abl.json"
       }
     ]

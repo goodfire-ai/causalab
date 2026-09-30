@@ -33,11 +33,11 @@ from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
 from causalab.neural.engines.pytorch_hooks.train import run_training
 from causalab.neural.shared.execution import campaign_plans
-from causalab.neural.shared.executor_base import ForwardCache, Interning
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.loader import load
-from causalab.protocol.plan import interned_groups, plan_point
-from causalab.protocol.resolve import ResolutionEnv
+from causalab.neural.shared.executor import ForwardCache, Interning
+from causalab.protocol.engine import RunContext
+from causalab.protocol.pipeline import compile_protocol
+from causalab.neural.shared.plan import interned_groups, plan_point
+from causalab.io.env import ResolutionEnv
 from causalab.protocol.schema import Document, parse_document
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
@@ -49,8 +49,14 @@ from tests.neural.engines.pytorch_hooks.test_train import (
     das_doc,
     dbm_doc,
 )
-from tests.protocol._docs import in_order
-from tests.protocol._env import CORPUS_DIR, FIXTURES, build_env, write_rot_fixture
+from tests.protocol._docs import in_order, term
+from tests.protocol._env import (
+    CORPUS_DIR,
+    FIXTURES,
+    build_env,
+    write_rot_fixture,
+    steps_of,
+)
 
 EVAL_SPLIT = "inline#eval"
 #: Three rows, so an eval forward (batch 3) is distinguishable from a
@@ -96,13 +102,8 @@ class _InlineDatasets:
         return self._splits[ref]
 
 
-def _request() -> ExecutionRequest:
-    return ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+def _request() -> RunContext:
+    return RunContext(
         env=ResolutionEnv(
             datasets=_InlineDatasets({EVAL_SPLIT: EVAL_ROWS}), artifacts=None
         ),  # type: ignore[arg-type]
@@ -118,10 +119,12 @@ def _train_doc(
         raw["method"]["train"]["seed"] = seed
         raw["method"]["train"]["steps"] = {"epochs": epochs}
     raw["method"]["train"]["batch"] = {"pairs": pairs}
+    # the eval scores the objective's cross-entropy, under its saved label
+    (ce,) = [e for e in raw["method"]["save"] if e.get("file_path") == "ce.json"]
     raw["method"]["train"]["eval"] = {
         "every": {"epochs": 1},
         "split": EVAL_SPLIT,
-        "metrics": ["ce"],
+        "aggregations": {"ce": term(ce["read"], ce["model"], ce["aggregation"])},
     }
     return raw
 
@@ -136,11 +139,11 @@ def _campaign(
     if cache is None:
         cache = ForwardCache(
             wanted={
-                g.digest: tuple(doc.sites[t.site] for t in g.taps) for g in plan.groups
+                g.key: tuple(doc.sites[t.site] for t in g.taps) for g in plan.groups
             }
         )
     return doc, Interning(
-        digests={(g.model, g.input): g.digest for g in plan.groups}, cache=cache
+        keys={(g.model, g.input): g.key for g in plan.groups}, cache=cache
     )
 
 
@@ -237,7 +240,7 @@ class TestFitInterning:
         _outcome, _ex, sizes = _fit(
             _train_doc(epochs=epochs, pairs=1), bundle, interning=single
         )
-        source = first.digests[("original", "counterfactual")]
+        source = first.keys[("original_counterfactual", "counterfactual")]
         assert len(sizes) == 4 + 4 * epochs + epochs
         assert sizes.count(len(EVAL_ROWS)) == epochs
         for i in range(4):
@@ -270,14 +273,15 @@ class TestFitInterning:
         _doc, interning = _campaign(raw)
         _outcome, executor, _s = _fit(raw, bundle, interning=interning)
         cache = interning.cache
-        patched = interning.digests[("patched", "base")]
-        source = interning.digests[("original", "counterfactual")]
+        patched = interning.keys[("patched", "base")]
+        source = interning.keys[("original_counterfactual", "counterfactual")]
 
-        def digest_of(key: Any) -> str:
-            return key if isinstance(key, str) else key[0]
+        def key_of(capture_key: Any) -> str:
+            """The group key of a bare or sliced ``CaptureKey``."""
+            return capture_key if isinstance(capture_key, str) else capture_key[0]
 
-        assert all(digest_of(k) != patched for k in cache.captured)
-        assert any(digest_of(k) == source for k in cache.captured)
+        assert all(key_of(k) != patched for k in cache.captured)
+        assert any(key_of(k) == source for k in cache.captured)
 
         grad = PointExecutor(
             executor.doc,
@@ -287,12 +291,12 @@ class TestFitInterning:
             load_tensors=executor.load_tensors,
             stage_cache=executor.stage_cache,
             grad_enabled=True,
-            interning=interning,  # unfiltered: carries the patched digest
+            interning=interning,  # unfiltered: carries the patched key
         )
-        assert grad._may_intern("original")
+        assert grad._may_intern("original_counterfactual")
         assert not grad._may_intern("patched")
         grad.run_all()
-        assert all(digest_of(k) != patched for k in cache.captured)
+        assert all(key_of(k) != patched for k in cache.captured)
 
         inner = PointExecutor(
             executor.doc,
@@ -303,26 +307,26 @@ class TestFitInterning:
             stage_cache=executor.stage_cache,
             grad_enabled=False,
             interning=Interning(
-                digests=interning.digests, cache=cache, rows="probe", counted=False
+                keys=interning.keys, cache=cache, rows="probe", counted=False
             ),
         )
-        assert inner._may_intern("original")
+        assert inner._may_intern("original_counterfactual")
         assert not inner._may_intern("patched")
         inner.run_all()
-        assert all(digest_of(k) != patched for k in cache.captured)
+        assert all(key_of(k) != patched for k in cache.captured)
         assert (source, "probe") in cache.captured
         # neither inner executor counted toward the campaign's forwards
         assert patched not in cache.executed
 
     def test_the_eval_split_has_its_own_key_and_its_own_rows(self, bundle):
-        """``(digest, split)`` is distinct from every minibatch slice, holds a
+        """``(key, split)`` is distinct from every minibatch slice, holds a
         capture over the split's rows, and is read once — the score it yields
         is the un-interned score."""
         epochs = 2
         _doc, interning = _campaign(_train_doc(epochs=epochs))
         interned, _ex, _s = _fit(_train_doc(epochs=epochs), bundle, interning=interning)
         plain, _ex, _s = _fit(_train_doc(epochs=epochs), bundle, interning=None)
-        source = interning.digests[("original", "counterfactual")]
+        source = interning.keys[("original_counterfactual", "counterfactual")]
         captured = interning.cache.captured
         assert {(source, EVAL_SPLIT), (source, (0, 1)), (source, (2, 3))} <= set(
             captured
@@ -409,10 +413,10 @@ def test_a_swept_fit_shares_its_constant_forwards_across_points(
     write_rot_fixture(root)
     register_model_key({"model": {"key": TINY_LLAMA, "revision": "main"}})
     env = build_env(root)
-    loaded = load(
-        CORPUS_DIR / "08_weekdays_das_sweep_im.json", env, overrides=SWEEP_OVERRIDES
+    loaded = compile_protocol(
+        CORPUS_DIR / "08_weekdays_das_sweep_im.json", env=env, overrides=SWEEP_OVERRIDES
     )
-    docs = loaded.point_documents
+    docs = steps_of(loaded, env).documents
     assert len(docs) == 3
     train_rows = len(env.datasets.rows("weekdays/data#train"))
     pairs = SWEEP_OVERRIDES["train.batch"]["pairs"]
@@ -420,16 +424,7 @@ def test_a_swept_fit_shares_its_constant_forwards_across_points(
     e = SWEEP_OVERRIDES["train.steps"]["epochs"]
 
     out = tmp_path / "out"
-    request = ExecutionRequest(
-        points=tuple(p.raw for p in loaded.expansion.points),
-        canonical=tuple(loaded.canonical_points),
-        digests=tuple(loaded.point_digests),
-        coords=tuple(p.coords for p in loaded.expansion.points),
-        document_digest=loaded.document_digest,
-        env=env,
-        output_dir=out,
-    )
-    result = PytorchHooksEngine().execute(request)
+    result = PytorchHooksEngine().execute(loaded, RunContext(output_dir=out, env=env))
 
     # The three points fit as one cohort (§4 "Cohorts"): every optimizer step
     # is ONE forward over the three minibatches together, every eval pass one
@@ -444,7 +439,7 @@ def test_a_swept_fit_shares_its_constant_forwards_across_points(
     # the campaign's own tally is unchanged: inner passes of a fit are not
     # forward groups (RunResult.forwards)
     assert result.forwards == len(
-        interned_groups(campaign_plans(docs, loaded.canonical_points))
+        interned_groups(campaign_plans(docs, steps_of(loaded, env).canonical))
     )
     # ...but the saving is visible per point in the run's summaries: what
     # the fit's inner executors ran for constant groups, and what they were

@@ -1,0 +1,34 @@
+[
+  {
+    "featurizers.rot.k": 1,
+    "value": 0.0
+  },
+  {
+    "featurizers.rot.k": 2,
+    "value": 0.0
+  },
+  {
+    "featurizers.rot.k": 4,
+    "value": 0.03125
+  },
+  {
+    "featurizers.rot.k": 8,
+    "value": 0.125
+  },
+  {
+    "featurizers.rot.k": 16,
+    "value": 0.4375
+  },
+  {
+    "featurizers.rot.k": 32,
+    "value": 0.734375
+  },
+  {
+    "featurizers.rot.k": 64,
+    "value": 0.859375
+  },
+  {
+    "featurizers.rot.k": 128,
+    "value": 0.890625
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Replay a fitted attention-head DBM mask (dbm_head.json) on a held-out split without re-fitting: the gate's file_path loads the fitted per-head theta, the stage comes back in eval mode, and the swap runs through the same hard theta>0 mask over heads the fit was scored on. The gate declares group: head as the fit did - the bundle's stamped group and group_map (heads, head_dim) are checked against what this document's site derives, so a mask fitted over 16 query heads of 256 is refused at a DeltaNet layer's 32 value heads of 128, or through a per-coordinate gate, by name [V15]. No train section: the number saved is a confirmation one by construction. No entry selector: dbm_head.json fits one cell, so the bundle holds a single theta. The dtype is part of the fit's ArtifactIdentity; omit it and the document implies fp32 and is refused against a bf16 fit."
+  },
+  "model": {"key": "Qwen/Qwen3.6-35B-A3B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#test", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#test",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]}
+    },
+    "sites": {
+      "target": {"component": "attention_premix", "layers": [19]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {"gate": {"kind": "gate", "group": "head", "file_path": "fit/gate.safetensors"}},
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "featurizer": "gate"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask": {"site": "target", "pos": -1, "featurizer": "gate", "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia.json"
+      }
+    ]
+  }
+}

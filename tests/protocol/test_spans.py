@@ -29,12 +29,12 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.alignment import alignment_of
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ParseError, ProtocolError, ValidationError
-from causalab.protocol.plan import static_alignment
+from causalab.protocol.positions.alignment import alignment_of
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ParseError, ProtocolError, ValidationError
+from causalab.protocol.positions.alignment import static_alignment
 from causalab.protocol.schema import PositionSpec, parse_document
-from causalab.protocol.spans import (
+from causalab.protocol.positions.spans import (
     COMPOSITE_KEYS,
     PREDICATE_KEYS,
     SPAN_KEYS,
@@ -46,9 +46,10 @@ from causalab.protocol.spans import (
     static_indices,
     walk,
 )
-from causalab.protocol.validate import validate_document
+from causalab.protocol.rules.document import validate_document
 
-from tests.protocol._docs import base_doc, in_order
+from tests.protocol._docs import UNWRITTEN, base_doc, in_order
+
 
 pytestmark = pytest.mark.unit
 
@@ -231,8 +232,9 @@ def test_the_span_table_is_exactly_the_span_keys() -> None:
 
 def test_the_span_module_is_torch_free_and_spells_no_cardinality() -> None:
     """The algebra is pure over a frame; it imports no torch and derives no
-    cardinality of its own (the one-classifier rule)."""
-    source = (REPO / "causalab/protocol/spans.py").read_text()
+    cardinality of its own (the one-classifier rule: ``alignment_of`` alone
+    classifies)."""
+    source = (REPO / "causalab/protocol/positions/spans.py").read_text()
     tree = ast.parse(source)
     imported = {
         (node.module or "").split(".")[0]
@@ -447,6 +449,7 @@ def _two_absolute_writes(first: Any, second: Any) -> dict[str, Any]:
     doc["method"]["positions"] = {"a": first, "b": second}
     doc["method"]["reads"]["v_cf"]["pos"] = "a"
     doc["method"]["reads"]["v_cf2"] = {**doc["method"]["reads"]["v_cf"], "pos": "b"}
+    doc["method"]["intervened_models"][UNWRITTEN]["reads"] = ["v_cf", "v_cf2"]
     doc["method"]["writes"]["patch"]["pos"] = "a"
     doc["method"]["writes"]["patch2"] = {
         "site": "tgt",

@@ -17,13 +17,14 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ParseError, ValidationError
-from causalab.protocol.loader import load
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ParseError, ValidationError
+from causalab.protocol.pipeline import compile_protocol
 from causalab.protocol.schema import K_SCHEDULE_OF, parse_document
 
-from tests.protocol._docs import base_doc, in_order
+from tests.protocol._docs import LOGIT_DIFF, UNWRITTEN, base_doc, in_order, term
 from tests.protocol._env import build_env
+
 
 pytestmark = pytest.mark.unit
 
@@ -49,13 +50,8 @@ def pool_doc(
     if gate_b is not None:
         method["featurizers"]["b"] = {"kind": "gate", **gate_b}
         method["sites"]["mlp"] = {"component": "mlp_output", "layers": [3]}
-        method["reads"]["v_cf_b"] = {
-            "site": "mlp",
-            "pos": -1,
-            "model": "original",
-            "input": "counterfactual",
-            "featurizer": "b",
-        }
+        method["reads"]["v_cf_b"] = {"site": "mlp", "pos": -1, "featurizer": "b"}
+        method["intervened_models"][UNWRITTEN]["reads"].append("v_cf_b")
         method["writes"]["patch_b"] = {
             "site": "mlp",
             "pos": -1,
@@ -66,7 +62,7 @@ def pool_doc(
         names.append("b")
     if train:
         method["train"] = {
-            "objective": [[1.0, "ld"]],
+            "objective": [[1.0, term("logits", "patched", dict(LOGIT_DIFF))]],
             "params": params if params is not None else names,
             "optimizer": {"name": "adam", "lr": 0.1},
             "steps": {"epochs": 1},
@@ -108,8 +104,8 @@ def test_pool_and_of_parse_and_of_is_a_closed_vocabulary() -> None:
 @pytest.mark.parametrize(
     "gate, needle",
     [
-        ({"pool": "mib"}, "only the budget parametrization draws"),  # sigmoid fit
-        ({"parametrization": "clamp", "pool": "mib"}, "only the budget"),
+        ({"pool": "mib"}, "requires budget during fitting"),  # sigmoid fit
+        ({"parametrization": "clamp", "pool": "mib"}, "requires budget during fitting"),
         (budget(pool=""), "needs a name"),
         (budget(pool={"sweep": ["p", "q"]}), "string"),
     ],
@@ -140,7 +136,7 @@ def test_a_loaded_gate_may_author_a_pool_under_any_map() -> None:
 
 def _expect_rule(rule: int, raw: dict[str, Any], tmp_path: Path) -> ValidationError:
     with pytest.raises(ValidationError) as err:
-        load(raw, build_env(tmp_path))
+        compile_protocol(raw, env=build_env(tmp_path))
     assert err.value.rule == rule, err.value
     return err.value
 
@@ -177,13 +173,13 @@ def test_rule_4_a_swept_map_with_a_non_budget_arm_is_not_a_pool(tmp_path: Path) 
         "sweep": ["budget", "sigmoid"]
     }
     with pytest.raises((ParseError, ValidationError)):
-        load(doc, build_env(tmp_path))
+        compile_protocol(doc, env=build_env(tmp_path))
 
 
 def test_a_valid_pool_loads_and_a_pool_of_one_is_the_lone_gate(tmp_path: Path) -> None:
     env = build_env(tmp_path)
-    load(pool_doc(budget(pool="mib"), budget(pool="mib")), env)
-    load(pool_doc(budget(pool="mib")), env)
+    compile_protocol(pool_doc(budget(pool="mib"), budget(pool="mib")), env=env)
+    compile_protocol(pool_doc(budget(pool="mib")), env=env)
 
 
 # -- canonical form ---------------------------------------------------------- #
@@ -225,7 +221,6 @@ def _write_gate_header(
         "model_dtype": "fp32",
         "model_key": "gpt2",
         "model_revision": "main",
-        "produced_by": "0" * 64,
         "site": json.dumps(
             {"component": "block_output", "layers": [3]}, sort_keys=True
         ),
@@ -270,12 +265,12 @@ def test_a_pooled_bundle_reloads_only_under_a_pooled_document(tmp_path: Path) ->
         theta_len=768,
         extra={"pool": "mib", "pool_units": "1536"},
     )
-    load(_apply({"pool": "mib"}), build_env(tmp_path))
+    compile_protocol(_apply({"pool": "mib"}), env=build_env(tmp_path))
     with pytest.raises(ValidationError) as err:
-        load(_apply({}), build_env(tmp_path))
+        compile_protocol(_apply({}), env=build_env(tmp_path))
     assert err.value.rule == 15 and "fitted in pool 'mib'" in str(err.value)
     with pytest.raises(ValidationError) as err:
-        load(_apply({"pool": "other"}), build_env(tmp_path))
+        compile_protocol(_apply({"pool": "other"}), env=build_env(tmp_path))
     assert err.value.rule == 15 and "'pool'" in str(err.value)
 
 
@@ -284,7 +279,7 @@ def test_an_unpooled_bundle_may_join_a_pooled_readout(tmp_path: Path) -> None:
     The stamp is an expectation the bundle may not contradict, not one it
     must carry."""
     _write_gate_header(tmp_path, "fit/a.safetensors", theta_len=768, extra={})
-    load(_apply({"pool": "mib"}), build_env(tmp_path))
+    compile_protocol(_apply({"pool": "mib"}), env=build_env(tmp_path))
 
 
 def test_rule_4_readout_members_agree_on_the_map(tmp_path: Path) -> None:
@@ -310,7 +305,7 @@ def test_a_swept_file_path_is_a_loaded_member(tmp_path: Path) -> None:
     other = {"file_path": "fit/b.safetensors", "top_k": 3, "pool": "mib"}
     raw = pool_doc(loaded, other, train=False)
     with pytest.raises(ValidationError) as err:
-        load(raw, build_env(tmp_path))
+        compile_protocol(raw, env=build_env(tmp_path))
     assert err.value.rule != 4 or "budget gate" not in str(err.value)
     assert "mixes fitted and loaded" not in str(err.value)
 
@@ -321,7 +316,7 @@ def test_a_stamped_pool_of_another_size_is_refused_at_the_link() -> None:
     import torch
 
     from causalab.neural.shared.featurizers import Gate, link_budget_pools
-    from causalab.protocol.errors import ProtocolError
+    from causalab.protocol.rules.errors import ProtocolError
     from causalab.protocol.schema import FeaturizerSpec
 
     theta = torch.randn(4)

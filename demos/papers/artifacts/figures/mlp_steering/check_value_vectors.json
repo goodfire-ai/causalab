@@ -1,0 +1,98 @@
+{
+  "model": "openai-community/gpt2-medium",
+  "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+  "min_hits": 10,
+  "max_unshifted_hits": 0,
+  "vectors": [
+    {
+      "table8": "v14_1853",
+      "document": [
+        13,
+        1852
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    },
+    {
+      "table8": "v15_73",
+      "document": [
+        14,
+        72
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    },
+    {
+      "table8": "v15_1395",
+      "document": [
+        14,
+        1394
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    },
+    {
+      "table8": "v16_216",
+      "document": [
+        15,
+        215
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    },
+    {
+      "table8": "v17_462",
+      "document": [
+        16,
+        461
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    },
+    {
+      "table8": "v17_3209",
+      "document": [
+        16,
+        3208
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    },
+    {
+      "table8": "v17_4061",
+      "document": [
+        16,
+        4060
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    },
+    {
+      "table8": "v18_2921",
+      "document": [
+        17,
+        2920
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    },
+    {
+      "table8": "v19_1891",
+      "document": [
+        18,
+        1890
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    },
+    {
+      "table8": "v23_3770",
+      "document": [
+        22,
+        3769
+      ],
+      "shifted_hits": 10,
+      "unshifted_hits": 0
+    }
+  ]
+}

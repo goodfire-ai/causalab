@@ -1,12 +1,12 @@
 """Eligibility-aware metrics, the engine half (spec §2.10 "Eligibility", §4.1)
-— on the tiny Llama fixture, end to end through ``run_protocol``.
+— on the tiny Llama fixture, end to end through
+``run_protocol``.
 
 * **T1** — a cohort with *k* of *n* rows structurally unobservable produces a
   metric cell with ``n_eligible = n − k``, each excluded row carrying its
   reason code, and a value computed over the eligible rows only. Two sources:
   a ``variable`` row whose value occurs twice (``alignment_ambiguous``, the
-  read's own cell staying what alignment cardinality made it) and a row whose
-  answer column is
+  read's own cell staying unavailable) and a row whose answer column is
   ``null`` (``alignment_missing``, the read available). *Mutation:* a mean
   over *n* (the excluded row counted as 0) fails the value assertion.
 * the **twin**: every row answered — every row ``eligible: true``, no
@@ -29,14 +29,15 @@ import pytest
 
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.protocol import run_protocol
-from causalab.protocol.errors import ProtocolError, ValidationError
-from causalab.protocol.loader import check_data_columns, load
-from causalab.protocol.resolution import Available, Unavailable
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
-from causalab.protocol.tables import read_table
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.rules.data import check_data_columns
+from causalab.protocol.results import Available, Unavailable
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.tables import read_table
 
 from .conftest import TINY_LLAMA
-from tests.protocol._docs import in_order
+from tests.protocol._docs import aggregation, in_order, saved
 
 pytestmark = pytest.mark.smoke
 
@@ -45,34 +46,20 @@ def _doc(*, pos: Any) -> dict[str, Any]:
     """A ``token_logit`` over the ``entity`` column at ``pos`` — a ``variable``
     anchor on that same column, or the last position."""
     doc: dict[str, Any] = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main", "dtype": "fp32"},
         "data": {"base": {"dataset": "elig/rows", "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["logits"]}},
             "sites": {"lm_head": {"component": "lm_head"}},
-            "reads": {
-                "logits": {
-                    "site": "lm_head",
-                    "pos": pos,
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "metrics": {
-                "tl": {
-                    "kind": "token_logit",
-                    "of": "logits",
-                    "token": "entity",
-                    "token_form": "auto",
-                }
-            },
+            "reads": {"logits": {"site": "lm_head", "pos": pos}},
             "save": [
-                {
-                    "value": "tl",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "tl.json",
-                }
+                saved(
+                    "logits",
+                    "original",
+                    "tl.json",
+                    aggregation("token_logit", token="entity"),
+                )
             ],
         },
     }
@@ -95,9 +82,9 @@ def _run(tmp_path: Path, doc: dict[str, Any], rows: list[dict[str, Any]]):
     # callers take the `llama_bundle` fixture: loading the fixture model is
     # what registers its static config, which `load` needs for the digest
     env = _env_with_rows(tmp_path, rows)
-    loaded = load(doc, env)
+    loaded = compile_protocol(doc, env=env)
     out = tmp_path / "out"
-    result = run_protocol(loaded, env, [PytorchHooksEngine(device="cpu")], out)
+    result = run_protocol(loaded, env, PytorchHooksEngine(device="cpu"), out)
     return result, read_table(out / "tl.json")
 
 
@@ -153,7 +140,7 @@ def _assert_t1(result, table, *, excluded_row: int, reason: str) -> None:
 def test_t1_an_ambiguous_row_is_excluded_and_the_other_rows_are_scored(
     tmp_path, llama_bundle
 ):
-    """The read's cell stays alignment cardinality's (`alignment_ambiguous`, the saved gather
+    """The read's cell stays unavailable (`alignment_ambiguous`, the saved gather
     width zero on that row); the metric over it inherits row by row."""
     result, table = _run(tmp_path, _doc(pos="ent"), AMBIGUOUS_ROWS)
     _assert_t1(result, table, excluded_row=0, reason="alignment_ambiguous")
@@ -249,11 +236,54 @@ def test_a_repeated_example_id_is_refused_at_validate_and_before_the_first_forwa
         2:
     ]
     env = _env_with_rows(tmp_path, rows)
-    loaded = load(_doc(pos=-1), env)
+    loaded = compile_protocol(_doc(pos=-1), env=env)
     with pytest.raises(ValidationError) as err:
         check_data_columns(loaded, env)
     assert err.value.rule == 4 and err.value.path == "data.base"
     assert "'same' labels rows 0 and 1" in str(err.value)
     with pytest.raises(ProtocolError, match="labels rows 0 and 1"):
-        run_protocol(loaded, env, [PytorchHooksEngine(device="cpu")], tmp_path / "out")
+        run_protocol(loaded, env, PytorchHooksEngine(device="cpu"), tmp_path / "out")
+    assert not (tmp_path / "out" / "tl.json").exists()
+
+
+#: row 0's entity occurs nowhere in its text, and the tiny Llama tokenizer
+#: splits it (``['sevent', 'een']``); row 1's is one token and aligns
+UNALIGNED_SPLIT_ROWS = [
+    {"input": "one two three", "entity": "seventeen", "split": "all"},
+    {"input": "one two three", "entity": "two", "split": "all"},
+]
+
+
+def test_a_split_answer_on_a_row_its_read_does_not_align_runs_and_scores(
+    tmp_path, llama_bundle
+):
+    """The score never tokenizes the answer of a row whose read aligns on
+    nothing (§4.1), so the run door does not either: the run scores 1 of 2
+    rows and excludes row 0 under ``alignment_missing``, as it did before
+    the door resolved answers."""
+    result, table = _run(tmp_path, _doc(pos="ent"), UNALIGNED_SPLIT_ROWS)
+    rows = sorted(table, key=lambda r: r["example_id"])
+    assert [r["eligible"] for r in rows] == [False, True]
+    assert rows[0]["reason_code"] == "alignment_missing"
+    (summary,) = result.summaries
+    assert summary["eligibility"]["tl"] == {
+        "n_eligible": 1,
+        "n_considered": 2,
+        "excluded": {"alignment_missing": 1},
+    }
+
+
+def test_twin_a_split_answer_on_an_aligned_row_refuses_before_the_first_forward(
+    tmp_path, llama_bundle
+):
+    """The same split answer on a row whose read aligns is scored, so the
+    door refuses it before the weights, naming the row."""
+    rows = [{**UNALIGNED_SPLIT_ROWS[0], "input": "one seventeen three"}] + (
+        UNALIGNED_SPLIT_ROWS[1:]
+    )
+    with pytest.raises(ProtocolError) as err:
+        _run(tmp_path, _doc(pos="ent"), rows)
+    text = str(err.value)
+    assert err.value.path == "save[0].aggregation", text
+    assert "'seventeen' (row 0) is not a single token" in text, text
     assert not (tmp_path / "out" / "tl.json").exists()

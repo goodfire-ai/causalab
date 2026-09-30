@@ -1,19 +1,20 @@
 {
   "version": "1",
-  "description": "The 02_trace demo's scan with a figure after it. One protocol step and one script step is the smallest workflow that is not a protocol: nothing here fans out, and the reason to write it is that a table and the picture of that table are two products of one experiment. It is also the only way a dense index sweep gets a figure -- causalab.io.plots.workflow_figures reads a table's sweep axes from the step record a workflow writes, so the same protocol run on its own produces a table no shipped renderer can draw.",
-  "output_dir": "mcqa_trace",
+  "description": "The 05_trace demo's scan with a figure after it. One specification step and one script step is the smallest workflow that is not a protocol: nothing here fans out, and the reason to write it is that a table and the picture of that table are two products of one experiment. It is also the only way a dense index sweep gets a figure -- causalab.io.plots.workflow_figures reads a table's sweep axes from the step record a workflow writes, so the same specification run on its own produces a table no shipped renderer can draw.",
+  "output_dir": "05_trace",
   "steps": {
     "scan": {"type": "intervention_protocol", "document": "../protocols/mcqa_trace_scan.json"},
     "heatmap": {
       "type": "script",
       "script": {"module": "causalab.io.plots.workflow_figures"},
       "inputs": {
-        "table": {"step": "scan", "file": "flipped.json"},
+        "table": {"step": "scan", "file": "p.json"},
         "plot": "heatmap",
+        "key": "Q",
         "x": "sites.target.layers",
         "y": "positions.tap.index"
       },
-      "outputs": {"figure": "flipped_grid.png", "plotted": {"file": "flipped_grid.json"}}
+      "outputs": {"figure": "05_trace_p_q_grid.png", "plotted": {"file": "05_trace_p_q_grid.json"}}
     }
   }
 }

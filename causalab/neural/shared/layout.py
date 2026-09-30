@@ -1,73 +1,15 @@
-"""Reconciling a module's native tensor shape with the executor's.
+"""Convert declared native shapes to the executor's tensor layout.
 
-The executor works in one shape throughout — ``(batch, position, feature)``.
-``PointExecutor._gather`` indexes ``tensor[rows, idx]`` (dim 0 batch, dim 1
-position), ``_finalize_read`` slices features on dim ``-1``, and
-``_address_writer`` mutates ``tensor[rows, idx][..., fslice]`` in place. That is
-the *contract*.
+The contract layout is ``(batch, position, feature)``. ``to_contract``
+unpacks declared axes, selects a fused projection part, orders the axes,
+and flattens inner dimensions. Rank and width checks reject tensors that
+contradict the site's FeatureShape. Shapes without a contract form retain
+their native layout.
 
-Most taps already satisfy it; some do not, and the shapes are architecture facts
-rather than bugs. A tap declares a
-:class:`~causalab.protocol.shapes.FeatureShape` on
-:class:`~causalab.neural.pytorch_hooks.sites.ResolvedSite` and this module
-converts in both directions — :func:`to_contract` on the way out of a hook,
-:func:`from_contract` on the way back in for writes — by **computing** the
-conversion from the declared axes.
-
-That is the change from the five-string ``Layout`` vocabulary this replaces
-(``"bsd"``, ``"flat_td"``, ``"bds"``, ``"bs"``, ``"native"``). Those five are
-still the five shapes the module-boundary vocabulary needs, and they survive as
-constructor names in
-:mod:`causalab.protocol.shapes`; what does not survive is an ``if layout == …``
-chain that a sixth shape had to be added to. The attention interior brings
-four more — a kept head axis, a head axis in front of the position axis, a fused
-``[q | gate]`` projection — and each is a different axis tuple, not a new branch.
-
-The conversion, in four steps
------------------------------
-
-1. **unpack** each native dimension into the axes packed into it
-   (``flat_batch`` splits ``(batch*position)`` using the batch size;
-   ``flat_inner`` splits ``head·feature``), checking every static width on the
-   way. A tensor whose rank or widths contradict the declaration raises rather
-   than being silently reinterpreted — a wrong tap that still produces plausible
-   numbers is the failure mode this exists to prevent;
-2. **select** the fused split, when the component names one of several
-   sub-tensors sharing a projection;
-3. **permute** to ``(batch, position, *inner)``;
-4. **flatten** the inner axes into the contract's single feature axis — or add a
-   width-1 one when the tap has no feature axis at all (``input_ids``).
-
-A shape with no contract form — an attention pattern, whose feature axis *is* a
-position axis — converts by doing nothing, in both directions. That is what the
-``"native"`` marker used to mean; it now follows from
-``FeatureShape.has_contract_form`` rather than being asserted.
-
-Aliasing
---------
-
-📐 **Aliasing is not load-bearing.** ``to_contract`` returns a view where the
-steps above permit one, but that is an artefact of ``view``/``permute``, not a
-guarantee, and no behaviour depends on it: writes are correct because the hook
-passes :func:`from_contract`'s result *back* to the model and
-``_address_writer`` mutates through the returned chain, so a shape that has to
-copy (a fused select, an incompatible stride) is equally correct and simply
-slower. Stated because the reverse is the tempting mistake — nothing in the
-suite fails if aliasing is lost, so a later change that relied on it would be
-silently unpinned.
-
-The one shape that *cannot* alias is the fused one, and it says so: writing back
-one split of ``[q | gate]`` has to reach the other split's storage, so
-:func:`from_contract` takes the native tensor and scatters into it.
-
-Tuple payloads
---------------
-
-Separately, a module may return a **tuple** and the interesting tensor may not be
-element 0: ``Qwen3_5MoeTopKRouter.forward`` returns
-``(router_logits, router_scores, router_indices)``. A tap declares which element
-it means with ``tuple_index``; the default keeps the historical behaviour of
-taking element 0 of any tuple.
+``from_contract`` returns the written tensor to the model. Conversions may
+copy, so callers must use that return value. A fused projection writes its
+selected part back into the supplied native tensor. Tuple taps choose their
+tensor with ``tuple_index``, which defaults to zero.
 """
 
 from __future__ import annotations
@@ -77,7 +19,7 @@ from typing import Any
 
 import torch
 
-from causalab.protocol.shapes import INNER_KINDS, Axis, FeatureShape
+from causalab.protocol.registry.shapes import INNER_KINDS, Axis, FeatureShape
 
 __all__ = [
     "LayoutError",
@@ -91,9 +33,9 @@ __all__ = [
 class LayoutError(ValueError):
     """A tensor does not have the shape its tap's descriptor claims.
 
-    Deliberately *not* a :class:`~causalab.protocol.errors.ProtocolError`, and
+    Deliberately *not* a [`ProtocolError`][causalab.protocol.rules.errors.ProtocolError], and
     so it carries no ``P``/``V`` code: the shape is a field the site table sets
-    on :class:`~causalab.neural.pytorch_hooks.sites.ResolvedSite`, never
+    on [`ResolvedSite`][causalab.neural.shared.sites.ResolvedSite], never
     something a document author writes, so this can only fire on a mismatch
     between our table and a model's real module — an internal invariant, and
     the protocol codes exist to name rules a *document* broke.
@@ -207,14 +149,14 @@ def from_contract(
     batch_size: int,
     native: torch.Tensor | None = None,
 ) -> torch.Tensor:
-    """Invert :func:`to_contract`, returning the module's native shape.
+    """Invert [`to_contract`][], returning the module's native shape.
 
     ``from_contract(to_contract(x, s), s)`` round-trips to ``x``'s shape for
     every shape. Used on the write path, where the model must receive back the
     shape it was going to produce.
 
     Args:
-        native: the tensor :func:`to_contract` was given. Required only for a
+        native: the tensor [`to_contract`][] was given. Required only for a
             **fused** shape, where the component named one split of a shared
             projection and the other splits have to survive the write: the
             contract tensor is scattered back into ``native``, which is then
@@ -266,7 +208,7 @@ def from_contract(
 
 
 def _pack(tensor: torch.Tensor, shape: FeatureShape, batch_size: int) -> torch.Tensor:
-    """Invert :func:`_unpack`: re-merge the axes each native dimension holds."""
+    """Invert `_unpack`: re-merge the axes each native dimension holds."""
     sizes: list[int] = []
     dim = 0
     for group in shape.native_groups:
@@ -299,7 +241,7 @@ def tap_tensor(payload: Any, tuple_index: int | None) -> torch.Tensor:
 
 
 def rebuild_payload(payload: Any, tuple_index: int | None, value: torch.Tensor) -> Any:
-    """Put ``value`` back where :func:`tap_tensor` took it from.
+    """Put ``value`` back where [`tap_tensor`][] took it from.
 
     Preserves the rest of a tuple payload so a write does not drop the cache or
     the attention weights a module also returned.

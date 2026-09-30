@@ -58,14 +58,14 @@ def test_invalid_identity_or_cohort_is_rejected(rows):
 @pytest.mark.parametrize("change", ["missing", "duplicate", "foreign", "negative"])
 def test_qualification_rejects_incomplete_or_foreign_engine_rows(change):
     from causalab.workflow.behavioral import validate_continuation_coverage
-    from causalab.protocol.errors import ProtocolError
+    from causalab.protocol.rules.errors import ProtocolError
 
     labels = ["0", "1", "2"]
     rows = [
         dict(point=0, example_id=label, model="original", input="base")
         for label in labels
     ]
-    validate_continuation_coverage(rows, labels, 1)
+    validate_continuation_coverage(rows, labels, 1, unwritten={"original"})
     if change == "missing":
         rows.pop()
     elif change == "duplicate":
@@ -73,4 +73,4 @@ def test_qualification_rejects_incomplete_or_foreign_engine_rows(change):
     else:
         rows[0]["example_id"] = "3" if change == "foreign" else -1
     with pytest.raises(ProtocolError):
-        validate_continuation_coverage(rows, labels, 1)
+        validate_continuation_coverage(rows, labels, 1, unwritten={"original"})

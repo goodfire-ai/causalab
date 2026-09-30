@@ -1,19 +1,19 @@
-"""The hybrid tower's residual accounting, rebuilt **through the readout adapter**.
+"""The Hydra-effect residual accounting, rebuilt **through the readout adapter**.
 
-The accepted parity fixture decomposed its logits into per-component
-contributions through a fixed-RMS linearisation of the final norm and
-attributed the closure residual to two declared rounding terms — the
-normalization's and the LM head's — with the acceptance that removing either
-term must break the closure on a fixture that exhibits that residual. A first
-rebuild on the real Qwen3.6-35B-A3B leaned on architecture branches the
-adapter contract rules out (a ``final_norm_of`` probing three attribute names,
-a gain convention detected by fit, ``lm_head.weight`` read by hand). This
-module is the same accounting with **none of them**: every family fact comes
-from :class:`Readout`, every tensor from the engine's own reads, and the
-reference projection from the head's own forward in the declared accumulation
-dtype.
+The direct-effect accounting behind the Hydra-effect replication (McGrath et
+al., arXiv:2307.15771; ``demos/papers/hydra_fig1.md``) decomposes the logits
+into per-component contributions through a fixed-RMS linearisation of the
+final norm and attributes the closure residual to two declared rounding terms
+— the normalization's and the LM head's — with the acceptance that removing
+either term must break the closure on a fixture that exhibits that residual.
+An earlier version on the real Qwen3.6-35B-A3B needed architecture branches (a
+``final_norm_of`` probing three attribute names, a gain convention detected by
+fit, ``lm_head.weight`` read by hand). This module is the same accounting with
+**none of them**: every family fact comes from [`Readout`][causalab.analysis.logit_lens.Readout], every tensor
+from the engine's own reads, and the reference projection from the head's own
+forward in the declared accumulation dtype.
 
-The accounting, references in float64 on CPU::
+The accounting, references in float64 on CPU (the earlier version's, verbatim)::
 
     x        = block_output @ last layer          (the final residual, as run)
     c_i      = block_input @ 0, then attention_output@L, mlp_output@L for every L
@@ -49,7 +49,7 @@ from typing import Any, Mapping
 import torch
 
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
-from causalab.neural.shared.readout import (
+from causalab.analysis.logit_lens import (
     CERTIFICATION_ULPS,
     Certificate,
     Readout,
@@ -60,7 +60,7 @@ from tests._helpers import a3b_sweep as sweep
 
 __all__ = ["ROWS", "Accounting", "account", "problems", "read"]
 
-#: Two rows — a batch axis, and two lengths so the reads are ragged.
+#: The earlier version's two rows — a batch axis, and two lengths so the reads are ragged.
 ROWS: list[dict[str, Any]] = [
     {"input": "The Eiffel Tower stands in the city of Paris"},
     {"input": "The capital city of Japan is Tokyo"},
@@ -72,7 +72,7 @@ def read(
 ) -> torch.Tensor:
     """One engine read of ``component`` at every position of every row, as the
     flat ``(positions, features)`` tensor — the same document shape the A3B
-    sweep drives. The executor hands it back on the host, whatever
+    sweep and the earlier version drive. The executor hands it back on the host, whatever
     device the model runs on."""
     doc = sweep.read_doc(component, layer, pos="all")
     executor = sweep.make_executor(PointExecutor, doc, bundle, rows=rows, with_cf=False)
@@ -127,7 +127,7 @@ def _maxabs(t: torch.Tensor) -> float:
 
 
 def account(bundle: Any, *, rows: list[dict[str, Any]] = ROWS) -> Accounting:
-    """Run the accounting on ``bundle`` through :class:`Readout`."""
+    """Run the accounting on ``bundle`` through [`Readout`][causalab.analysis.logit_lens.Readout]."""
     readout = Readout.from_bundle(bundle)
     n_layers = len(bundle.blocks)
 
@@ -141,7 +141,7 @@ def account(bundle: Any, *, rows: list[dict[str, Any]] = ROWS) -> Accounting:
 
     # The as-run calls are module forwards, so they need ``x`` where the
     # module's parameters are; the reads arrive on the host. The tiny tier runs
-    # on the CPU and never tells the two apart; the golden tier does.
+    # on the CPU and never told the two apart — the A3B golden tier did.
     run_device = next(readout.norm.parameters()).device
     x_run = x.to(run_device)
     with torch.no_grad():
@@ -206,7 +206,7 @@ def problems(acc: Accounting, *, ulps: int = CERTIFICATION_ULPS) -> list[str]:
 
     * the adapter's readout is the engine's ``lm_head`` read bit for bit;
     * the closure residual is at the reference projection's own noise floor
-      (``10 · floor``, floor ≥ 1e-12);
+      (the earlier version's ``10 · floor``, floor ≥ 1e-12);
     * the fixture **exhibits** both rounding terms (each ≫ the floor) — so
       dropping either breaks the closure, by exactly that term;
     * each rounding term is what its dtype's roundoff allows at the value's

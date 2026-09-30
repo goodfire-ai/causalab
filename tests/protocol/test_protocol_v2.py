@@ -31,10 +31,11 @@ from typing import Any
 import pytest
 
 from causalab.cli import main
-from causalab.protocol.axes import AXES_KEY
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ParseError, ProtocolWarning
-from causalab.protocol.loader import apply_overrides, load
+from causalab.protocol.lowering import AXES_KEY
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ParseError, ProtocolWarning
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.sources import apply_overrides
 from causalab.protocol.migrate import (
     format_document,
     migrate_document,
@@ -51,10 +52,12 @@ from causalab.protocol.schema import (
     parse_document,
     tree_path,
 )
-from causalab.protocol.sweep import find_axes
+from causalab.protocol.lowering import find_axes
 
 from tests.protocol._docs import base_doc, in_order
-from tests.protocol._env import FIXTURES, fixture_input_overrides
+from tests.protocol._env import FIXTURES, fixture_input_overrides, steps_of
+from tests.protocol.test_site_layers import v3_base_doc
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.unit
 
@@ -240,19 +243,23 @@ def test_at_once_families_expand_inside_the_method_group(env):
     sites, reads and writes are families, loads to the members it denotes, and
     a wrapper where no name identity exists is refused by its section-rooted
     path."""
-    from causalab.protocol.errors import ValidationError
+    from causalab.protocol.rules.errors import ValidationError
 
-    preset = REPO / "causalab/configs/protocols/attention_band_patch.json"
-    loaded = load(
-        preset, env, overrides=fixture_input_overrides(json.loads(preset.read_text()))
+    preset = PROTOCOLS_DIR / "attention_band_patch.json"
+    loaded = compile_protocol(
+        preset,
+        env=env,
+        overrides=fixture_input_overrides(json.loads(preset.read_text())),
     )
-    assert {f"a{layer}" for layer in range(10, 20)} <= set(loaded.document.sites)
-    assert "at_once" not in json.dumps(loaded.raw["method"])  # the sugar is gone
+    assert {f"a{layer}" for layer in range(9, 17)} <= set(loaded.document.sites)
+    assert "at_once" not in json.dumps(loaded.tree["method"])  # the sugar is gone
     stray = base_doc()
-    stray["method"]["metrics"]["ld"]["a"] = {"at_once": ["cf_answer", "base_answer"]}
+    stray["method"]["save"][0]["aggregation"]["a"] = {
+        "at_once": ["cf_answer", "base_answer"]
+    }
     with pytest.raises(ValidationError) as err:
-        load(stray, env)
-    assert err.value.rule == 28 and err.value.path == "metrics.ld.a"
+        compile_protocol(stray, env=env)
+    assert err.value.rule == 28 and err.value.path == "save[0].aggregation.a"
 
 
 def test_sweep_axis_ids_are_section_rooted():
@@ -269,42 +276,40 @@ def test_sweep_axis_ids_are_section_rooted():
 
 
 def test_title_and_description_are_not_in_the_digest(env):
-    plain = load(base_doc(), env)
+    plain = compile_protocol(base_doc(), env=env)
     named = base_doc()
     named["header"].update(title="a name", description="what it is for")
-    renamed = load(named, env)
-    assert renamed.document_digest == plain.document_digest
-    assert renamed.point_digests == plain.point_digests
-    assert renamed.canonical_document["header"] == {"protocol_version": "3"}
-    assert list(renamed.canonical_document) == list(GROUP_ORDER)
+    renamed = compile_protocol(named, env=env)
+    assert renamed.digests.document == plain.digests.document
+    assert steps_of(renamed, env).digests == steps_of(plain, env).digests
+    assert renamed.canonical["header"] == {"protocol_version": PROTOCOL_VERSION}
+    assert list(renamed.canonical) == list(GROUP_ORDER)
 
 
 def test_protocol_version_is_in_the_digest(env):
     canonical = canonicalize(base_doc(), env)
     assert canonical["header"]["protocol_version"] == PROTOCOL_VERSION
     other = json.loads(json.dumps(canonical))
-    other["header"]["protocol_version"] = "4"
+    other["header"]["protocol_version"] = "5"
     assert digest(other) != digest(canonical)
 
 
 def test_there_is_no_method_digest(env):
-    """A compile reports the document digest and the point digests and nothing
-    else (§7): the method digest was a third identity that ``--resume`` never
-    compared and no record needed, so a loaded protocol has no such field and
-    a sugar-only respelling is one experiment under every digest there is."""
+    """A compile reports the document digest and nothing else (§7; the point
+    digests are the engine's to sign): the method digest was a
+    third identity that ``--resume`` never compared and no record needed, so
+    a loaded protocol has no such field and a sugar-only respelling is one
+    experiment under every digest there is."""
     import dataclasses
 
-    sugar = load(base_doc(), env)
+    sugar = compile_protocol(base_doc(), env=env)
     assert not hasattr(sugar, "method_digest")
-    assert [f.name for f in dataclasses.fields(sugar.compiled.digests)] == [
-        "document",
-        "points",
-    ]
+    assert [f.name for f in dataclasses.fields(sugar.digests)] == ["document"]
     explicit_raw = base_doc()
     explicit_raw["method"]["reads"]["v_cf"]["pos"] = {"index": -1}
-    explicit = load(explicit_raw, env)
-    assert explicit.document_digest == sugar.document_digest
-    assert explicit.point_digests == sugar.point_digests
+    explicit = compile_protocol(explicit_raw, env=env)
+    assert explicit.digests.document == sugar.digests.document
+    assert steps_of(explicit, env).digests == steps_of(sugar, env).digests
 
 
 # --------------------------------------------------------------------------- #
@@ -313,7 +318,8 @@ def test_there_is_no_method_digest(env):
 
 
 def _v1(doc: dict[str, Any]) -> dict[str, Any]:
-    """The v1 spelling of a v2 document, for the round trip."""
+    """The v1 spelling of a grouped document, for the round trip — fed the
+    protocol-3 ancestor, since a v1 body is spelled like one (§9)."""
     out: dict[str, Any] = {"version": "1"}
     if "description" in doc["header"]:
         out["description"] = doc["header"]["description"]
@@ -324,23 +330,25 @@ def _v1(doc: dict[str, Any]) -> dict[str, Any]:
 
 
 def test_migrate_regroups_a_flat_v1_document_and_is_idempotent():
-    v2 = base_doc()
+    v2 = v3_base_doc()
     v2["header"]["description"] = "the intent"
-    assert migrate_document(_v1(v2)) == v2
-    assert migrate_document(v2) == v2
+    current = base_doc()
+    current["header"]["description"] = "the intent"
+    assert migrate_document(_v1(v2)) == current
+    assert migrate_document(current) == current
     workflow = {"version": "1", "output_dir": "r", "steps": {}}
     assert migrate_document(workflow) == workflow
 
 
 def test_migrate_drops_type_and_the_neural_model_alias():
-    v1 = _v1(base_doc())
+    v1 = _v1(v3_base_doc())
     v1["type"] = "protocol"
     v1["neural_model"] = v1.pop("model")
     assert migrate_document(v1) == base_doc()
 
 
 def test_migrate_refuses_a_split_document_and_a_method_file():
-    v1 = _v1(base_doc())
+    v1 = _v1(v3_base_doc())
     split = {
         "version": "1",
         "application": {"model": v1["model"], "data": v1["data"]},
@@ -362,11 +370,13 @@ def test_format_document_writes_shallow_objects_on_one_line():
     assert json.loads(text) == base_doc()
     assert '"tgt": {"component": "block_output", "layers": [3]}' in text
     assert '"patch": {"site": "tgt", "pos": -1, "do": {"swap": "v_cf"}}' in text
-    assert text.startswith('{\n  "header": {"protocol_version": "3"},\n  "model":')
+    assert text.startswith(
+        '{\n  "header": {"protocol_version": "' + PROTOCOL_VERSION + '"},\n  "model":'
+    )
 
 
 def test_migrate_markdown_rewrites_whole_v1_examples_only():
-    v1 = _v1(base_doc())
+    v1 = _v1(v3_base_doc())
     prose = (
         "Some prose.\n\n```json\n"
         + json.dumps(v1, indent=2)
@@ -377,7 +387,7 @@ def test_migrate_markdown_rewrites_whole_v1_examples_only():
         + "\n  ```\n"
     )
     out = migrate_markdown(prose)
-    assert out.count('"protocol_version": "3"') == 2
+    assert out.count('"protocol_version": "4"') == 2
     assert '{"sites": {"target": {...}}}' in out  # the fragment is untouched
     assert (
         '{"version": "1", "output_dir": "r", "steps": {}}' in out
@@ -387,7 +397,7 @@ def test_migrate_markdown_rewrites_whole_v1_examples_only():
 
 
 def test_the_migrate_verb_rewrites_in_place_and_check_reports(tmp_path, capsys):
-    v1 = _v1(base_doc())
+    v1 = _v1(v3_base_doc())
     document = tmp_path / "old.json"
     document.write_text(json.dumps(v1))
     workflow = tmp_path / "wf.json"
@@ -426,6 +436,8 @@ def test_the_migrate_verb_rewrites_in_place_and_check_reports(tmp_path, capsys):
         main(
             [
                 "validate",
+                "--engine",
+                "auto",
                 str(document),
                 "--data-root",
                 str(FIXTURES / "data"),
@@ -484,7 +496,7 @@ def test_the_spec_section_one_tables_are_the_constants():
     assert _keys(groups, "key") == (*GROUP_ORDER, AXES_KEY)
     header = next(t for t in tables if _keys(t, "key")[0] == "protocol_version")
     assert _keys(header, "key") == HEADER_FIELDS
-    method = next(t for t in tables if _keys(t, "key")[0] == "segments")
+    method = next(t for t in tables if _keys(t, "key")[0] == "intervened_models")
     assert _keys(method, "key") == METHOD_SECTIONS
     required = {
         key

@@ -32,16 +32,18 @@ from typing import Any
 import pytest
 
 from causalab.io.step_record import SIDECAR
-from causalab.protocol.errors import ProtocolError, ProtocolWarning
-from causalab.protocol.tables import read_table
+from causalab.protocol.rules.errors import ProtocolError, ProtocolWarning
+from causalab.io.tables import read_table
 from causalab.workflow import manifest as mf
 from causalab.workflow import runner
-from causalab.workflow.document import load_workflow
+from causalab.workflow.document import OutputDecl, load_workflow
 from causalab.workflow.runner import (
     WRITE_BOUNDARIES,
     ScriptFailure,
     _verify_safetensors,  # pyright: ignore[reportPrivateUsage]
     run_workflow,
+    script_call,
+    verify_output,
 )
 
 pytestmark = pytest.mark.unit
@@ -81,7 +83,7 @@ SECOND = (
 import json
 from pathlib import Path
 from causalab.workflow import runner
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 
 def main(inputs, outputs):
     rows = read_table(inputs["a"])
@@ -188,7 +190,7 @@ def _load(wf_dir: Path, env: Any, **kwargs: Any) -> Any:
 
 
 def _run(loaded: Any, env: Any, out: Path, *, resume: bool = False) -> dict[str, str]:
-    result = run_workflow(loaded, env, out, [], resume=resume)
+    result = run_workflow(loaded, env, out, None, resume=resume)
     return {name: entry["status"] for name, entry in result.manifest["steps"].items()}
 
 
@@ -331,11 +333,11 @@ def test_interruption_at_every_write_boundary_recovers(
         with pytest.raises(
             ProtocolError, match=rf"'{step}'.*'completed'.*'pending'"
         ) as info:
-            run_workflow(loaded, env, out, [])
+            run_workflow(loaded, env, out, None)
         assert isinstance(info.value.__cause__, InjectedFailure)
     else:
         with pytest.raises(InjectedFailure):
-            run_workflow(loaded, env, out, [])
+            run_workflow(loaded, env, out, None)
     assert fired == [(boundary, step)], "the injection did not fire exactly once"
     monkeypatch.undo()
 
@@ -435,8 +437,7 @@ def test_a_damaged_output_is_re_executed_not_reused(wf_dir, tmp_path, env, damag
     """Cut the last byte, or overwrite one byte keeping the size: either way
     the content digest disagrees with the record and the step runs again,
     publishing a verified unit. Steps downstream follow the identity rules as
-    they stand (their own digest; the upstream implementation is a separate
-    check)."""
+    they stand (their own digest)."""
     loaded = _load(wf_dir, env)
     out = tmp_path / "runs"
     run_root = out / "chain"
@@ -504,7 +505,7 @@ def test_a_failed_run_classifies_every_step(wf_dir, tmp_path, env):
     out = tmp_path / "runs"
     run_root = out / "chain"
     with pytest.raises(RuntimeError, match="the step died"):
-        run_workflow(loaded, env, out, [])
+        run_workflow(loaded, env, out, None)
     manifest = _manifest(run_root)
     assert {n: e["status"] for n, e in manifest["steps"].items()} == {
         "first": "completed",
@@ -534,7 +535,7 @@ def test_an_interrupt_in_step_one_blocks_the_chain_and_leaves_the_rest_pending(
     assert loaded.order == ("first", "second", "third", "aside")
     out = tmp_path / "runs"
     with pytest.raises(KeyboardInterrupt):
-        run_workflow(loaded, env, out, [])
+        run_workflow(loaded, env, out, None)
     assert _statuses(out / "chain") == {
         "first": "failed",
         "second": "blocked",
@@ -557,7 +558,7 @@ def test_a_manifest_that_cannot_be_written_does_not_mask_the_step_failure(
     monkeypatch.setattr(runner, "write_manifest", refuse)
     with pytest.warns(ProtocolWarning, match="workflow.json could not be written"):
         with pytest.raises(RuntimeError, match="the step died"):
-            run_workflow(loaded, env, tmp_path / "runs", [])
+            run_workflow(loaded, env, tmp_path / "runs", None)
 
 
 def test_a_manifest_failure_on_a_clean_run_is_raised(
@@ -570,11 +571,11 @@ def test_a_manifest_failure_on_a_clean_run_is_raised(
 
     monkeypatch.setattr(runner, "write_manifest", refuse)
     with pytest.raises(OSError, match="disk full"):
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
 
 
 # --------------------------------------------------------------------------- #
-# T4 — valid work
+# T4 — valid work is not refused
 # --------------------------------------------------------------------------- #
 
 
@@ -699,7 +700,7 @@ def test_verification_refuses_before_publish(wf_dir, tmp_path, env, script, matc
     loaded = _load(wf_dir, env)
     out = tmp_path / "runs"
     with pytest.raises(ProtocolError, match=match):
-        run_workflow(loaded, env, out, [])
+        run_workflow(loaded, env, out, None)
     assert not (out / "chain" / "first").exists(), "an unverified unit was published"
     assert _statuses(out / "chain")["first"] == "failed"
 
@@ -710,7 +711,81 @@ def test_a_figure_without_its_signature_is_refused(wf_dir, tmp_path, env):
     )
     loaded = _load(wf_dir, env)
     with pytest.raises(ProtocolError, match="png signature"):
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
+
+
+def test_verify_output_holds_a_file_to_its_declaration(tmp_path):
+    """The public check is the one the runner publishes by: declared columns
+    against a table's first row, declared keys against a values object, the
+    format alone without a declaration. It returns the name of the check that
+    passed, and a refusal names the file and what it misses."""
+    table = tmp_path / "direct_effect.json"
+    table.write_text(json.dumps([{"example_id": "0", "delta": 0.5}]))
+    columns = {"example_id": "string", "delta": "float64"}
+    assert verify_output(table, OutputDecl(file=table.name, columns=columns)) == (
+        "json-table"
+    )
+    assert verify_output(table) == "json"
+    stale = OutputDecl(
+        file=table.name, columns={"example": "int64", "delta": "float64"}
+    )
+    with pytest.raises(
+        ProtocolError, match=r"output 'direct_effect\.json'.*missing \['example'\]"
+    ):
+        verify_output(table, stale)
+    # the documented limit: only the first row is held to the declaration
+    ragged = tmp_path / "ragged.json"
+    ragged.write_text(json.dumps([{"example_id": "0", "delta": 0.5}, {"delta": 0.1}]))
+    assert verify_output(ragged, OutputDecl(file=ragged.name, columns=columns)) == (
+        "json-table"
+    )
+    # without a declaration a missing file is only that
+    with pytest.raises(
+        ProtocolError, match=r"^\[P2\] output 'gone\.json' was not written$"
+    ):
+        verify_output(tmp_path / "gone.json")
+    values = tmp_path / "values.json"
+    values.write_text(json.dumps({"ablate_layer": 3}))
+    keys = OutputDecl(file=values.name, keys={"ablate_layer": 18})
+    assert verify_output(values, keys) == "json-values"
+    with pytest.raises(
+        ProtocolError, match=r"^\[P2\] step 'scale': .*missing \['noise_scale'\]"
+    ):
+        verify_output(
+            values,
+            OutputDecl(file=values.name, keys={"noise_scale": 0.1}),
+            what="step 'scale': output 'values'",
+        )
+
+
+def test_script_call_resolves_what_the_runner_hands_a_script(wf_dir, tmp_path, env):
+    """The public resolution is the runner's own: a step reference becomes
+    the producer's file, a ``key`` selector reads through it, and each
+    declared output sits in the step directory. ``stamp`` refuses a declared
+    output the script did not write, and a name that is no script step is
+    refused before anything is read."""
+    loaded = _load(wf_dir, env)
+    root = tmp_path / "runs"
+    (root / "first").mkdir(parents=True)
+    (root / "first" / "b.json").write_text(json.dumps({"k": 2}))
+    (root / "second").mkdir()
+    (root / "second" / "c.json").write_text(json.dumps([{"total": 3}]))
+    call = script_call("third", loaded, root, root / "third")
+    assert call.inputs == {"k": 2, "c": root / "second" / "c.json"}
+    assert call.outputs == {
+        "e": root / "third" / "e.json",
+        "f": root / "third" / "f.html",
+    }
+    assert call.input_digests == {
+        "k": _sha256(root / "first" / "b.json"),
+        "c": _sha256(root / "second" / "c.json"),
+    }
+    with pytest.raises(
+        ProtocolError, match=r"step 'third': output 'e' \(e\.json\) was not written"
+    ):
+        call.stamp()
+    with pytest.raises(ProtocolError, match=r"step 'fourth' is not a script step"):
+        script_call("fourth", loaded, root, root / "fourth")
 
 
 def _safetensors(tmp_path: Path, *, data_bytes: int, claimed: int) -> Path:
@@ -762,7 +837,7 @@ def test_the_status_vocabulary_matches_the_spec_table():
     assert documented == list(mf.STEP_STATUSES)
     assert set(typing.get_args(mf.StepStatus)) == set(mf.STEP_STATUSES)
     assert len(mf.STEP_STATUSES) == 6
-    assert mf.STEP_STATUSES[-1] == "skipped"  # the third outcome (§2.8)
+    assert mf.STEP_STATUSES[-1] == "skipped"  # the skip outcome (§2.8)
 
 
 def test_classify_unreached_distinguishes_blocked_from_pending():
@@ -787,7 +862,7 @@ def test_failed_attempts_are_retained_up_to_the_cap(wf_dir, tmp_path, env):
     out = tmp_path / "runs"
     for _ in range(4):
         with pytest.raises(RuntimeError):
-            run_workflow(loaded, env, out, [])
+            run_workflow(loaded, env, out, None)
     attempts_root = out / "chain" / mf.ATTEMPTS_DIR / "second"
     kept = sorted(p.name for p in attempts_root.iterdir())
     assert kept == ["0002", "0003", "0004"]
@@ -822,7 +897,7 @@ def test_an_isolated_scripts_stderr_tail_is_bounded(wf_dir, tmp_path, env, monke
 
     monkeypatch.setattr(runner, "_run_in_process", fail)
     with pytest.raises(ScriptFailure):
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     attempt = tmp_path / "runs" / "chain" / mf.ATTEMPTS_DIR / "first" / "0001"
     record = json.loads((attempt / mf.ATTEMPT_RECORD).read_text())
     tail = record["stderr_tail"]
@@ -846,7 +921,7 @@ def test_partial_outputs_of_a_failed_attempt_are_kept_only_within_the_cap(
     monkeypatch.setattr(runner, "_boundary", inject)
     for _ in range(mf.RETAINED_FAILED_ATTEMPTS + 2):
         with pytest.raises(InjectedFailure):
-            run_workflow(loaded, env, out, [])
+            run_workflow(loaded, env, out, None)
     attempts_root = out / "chain" / mf.ATTEMPTS_DIR / "first"
     kept = sorted(attempts_root.iterdir())
     assert len(kept) == mf.RETAINED_FAILED_ATTEMPTS

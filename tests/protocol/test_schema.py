@@ -7,20 +7,42 @@ import json
 
 import pytest
 
-from causalab.protocol.canonical import canonical_bytes, canonicalize, digest
-from causalab.protocol.errors import ParseError, ValidationError
+from causalab.protocol.schema.explicit import canonical_bytes, canonicalize, digest
+from causalab.protocol.rules.errors import ParseError, ValidationError
 from causalab.protocol.schema import PositionSpec, Sweep, load_raw, parse_document
-from causalab.protocol.sweep import find_axes
+from causalab.protocol.lowering import find_axes
 
-from tests.protocol._docs import base_doc, in_order
+from causalab.tables import inline_ref
+from tests.protocol._docs import (
+    LOGIT_DIFF,
+    UNWRITTEN,
+    base_doc,
+    base_only_doc,
+    by_label,
+    in_order,
+    inline_doc,
+    saved,
+    term,
+)
 
 pytestmark = pytest.mark.unit
+
+
+def _fit(**extra):
+    """An objective or eval term over `base_doc`'s one aggregation —
+    the logit difference on ``patched``'s logits (§2.11)."""
+    return term("logits", "patched", dict(LOGIT_DIFF), **extra)
+
+
+def _ld(raw: dict) -> dict:
+    """The aggregation `base_doc`'s one save entry tabulates (§2.12)."""
+    return raw["method"]["save"][0]["aggregation"]
 
 
 def test_load_raw_rejects_duplicate_keys():
     with pytest.raises(ParseError) as err:
         load_raw(
-            '{"header": {"protocol_version": "3"}, "header": {"protocol_version": "3"}}'
+            '{"header": {"protocol_version": "4"}, "header": {"protocol_version": "4"}}'
         )
     assert err.value.code == "P2"
 
@@ -62,7 +84,7 @@ def test_missing_required_section():
 
 def test_unsupported_version():
     raw = base_doc()
-    raw["header"]["protocol_version"] = "4"
+    raw["header"]["protocol_version"] = "99"
     with pytest.raises(ParseError):
         parse_document(raw)
 
@@ -155,62 +177,99 @@ def test_entry_level_sweep_on_positions():
 
 
 # --------------------------------------------------------------------------- #
-# §2.10 token_form — the metric-level answer-tokenization knob
+# §2.10 token_form — optional, `id` only; an answer string is tokenized as written
 # --------------------------------------------------------------------------- #
 
 
-def test_metric_token_form_is_required_on_the_token_column_kinds():
-    """A document may not inherit a tokenization rule.
-
-    ``token_form`` used to default to ``auto`` — the space-prefixed-first
-    guess — and the guess has been measurably wrong four ways (a leading space,
-    punctuation that merges leftward, two authored forms resolving to one id,
-    and multi-token digits). Every shipped document is pinned; what this makes
-    true is that every *new* one has to say which form it means. ``auto`` is
-    still available, as a choice."""
+def test_metric_token_form_is_absent_by_default():
+    """An answer string is tokenized as written, so a document has nothing to
+    say about its form: the key is optional and an unauthored key is ``None``
+    on the spec (and absent from the canonical form — the shipped-digest pins
+    hold that half)."""
     raw = base_doc()
-    del raw["method"]["metrics"]["ld"]["token_form"]
+    assert "token_form" not in _ld(raw)
+    assert by_label(parse_document(in_order(raw)))["ld"].token_form is None
+
+
+@pytest.mark.parametrize(
+    ("retired", "rewrite"),
+    [
+        ("auto", "so the rewrite needs the tokenizer"),
+        ("bare", "as s.lstrip(' ')"),
+        ("space_prefixed", "as ' ' + s.lstrip(' ')"),
+    ],
+)
+def test_metric_token_form_refuses_the_retired_values_by_name(
+    retired: str, rewrite: str
+):
+    """The three values that used to rewrite an answer's leading space are
+    refused with the replacement stated: put the space in the string. The
+    logit difference reads its answers from dataset columns, so the refusal
+    names them and states the table rewrite that keeps the scored tokens.
+    Dropping the key alone would change the scored token of a value written
+    without the space."""
+    raw = base_doc()
+    _ld(raw)["token_form"] = retired
     with pytest.raises(ParseError) as err:
-        parse_document(raw)
-    assert "token_form" in str(err.value)
-    assert "space_prefixed" in str(err.value)  # the message names the options
+        parse_document(in_order(raw))
+    assert err.value.code == "P4"
+    assert err.value.path == "save[0].aggregation.token_form"
+    message = str(err.value)
+    assert f"token_form {retired!r} was retired" in message
+    assert "tokenized as written" in message
+    assert "a: 'cf_answer'; b: 'base_answer'" in message
+    assert "each member of a list of forms included" in message
+    assert rewrite in message
+    assert "shipped tables" not in message
+
+
+def test_a_retired_token_form_on_literal_answers_states_the_rewrite():
+    """A literal answer list is in the document, so the refusal states the
+    rewrite of each string and names no column."""
+    raw = base_doc()
+    raw["method"]["save"][0]["aggregation"] = {
+        "kind": "class_probs",
+        "groups": {"city": ["Seattle"]},
+        "token_form": "space_prefixed",
+    }
+    with pytest.raises(ParseError) as err:
+        parse_document(in_order(raw))
+    assert err.value.code == "P4"
+    message = str(err.value)
+    assert "' Seattle'" in message and "'Seattle'" in message
+    assert "as ' ' + s.lstrip(' ')" in message
+    assert "dataset columns" not in message
 
 
 def test_metric_token_form_is_not_required_where_it_does_not_apply():
     """``kl`` compares two reads and ``top_k`` ranks a vector: neither resolves
     an authored string to a token id, so neither takes the field at all."""
     raw = base_doc()
-    raw["method"]["reads"]["cf_logits"] = {
-        "site": "lm_head",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-    }
-    raw["method"]["metrics"]["kl"] = {
-        "kind": "kl",
-        "of": "logits",
-        "target": "cf_logits",
-    }
-    raw["method"]["metrics"]["tk"] = {
-        "kind": "top_k",
-        "of": "logits",
-        "k": 3,
-        "by": "prob",
-    }
+    raw["method"]["reads"]["cf_logits"] = {"site": "lm_head", "pos": -1}
+    raw["method"]["intervened_models"][UNWRITTEN]["reads"].append("cf_logits")
+    raw["method"]["save"] += [
+        saved(
+            "logits",
+            "patched",
+            "kl.json",
+            {"kind": "kl", "target": {"read": "cf_logits", "model": UNWRITTEN}},
+        ),
+        saved("logits", "patched", "tk.json", {"kind": "top_k", "k": 3, "by": "prob"}),
+    ]
     parsed = parse_document(in_order(raw))
-    assert parsed.metrics["kl"].token_form == "auto"
+    assert by_label(parsed)["kl"].token_form is None
 
 
-@pytest.mark.parametrize("form", ["auto", "bare", "space_prefixed"])
-def test_metric_token_form_parses_each_form(form: str):
+def test_metric_token_form_parses_id():
+    """The one value: the column holds integer vocabulary ids."""
     raw = base_doc()
-    raw["method"]["metrics"]["ld"]["token_form"] = form
-    assert parse_document(in_order(raw)).metrics["ld"].token_form == form
+    _ld(raw)["token_form"] = "id"
+    assert by_label(parse_document(in_order(raw)))["ld"].token_form == "id"
 
 
 def test_metric_token_form_rejects_an_unknown_form():
     raw = base_doc()
-    raw["method"]["metrics"]["ld"]["token_form"] = "spaced"
+    _ld(raw)["token_form"] = "spaced"
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
     assert err.value.code == "P4"
@@ -222,12 +281,11 @@ def test_metric_token_form_is_refused_on_kinds_that_resolve_no_string():
     meaningless. Still true now that ``top_k`` runs over any read: it decodes
     an index only when the read taps ``lm_head``, and never resolves one."""
     raw = base_doc()
-    raw["method"]["metrics"]["ld"] = {
+    raw["method"]["save"][0]["aggregation"] = {
         "kind": "top_k",
-        "of": "logits",
         "k": 3,
         "by": "prob",
-        "token_form": "bare",
+        "token_form": "id",
     }
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
@@ -238,7 +296,9 @@ def test_top_k_needs_a_ranking_rule():
     """``by`` is mandatory: only the author knows whether the read's axis has
     meaningful negative entries, and guessing changes the answer."""
     raw = base_doc()
-    raw["method"]["metrics"]["tk"] = {"kind": "top_k", "of": "logits", "k": 3}
+    raw["method"]["save"].append(
+        saved("logits", "patched", "tk.json", {"kind": "top_k", "k": 3})
+    )
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
     assert err.value.code == "P2"
@@ -248,19 +308,20 @@ def test_top_k_needs_a_ranking_rule():
 @pytest.mark.parametrize("by", ["value", "abs_value", "prob"])
 def test_top_k_ranking_vocabulary(by):
     raw = base_doc()
-    raw["method"]["metrics"]["tk"] = {"kind": "top_k", "of": "logits", "k": 3, "by": by}
+    raw["method"]["save"].append(
+        saved("logits", "patched", "tk.json", {"kind": "top_k", "k": 3, "by": by})
+    )
     doc = parse_document(in_order(raw))
-    assert doc.metrics["tk"].fields["by"] == by
+    assert by_label(doc)["tk"].fields["by"] == by
 
 
 def test_top_k_ranking_is_a_closed_enum():
     raw = base_doc()
-    raw["method"]["metrics"]["tk"] = {
-        "kind": "top_k",
-        "of": "logits",
-        "k": 3,
-        "by": "softmax",
-    }
+    raw["method"]["save"].append(
+        saved(
+            "logits", "patched", "tk.json", {"kind": "top_k", "k": 3, "by": "softmax"}
+        )
+    )
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
     assert err.value.code == "P4"
@@ -271,12 +332,14 @@ def test_top_k_ranking_is_not_sweepable():
     than on a research variable — the reasoning that keeps ``token_form`` off
     §3's wrappers."""
     raw = base_doc()
-    raw["method"]["metrics"]["tk"] = {
-        "kind": "top_k",
-        "of": "logits",
-        "k": 3,
-        "by": {"sweep": ["value", "abs_value"]},
-    }
+    raw["method"]["save"].append(
+        saved(
+            "logits",
+            "patched",
+            "tk.json",
+            {"kind": "top_k", "k": 3, "by": {"sweep": ["value", "abs_value"]}},
+        )
+    )
     with pytest.raises(ValidationError) as err:
         parse_document(in_order(raw))
     assert err.value.rule == 14
@@ -286,7 +349,7 @@ def test_metric_token_form_is_not_sweepable():
     """A sweep over token_form would fork a campaign on a tokenizer detail
     rather than a research variable; §3 wrappers stay off this field."""
     raw = base_doc()
-    raw["method"]["metrics"]["ld"]["token_form"] = {"sweep": ["bare", "space_prefixed"]}
+    _ld(raw)["token_form"] = {"sweep": ["id"]}
     with pytest.raises(ValidationError) as err:
         parse_document(in_order(raw))
     assert err.value.rule == 14
@@ -389,8 +452,8 @@ def test_prompt_frame_positions_carry_no_generated():
 
 def test_decode_metric_takes_no_value_fields():
     raw = base_doc()
-    raw["method"]["metrics"]["ld"] = {"kind": "decode", "of": "logits"}
-    metric = parse_document(in_order(raw)).metrics["ld"]
+    raw["method"]["save"][0]["aggregation"] = {"kind": "decode"}
+    metric = by_label(parse_document(in_order(raw)))["ld"]
     assert str(metric.kind) == "decode"
     assert dict(metric.fields) == {}
 
@@ -399,7 +462,7 @@ def test_decode_metric_rejects_a_stray_field():
     """The kind reduces the tokens a decode produced; there is nothing to
     parametrize, so an extra key is a typo, not an option."""
     raw = base_doc()
-    raw["method"]["metrics"]["ld"] = {"kind": "decode", "of": "logits", "k": 1}
+    raw["method"]["save"][0]["aggregation"] = {"kind": "decode", "k": 1}
     with pytest.raises(ParseError):
         parse_document(in_order(raw))
 
@@ -465,7 +528,7 @@ def test_subspace_init_and_file_path_are_exclusive():
     raw = _subspace_doc(
         init={"file_path": "pca/basis.safetensors"}, file_path="rot.safetensors"
     )
-    with pytest.raises(ParseError, match="draws nothing and trains nothing"):
+    with pytest.raises(ParseError, match="loaded featurizer uses the weights"):
         parse_document(in_order(raw))
 
 
@@ -498,37 +561,39 @@ def test_init_is_a_field_of_the_kinds_that_have_a_start():
 def _token_logits(**overrides: object) -> dict:
     spec: dict = {
         "kind": "token_logits",
-        "of": "logits",
         "tokens": ["Monday", "Friday"],
-        "token_form": "space_prefixed",
     }
     spec.update(overrides)
     return spec
 
 
+def _answers(raw: dict, spec: dict) -> None:
+    """Save ``spec`` over ``patched``'s logits under the label ``answers``."""
+    raw["method"]["save"].append(saved("logits", "patched", "answers.json", spec))
+
+
 def test_token_logits_parses_its_token_list():
     raw = base_doc()
-    raw["method"]["metrics"]["answers"] = _token_logits()
-    metric = parse_document(in_order(raw)).metrics["answers"]
+    _answers(raw, _token_logits())
+    metric = by_label(parse_document(in_order(raw)))["answers"]
     assert metric.fields["tokens"] == ("Monday", "Friday")
-    assert metric.token_form == "space_prefixed"
+    assert metric.token_form is None
 
 
-def test_token_logits_needs_token_form():
-    """Same rule as every other string-resolving kind: the document says how
-    its strings become ids."""
+def test_token_logits_refuses_id():
+    """A literal token list is strings by construction; there is no column
+    of ids for ``id`` to name."""
     raw = base_doc()
-    raw["method"]["metrics"]["answers"] = _token_logits()
-    del raw["method"]["metrics"]["answers"]["token_form"]
+    _answers(raw, _token_logits(token_form="id"))
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
     assert err.value.code == "P2"
-    assert "token_form" in str(err.value)
+    assert "token_form='id'" in str(err.value)
 
 
 def test_token_logits_refuses_an_empty_list():
     raw = base_doc()
-    raw["method"]["metrics"]["answers"] = _token_logits(tokens=[])
+    _answers(raw, _token_logits(tokens=[]))
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
     assert err.value.code == "P2"
@@ -536,34 +601,45 @@ def test_token_logits_refuses_an_empty_list():
 
 def test_token_logits_refuses_a_non_string_entry():
     raw = base_doc()
-    raw["method"]["metrics"]["answers"] = _token_logits(tokens=["Monday", 7])
+    _answers(raw, _token_logits(tokens=["Monday", 7]))
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
     assert err.value.code == "P2"
+
+
+def test_token_logits_lists_both_spellings_as_two_answers():
+    """``["X", " X"]`` is two answers: each string is tokenized as written,
+    and on a byte-level BPE they are two rows. Whether a *tokenizer* folds
+    them onto one id is checked where the metric resolves them."""
+    raw = base_doc()
+    _answers(raw, _token_logits(tokens=["Monday", " Monday"]))
+    metric = by_label(parse_document(in_order(raw)))["answers"]
+    assert metric.fields["tokens"] == ("Monday", " Monday")
 
 
 def test_token_logits_refuses_an_answer_listed_twice():
-    """The ``["X", " X"]`` idiom: a leading space is normalized away before
-    ``token_form`` decides the form, so the two entries are one answer and
-    would carry one logit under two names. Caught torch-free, at parse."""
+    """A string repeated letter for letter would carry one logit under two
+    names. Caught torch-free, at parse."""
     raw = base_doc()
-    raw["method"]["metrics"]["answers"] = _token_logits(tokens=["Monday", " Monday"])
+    _answers(raw, _token_logits(tokens=["Monday", "Monday"]))
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
     assert err.value.code == "P2"
-    assert "once" in str(err.value)
+    assert "twice" in str(err.value)
 
 
-@pytest.mark.parametrize("blank", ["", " ", "\t "])
-def test_token_logits_refuses_an_empty_or_whitespace_only_entry(blank: str):
-    """A blank names no answer, and under ``space_prefixed`` it would resolve
-    to the lone space token — refused at parse, naming the entry."""
+def test_token_logits_refuses_an_empty_entry():
+    """An empty string names no token. A lone space is a token (the one a
+    model emits before a digit on gpt2), so it is allowed."""
     raw = base_doc()
-    raw["method"]["metrics"]["answers"] = _token_logits(tokens=["Monday", blank])
+    _answers(raw, _token_logits(tokens=["Monday", ""]))
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
     assert err.value.code == "P2"
-    assert "whitespace-only" in str(err.value)
+    assert "empty string" in str(err.value)
+    raw["method"]["save"][-1]["aggregation"] = _token_logits(tokens=["Monday", " "])
+    metric = by_label(parse_document(in_order(raw)))["answers"]
+    assert metric.fields["tokens"] == ("Monday", " ")
 
 
 def test_token_logits_tokens_are_not_sweepable():
@@ -571,13 +647,12 @@ def test_token_logits_tokens_are_not_sweepable():
     ``top_k.by``: a sweep over it would fork the campaign on what gets saved
     rather than on a research variable."""
     raw = base_doc()
-    raw["method"]["metrics"]["answers"] = _token_logits(
-        tokens={"sweep": [["Monday"], ["Friday"]]}
-    )
+    _answers(raw, _token_logits(tokens={"sweep": [["Monday"], ["Friday"]]}))
     with pytest.raises(ValidationError) as err:
         parse_document(in_order(raw))
     assert err.value.rule == 14
-    assert err.value.path == "metrics.answers.tokens"
+    # the aggregation lives on the entry that saves it (§2.10)
+    assert err.value.path == "save[1].aggregation.tokens"
 
 
 def test_token_logits_rejects_a_column_style_field_with_a_suggestion():
@@ -586,7 +661,7 @@ def test_token_logits_rejects_a_column_style_field_with_a_suggestion():
     raw = base_doc()
     spec = _token_logits()
     spec["token"] = spec.pop("tokens")
-    raw["method"]["metrics"]["answers"] = spec
+    _answers(raw, spec)
     with pytest.raises(ParseError) as err:
         parse_document(in_order(raw))
     assert err.value.code == "P3"
@@ -644,13 +719,8 @@ def _two_gate_train(objective):
     raw["method"]["sites"]["tgt2"] = {"component": "block_output", "layers": [2]}
     raw["method"]["featurizers"] = {"g0": {"kind": "gate"}, "g1": {"kind": "gate"}}
     raw["method"]["reads"]["v_cf"]["featurizer"] = "g0"
-    raw["method"]["reads"]["v2"] = {
-        "site": "tgt2",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": "g1",
-    }
+    raw["method"]["reads"]["v2"] = {"site": "tgt2", "pos": -1, "featurizer": "g1"}
+    raw["method"]["intervened_models"][UNWRITTEN]["reads"].append("v2")
     raw["method"]["writes"]["patch"]["featurizer"] = "g0"
     raw["method"]["writes"]["patch2"] = {
         "site": "tgt2",
@@ -674,10 +744,10 @@ def _two_gate_train(objective):
 
 
 def test_a_regularizer_may_name_a_list_of_featurizers():
-    doc = parse_document(_two_gate_train([[1.0, "ld"], [0.01, {"l1": ["g1", "g0"]}]]))
+    doc = parse_document(_two_gate_train([[1.0, _fit()], [0.01, {"l1": ["g1", "g0"]}]]))
     assert doc.train is not None
-    (_fit, sparsity) = doc.train.objective
-    assert sparsity.weight == 0.01 and sparsity.metric is None
+    (_, sparsity) = doc.train.objective
+    assert sparsity.weight == 0.01 and sparsity.aggregation is None
     assert sparsity.regularizer == (
         "l1",
         ("g1", "g0"),
@@ -686,7 +756,7 @@ def test_a_regularizer_may_name_a_list_of_featurizers():
 
 
 def test_a_single_name_regularizer_is_a_one_name_list():
-    doc = parse_document(_two_gate_train([[1.0, "ld"], [0.5, {"l2": "g0"}]]))
+    doc = parse_document(_two_gate_train([[1.0, _fit()], [0.5, {"l2": "g0"}]]))
     assert doc.train is not None
     assert doc.train.objective[1].regularizer == ("l2", ("g0",))
 
@@ -696,7 +766,7 @@ def test_a_regularizer_may_declare_its_reduction_in_both_spellings():
     concatenated per-unit quantities; ``None`` when unauthored so the canonical
     form materializes nothing."""
     positional = parse_document(
-        _two_gate_train([[1.0, "ld"], [0.01, {"l1": ["g0", "g1"], "reduce": "sum"}]])
+        _two_gate_train([[1.0, _fit()], [0.01, {"l1": ["g0", "g1"], "reduce": "sum"}]])
     )
     assert positional.train is not None
     assert positional.train.objective[1].reduce == "sum"
@@ -704,28 +774,28 @@ def test_a_regularizer_may_declare_its_reduction_in_both_spellings():
     named = parse_document(
         _two_gate_train(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _fit(weight=1.0),
                 "sparsity": {"weight": 0.01, "l1": ["g0", "g1"], "reduce": "sum"},
             }
         )
     )
     assert named.train is not None
     assert named.train.objective[1].reduce == "sum"
-    plain = parse_document(_two_gate_train([[1.0, "ld"], [0.01, {"l1": "g0"}]]))
+    plain = parse_document(_two_gate_train([[1.0, _fit()], [0.01, {"l1": "g0"}]]))
     assert plain.train is not None and plain.train.objective[1].reduce is None
 
 
 def test_an_unknown_reduction_and_a_reduction_on_a_metric_are_refused():
     with pytest.raises(ParseError) as err:
         parse_document(
-            _two_gate_train([[1.0, "ld"], [0.01, {"l1": "g0", "reduce": "max"}]])
+            _two_gate_train([[1.0, _fit()], [0.01, {"l1": "g0", "reduce": "max"}]])
         )
     assert err.value.code == "P4" and err.value.path == "train.objective[1][1].reduce"
     with pytest.raises(ParseError) as err:
         parse_document(
             _two_gate_train(
                 {
-                    "fit": {"weight": 1.0, "metric": "ld", "reduce": "sum"},
+                    "fit": _fit(weight=1.0, reduce="sum"),
                     "sparsity": {"weight": 0.01, "l1": "g0"},
                 }
             )
@@ -740,7 +810,7 @@ def test_a_regularizer_may_declare_per_target_costs_in_both_spellings():
     positional = parse_document(
         _two_gate_train(
             [
-                [1.0, "ld"],
+                [1.0, _fit()],
                 [0.01, {"l1": ["g0", "g1"], "reduce": "sum", "costs": {"g1": 0.25}}],
             ]
         )
@@ -751,7 +821,7 @@ def test_a_regularizer_may_declare_per_target_costs_in_both_spellings():
     named = parse_document(
         _two_gate_train(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _fit(weight=1.0),
                 "sparsity": {
                     "weight": 0.01,
                     "l1": ["g0", "g1"],
@@ -763,11 +833,11 @@ def test_a_regularizer_may_declare_per_target_costs_in_both_spellings():
     assert named.train is not None
     assert named.train.objective[1].costs == "parameter_count"
     assert named.train.objective[1].reduce is None
-    plain = parse_document(_two_gate_train([[1.0, "ld"], [0.01, {"l1": "g0"}]]))
+    plain = parse_document(_two_gate_train([[1.0, _fit()], [0.01, {"l1": "g0"}]]))
     assert plain.train is not None and plain.train.objective[1].costs is None
     # an integer cost is a float, so `1` and `1.0` are one declaration
     whole = parse_document(
-        _two_gate_train([[1.0, "ld"], [0.01, {"l1": "g0", "costs": {"g0": 2}}]])
+        _two_gate_train([[1.0, _fit()], [0.01, {"l1": "g0", "costs": {"g0": 2}}]])
     )
     assert whole.train is not None and whole.train.objective[1].costs == {"g0": 2.0}
 
@@ -796,7 +866,7 @@ def test_a_regularizer_may_declare_per_target_costs_in_both_spellings():
 def test_a_malformed_costs_field_is_refused_naming_the_path(costs, code, leaf):
     with pytest.raises(ParseError) as err:
         parse_document(
-            _two_gate_train([[1.0, "ld"], [0.01, {"l1": "g0", "costs": costs}]])
+            _two_gate_train([[1.0, _fit()], [0.01, {"l1": "g0", "costs": costs}]])
         )
     assert err.value.code == code
     assert err.value.path == f"train.objective[1][1].costs{leaf}"
@@ -815,7 +885,7 @@ def test_a_named_mask_term_may_carry_a_lagrangian_constraint_instead_of_a_weight
     doc = parse_document(
         _two_gate_train(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _fit(weight=1.0),
                 "density": {"l1": ["g0", "g1"], "constraint": _constraint()},
             }
         )
@@ -833,7 +903,7 @@ def test_a_named_mask_term_may_carry_a_lagrangian_constraint_instead_of_a_weight
     with_init = parse_document(
         _two_gate_train(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _fit(weight=1.0),
                 "density": {
                     "l1": "g0",
                     "reduce": "mean",
@@ -849,7 +919,7 @@ def test_a_named_mask_term_may_carry_a_lagrangian_constraint_instead_of_a_weight
     warm = parse_document(
         _two_gate_train(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _fit(weight=1.0),
                 "density": {
                     "l1": "g0",
                     "constraint": _constraint(dual={"lr": 0.05, "init": [-2, 0.5]}),
@@ -863,7 +933,7 @@ def test_a_named_mask_term_may_carry_a_lagrangian_constraint_instead_of_a_weight
     costed = parse_document(
         _two_gate_train(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _fit(weight=1.0),
                 "density": {
                     "l1": ["g0", "g1"],
                     "costs": {"g1": 0.5},
@@ -887,7 +957,7 @@ def test_a_named_mask_term_may_carry_a_lagrangian_constraint_instead_of_a_weight
     [
         ({"weight": 0.01, "l1": "g0", "constraint": _constraint()}, ".weight"),
         ({"l1": "g0"}, ""),  # no weight and no constraint
-        ({"weight": 1.0, "metric": "ld", "constraint": _constraint()}, ".constraint"),
+        (_fit(weight=1.0, constraint=_constraint()), ".constraint"),
         ({"l2": "g0", "constraint": _constraint()}, ".constraint"),
         ({"l1": "g0", "reduce": "sum", "constraint": _constraint()}, ".reduce"),
         # `parameter_count` divides the density by N: no longer a fraction
@@ -925,9 +995,7 @@ def test_a_named_mask_term_may_carry_a_lagrangian_constraint_instead_of_a_weight
 )
 def test_a_malformed_constraint_term_is_refused_naming_the_path(term, leaf):
     with pytest.raises(ParseError) as err:
-        parse_document(
-            _two_gate_train({"fit": {"weight": 1.0, "metric": "ld"}, "density": term})
-        )
+        parse_document(_two_gate_train({"fit": _fit(weight=1.0), "density": term}))
     # an unknown key inside the block is the parser's strict-keys code (P3)
     assert err.value.code in ("P2", "P3"), err.value
     assert err.value.path == f"train.objective.density{leaf}", err.value.path
@@ -972,9 +1040,7 @@ def test_a_swept_constraint_field_is_refused_saying_it_is_not_swept(term, leaf):
     and `_check_keys` an unknown key, at the same path, which is why the code
     and the path alone would not pin this."""
     with pytest.raises(ParseError) as err:
-        parse_document(
-            _two_gate_train({"fit": {"weight": 1.0, "metric": "ld"}, "density": term})
-        )
+        parse_document(_two_gate_train({"fit": _fit(weight=1.0), "density": term}))
     assert err.value.code == "P2", err.value
     assert err.value.path == f"train.objective.density{leaf}", err.value.path
     assert "not swept (nor an `axis`)" in str(err.value), err.value
@@ -987,11 +1053,11 @@ def test_a_constraint_target_bound_to_a_declared_axis_is_refused_naming_axis():
     guard matches on `sweep` and only the words "(nor an `axis`)" tell the
     author their axis reference was the refused thing. Both the lowering and
     the wording are pinned; trimming the parenthetical fails here."""
-    from causalab.protocol.axes import lower_axes, parse_axes
+    from causalab.protocol.lowering import lower_axes, parse_axes
 
     raw = _two_gate_train(
         {
-            "fit": {"weight": 1.0, "metric": "ld"},
+            "fit": _fit(weight=1.0),
             "density": {"l1": "g0", "constraint": _constraint(target={"axis": "t"})},
         }
     )
@@ -1009,7 +1075,7 @@ def test_a_positional_constraint_is_refused_toward_the_named_form():
     with pytest.raises(ParseError) as err:
         parse_document(
             _two_gate_train(
-                [[1.0, "ld"], [0.01, {"l1": "g0", "constraint": _constraint()}]]
+                [[1.0, _fit()], [0.01, {"l1": "g0", "constraint": _constraint()}]]
             )
         )
     assert (
@@ -1023,7 +1089,7 @@ def test_costs_on_a_metric_term_is_refused():
         parse_document(
             _two_gate_train(
                 {
-                    "fit": {"weight": 1.0, "metric": "ld", "costs": {"g0": 1.0}},
+                    "fit": _fit(weight=1.0, costs={"g0": 1.0}),
                     "sparsity": {"weight": 0.01, "l1": "g0"},
                 }
             )
@@ -1034,13 +1100,13 @@ def test_costs_on_a_metric_term_is_refused():
 @pytest.mark.parametrize("names", [[], ["g0", "g0"], ["g0", 1]])
 def test_an_empty_repeated_or_non_string_regularizer_list_is_refused(names):
     with pytest.raises(ParseError) as err:
-        parse_document(_two_gate_train([[1.0, "ld"], [0.01, {"l1": names}]]))
+        parse_document(_two_gate_train([[1.0, _fit()], [0.01, {"l1": names}]]))
     assert err.value.code == "P2"
     assert err.value.path == "train.objective[1][1].l1"
 
 
 def _two_gate_train_with_optimizer(optimizer):
-    raw = _two_gate_train([[1.0, "ld"], [0.01, {"l1": ["g0", "g1"]}]])
+    raw = _two_gate_train([[1.0, _fit()], [0.01, {"l1": ["g0", "g1"]}]])
     raw["method"]["train"]["optimizer"] = optimizer
     return raw
 
@@ -1100,47 +1166,47 @@ def test_a_per_params_lr_value_must_be_a_number():
 
 def test_a_regularizer_kind_is_l1_or_l2_with_a_suggestion():
     with pytest.raises(ParseError) as err:
-        parse_document(_two_gate_train([[1.0, "ld"], [0.01, {"L1": ["g0", "g1"]}]]))
+        parse_document(_two_gate_train([[1.0, _fit()], [0.01, {"L1": ["g0", "g1"]}]]))
     assert err.value.code == "P2" and "l1" in str(err.value)
 
 
 def test_the_named_objective_form_parses_to_the_same_terms():
     named = {
-        "fit": {"weight": 1.0, "metric": "ld"},
+        "fit": _fit(weight=1.0),
         "sparsity": {"weight": 0.01, "l1": ["g0", "g1"]},
     }
     doc = parse_document(_two_gate_train(named))
     assert doc.train is not None
     fit, sparsity = doc.train.objective
-    assert (fit.weight, fit.metric, fit.name) == (1.0, "ld", "fit")
+    assert (fit.weight, fit.name) == (1.0, "fit")
+    assert fit.aggregation is not None and fit.aggregation.kind == "logit_diff"
     assert sparsity.regularizer == ("l1", ("g0", "g1"))
     assert sparsity.path(1) == "train.objective.sparsity"
 
 
 def test_a_named_term_needs_a_weight_and_exactly_one_kind():
     with pytest.raises(ParseError) as err:
-        parse_document(_two_gate_train({"fit": {"metric": "ld"}}))
+        parse_document(_two_gate_train({"fit": _fit()}))
     assert err.value.path == "train.objective.fit" and "weight" in str(err.value)
     with pytest.raises(ParseError) as err:
-        parse_document(
-            _two_gate_train({"both": {"weight": 1.0, "metric": "ld", "l1": "g0"}})
-        )
+        parse_document(_two_gate_train({"both": _fit(weight=1.0, l1="g0")}))
     assert "exactly one" in str(err.value)
+    # protocol 3's `metric` key is refused by name, toward `causalab migrate`
     with pytest.raises(ParseError) as err:
-        parse_document(_two_gate_train({"fit": {"weight": 1.0, "metrics": "ld"}}))
-    assert err.value.code == "P3" and "metric" in str(err.value)
+        parse_document(_two_gate_train({"fit": {"weight": 1.0, "metric": "ld"}}))
+    assert err.value.code == "P3" and err.value.path == "train.objective.fit.metric"
 
 
 def test_a_named_terms_weight_may_be_swept_where_a_positional_one_may_not():
     named = {
-        "fit": {"weight": 1.0, "metric": "ld"},
+        "fit": _fit(weight=1.0),
         "sparsity": {"weight": {"sweep": [0.01, 0.1]}, "l1": ["g0", "g1"]},
     }
     doc = parse_document(_two_gate_train(named))
     assert doc.train is not None
     assert isinstance(doc.train.objective[1].weight, Sweep)
     positional = _two_gate_train(
-        [[1.0, "ld"], [{"sweep": [0.01, 0.1]}, {"l1": ["g0", "g1"]}]]
+        [[1.0, _fit()], [{"sweep": [0.01, 0.1]}, {"l1": ["g0", "g1"]}]]
     )
     parse_document(positional)  # the shape gate passes; the axis has no name
     with pytest.raises(ValidationError) as err:
@@ -1148,7 +1214,7 @@ def test_a_named_terms_weight_may_be_swept_where_a_positional_one_may_not():
     assert err.value.rule == 14
 
 
-@pytest.mark.parametrize("objective", [[], {}, {"sweep": [[[1.0, "ld"]]]}])
+@pytest.mark.parametrize("objective", [[], {}, {"sweep": [[[1.0, _fit()]]]}])
 def test_an_empty_or_wholly_swept_objective_is_refused(objective):
     with pytest.raises(ParseError) as err:
         parse_document(_two_gate_train(objective))
@@ -1167,7 +1233,7 @@ def _shuffled(shuffle, *, role="counterfactual", listed=False):
     if listed:
         cf = doc["data"]["counterfactual"]
         doc["data"]["counterfactual"] = [dict(cf), {**cf, "shuffle": shuffle}]
-        doc["method"]["reads"]["v_cf"]["input"] = "counterfactual[1]"
+        doc["method"]["intervened_models"][UNWRITTEN]["input"] = "counterfactual[1]"
     else:
         doc["data"][role] = {**doc["data"][role], "shuffle": shuffle}
     return in_order(doc)
@@ -1336,8 +1402,8 @@ def test_span_length_is_the_fixed_windows_size_or_none():
     # `atomic` composes: it decides rule 8's write cardinality and §2.3's
     # alignment run, not the window — the one `SpanSpec` field that is not a
     # selector, and the twin below answers the same
-    from causalab.protocol.canonical import _window_length_raw
-    from causalab.protocol.spans import SpanSpec
+    from causalab.protocol.schema.explicit import _window_length_raw
+    from causalab.protocol.positions.spans import SpanSpec
 
     assert span_length(SpanSpec(span=(0, 3), atomic=True)) == 3
     assert _window_length_raw({"span": [0, 3], "atomic": True}, {}) == 3
@@ -1423,6 +1489,128 @@ def test_shuffle_is_refused_on_base():
     assert err.value.code == "P2"
     assert err.value.path == "data.base.shuffle"
     assert "population" in str(err.value)
+
+
+def test_a_role_less_data_block_is_the_base_role():
+    """§2.2: role names earn their place only when a counterfactual is
+    present, so a block naming none is ``base``. Fails without the change:
+    ``[P2] data needs a 'base' role``."""
+    short, explicit = base_only_doc(), base_only_doc()
+    short["data"] = explicit["data"]["base"]
+    assert parse_document(short).data == parse_document(explicit).data
+
+
+def test_a_counterfactual_without_a_base_is_refused():
+    """The author started naming roles and stopped: refused at ``data``, not
+    wrapped into a base role that then fails on an unknown key."""
+    doc = base_only_doc()
+    doc["data"] = {
+        **doc["data"]["base"],
+        "counterfactual": {"dataset": "weekdays/data#train", "field": "input"},
+    }
+    with pytest.raises(ParseError) as err:
+        parse_document(doc)
+    assert err.value.code == "P2" and err.value.path == "data"
+    assert "'base'" in str(err.value)
+
+
+def test_a_role_less_data_block_keeps_strict_keys():
+    """A typo in the short form is judged against the role's keys, at the
+    role's path, so the message says what the block was read as."""
+    doc = base_only_doc()
+    doc["data"] = {"dataset": "weekdays/data#train", "input_string": ["x"]}
+    with pytest.raises(ParseError) as err:
+        parse_document(doc)
+    assert err.value.code == "P3" and err.value.path == "data.base"
+    assert "input_string" in str(err.value)
+
+
+def test_an_inline_role_is_a_resolved_role():
+    """§2.2: ``inputs`` arrives at every consumer as a dataset ref plus the
+    fixed column, so nothing downstream tells the spellings apart. Fails
+    without the change: ``[P3] unknown key 'inputs'``."""
+    role = parse_document(inline_doc("a", "b")).data["base"]
+    assert role.dataset == inline_ref(["a", "b"])
+    assert (
+        role.dataset.startswith("inline:") and len(role.dataset) == len("inline:") + 64
+    )
+    assert role.field == "input" and role.shuffle is None and role.draw is None
+
+
+def test_an_inline_ref_is_content_addressed():
+    assert inline_ref(["a", "b"]) == inline_ref(["a", "b"])
+    assert inline_ref(["a", "b"]) != inline_ref(["b", "a"])
+
+
+def test_an_inline_counterfactual_pairs_and_shuffles():
+    doc = inline_doc()
+    doc["data"] = {
+        "base": doc["data"],
+        "counterfactual": {
+            "inputs": ["The Eiffel Tower is located in"],
+            "shuffle": {"seed": 1},
+        },
+    }
+    parsed = parse_document(doc).data
+    assert parsed["counterfactual"].shuffle == {"seed": 1}
+    assert parsed["counterfactual"].dataset != parsed["base"].dataset
+
+
+@pytest.mark.parametrize(
+    "role, code, where, fragment",
+    [
+        (
+            {"inputs": ["x"], "dataset": "weekdays/data#train", "field": "input"},
+            "P2",
+            "data.base",
+            "not both",
+        ),
+        ({"field": "input"}, "P2", "data.base", "not both and not neither"),
+        ({"inputs": ["x"], "field": "input"}, "P2", "data.base.field", "drop 'field'"),
+        (
+            {"inputs": ["x"], "draw": {"kind": "uniform"}},
+            "P2",
+            "data.base.draw",
+            "one prompt per row",
+        ),
+        ({"inputs": []}, "P2", "data.base.inputs", "at least one"),
+        ({"inputs": ["x", ""]}, "P2", "data.base.inputs[1]", "empty prompt"),
+        ({"inputs": "x"}, "P2", "data.base.inputs", "list of strings"),
+        ({"inputs": [1]}, "P2", "data.base.inputs", "list of strings"),
+        (
+            {"dataset": inline_ref(["x"]), "field": "input"},
+            "P2",
+            "data.base.dataset",
+            "derived ref",
+        ),
+    ],
+    ids=[
+        "both",
+        "neither",
+        "field",
+        "draw",
+        "empty-list",
+        "empty-prompt",
+        "not-a-list",
+        "not-strings",
+        "authored-ref",
+    ],
+)
+def test_inline_role_refusals(role, code, where, fragment):
+    doc = inline_doc()
+    doc["data"] = role
+    with pytest.raises(ParseError) as err:
+        parse_document(doc)
+    assert err.value.code == code and err.value.path == where
+    assert fragment in str(err.value)
+
+
+def test_inputs_are_not_sweepable():
+    doc = inline_doc()
+    doc["data"] = {"inputs": {"sweep": [["x"], ["y"]]}}
+    with pytest.raises(ValidationError) as err:
+        parse_document(doc)
+    assert err.value.rule == 14 and err.value.path == "data.base.inputs"
 
 
 @pytest.mark.parametrize(
@@ -1582,55 +1770,53 @@ def test_ragged_enters_the_canonical_form_only_when_authored(env):
 
 def _js_doc(**metric_extra):
     raw = base_doc()
-    raw["method"]["reads"]["cf_logits"] = {
-        "site": "lm_head",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-    }
-    raw["method"]["metrics"]["js"] = {
-        "kind": "js",
-        "of": "logits",
-        "target": "cf_logits",
-        **metric_extra,
-    }
+    raw["method"]["reads"]["cf_logits"] = {"site": "lm_head", "pos": -1}
+    raw["method"]["intervened_models"][UNWRITTEN]["reads"].append("cf_logits")
     raw["method"]["save"].append(
-        {"value": "js", "model": "patched", "input": "base", "file_path": "js.json"}
+        saved(
+            "logits",
+            "patched",
+            "js.json",
+            {
+                "kind": "js",
+                "target": {"read": "cf_logits", "model": UNWRITTEN},
+                **metric_extra,
+            },
+        )
     )
     return in_order(raw)
 
 
 def test_js_parses_unrestricted_without_token_form():
     """Unrestricted, `js` is `kl`'s symmetric twin: two reads, no string
-    resolved, so `token_form` is neither required nor accepted."""
+    resolved, so `token_form` is not accepted."""
     parsed = parse_document(_js_doc())
-    assert dict(parsed.metrics["js"].fields) == {"target": "cf_logits"}
-    assert parsed.metrics["js"].token_form == "auto"
+    (target,) = by_label(parsed)["js"].fields.values()
+    assert target.read == "cf_logits"  # bound to the model that lists it
+    assert by_label(parsed)["js"].token_form is None
 
 
-def test_js_restrict_accepts_a_column_name_with_a_token_form():
-    parsed = parse_document(_js_doc(restrict="valid_answers", token_form="bare"))
-    assert parsed.metrics["js"].fields["restrict"] == "valid_answers"
-    assert parsed.metrics["js"].token_form == "bare"
+def test_js_restrict_accepts_a_column_name_of_ids():
+    parsed = parse_document(_js_doc(restrict="valid_answers", token_form="id"))
+    assert by_label(parsed)["js"].fields["restrict"] == "valid_answers"
+    assert by_label(parsed)["js"].token_form == "id"
 
 
 def test_js_restrict_accepts_a_literal_answer_list():
-    parsed = parse_document(_js_doc(restrict=["Yes", "No"], token_form="bare"))
-    assert tuple(parsed.metrics["js"].fields["restrict"]) == ("Yes", "No")
+    parsed = parse_document(_js_doc(restrict=["Yes", "No"]))
+    assert tuple(by_label(parsed)["js"].fields["restrict"]) == ("Yes", "No")
 
 
-def test_js_with_restrict_needs_token_form():
-    """`restrict` is what makes the kind resolve strings, so it is what makes
-    `token_form` required — decided per document, not per kind."""
-    with pytest.raises(ParseError) as err:
-        parse_document(_js_doc(restrict=["Yes", "No"]))
-    assert err.value.code == "P2"
-    assert "token_form" in str(err.value)
+def test_js_with_restrict_parses_without_token_form():
+    """`restrict` makes the kind resolve strings, and strings are tokenized as
+    written — nothing left for a document to declare."""
+    parsed = parse_document(_js_doc(restrict=["Yes", "No"]))
+    assert by_label(parsed)["js"].token_form is None
 
 
 def test_js_without_restrict_refuses_token_form():
     with pytest.raises(ParseError) as err:
-        parse_document(_js_doc(token_form="bare"))
+        parse_document(_js_doc(token_form="id"))
     assert err.value.code == "P3"
 
 
@@ -1638,15 +1824,13 @@ def test_js_restrict_is_not_sweepable():
     """An answer space is not a research variable — the `token_form` and
     `tokens` reasoning, applied to both spellings."""
     with pytest.raises(ParseError) as err:
-        parse_document(
-            _js_doc(restrict={"sweep": [["Yes"], ["No"]]}, token_form="bare")
-        )
+        parse_document(_js_doc(restrict={"sweep": [["Yes"], ["No"]]}))
     assert err.value.code == "P2"
 
 
 def test_js_restrict_literal_refuses_a_duplicated_answer():
     with pytest.raises(ParseError):
-        parse_document(_js_doc(restrict=["Yes", " Yes"], token_form="bare"))
+        parse_document(_js_doc(restrict=["Yes", "Yes"]))
 
 
 def test_a_restrict_column_is_a_metric_column_and_a_literal_is_not():
@@ -1655,14 +1839,14 @@ def test_a_restrict_column_is_a_metric_column_and_a_literal_is_not():
     list and the target read are not."""
     from causalab.protocol.schema import metric_column_fields
 
-    by_column = parse_document(_js_doc(restrict="valid", token_form="bare"))
-    by_literal = parse_document(_js_doc(restrict=["Yes"], token_form="bare"))
+    by_column = parse_document(_js_doc(restrict="valid"))
+    by_literal = parse_document(_js_doc(restrict=["Yes"]))
     plain = parse_document(_js_doc())
-    assert metric_column_fields(by_column.metrics["js"]) == {"restrict": "valid"}
-    assert metric_column_fields(by_literal.metrics["js"]) == {}
-    assert metric_column_fields(plain.metrics["js"]) == {}
+    assert metric_column_fields(by_label(by_column)["js"]) == {"restrict": "valid"}
+    assert metric_column_fields(by_label(by_literal)["js"]) == {}
+    assert metric_column_fields(by_label(plain)["js"]) == {}
     # and the existing kinds are unchanged by the refactor
-    assert metric_column_fields(plain.metrics["ld"]) == {
+    assert metric_column_fields(by_label(plain)["ld"]) == {
         "a": "cf_answer",
         "b": "base_answer",
     }
@@ -1673,22 +1857,26 @@ def test_an_unrestricted_js_binds_to_any_read_and_a_restricted_one_to_lm_head():
     distributions and binds where `kl` does; restricted, it resolves answer
     strings to token ids and needs a plain `lm_head` read like every
     token-space kind."""
-    from causalab.protocol.validate import validate_document
+    from causalab.protocol.rules.document import validate_document
 
     raw = base_doc()
-    raw["method"]["reads"]["v_base"] = {
-        "site": "tgt",
-        "pos": -1,
-        "model": "original",
+    # the un-intervened network on base, read at the target site
+    raw["method"]["reads"]["v_base"] = {"site": "tgt", "pos": -1}
+    raw["method"]["intervened_models"]["original_base"] = {
         "input": "base",
+        "reads": ["v_base"],
     }
-    raw["method"]["metrics"]["js"] = {"kind": "js", "of": "v_base", "target": "v_cf"}
     raw["method"]["save"].append(
-        {"value": "js", "model": "original", "input": "base", "file_path": "js.json"}
+        saved(
+            "v_base",
+            "original_base",
+            "js.json",
+            {"kind": "js", "target": {"read": "v_cf", "model": UNWRITTEN}},
+        )
     )
     validate_document(parse_document(in_order(raw)), engine_is_local=True)
 
-    raw["method"]["metrics"]["js"].update(restrict=["Yes", "No"], token_form="bare")
+    raw["method"]["save"][1]["aggregation"].update(restrict=["Yes", "No"])
     with pytest.raises(ValidationError) as err:
         validate_document(parse_document(in_order(raw)), engine_is_local=True)
     assert err.value.rule == 4
@@ -1696,10 +1884,14 @@ def test_an_unrestricted_js_binds_to_any_read_and_a_restricted_one_to_lm_head():
 
 
 def test_js_target_must_be_a_read_on_the_same_component():
-    from causalab.protocol.validate import validate_document
+    from causalab.protocol.rules.document import validate_document
 
     raw = _js_doc()
-    raw["method"]["metrics"]["js"]["target"] = "v_cf"  # block_output, not lm_head
+    # block_output, not lm_head: the js entry is the second save entry
+    raw["method"]["save"][1]["aggregation"]["target"] = {
+        "read": "v_cf",
+        "model": UNWRITTEN,
+    }
     with pytest.raises(ValidationError) as err:
         validate_document(parse_document(raw), engine_is_local=True)
     assert err.value.rule == 4
@@ -1790,7 +1982,7 @@ def _control_doc(control=None, *, objective=None, **gate_extra):
         "objective": objective
         if objective is not None
         else {
-            "fit": {"weight": 1.0, "metric": "ld"},
+            "fit": _fit(weight=1.0),
             "sparsity": {"weight": 0.025, "l1": "g"},
         },
         "params": ["g"],
@@ -1905,7 +2097,7 @@ def test_an_annealed_weight_names_a_numeric_named_term():
     """Rule 4 for a weight `anneal` (§2.11), the open-loop twin of the same
     `control` rule: a positional term has no name, a swept weight is not one
     start, and one path may not be both annealed and controlled."""
-    from causalab.protocol.validate import validate_document
+    from causalab.protocol.rules.document import validate_document
 
     def check(raw):
         validate_document(parse_document(raw), engine_is_local=True)
@@ -1914,21 +2106,21 @@ def test_an_annealed_weight_names_a_numeric_named_term():
     raw["method"]["train"]["anneal"] = {CONTROL_TARGET: [0.025, 30.0, 0.5]}
     check(raw)
 
-    raw = _control_doc(objective=[[1.0, "ld"], [0.025, {"l1": "g"}]])
+    raw = _control_doc(objective=[[1.0, _fit()], [0.025, {"l1": "g"}]])
     raw["method"]["train"]["anneal"] = {CONTROL_TARGET: [0.025, 30.0, 0.5]}
     with pytest.raises(ValidationError) as err:
         check(raw)
     assert err.value.rule == 4 and "named objective term" in str(err.value)
 
     raw = _control_doc()
-    raw["method"]["train"]["anneal"] = {"train.objective.fit.metric": [0.0, 1.0, 0.5]}
+    raw["method"]["train"]["anneal"] = {"train.objective.fit.read": [0.0, 1.0, 0.5]}
     with pytest.raises(ValidationError) as err:
         check(raw)
     assert err.value.rule == 4
 
     raw = _control_doc(
         objective={
-            "fit": {"weight": 1.0, "metric": "ld"},
+            "fit": _fit(weight=1.0),
             "sparsity": {"weight": {"sweep": [0.01, 0.1]}, "l1": "g"},
         }
     )
@@ -2063,7 +2255,7 @@ def test_phase_names_resolve_against_the_fit_they_narrow():
     """Rule 4 for `phases` (§2.11): a phase's anneal names a featurizer the
     phase trains (or a named term's weight) and no path a top-level schedule
     already moves; `freeze_masks` names gates the phase does not train."""
-    from causalab.protocol.validate import validate_document
+    from causalab.protocol.rules.document import validate_document
 
     def check(raw):
         validate_document(parse_document(raw), engine_is_local=True)
@@ -2120,7 +2312,7 @@ def test_control_targets_resolve_and_signals_are_trained_gates():
     """Rule 4 for `control` (§2.11): the target is a named term's weight or a
     trained featurizer's hyperparameter, the signal a trained gate, and no
     path is both annealed and controlled."""
-    from causalab.protocol.validate import validate_document
+    from causalab.protocol.rules.document import validate_document
 
     def check(raw):
         validate_document(parse_document(raw), engine_is_local=True)
@@ -2131,13 +2323,14 @@ def test_control_targets_resolve_and_signals_are_trained_gates():
     with pytest.raises(ValidationError) as err:
         check(
             _control_doc(
-                {CONTROL_TARGET: _pid()}, objective=[[1.0, "ld"], [0.025, {"l1": "g"}]]
+                {CONTROL_TARGET: _pid()},
+                objective=[[1.0, _fit()], [0.025, {"l1": "g"}]],
             )
         )
     assert err.value.rule == 4 and "named objective term" in str(err.value)
 
     with pytest.raises(ValidationError) as err:
-        check(_control_doc({"train.objective.fit.metric": _pid()}))
+        check(_control_doc({"train.objective.fit.read": _pid()}))
     assert err.value.rule == 4
 
     raw = _control_doc({CONTROL_TARGET: _pid(signal={"hard_mask_size": "rot"})})
@@ -2168,7 +2361,7 @@ def _trajectory_doc(entry):
     raw["method"]["reads"]["v_cf"]["featurizer"] = "g"
     raw["method"]["writes"]["patch"]["featurizer"] = "g"
     raw["method"]["train"] = {
-        "objective": [[1.0, "ld"]],
+        "objective": [[1.0, _fit()]],
         "params": ["g"],
         "optimizer": {"name": "adam", "lr": 0.1},
         "steps": {"epochs": 2},
@@ -2235,13 +2428,8 @@ def _two_gate_control_doc(signal):
     raw = _control_doc({CONTROL_TARGET: _pid(signal={"hard_mask_size": signal})})
     raw["method"]["sites"]["tgt2"] = {"component": "block_output", "layers": [1]}
     raw["method"]["featurizers"]["h"] = {"kind": "gate"}
-    raw["method"]["reads"]["v_cf2"] = {
-        "site": "tgt2",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": "h",
-    }
+    raw["method"]["reads"]["v_cf2"] = {"site": "tgt2", "pos": -1, "featurizer": "h"}
+    raw["method"]["intervened_models"][UNWRITTEN]["reads"].append("v_cf2")
     raw["method"]["writes"]["patch2"] = {
         "site": "tgt2",
         "pos": -1,
@@ -2249,7 +2437,8 @@ def _two_gate_control_doc(signal):
         "do": {"swap": "v_cf2"},
     }
     for im in raw["method"]["intervened_models"].values():
-        im["writes"] = list(im["writes"]) + ["patch2"]
+        if im.get("writes"):  # the written model gains the second gate's write
+            im["writes"] = list(im["writes"]) + ["patch2"]
     raw["method"]["train"]["params"].append("h")
     raw["method"]["train"]["objective"]["sparsity"]["l1"] = ["g", "h"]
     raw["method"]["save"].append(
@@ -2274,7 +2463,7 @@ def test_a_list_signal_is_a_non_empty_list_of_distinct_gate_names(signal, needle
 
 
 def test_every_gate_of_a_list_signal_must_be_trained():
-    from causalab.protocol.validate import validate_document
+    from causalab.protocol.rules.document import validate_document
 
     validate_document(
         parse_document(_two_gate_control_doc(["g", "h"])), engine_is_local=True
@@ -2336,7 +2525,7 @@ def test_gate_dead_is_a_training_rule_so_a_loaded_gate_refuses_it():
     raw["method"]["featurizers"] = {
         "g": {"kind": "gate", "file_path": "fit/g.safetensors", "dead": {"leak": 0.1}}
     }
-    with pytest.raises(ParseError, match="takes no step"):
+    with pytest.raises(ParseError, match="loaded gate uses a fixed mask"):
         parse_document(in_order(raw))
 
 
@@ -2413,8 +2602,8 @@ def test_gate_top_k_enters_the_canonical_form_only_when_authored():
     from tests.protocol._env import build_env
 
     env = build_env(Path(__file__).parent / "fixtures" / "artifacts")
-    plain = _loaded_gate_doc({"file_path": "weekdays/llama31_8b/locate.json"})
-    cut = _loaded_gate_doc({"file_path": "weekdays/llama31_8b/locate.json", "top_k": 2})
+    plain = _loaded_gate_doc({"file_path": "weekdays/qwen25_7b/locate.json"})
+    cut = _loaded_gate_doc({"file_path": "weekdays/qwen25_7b/locate.json", "top_k": 2})
     plain_form = canonicalize(plain, env)
     cut_form = canonicalize(cut, env)
     assert "top_k" not in plain_form["method"]["featurizers"]["g"]
@@ -2430,7 +2619,7 @@ def test_a_rank_entry_parses_as_a_non_value_kind():
     )
     (entry,) = [e for e in doc.save if e.kind == "rank"]
     assert entry.value == "rank" and entry.file_path == "rank.json"
-    assert entry.every is None and entry.model is None and entry.site is None
+    assert entry.every is None and entry.read is None and entry.site is None
 
 
 def test_a_rank_entry_takes_no_spacing():
@@ -2455,7 +2644,7 @@ def _budget_fit_doc(gate: dict):
     raw["method"]["reads"]["v_cf"]["featurizer"] = "g"
     raw["method"]["writes"]["patch"]["featurizer"] = "g"
     raw["method"]["train"] = {
-        "objective": [[1.0, "ld"]],
+        "objective": [[1.0, _fit()]],
         "params": ["g"],
         "optimizer": {"name": "adam", "lr": 0.1},
         "steps": {"epochs": 1},
@@ -2506,10 +2695,10 @@ def test_budget_gate_parses_its_schedule():
     "gate, needle",
     [
         ({"parametrization": "budget"}, "k_schedule"),
-        ({"k_schedule": {"kind": "fixed", "k": 3}}, "draws no budget"),
+        ({"k_schedule": {"kind": "fixed", "k": 3}}, "require budget"),
         (
             {"parametrization": "clamp", "stop_grad_shift": True},
-            "draws no budget",
+            "require budget",
         ),
         (
             {"parametrization": "budget", "k_schedule": {"kind": "fixed"}},
@@ -2550,7 +2739,7 @@ def test_budget_gate_parses_its_schedule():
                 "k_schedule": {"kind": "fixed", "k": 2},
                 "temperature": 0.5,
             },
-            "samples nothing",
+            "requires hard_concrete or boundary",
         ),
     ],
 )
@@ -2591,7 +2780,7 @@ def _fit_with_optimizer(optimizer: dict):
     raw["method"]["reads"]["v_cf"]["featurizer"] = "g"
     raw["method"]["writes"]["patch"]["featurizer"] = "g"
     raw["method"]["train"] = {
-        "objective": [[1.0, "ld"]],
+        "objective": [[1.0, _fit()]],
         "params": ["g"],
         "optimizer": optimizer,
         "steps": {"epochs": 1},
@@ -2657,3 +2846,61 @@ def test_a_drawn_roles_resolved_field_is_its_eval_member():
     assert parsed.data["base"].resolved_field == "input"
     plain = parse_document(in_order(base_doc()))
     assert plain.data["counterfactual"].resolved_field == "counterfactual_inputs[0]"
+
+
+# §2.5 `parametrization: boundary` — the per-unit fields are refused at parse -- #
+
+
+def _boundary_doc(extra: dict | None = None, chain=("rot", "bnd")) -> dict:
+    doc = base_doc()
+    doc["method"]["featurizers"] = {
+        "rot": {"kind": "subspace", "k": 4, "parametrization": "cayley"},
+        "bnd": {"kind": "gate", "parametrization": "boundary", **(extra or {})},
+    }
+    doc["method"]["reads"]["v_cf"]["featurizer"] = list(chain)
+    doc["method"]["writes"]["patch"]["featurizer"] = list(chain)
+    return in_order(doc)
+
+
+def test_a_boundary_gate_parses_with_a_temperature_and_a_fill():
+    doc = parse_document(_boundary_doc({"temperature": 0.5, "init": {"fill": 0.25}}))
+    spec = doc.featurizers["bnd"]
+    assert spec.parametrization == "boundary" and spec.temperature == 0.5
+    assert spec.init == {"fill": 0.25}
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "needle"),
+    [
+        ("group", "site", "requires one theta entry per unit"),
+        ("axis", "position", "ordered feature basis"),
+        ("dead", {"leak": 0.1}, "requires theta entries per unit"),
+        ("stretch", [-0.1, 1.1], "requires hard_concrete"),
+    ],
+)
+def test_a_boundary_gate_refuses_the_per_unit_fields_in_the_tables_words(
+    field, value, needle
+):
+    with pytest.raises(ParseError) as err:
+        parse_document(_boundary_doc({field: value}))
+    assert err.value.path == f"featurizers.bnd.{field}", err.value.path
+    assert needle in str(err.value) and "'boundary'" in str(err.value)
+
+
+def test_a_loaded_boundary_gate_refuses_top_k_and_a_pooled_readout():
+    with pytest.raises(ParseError) as err:
+        parse_document(_boundary_doc({"file_path": "fit/bnd.safetensors", "top_k": 3}))
+    assert err.value.path == "featurizers.bnd.top_k"
+    assert "requires a ranking of units" in str(err.value)
+    with pytest.raises(ParseError) as err:
+        parse_document(_boundary_doc({"file_path": "fit/bnd.safetensors", "pool": "p"}))
+    assert err.value.path == "featurizers.bnd.pool"
+    assert "requires per-unit maps" in str(err.value)
+
+
+def test_a_boundary_gate_refuses_init_from_scores():
+    scores = {"file_path": "scores.json", "unit": "unit", "value": "score", "keep": 2}
+    with pytest.raises(ParseError) as err:
+        parse_document(_boundary_doc({"init": {"from_scores": scores}}))
+    assert err.value.path == "featurizers.bnd.init.from_scores"
+    assert "no unit to place" in str(err.value)

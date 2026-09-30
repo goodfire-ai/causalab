@@ -1,0 +1,32 @@
+[
+ {
+  "input": "Vinson Massif is located in the continent of",
+  "subject": "Vinson Massif",
+  "split": "all"
+ },
+ {
+  "input": "Beats Music is owned by",
+  "subject": "Beats Music",
+  "split": "all"
+ },
+ {
+  "input": "Audible.com is owned by",
+  "subject": "Audible.com",
+  "split": "all"
+ },
+ {
+  "input": "The Big Bang Theory premieres on",
+  "subject": "The Big Bang Theory",
+  "split": "all"
+ },
+ {
+  "input": "MacApp, a product created by",
+  "subject": "MacApp",
+  "split": "all"
+ },
+ {
+  "input": "Giuseppe Angeli, who has a citizenship of",
+  "subject": "Giuseppe Angeli",
+  "split": "all"
+ }
+]

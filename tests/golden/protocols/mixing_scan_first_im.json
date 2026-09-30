@@ -1,7 +1,7 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Mixing mechanisms (arXiv:2510.06182), TargetRebind interchange on gemma-2-2b-it: swap the counterfactual run's last-token residual into the original run, swept over layers around the paper's most-mixed region (~18 of 26), on the Music binding task, first-position query bucket (per-bucket documents keep the single-batch lm_head forward within GPU memory) (m=3, n=20 groups, t_entity=2). Per row the positional / lexical / reflexive mechanisms predict distinct single-token genres (pos_answer / lex_answer / ref_answer columns; see gen_mixing.py for the permutation construction); attribution is candidate-relative, the paper's own currency (its Fig 9 works in mean logits over candidate outputs): three logit_diff metrics score each mechanism's predicted genre against the original answer, and a row is attributed to the mechanism with the largest positive shift - full-vocab argmax match measured ~zero attribution because instruct gemma prefers to restate the queried name before the genre (measured in an H100 diagnostic run). Goldens: edges >= 60% (figure-read, confidence low), middle in [5, 35] (paper text: 'accounting only for 20%')."
+    "protocol_version": "4",
+    "description": "Mixing mechanisms (arXiv:2510.06182), TargetRebind interchange on gemma-2-2b-it: swap the counterfactual run's last-token residual into the original run, swept over layers around the paper's most-mixed region (~18 of 26), on the Music binding task, first-position query bucket (per-bucket documents keep the single-batch lm_head forward within GPU memory) (m=3, n=20 groups, t_entity=2). Per row the positional / lexical / reflexive mechanisms predict distinct single-token genres (pos_answer / lex_answer / ref_answer columns; see gen_mixing.py for the permutation construction); attribution is candidate-relative, the paper's own currency (its Fig 9 works in mean logits over candidate outputs): three logit_diff metrics score each mechanism's predicted genre against the original answer, and a row is attributed to the mechanism with the largest positive shift. Scored by full-vocab argmax match instead, this document attributes ~zero rows (measured on an H100), because instruct gemma prefers to restate the queried name before the genre. Goldens: edges >= 60% (figure-read, confidence low), middle in [5, 35] (paper text: 'accounting only for 20%')."
   },
   "model": {"key": "google/gemma-2-2b-it", "revision": "main", "dtype": "bf16"},
   "data": {
@@ -9,6 +9,10 @@
     "counterfactual": {"dataset": "mixing/music_first", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_src"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "sites": {
       "target": {
         "component": "block_output",
@@ -18,56 +22,27 @@
       },
       "lm_head": {"component": "lm_head"}
     },
-    "reads": {
-      "v_src": {"site": "target", "pos": -1, "model": "original", "input": "counterfactual"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
-    },
+    "reads": {"v_src": {"site": "target", "pos": -1}, "logits": {"site": "lm_head", "pos": -1}},
     "writes": {
       "patch": {"site": "target", "pos": -1, "do": {"swap": "v_src"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "ld_pos": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "pos_answer",
-        "b": "orig_answer",
-        "token_form": "space_prefixed"
-      },
-      "ld_lex": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "lex_answer",
-        "b": "orig_answer",
-        "token_form": "space_prefixed"
-      },
-      "ld_ref": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "ref_answer",
-        "b": "orig_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
       {
-        "value": "ld_pos",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
+        "aggregation": {"kind": "logit_diff", "a": "pos_answer", "b": "orig_answer"},
         "file_path": "ld_pos.json"
       },
       {
-        "value": "ld_lex",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
+        "aggregation": {"kind": "logit_diff", "a": "lex_answer", "b": "orig_answer"},
         "file_path": "ld_lex.json"
       },
       {
-        "value": "ld_ref",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
+        "aggregation": {"kind": "logit_diff", "a": "ref_answer", "b": "orig_answer"},
         "file_path": "ld_ref.json"
       }
     ]

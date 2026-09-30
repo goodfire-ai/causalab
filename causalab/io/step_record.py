@@ -1,24 +1,7 @@
-"""The per-step ``_step.json`` record: its format, its reader, and the shared
-reduction rule that reads it.
+"""Read and write a workflow step's ``_step.json`` record.
 
-The runner writes one per step (workflow spec §4): the files it declared, and
-for a protocol step the **sweep axes** its document expanded to. v1 derived
-group-by columns from those axes inside the document model; v2 publishes them
-as data and lets a script read them, which is what keeps
-group-by-coordinates-then-mean working now that ``select`` and ``plot`` are
-scripts rather than step types (§6).
-
-A script is handed *files*, not step names, so the sidecar is found beside the
-input it was given — which also means a script works identically against a run
-tree and against a hand-made directory in a test.
-
-**Why this lives in ``io/`` rather than ``workflow/``.** It is a file format, and
-both readers of it are outside the workflow package: the shipped ``select``
-script and the ``io.plots`` renderer. Putting it here keeps the dependency one
-way — ``workflow`` → ``io`` — where the reverse would be a cycle, since the
-runner already reads ``io.step_io``. The runner writes the record through
-:func:`write_sidecar`; everything that consumes one reads it through here.
-"""
+The record identifies the step and its declared products. Shared aggregation
+rules let selection and plotting scripts read metric rows consistently."""
 
 from __future__ import annotations
 
@@ -72,7 +55,7 @@ EXAMPLE_COLUMN = "example_id"
 
 
 def implied_reduction(axes: tuple[str, ...]) -> dict[str, Any]:
-    """The reduction :func:`aggregate` performs, **declared** in the workflow
+    """The reduction [`aggregate`][] performs, **declared** in the workflow
     spec's §2.6 vocabulary — what a step that authors nothing implicitly does
     in cases 1 and 2 below:
 
@@ -91,7 +74,7 @@ def implied_reduction(axes: tuple[str, ...]) -> dict[str, Any]:
     Written as data rather than imported from the workflow layer because
     ``io/`` sits below it (docs/CODEBASE.md §1). The equality of this
     declaration, run through the built-in ``causalab.workflow.scripts.reduce``,
-    with :func:`aggregate`'s output on the same table is a test
+    with [`aggregate`][]'s output on the same table is a test
     (``tests/workflow/test_reduction.py``): if today's behaviour could not be
     written in the vocabulary, the vocabulary would be wrong. ``aggregate``'s
     own arithmetic is deliberately untouched — a table an unauthored step
@@ -127,7 +110,7 @@ def aggregate(
     from the same table must never disagree about what a row is.
 
     Cases 1 and 2 are one reduction in the workflow spec's §2.6 vocabulary —
-    :func:`implied_reduction` spells it out — and pandas' ``skipna`` default is
+    [`implied_reduction`][] spells it out — and pandas' ``skipna`` default is
     its ``missing: exclude`` with the excluded count unrecorded. Case 3 is not a
     reduction at all. A step that wants the statistical unit, the grouping, the
     missing policy or an interval *declared* authors a ``reduction`` block on

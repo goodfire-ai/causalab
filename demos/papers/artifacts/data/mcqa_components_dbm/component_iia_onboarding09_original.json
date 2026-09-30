@@ -1,0 +1,427 @@
+{
+ "source": "demos/onboarding_tutorial/artifacts/output/09_components/grid/09_components_component_iia.json",
+ "sha256": "d81e7c7a06f905fafea65065d3824ac96b027410142f6851c8db1652513faa6e",
+ "description": "Onboarding 09: mean IIA over the 64 different_symbol pairs of mcqa/pairs_n64_s0 of swapping one component of one layer at the answer slot (position -1) of Qwen/Qwen2.5-1.5B-Instruct in bf16; a match is the counterfactual letter. Every layer of the 28 for the attention output, the MLP output and the residual stream (block_output).",
+ "records": [
+  {
+   "component": "attention_output",
+   "layer": 0,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 1,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 2,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 3,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 4,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 5,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 6,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 7,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 8,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 9,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 10,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 11,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 12,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 13,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 14,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 15,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 16,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 17,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 18,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 19,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 20,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 21,
+   "iia": 0.078125
+  },
+  {
+   "component": "attention_output",
+   "layer": 22,
+   "iia": 0.546875
+  },
+  {
+   "component": "attention_output",
+   "layer": 23,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 24,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 25,
+   "iia": 0.0
+  },
+  {
+   "component": "attention_output",
+   "layer": 26,
+   "iia": 0.015625
+  },
+  {
+   "component": "attention_output",
+   "layer": 27,
+   "iia": 0.015625
+  },
+  {
+   "component": "mlp_output",
+   "layer": 0,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 1,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 2,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 3,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 4,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 5,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 6,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 7,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 8,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 9,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 10,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 11,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 12,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 13,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 14,
+   "iia": 0.015625
+  },
+  {
+   "component": "mlp_output",
+   "layer": 15,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 16,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 17,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 18,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 19,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 20,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 21,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 22,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 23,
+   "iia": 0.03125
+  },
+  {
+   "component": "mlp_output",
+   "layer": 24,
+   "iia": 0.0
+  },
+  {
+   "component": "mlp_output",
+   "layer": 25,
+   "iia": 0.015625
+  },
+  {
+   "component": "mlp_output",
+   "layer": 26,
+   "iia": 0.015625
+  },
+  {
+   "component": "mlp_output",
+   "layer": 27,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 0,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 1,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 2,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 3,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 4,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 5,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 6,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 7,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 8,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 9,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 10,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 11,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 12,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 13,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 14,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 15,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 16,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 17,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 18,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 19,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 20,
+   "iia": 0.0
+  },
+  {
+   "component": "block_output",
+   "layer": 21,
+   "iia": 0.109375
+  },
+  {
+   "component": "block_output",
+   "layer": 22,
+   "iia": 0.703125
+  },
+  {
+   "component": "block_output",
+   "layer": 23,
+   "iia": 0.796875
+  },
+  {
+   "component": "block_output",
+   "layer": 24,
+   "iia": 0.78125
+  },
+  {
+   "component": "block_output",
+   "layer": 25,
+   "iia": 0.765625
+  },
+  {
+   "component": "block_output",
+   "layer": 26,
+   "iia": 0.921875
+  },
+  {
+   "component": "block_output",
+   "layer": 27,
+   "iia": 0.890625
+  }
+ ]
+}

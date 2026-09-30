@@ -3,13 +3,13 @@
 One trace per fixture stream type resolves **every** table entry — match,
 peel, field, value — and fails with the op-inventory diff on any miss. It has
 to *run a trace*, not parse: recursive ``.source`` drilling only exists
-inside one (§10.2). This is the tripwire for a transformers bump — the
+inside one. This is the tripwire for a transformers bump — the
 ``uv.lock`` revision is the real pin, and their own history shows why
 (transformers 5 renamed GPT-2's dropout op and broke nnterp's address) — and
 the artifact that travels upstream with ``addresses.py`` later.
 
 Plus the upstreaming discipline itself: ``addresses.py`` imports nothing from
-the rest of ``causalab`` (§2's rule), pinned by a subprocess import so this
+the rest of ``causalab``, pinned by a subprocess import so this
 suite's own imports cannot mask a violation.
 """
 
@@ -31,7 +31,9 @@ from causalab.neural.engines.nnsight_tracing.executor import (
     TracePointExecutor,
 )
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.schema import SiteSpec
+from causalab.protocol.schema import PROTOCOL_VERSION, SiteSpec
+
+from tests.protocol._docs import saved
 
 from .test_parity_module_boundaries import _data, _executor
 
@@ -49,22 +51,14 @@ def _layer_of(bundle, stream: str) -> int | None:
 
 def _canary_doc(layer: int) -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": {"component": "block_output", "layers": [layer]}},
-            "reads": {
-                "r": {"site": "tap", "pos": -1, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": -1}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 
@@ -152,7 +146,7 @@ def test_the_call_op_wins_over_the_assignment():
 
 
 def test_addresses_imports_nothing_from_causalab():
-    """§2's upstreaming rule, by construction: the table+matcher module must
+    """The upstreaming rule, by construction: the table+matcher module must
     stand alone — moving it to nnterp later is then a file move, not a
     rewrite. Loaded by file path in a subprocess (the package ``__init__``
     would drag the engine in), so a green run means the module's own body

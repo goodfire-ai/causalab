@@ -54,6 +54,7 @@ from causalab.neural.engines.pytorch_hooks.loading import ModelBundle
 from causalab.protocol.schema import PROTOCOL_VERSION
 
 from ._drive import base_data_section, executor_for
+from tests.protocol._docs import saved
 from .test_sites_round3_moe_interior import MOE_LAYER, TEXT
 
 pytestmark = pytest.mark.smoke
@@ -175,6 +176,19 @@ class TestMayRouteToSentinels:
         monkeypatch.setattr(experts, "num_experts", experts.num_experts // 2)
         assert may_route_to_sentinels(experts)
 
+    def test_the_repository_expert_axis_can(
+        self, qwen35moe_bundle: ModelBundle, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Shard-on-read leaves local weights, a matching local expert count
+        and the expert-parallel mark needed for sentinel routing."""
+        experts = _experts(qwen35moe_bundle)
+        assert experts.num_experts == experts.gate_up_proj.shape[0]
+        assert not may_route_to_sentinels(experts)
+        monkeypatch.setattr(
+            experts, experts_path.EXPERT_PARALLEL_MARK, True, raising=False
+        )
+        assert may_route_to_sentinels(experts)
+
     def test_an_unreadable_id_space_can(self) -> None:
         """No premise readable, no shortcut taken."""
         assert may_route_to_sentinels(SimpleNamespace())
@@ -251,17 +265,9 @@ def _doc(component: str = "block_output") -> dict:
         "data": base_data_section(with_counterfactual=False),
         "method": {
             "sites": {"tap": {"component": component, "layers": [MOE_LAYER]}},
-            "reads": {
-                "r": {"site": "tap", "pos": -1, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
+            "reads": {"r": {"site": "tap", "pos": -1}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 
@@ -359,3 +365,72 @@ class TestDriftCanary:
         )
         assert "num_local_experts = num_experts // ep_size" in router
         assert "masked_fill(router_indices == -1, num_local_experts)" in router
+
+
+def test_interleaved_enterers_restore_the_entry_once_the_last_leaves() -> None:
+    """Two simulated ranks are two threads in one process, each entering the
+    manager around its own forward; when they leave in the order they came
+    (not the nested order) the entry must still end as it was found, and be
+    the copy for as long as either is inside."""
+    import threading
+
+    before = moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"]
+    a_in, b_in, a_out, b_out = (threading.Event() for _ in range(4))
+    seen: dict[str, Any] = {}
+
+    def rank_a() -> None:
+        with lean_experts_path():
+            a_in.set()
+            b_in.wait()
+        seen["after_a_left"] = moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"]
+        a_out.set()
+
+    def rank_b() -> None:
+        a_in.wait()
+        with lean_experts_path():
+            b_in.set()
+            a_out.wait()
+            seen["while_b_inside"] = moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"]
+        b_out.set()
+
+    threads = [threading.Thread(target=rank_a), threading.Thread(target=rank_b)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+    assert b_out.is_set(), "the ranks did not both leave"
+    assert seen["after_a_left"] is lean_grouped_mm_forward
+    assert seen["while_b_inside"] is lean_grouped_mm_forward
+    assert moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"] is before
+
+
+def test_a_nested_enterer_in_one_thread_restores_on_the_outermost_exit() -> None:
+    before = moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"]
+    with lean_experts_path():
+        with lean_experts_path():
+            assert moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"] is lean_grouped_mm_forward
+        assert moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"] is lean_grouped_mm_forward
+    assert moe.ALL_EXPERTS_FUNCTIONS["grouped_mm"] is before
+
+
+class TestActFnIsHooked:
+    """The fused gate kernel skips the ``act_fn`` call it reproduces; the
+    experts-interface taps read and edit the ``activation`` slot through a
+    forward hook on that very call, so the plan must yield the gate to the
+    module's own implementation while a hook is attached."""
+
+    def test_a_forward_hook_on_act_fn_is_seen_and_its_removal_too(
+        self, qwen35moe_bundle: ModelBundle
+    ) -> None:
+        experts = _experts(qwen35moe_bundle)
+        assert experts_path.has_default_silu_gate(experts)
+        assert not experts_path.act_fn_is_hooked(experts)
+        handle = experts.act_fn.register_forward_hook(lambda m, i, o: o)
+        try:
+            assert experts_path.act_fn_is_hooked(experts)
+        finally:
+            handle.remove()
+        assert not experts_path.act_fn_is_hooked(experts)
+
+    def test_a_module_without_act_fn_is_not_hooked(self) -> None:
+        assert not experts_path.act_fn_is_hooked(torch.nn.Linear(2, 2))

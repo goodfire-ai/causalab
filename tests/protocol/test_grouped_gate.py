@@ -24,8 +24,7 @@ property of the pure layer rather than of the engine:
   `dict(entry)`, so a field no document authored stays out of the canonical
   form — the digest of every document that predates this feature is
   byte-identical, and a per-coordinate bundle stamped before the field existed
-  still loads under an ungrouped document. `coordinate` is not a value: the
-  default has no spelling.
+  still loads under an ungrouped document. `coordinate` is not a value: the default has no spelling.
 """
 
 from __future__ import annotations
@@ -38,14 +37,15 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ParseError, ValidationError
-from causalab.protocol.loader import load
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ParseError, ValidationError
+from causalab.protocol.pipeline import compile_protocol
 from causalab.protocol.registry import component_width, get_model_info, site_group_map
-from causalab.protocol.schema import GATE_GROUPS, parse_document
+from causalab.protocol.schema import GATE_GROUPS, GATE_MAPS, parse_document
 
 from tests.protocol._docs import base_doc, in_order
 from tests.protocol._env import build_env
+
 
 pytestmark = pytest.mark.unit
 
@@ -92,7 +92,7 @@ def gate_doc(
     doc["method"]["reads"]["v_cf"]["featurizer"] = chain
     doc["method"]["writes"]["patch"]["featurizer"] = chain
     doc["method"]["train"] = {
-        "objective": [[1.0, "ld"]],
+        "objective": [[1.0, fit_term(doc)]],
         "params": ["g"],
         "optimizer": {"name": "adamw", "lr": 1e-3},
         "steps": {"epochs": 1},
@@ -113,10 +113,15 @@ def apply_doc(
     doc = gate_doc(group=group, component=component, layer=layer)
     doc["method"]["featurizers"]["g"]["file_path"] = "fit/g.safetensors"
     del doc["method"]["train"]
-    doc["method"]["save"] = [
-        {"value": "ld", "model": "patched", "input": "base", "file_path": "ld.json"}
-    ]
+    doc["method"]["save"] = [doc["method"]["save"][0]]  # the aggregation alone
     return in_order(doc)
+
+
+def fit_term(doc: dict[str, Any]) -> dict[str, Any]:
+    """The `ld` aggregation as an objective term's fields (§2.11): the read,
+    the model and the aggregation the save entry `ld.json` carries."""
+    (entry,) = [e for e in doc["method"]["save"] if e["file_path"] == "ld.json"]
+    return {k: entry[k] for k in ("read", "model", "aggregation")}
 
 
 def canon_gate(env: Any, **kwargs: Any) -> dict[str, Any]:
@@ -128,7 +133,7 @@ def expect_rule(rule: int, env: Any, raw: dict[str, Any]) -> ValidationError:
     it is decided while the document canonicalizes, and `load` is the surface
     that runs it. No model is loaded: `ModelInfo` is static config."""
     with pytest.raises(ValidationError) as err:
-        load(raw, env)
+        compile_protocol(raw, env=env)
     assert err.value.rule == rule, f"expected V{rule}, got {err.value}"
     return err.value
 
@@ -176,7 +181,7 @@ def test_a_head_grouped_gate_has_exactly_one_parameter_per_head(env: Any) -> Non
 
 @pytest.mark.parametrize("component", ["expert_activation", "expert_neuron_output"])
 def test_an_expert_keyed_gate_has_the_whole_expert_table(env: Any, component) -> None:
-    """The expert-neuron contract: `num_experts × d_expert` parameters whatever `top_k`
+    """The expert contract: `num_experts × d_expert` parameters whatever `top_k`
     experts a token activates — the site is `top_k` slots wide, the table is
     not."""
     entry = canon_gate(env, group="expert_neuron", component=component, model=A3B)
@@ -419,17 +424,17 @@ def test_a_loaded_grouped_gate_keeps_its_group_in_the_canonical_form(env: Any) -
     assert "group_map" not in entry
 
 
-# -- a main-era ungrouped bundle still loads --------------------------------- #
+# -- an ungrouped bundle from before `group` still loads --------------------- #
 #
-# Every gate bundle fitted before this feature (every demo-fitted gate included)
-# was fitted per coordinate on `main`, whose ArtifactIdentity had no `group` and no
-# `group_map`. `group` enters the loader's expectation ONLY when the document
+# Every gate bundle fitted before `group` existed (every demo-fitted gate among
+# them) was fitted per coordinate, with an ArtifactIdentity that had no `group`
+# and no `group_map`. `group` enters the loader's expectation ONLY when the document
 # authors a group; an ungrouped document must accept such a header unchanged,
 # and there is no re-fit migration. The header below is written by hand with
-# exactly the key set the pre-feature `main` stamped on a single-point gate fit —
+# exactly the key set that earlier code stamps on a single-point gate fit —
 # not through `build_artifact_identity`, whose key set is the extended one.
 
-#: The file-level identity keys of a gate bundle written on `main` (a
+#: The file-level identity keys of a gate bundle written before `group` (a
 #: single-point fit; `k`/`parametrization`/`model_quantization`/`tokenizer`/
 #: `trained_on_digest` are absent because the stamp drops `None`).
 MAIN_ERA_GATE_HEADER_KEYS = (
@@ -455,8 +460,8 @@ def _write_gate_header(
 ) -> dict[str, str]:
     """A hand-written fitted-gate bundle: a stamped header and a zero ``theta``
     of ``theta_len`` fp32 entries, no tensor library involved. Without
-    ``extra`` the header is byte-for-byte what ``main`` writes for an ungrouped
-    gate; ``extra`` adds this branch's ``group``/``group_map``."""
+    ``extra`` the header is byte-for-byte what earlier code writes for an
+    ungrouped gate; ``extra`` adds the grouped header's ``group``/``group_map``."""
     metadata: dict[str, str] = {
         "commit": "fixture",
         "dtype": "fp32",
@@ -491,7 +496,7 @@ def _write_gate_header(
 def test_a_main_era_ungrouped_gate_loads_under_an_ungrouped_document(
     tmp_path: Path,
 ) -> None:
-    """The 392-bundle clause: no `group`, no `group_map`, and the load is
+    """The backward-compatibility clause: no `group`, no `group_map`, and the load is
     accepted — `group` is not expected of a document that authors none."""
     metadata = _write_gate_header(
         tmp_path,
@@ -500,8 +505,10 @@ def test_a_main_era_ungrouped_gate_loads_under_an_ungrouped_document(
         site={"component": "block_output", "layers": [3]},
     )
     assert set(metadata) == set(MAIN_ERA_GATE_HEADER_KEYS)
-    loaded = load(apply_doc(group=None, component="block_output"), build_env(tmp_path))
-    entry = loaded.canonical_document["method"]["featurizers"]["g"]
+    loaded = compile_protocol(
+        apply_doc(group=None, component="block_output"), env=build_env(tmp_path)
+    )
+    entry = loaded.canonical["method"]["featurizers"]["g"]
     assert "group" not in entry and "content_digest" in entry
 
 
@@ -517,7 +524,7 @@ def test_a_main_era_ungrouped_gate_is_refused_by_a_grouped_document(
         site={"component": "attention_premix", "layers": [3]},
     )
     with pytest.raises(ValidationError) as err:
-        load(apply_doc(group="head"), build_env(tmp_path))
+        compile_protocol(apply_doc(group="head"), env=build_env(tmp_path))
     assert err.value.rule == 15
     assert "missing 'group'" in str(err.value)
 
@@ -533,7 +540,7 @@ def test_a_grouped_bundle_is_refused_by_an_ungrouped_document(tmp_path: Path) ->
         extra={"group": "head", "group_map": [GPT2_HEADS, GPT2_HEAD_DIM]},
     )
     with pytest.raises(ValidationError) as err:
-        load(apply_doc(group=None), build_env(tmp_path))
+        compile_protocol(apply_doc(group=None), env=build_env(tmp_path))
     assert err.value.rule == 15
     assert "fitted with group 'head'" in str(err.value)
 
@@ -550,7 +557,7 @@ def test_a_grouped_bundle_reloads_under_the_document_that_fitted_it(
         site={"component": "attention_premix", "layers": [3]},
         extra={"group": "head", "group_map": [GPT2_HEADS, GPT2_HEAD_DIM]},
     )
-    load(apply_doc(group="head"), build_env(tmp_path))
+    compile_protocol(apply_doc(group="head"), env=build_env(tmp_path))
 
 
 def test_a_grouped_bundle_with_another_map_is_refused(tmp_path: Path) -> None:
@@ -564,7 +571,7 @@ def test_a_grouped_bundle_with_another_map_is_refused(tmp_path: Path) -> None:
         extra={"group": "head", "group_map": [6, 128]},
     )
     with pytest.raises(ValidationError) as err:
-        load(apply_doc(group="head"), build_env(tmp_path))
+        compile_protocol(apply_doc(group="head"), env=build_env(tmp_path))
     assert err.value.rule == 15
     assert "ArtifactIdentity mismatch on 'group_map'" in str(err.value)
 
@@ -661,12 +668,12 @@ def test_a_site_bundle_reloads_only_under_a_site_document(tmp_path: Path) -> Non
         site=site,
         extra={"group": "site", "group_map": [1, GPT2_HEADS * GPT2_HEAD_DIM]},
     )
-    load(apply_doc(group="site"), build_env(tmp_path))
+    compile_protocol(apply_doc(group="site"), env=build_env(tmp_path))
     with pytest.raises(ValidationError) as err:
-        load(apply_doc(group="head"), build_env(tmp_path))
+        compile_protocol(apply_doc(group="head"), env=build_env(tmp_path))
     assert err.value.rule == 15
     with pytest.raises(ValidationError) as err:
-        load(apply_doc(group=None), build_env(tmp_path))
+        compile_protocol(apply_doc(group=None), env=build_env(tmp_path))
     assert err.value.rule == 15
     assert "fitted with group 'site'" in str(err.value)
 
@@ -731,10 +738,10 @@ def test_rule_4_refuses_a_temperature_anneal_on_a_clamp_gate(env: Any) -> None:
     doc = _clamp(gate_doc())
     doc["method"]["train"]["anneal"] = {"g.theta.temperature": [1.0, 0.01, 0.5]}
     err = expect_rule(4, env, in_order(doc))
-    assert "no temperature" in str(err)
+    assert GATE_MAPS["clamp"].no_temperature_because in str(err)
     sigmoid = gate_doc()
     sigmoid["method"]["train"]["anneal"] = {"g.theta.temperature": [1.0, 0.01, 0.5]}
-    load(in_order(sigmoid), env)  # the sigmoid gate anneals as before
+    compile_protocol(in_order(sigmoid), env=env)  # the sigmoid gate anneals as before
 
 
 def test_a_clamp_bundle_is_refused_by_a_document_declaring_no_parametrization(
@@ -750,7 +757,9 @@ def test_a_clamp_bundle_is_refused_by_a_document_declaring_no_parametrization(
         extra={"parametrization": "clamp"},
     )
     with pytest.raises(ValidationError) as err:
-        load(apply_doc(group=None, component="block_output"), build_env(tmp_path))
+        compile_protocol(
+            apply_doc(group=None, component="block_output"), env=build_env(tmp_path)
+        )
     assert err.value.rule == 15
     assert "fitted with parametrization 'clamp'" in str(err.value)
 
@@ -765,8 +774,9 @@ def test_an_unstamped_bundle_is_refused_by_a_clamp_document(tmp_path: Path) -> N
         site={"component": "block_output", "layers": [3]},
     )
     with pytest.raises(ValidationError) as err:
-        load(
-            _clamp(apply_doc(group=None, component="block_output")), build_env(tmp_path)
+        compile_protocol(
+            _clamp(apply_doc(group=None, component="block_output")),
+            env=build_env(tmp_path),
         )
     assert err.value.rule == 15
     assert "missing 'parametrization'" in str(err.value)
@@ -782,7 +792,9 @@ def test_a_bundle_reloads_under_the_map_it_was_fitted_with(tmp_path: Path) -> No
         site={"component": "block_output", "layers": [3]},
         extra={"parametrization": "clamp"},
     )
-    load(_clamp(apply_doc(group=None, component="block_output")), build_env(tmp_path))
+    compile_protocol(
+        _clamp(apply_doc(group=None, component="block_output")), env=build_env(tmp_path)
+    )
     _write_gate_header(
         tmp_path,
         "fit/g.safetensors",
@@ -790,7 +802,9 @@ def test_a_bundle_reloads_under_the_map_it_was_fitted_with(tmp_path: Path) -> No
         site={"component": "block_output", "layers": [3]},
         extra={"parametrization": "sigmoid"},
     )
-    load(apply_doc(group=None, component="block_output"), build_env(tmp_path))
+    compile_protocol(
+        apply_doc(group=None, component="block_output"), env=build_env(tmp_path)
+    )
 
 
 # -- §2.5 `init` on a gate ---------------------------------------------------- #
@@ -806,7 +820,7 @@ def test_a_gate_fill_enters_the_canonical_form_as_authored(env: Any) -> None:
     assert "content_digest" not in canon["init"]
     assert digest(canonicalize(doc, env)) != digest(canonicalize(gate_doc(), env))
     assert "init" not in canon_gate(env)  # absent, the midpoint start: no key
-    load(in_order(doc), env)  # and nothing to refuse at load
+    compile_protocol(in_order(doc), env=env)  # and nothing to refuse at load
 
 
 # -- §2.11 `train.control` in the canonical form ----------------------------- #
@@ -824,7 +838,7 @@ def test_a_controllers_defaults_are_materialized_like_an_optimizers(env: Any) ->
     }
     terse = gate_doc()
     terse["method"]["train"]["objective"] = {
-        "fit": {"weight": 1.0, "metric": "ld"},
+        "fit": {"weight": 1.0, **fit_term(terse)},
         "sparsity": {"weight": 0.025, "l1": "g"},
     }
     terse["method"]["train"]["control"] = {target: pid}
@@ -843,7 +857,7 @@ def test_a_controllers_defaults_are_materialized_like_an_optimizers(env: Any) ->
     plain = json.loads(json.dumps(terse))
     del plain["method"]["train"]["control"]
     assert digest(canonicalize(plain, env)) != digest(canonicalize(terse, env))
-    load(in_order(terse), env)
+    compile_protocol(in_order(terse), env=env)
 
 
 def test_a_control_signal_over_one_gate_and_over_a_list_of_one_are_one_document(
@@ -857,7 +871,7 @@ def test_a_control_signal_over_one_gate_and_over_a_list_of_one_are_one_document(
     def controlled(signal: Any) -> dict[str, Any]:
         doc = gate_doc()
         doc["method"]["train"]["objective"] = {
-            "fit": {"weight": 1.0, "metric": "ld"},
+            "fit": {"weight": 1.0, **fit_term(doc)},
             "sparsity": {"weight": 0.025, "l1": "g"},
         }
         doc["method"]["train"]["control"] = {
@@ -874,7 +888,7 @@ def test_a_control_signal_over_one_gate_and_over_a_list_of_one_are_one_document(
     canon = canonicalize(bare, env)["method"]["train"]["control"][target]
     assert canon["signal"] == {"hard_mask_size": ["g"]}
     assert digest(canonicalize(bare, env)) == digest(canonicalize(listed, env))
-    load(in_order(listed), env)
+    compile_protocol(in_order(listed), env=env)
 
 
 # -- §2.12 `trajectory` under rule 10 ----------------------------------------- #
@@ -893,7 +907,7 @@ def _with_trajectory(doc: dict[str, Any], **entry: Any) -> dict[str, Any]:
 
 
 def test_rule_10_holds_a_trajectory_to_its_shape(env: Any) -> None:
-    load(_with_trajectory(gate_doc()), env)  # a fit, one bundle: fine
+    compile_protocol(_with_trajectory(gate_doc()), env=env)  # a fit, one bundle: fine
     err = expect_rule(
         10, env, _with_trajectory(gate_doc(), file_path="trajectory.json")
     )
@@ -939,9 +953,9 @@ def test_an_authored_stretch_is_asked_of_the_bundle(tmp_path: Path) -> None:
     (the `group` precedent), a matching one loads, a different one refuses by
     name."""
     _hard_concrete_bundle(tmp_path, [-0.1, 1.5])
-    load(_hard_concrete_apply([-0.1, 1.5]), build_env(tmp_path))
+    compile_protocol(_hard_concrete_apply([-0.1, 1.5]), env=build_env(tmp_path))
     with pytest.raises(ValidationError) as err:
-        load(_hard_concrete_apply([-0.2, 1.2]), build_env(tmp_path))
+        compile_protocol(_hard_concrete_apply([-0.2, 1.2]), env=build_env(tmp_path))
     assert err.value.rule == 15 and "'stretch'" in str(err.value)
 
 
@@ -954,7 +968,7 @@ def test_a_non_default_stretch_bundle_is_refused_by_a_document_authoring_none(
     silently, were the key write-only provenance."""
     _hard_concrete_bundle(tmp_path, [-0.1, 1.5])
     with pytest.raises(ValidationError) as err:
-        load(_hard_concrete_apply(None), build_env(tmp_path))
+        compile_protocol(_hard_concrete_apply(None), env=build_env(tmp_path))
     assert err.value.rule == 15 and "fitted at stretch" in str(err.value)
 
 
@@ -965,8 +979,8 @@ def test_a_default_stretch_bundle_loads_under_a_document_authoring_none(
     nothing implies the same default — the two thresholds agree, so it loads
     (and so does one that spells the default out)."""
     _hard_concrete_bundle(tmp_path, [-0.1, 1.1])
-    load(_hard_concrete_apply(None), build_env(tmp_path))
-    load(_hard_concrete_apply([-0.1, 1.1]), build_env(tmp_path))
+    compile_protocol(_hard_concrete_apply(None), env=build_env(tmp_path))
+    compile_protocol(_hard_concrete_apply([-0.1, 1.1]), env=build_env(tmp_path))
 
 
 def _position_apply_doc(*, axis: bool) -> dict[str, Any]:
@@ -995,7 +1009,7 @@ def test_a_position_gate_bundle_is_refused_by_a_document_without_axis(
         extra={"axis": "position"},
     )
     with pytest.raises(ValidationError) as err:
-        load(_position_apply_doc(axis=False), build_env(tmp_path))
+        compile_protocol(_position_apply_doc(axis=False), env=build_env(tmp_path))
     assert err.value.rule == 15 and "fitted over 'position'" in str(err.value)
 
 
@@ -1011,7 +1025,7 @@ def test_a_coordinate_gate_bundle_is_refused_by_a_position_gate_document(
         site={"component": "block_output", "layers": [3]},
     )
     with pytest.raises(ValidationError) as err:
-        load(_position_apply_doc(axis=True), build_env(tmp_path))
+        compile_protocol(_position_apply_doc(axis=True), env=build_env(tmp_path))
     assert err.value.rule == 15 and "missing 'axis'" in str(err.value)
 
 
@@ -1032,8 +1046,8 @@ def test_a_position_gate_document_authors_top_k_beside_axis(tmp_path: Path) -> N
         entry["pos"] = {"span": [0, 3]}
     doc["method"]["featurizers"]["g"]["axis"] = "position"
     doc["method"]["featurizers"]["g"]["top_k"] = 2
-    loaded = load(in_order(doc), build_env(tmp_path))
-    entry = loaded.canonical_document["method"]["featurizers"]["g"]
+    loaded = compile_protocol(in_order(doc), env=build_env(tmp_path))
+    entry = loaded.canonical["method"]["featurizers"]["g"]
     assert entry["axis"] == "position" and entry["top_k"] == 2
 
 
@@ -1047,6 +1061,6 @@ def test_a_position_gate_bundle_loads_under_a_document_that_spells_axis(
         site={"component": "block_output", "layers": [3]},
         extra={"axis": "position"},
     )
-    loaded = load(_position_apply_doc(axis=True), build_env(tmp_path))
-    entry = loaded.canonical_document["method"]["featurizers"]["g"]
+    loaded = compile_protocol(_position_apply_doc(axis=True), env=build_env(tmp_path))
+    entry = loaded.canonical["method"]["featurizers"]["g"]
     assert entry["axis"] == "position" and "content_digest" in entry

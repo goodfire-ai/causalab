@@ -1,16 +1,23 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "Hours baseline (Arithmetic in the Wild, arXiv:2605.01148): no-intervention accuracy on all 1,152 hours prompts (24 concepts x 48 spelled-out offsets, the paper template with a trailing space so the zero-padded hour is the single next token - hence token_form 'bare': the prompt already ends in the space, so the answer '01' is emitted with none before it, and the space-prefixed form would name a token the model never produces). Golden: paper reports 70.8%; band [0.65, 0.75] around the paper's figure."
   },
   "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
   "data": {"base": {"dataset": "hours/all", "field": "input"}},
   "method": {
-    "sites": {"lm_head": {"component": "lm_head"}},
-    "reads": {"logits": {"site": "lm_head", "pos": -1, "model": "original", "input": "base"}},
-    "metrics": {
-      "acc": {"kind": "match", "of": "logits", "expected": "answer", "token_form": "bare"}
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["logits"]}
     },
-    "save": [{"value": "acc", "model": "original", "input": "base", "file_path": "acc.json"}]
+    "sites": {"lm_head": {"component": "lm_head"}},
+    "reads": {"logits": {"site": "lm_head", "pos": -1}},
+    "save": [
+      {
+        "read": "logits",
+        "model": "original",
+        "aggregation": {"kind": "match", "expected": "answer"},
+        "file_path": "acc.json"
+      }
+    ]
   }
 }

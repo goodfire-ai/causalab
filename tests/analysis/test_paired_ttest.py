@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 from causalab.analysis import paired_ttest
 from causalab.io.step_io import StepError
 from tests.step_scripts import put_table, run_step

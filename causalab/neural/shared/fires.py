@@ -1,36 +1,14 @@
-"""Per-member fire counts of an installed write set (spec §4 "Fires").
+"""Check how often each installed write fires.
 
-An intervened model's writes install together, run in one forward and tear
-down together — so a member that fails to resolve or mismatches its operand's
-shape aborts the forward before any capture is published or any table is
-written (the write set is atomic by construction; ``executor.py`` names the
-three design choices that make it so). What nothing used to check is that
-every member **fired**: a write installed on a module the forward never calls
-— 📐 the DeltaNet ``conv1d`` module, whose forward goes through a
-module-global function instead (``delta_interface.py``) — edited nothing, and
-the un-intervened forward was scored as an intervention, a wrong answer with
-no error. This module is the counter, the declaration of how often each kind
-of write fires, and the refusal when the two disagree.
+Counts apply to one forward of a forward group, including a row window
+or a forward resumed from a prefix. Module, attention, expert, and delta
+boundary writes fire once. A ``delta_state`` write fires once per addressed
+step. Members sharing a hook keep separate counts. Cached groups retain
+the counts from the forward that produced them.
 
-**The unit is one forward of a forward group.** A group runs as one forward,
-or as several over row windows (``batch_rows``), and each of them installs
-the whole set again; a forward that *resumes* from a cached prefix (§4
-"Resume") still runs every block a write lands in and is one forward like
-any other. Per forward, a write at a module boundary, an attention-interface
-slot, the experts interior or the DeltaNet kernel boundary fires **once**;
-a ``delta_state`` write fires **once per addressed step** — the stepwise
-substitution hands it every step's state and it edits the ones the write's
-positions name. Two members at one address share a hook and each counts its
-firing. A group served from the campaign store (§3) ran in another point,
-and that point's counts are its counts.
-
-What the receipt records is layout-invariant, like everything else in it
-(§8): the per-forward count a module-kind member was checked at, and for a
-state write the number of distinct steps it fired at over the group's rows
-— the same number whether the rows ran as one forward or six.
-
-Torch-free on purpose: the tally counts calls, and the engine wraps its own
-hooks around :meth:`FireTally.fired`.
+A mismatch raises before captures or result tables are published. Receipts
+record the checked count for a module write and distinct addressed steps
+for a state write, independent of row batching. This module is torch-free.
 """
 
 from __future__ import annotations
@@ -38,7 +16,7 @@ from __future__ import annotations
 import dataclasses
 from typing import Iterable
 
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 
 __all__ = [
     "FireTally",
@@ -59,12 +37,12 @@ class FireTally:
     """One forward's count of each write member's firings against what its
     kind declares.
 
-    :meth:`declare` is called once per member while the hooks are built, with
-    the count that member's kind owes this forward; :meth:`fired` is called
+    [`declare`][] is called once per member while the hooks are built, with
+    the count that member's kind owes this forward; [`fired`][] is called
     by the hook each time it runs. A state write declares the distinct steps
     its rows address and fires per step, so its ``steps`` are kept as well as
     counted — the receipt's number for it is the union over the group's
-    forwards (:class:`GroupFires`).
+    forwards ([`GroupFires`][]).
     """
 
     expected: dict[str, int] = dataclasses.field(default_factory=dict)
@@ -89,7 +67,7 @@ class FireTally:
 class GroupFires:
     """One forward group's fire record across the forwards it ran as.
 
-    Each forward's checked :class:`FireTally` is folded in; :meth:`record` is
+    Each forward's checked [`FireTally`][] is folded in; [`record`][] is
     the ``{member: count}`` the run receipt carries for the group — a
     module-kind member's per-forward count (every forward was checked at the
     same declared count, so the number does not depend on the row layout),

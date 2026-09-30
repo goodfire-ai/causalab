@@ -6,9 +6,9 @@ carries ``eligible: false`` with its reason code.
 
 *Mutation:* score ``None`` as the string ``"None"`` (what a bare ``str`` over
 the column did) or take the mean over *n* — both fail
-:func:`test_t1_k_of_n_rows_without_an_answer_are_excluded_measurements`.
+`test_t1_k_of_n_rows_without_an_answer_are_excluded_measurements`.
 
-Module-level imports are names that existed before this change on purpose, so the
+Module-level imports are names that existed before this PR on purpose, so the
 fails-without witness on the base export fails *behaviourally* — a value over
 *n* rows where *n − k* is right — and not by an ``ImportError`` at collection.
 """
@@ -21,10 +21,10 @@ import pytest
 import torch
 
 from causalab.neural.shared.metrics import compute_metric
-from causalab.neural.shared.outputs import MetricTable
+from causalab.neural.shared.results import MetricTable
 from causalab.protocol.estimand import metric_record_identity
-from causalab.protocol.resolution import Unavailable
-from causalab.protocol.schema import MetricSpec
+from causalab.protocol.results import Unavailable
+from causalab.protocol.schema import AggregationSpec
 
 pytestmark = pytest.mark.unit
 
@@ -48,12 +48,10 @@ class FakeTokenizer:
         return "".join(by_id.get(int(i), "?") for i in ids)
 
 
-def _token_logit(**extra: Any) -> MetricSpec:
-    return MetricSpec(
+def _token_logit(**extra: Any) -> AggregationSpec:
+    return AggregationSpec(
         kind="token_logit",
-        of="logits",
         fields={"token": "entity"},
-        token_form="bare",
         **extra,
     )
 
@@ -98,7 +96,7 @@ def test_t1_the_table_row_of_an_excluded_measurement_carries_the_record():
     values = compute_metric(_token_logit(), _logits(4), ROWS, tok)
     table = MetricTable()
     identity = metric_record_identity("token_logit", unit=None, estimand_version=None)
-    table.add("tl", values, {}, "0" * 64, identity=identity)
+    table.add("tl", values, {}, identity=identity)
     assert [row["eligible"] for row in table.rows] == [True, False, True, True]
     excluded = table.rows[1]
     assert excluded["value"] is None
@@ -116,7 +114,6 @@ def test_t1_the_table_row_of_an_excluded_measurement_carries_the_record():
         "unit",
         "estimand_version",
         "eligible",
-        "produced_by",
     }
 
 
@@ -127,13 +124,13 @@ def test_twin_a_table_with_every_answer_scores_every_row():
     assert all(isinstance(v, float) for v in values) and len(values) == 4
     table = MetricTable()
     identity = metric_record_identity("token_logit", unit=None, estimand_version=None)
-    table.add("tl", values, {}, "0" * 64, identity=identity)
+    table.add("tl", values, {}, identity=identity)
     assert all(row["eligible"] is True for row in table.rows)
     assert not any("reason_code" in row for row in table.rows)
 
 
 def test_the_denominator_key_is_the_callers_cell_key():
-    from causalab.neural.shared.metrics import excluded_rows
+    from causalab.protocol.answers import excluded_rows
 
     excluded = excluded_rows(_token_logit(), ROWS, "tl[layer=3]")
     assert set(excluded) == {1}
@@ -145,11 +142,9 @@ def test_the_denominator_key_is_the_callers_cell_key():
 
 
 def test_an_empty_form_group_is_an_excluded_row_not_a_refusal():
-    from causalab.neural.shared.metrics import excluded_rows
+    from causalab.protocol.answers import excluded_rows
 
-    metric = MetricSpec(
-        kind="match", of="logits", fields={"expected": "entity"}, token_form="bare"
-    )
+    metric = AggregationSpec(kind="match", fields={"expected": "entity"})
     rows = [{"entity": ["one", "uno"]}, {"entity": []}, {}]
     excluded = excluded_rows(metric, rows, "iia")
     assert set(excluded) == {1, 2}
@@ -166,9 +161,9 @@ def test_every_row_excluded_returns_only_unavailables_and_raises_nothing():
 
 
 def test_a_kind_naming_no_column_excludes_nothing():
-    from causalab.neural.shared.metrics import excluded_rows
+    from causalab.protocol.answers import excluded_rows
 
-    metric = MetricSpec(kind="top_k", of="logits", fields={"k": 2, "by": "value"})
+    metric = AggregationSpec(kind="top_k", fields={"k": 2, "by": "value"})
     assert excluded_rows(metric, ROWS, "tk") == {}
 
 
@@ -181,7 +176,6 @@ def test_a_windowed_metric_carries_the_record_per_position():
         "said",
         [[1.0, 0.0], []],
         {},
-        "0" * 64,
         identity=identity,
         steps=[[0, 1], []],
         matched=[True, False],

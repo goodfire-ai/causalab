@@ -10,7 +10,7 @@ section identity (heading, or a ``repeat`` block's ``over``) so re-running is a
 no-op, and re-validate the result against the viewer's own schema.
 
 It stays within the ``causalab.io`` layering rule — it imports only
-:mod:`causalab.io.artifact_viewer` (same layer) for the schema validator and
+[`causalab.io.artifact_viewer`][] (same layer) for the schema validator and
 carries no analysis-specific knowledge.
 
 Merge semantics
@@ -88,7 +88,7 @@ def merge_sections(
 
     ``spec`` is not mutated. Dedups by section *identity* — ``heading`` for a
     heading section, ``repeat.over`` for a repeat block (see
-    :func:`_section_identity`) — so re-running is a no-op (idempotent), and
+    `_section_identity`) — so re-running is a no-op (idempotent), and
     re-validates the result against the viewer schema, so a malformed merge fails
     loudly here rather than at render time.
     """

@@ -33,6 +33,7 @@ from causalab.neural.shared.kernels import (
 )
 
 from ._drive import base_data_section, executor_for
+from tests.protocol._docs import saved
 from .test_sites_round4_deltanet import DELTANET_LAYER, TEXT
 
 pytestmark = pytest.mark.smoke
@@ -76,17 +77,9 @@ def _doc(component: str) -> dict:
         "data": base_data_section(with_counterfactual=False),
         "method": {
             "sites": {"tap": {"component": component, "layers": [DELTANET_LAYER]}},
-            "reads": {
-                "r": {"site": "tap", "pos": -1, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
+            "reads": {"r": {"site": "tap", "pos": -1}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 

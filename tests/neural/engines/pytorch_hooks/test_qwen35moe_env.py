@@ -1,11 +1,11 @@
-"""The environment the hookpoint vocabulary needs: the Qwen3.5-MoE architecture must actually load.
+"""The Qwen3.5-MoE architecture must actually load.
 
 Everything in the hookpoint-vocabulary work targets ``qwen3_5_moe`` (the text
 tower of Qwen3.6-35B-A3B), which only exists from transformers 5.16. These tests
 are the gate on that bump: they assert the architecture is importable, that the
 engine's own loader reaches the text tower rather than the composite
 vision-language model, and that the layer stack really is hybrid — because the
-per-layer split is the assumption every hookpoint suite builds on.
+per-layer split is the assumption the hookpoint vocabulary builds on.
 
 They deliberately assert *structure*, not activations: numerical behaviour is
 pinned by the parity goldens, which this bump leaves untouched.
@@ -113,7 +113,7 @@ def test_loader_reaches_the_text_tower_not_the_vlm(qwen35moe_bundle):
 
 
 def test_the_layer_stack_is_hybrid(qwen35moe_bundle):
-    """The assumption the whole vocabulary plan rests on: block type is per-layer.
+    """The assumption the whole vocabulary rests on: block type is per-layer.
 
     A DeltaNet layer carries ``linear_attn`` and no ``self_attn``; a full-attention
     layer carries the reverse. Any site resolver that reads ``block.self_attn``
@@ -140,7 +140,7 @@ def test_every_layer_has_a_sparse_moe_block(qwen35moe_bundle):
     for idx, block in enumerate(qwen35moe_bundle.model.model.layers):
         mlp = block.mlp
         assert type(mlp).__name__ == "Qwen3_5MoeSparseMoeBlock", idx
-        # the four sub-taps the module-boundary MoE components resolve against
+        # the four sub-taps the MoE components resolve against
         for attr in ("gate", "experts", "shared_expert", "shared_expert_gate"):
             assert hasattr(mlp, attr), (idx, attr)
 

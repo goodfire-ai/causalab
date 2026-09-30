@@ -1,46 +1,22 @@
-"""Point-protocol execution over nnsight traces.
+"""Execute a protocol point through nnsight traces.
 
-One :class:`TracePointExecutor` runs one concrete document: the same lazy
-forward groups, position resolution, featurizer stacks and class-ordered
-write math as the reference engine (all inherited from
-:class:`~causalab.neural.shared.executor_base.ExecutorBase`) — only the
-landing differs. Each group is **one trace**: writes assign the envoy's
-``input``/``output`` at their address, reads ``nnsight.save`` the contract
-tensor, and a read at a written address sees the write because envoy
-assignment replaces the value later accesses observe (measured, mirroring
-the reference engine's write-before-capture hook order).
+TracePointExecutor inherits position resolution, featurizers, and write
+math from ExecutorBase. Each group runs in one trace. Writes assign envoy
+values before reads save them. Function interiors use the address table
+and the same contract-layout conversions.
 
-Interior components — tensors ``transformers`` computes inside one call, with
-no module boundary to hook — have their own landing: the address table in
-:mod:`causalab.neural.engines.nnsight_tracing.addresses` names the op, the
-executor navigates ``envoy.source`` to it inside the trace, and the same
-``to_contract``/``from_contract`` round-trip runs on what it finds. Only the
-address differs between engines, never the policy or the payload math.
+Operations follow model execution order. At one depth, writes precede
+reads. A ``block_mid`` edit carries its residual delta to the declared
+write-back target and applies it before an absolute write there.
 
-Operations are issued in forward-execution order (site depth, writes before
-reads at the same depth) — module-boundary envoys are order-tolerant, but the
-``.source`` interiors are not (``OutOfOrderError``), and the renumbered
-attention band of :data:`~causalab.protocol.plan.COMPONENT_RANK` *is* the
-in-forward op order, which the test suite pins rather than assumes. A
-``block_mid`` input rewrite carries its residual delta until the depth of the
-component its tap declares as the write-back target; the deferred delta lands
-before an absolute write on that target, matching the reference engine without
-reaching forward past intermediate operations.
+A trace temporarily enables implementations required by its interior taps
+and restores them afterward. Applied requirements enter execution metadata;
+the authored document retains its declared backend identity.
 
-Some interior addresses only exist under a specific implementation — the
-fused attention kernels never materialize the scores — so a group whose taps
-require one switches it on around its trace and restores the model default
-after. The applied set is stamped as execution metadata, never canonical
-form: the document and its digest are implementation-blind.
-
-The generated frame runs the group as one ``model.generate`` trace:
-prompt-frame operations bind occurrence 0 of their locations — the prefill,
-which is the whole of "writes are prefill-only" — and the decode steps are
-walked with ``tracer.iter``, occurrence ``j`` of a per-forward location being
-the step that consumes generated token ``j-1``. Interior components need a
-generated-frame address of their own: decode dispatches different kernels
-than prefill (the recurrent delta rule replaces the chunked one), so the
-prompt-frame table is not evidence a tensor exists per step.
+Generation uses one ``model.generate`` trace. Prompt operations bind the
+prefill occurrence; ``tracer.iter`` walks later decode occurrences. Each
+generated interior needs an address for the decode path, which can use
+different kernels from prefill.
 """
 
 from __future__ import annotations
@@ -66,7 +42,7 @@ from causalab.neural.shared.encoding import (
     continuation_frame,
     resolve_steps,
 )
-from causalab.neural.shared.executor_base import (
+from causalab.neural.shared.executor import (
     ExecutorBase,
     TapKey,
     refuse_unstackable,
@@ -78,11 +54,12 @@ from causalab.neural.shared.layout import (
     tap_tensor,
     to_contract,
 )
-from causalab.neural.shared.mechanisms import operand_names
+from causalab.neural.shared.plan import group_reads, write_names
 from causalab.neural.shared.sites import ResolvedSite, resolve_site
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.plan import generated_budget
-from causalab.protocol.schema import SiteSpec, WriteSpec
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.positions.encoding import generated_budget
+from causalab.protocol.registry import walk
+from causalab.protocol.schema import ReadRef, SiteSpec, WriteSpec, operand_reads
 
 __all__ = ["TracePointExecutor"]
 
@@ -90,11 +67,11 @@ __all__ = ["TracePointExecutor"]
 @dataclass(frozen=True)
 class ResolvedTap:
     """One tap as this engine lands it: the shared resolution (policy, layout,
-    layer — :class:`ResolvedSite` is the cross-engine vocabulary and stays
+    layer — [`ResolvedSite`][] is the cross-engine vocabulary and stays
     untouched) plus, for an interior component, its ``.source`` address."""
 
     site: ResolvedSite
-    #: ``None`` = a module boundary (``envoy.input``/``.output``).
+    #: ``None`` = a module boundary (served by ``envoy.input``/``.output``).
     source: SourceAddress | None = None
 
 
@@ -119,23 +96,31 @@ class TracePointExecutor(ExecutorBase):
                 "training documents route to an engine with the 'grad' "
                 "capability",
             )
+        declared = self.doc.intervened_models.get(model)
+        if declared is not None and declared.writes_during_generation:
+            # the trace binds each write's prefill occurrence only, so the
+            # flag would be dropped without a word: routing refuses this
+            # document (rule 13), and this is the backstop for a caller that
+            # builds the executor directly
+            raise ProtocolError(
+                "P4",
+                f"intervened model {model!r} declares writes_during_generation, "
+                "and the nnsight engine lands every write on the prefill only — "
+                "its 'generation_writes' capability is absent, so routing should "
+                "not have sent it here; the reference engine serves it",
+            )
         # operands first — the acyclic model graph is the schedule skeleton
-        write_names: tuple[str, ...] = ()
-        if model != "original":
-            im = self.doc.intervened_models[model]
-            write_names = tuple(im.writes) if isinstance(im.writes, tuple) else ()
-            for ename in write_names:
-                for operand in operand_names(self.doc.writes[ename].do.payload):
-                    if operand in self.doc.reads:
-                        self.read_value(operand)
+        names = write_names(self.doc, model) or ()
+        for ename in names:
+            for ref in operand_reads(self.doc, self.doc.writes[ename].do):
+                self.read_value(ref)
 
         batch = self._batch(input_role)
         taps = []
         gen_taps: list[tuple[str, Any]] = []
         depth = 0
-        for rname, read in self.doc.reads.items():
-            if str(read.model) != model or str(read.input) != input_role:
-                continue
+        for ref in group_reads(self.doc, model, input_role):
+            rname, read = ref.read, self.doc.reads[ref.read]
             budget = generated_budget(self.doc, read.pos)
             if budget is None:
                 taps.append((rname, read))
@@ -149,9 +134,7 @@ class TracePointExecutor(ExecutorBase):
         }
         write_taps = {
             key: (self._wrap(site), entries)
-            for key, (site, entries) in self._resolve_write_addresses(
-                write_names
-            ).items()
+            for key, (site, entries) in self._resolve_write_addresses(names).items()
         }
         # A continuation read at lm_head is served from kept ln_final
         # activations and projected at its addressed steps — the reference
@@ -310,7 +293,7 @@ class TracePointExecutor(ExecutorBase):
             )
             for key, _tap in gen_order:
                 gen_sinks[key] = nnsight.save([])
-            # 📐 rule 3 of the fire-counting probes: occurrences are counted
+            # 📐 fire-counting probes show occurrences are counted
             # per location, and a decode-only op (the recurrent delta kernel)
             # has no prefill occurrence — so its occurrence j is step j+1, one
             # off. Anchoring each body on a location that fires every forward
@@ -321,11 +304,10 @@ class TracePointExecutor(ExecutorBase):
                 gen_order[0][1].source is not None
                 and gen_order[0][1].source.fires != "once"
             )
-            embedding = (
-                self.bundle.model.transformer.wte
-                if self.bundle.is_gpt2_family
-                else self.bundle.model.model.embed_tokens
-            )
+            # the family's own tree names the embedding. 🐞 Was GPT-2's
+            # ``transformer.wte`` or else llama's ``model.embed_tokens``, so
+            # every generated read on a third tree (GPT-J) raised here
+            embedding = walk(self.bundle.model, self.bundle.adapter.tree.embedding)
             for _step in tracer.iter[1 : depth + 1]:
                 if needs_anchor:
                     _ = embedding.input
@@ -390,13 +372,14 @@ class TracePointExecutor(ExecutorBase):
         for rname, read in taps:
             tap = read_taps[rname]
             raw = saves[tap_key(tap.site, tap.source)]
+            ref = ReadRef(rname, model)
             if tap.source is not None and tap.source.fires != "once":
-                self._read_values[rname] = self._finalize_per_fire_read(
-                    rname, read, tap, raw, batch, input_role
+                self._read_values[ref] = self._finalize_per_fire_read(
+                    ref, read, tap, raw, batch, input_role
                 )
             else:
-                self._read_values[rname] = self._finalize_read(
-                    rname, read, tap.site, raw, batch, input_role
+                self._read_values[ref] = self._finalize_read(
+                    ref, read, tap.site, raw, batch, input_role
                 )
         if depth:
             self._finalize_generated(
@@ -536,7 +519,7 @@ class TracePointExecutor(ExecutorBase):
 
         An ``align`` address' rows are in the kernel's expert-sorted order:
         un-sort them (a gather, so the result is a copy — writes go back
-        through :meth:`_land_writes`' restore path, never through this).
+        through `_land_writes`' restore path, never through this).
         ``expert_rows`` re-packs ``(batch·position·top_k, …)`` rows into the
         declared 2-D native ``(batch·position, top_k·…)``.
         """
@@ -708,7 +691,7 @@ class TracePointExecutor(ExecutorBase):
 
     def _finalize_per_fire_read(
         self,
-        rname: str,
+        ref: ReadRef,
         read: Any,
         tap: ResolvedTap,
         sink: Any,
@@ -728,9 +711,9 @@ class TracePointExecutor(ExecutorBase):
             stacked.shape[0], stacked.shape[1], heads, width // heads
         )
         raw = to_contract(native, site.shape, batch_size=int(batch.input_ids.shape[0]))
-        per_row = self._fire_positions(rname, read.pos, len(fires), raw.shape[0])
+        per_row = self._fire_positions(ref.read, read.pos, len(fires), raw.shape[0])
         return self._finalize_read(
-            rname, read, site, raw, batch, input_role, per_row=per_row
+            ref, read, site, raw, batch, input_role, per_row=per_row
         )
 
     def _fire_positions(
@@ -862,6 +845,7 @@ class TracePointExecutor(ExecutorBase):
         field = self.role_fields[input_role]
         head = None
         for rname, read in gen_taps:
+            ref = ReadRef(rname, model)
             site = gen_sites[rname]
             tap = gen_wrapped[rname]
             sink = gen_sinks[tap_key(tap.site, tap.source)]
@@ -876,7 +860,7 @@ class TracePointExecutor(ExecutorBase):
                 )
                 for row in range(rows_n)
             ]
-            self._read_steps[rname] = per_row
+            self._read_steps[ref] = per_row
             project = None
             if tap.site.component != site.component:  # ln_final kept, lm_head owed
                 head = (
@@ -884,8 +868,8 @@ class TracePointExecutor(ExecutorBase):
                     or resolve_site(self.bundle, SiteSpec(component="lm_head")).module
                 )
                 project = head
-            self._read_values[rname] = self._finalize_read(
-                rname,
+            self._read_values[ref] = self._finalize_read(
+                ref,
                 read,
                 site,
                 frame,
@@ -902,7 +886,7 @@ class TracePointExecutor(ExecutorBase):
         📐 The runtime switch is verified on the real A3B and the fixture
         (`set_attn_implementation` both directions). The model default is
         restored afterwards, so a document that never touches the pattern
-        keeps whatever the checkpoint prefers (sdpa) — switched on demand.
+        keeps whatever the checkpoint prefers (sdpa); the switch is on demand.
         """
         model = self.bundle.model
         previous_attn: str | None = None

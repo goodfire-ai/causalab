@@ -1,0 +1,1709 @@
+{
+ "files": 26,
+ "model": "Qwen/Qwen3.6-35B-A3B",
+ "patterns": {
+  "lm_head.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    248320,
+    2048
+   ]
+  },
+  "model.language_model.embed_tokens.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    248320,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.input_layernorm.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     39
+    ]
+   ],
+   "shape": [
+    2048
+   ]
+  },
+  "model.language_model.layers.*.linear_attn.A_log": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ],
+    [
+     12
+    ],
+    [
+     13
+    ],
+    [
+     14
+    ],
+    [
+     16
+    ],
+    [
+     17
+    ],
+    [
+     18
+    ],
+    [
+     20
+    ],
+    [
+     21
+    ],
+    [
+     22
+    ],
+    [
+     24
+    ],
+    [
+     25
+    ],
+    [
+     26
+    ],
+    [
+     28
+    ],
+    [
+     29
+    ],
+    [
+     30
+    ],
+    [
+     32
+    ],
+    [
+     33
+    ],
+    [
+     34
+    ],
+    [
+     36
+    ],
+    [
+     37
+    ],
+    [
+     38
+    ]
+   ],
+   "shape": [
+    32
+   ]
+  },
+  "model.language_model.layers.*.linear_attn.conv1d.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ],
+    [
+     12
+    ],
+    [
+     13
+    ],
+    [
+     14
+    ],
+    [
+     16
+    ],
+    [
+     17
+    ],
+    [
+     18
+    ],
+    [
+     20
+    ],
+    [
+     21
+    ],
+    [
+     22
+    ],
+    [
+     24
+    ],
+    [
+     25
+    ],
+    [
+     26
+    ],
+    [
+     28
+    ],
+    [
+     29
+    ],
+    [
+     30
+    ],
+    [
+     32
+    ],
+    [
+     33
+    ],
+    [
+     34
+    ],
+    [
+     36
+    ],
+    [
+     37
+    ],
+    [
+     38
+    ]
+   ],
+   "shape": [
+    8192,
+    1,
+    4
+   ]
+  },
+  "model.language_model.layers.*.linear_attn.dt_bias": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ],
+    [
+     12
+    ],
+    [
+     13
+    ],
+    [
+     14
+    ],
+    [
+     16
+    ],
+    [
+     17
+    ],
+    [
+     18
+    ],
+    [
+     20
+    ],
+    [
+     21
+    ],
+    [
+     22
+    ],
+    [
+     24
+    ],
+    [
+     25
+    ],
+    [
+     26
+    ],
+    [
+     28
+    ],
+    [
+     29
+    ],
+    [
+     30
+    ],
+    [
+     32
+    ],
+    [
+     33
+    ],
+    [
+     34
+    ],
+    [
+     36
+    ],
+    [
+     37
+    ],
+    [
+     38
+    ]
+   ],
+   "shape": [
+    32
+   ]
+  },
+  "model.language_model.layers.*.linear_attn.in_proj_a.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ],
+    [
+     12
+    ],
+    [
+     13
+    ],
+    [
+     14
+    ],
+    [
+     16
+    ],
+    [
+     17
+    ],
+    [
+     18
+    ],
+    [
+     20
+    ],
+    [
+     21
+    ],
+    [
+     22
+    ],
+    [
+     24
+    ],
+    [
+     25
+    ],
+    [
+     26
+    ],
+    [
+     28
+    ],
+    [
+     29
+    ],
+    [
+     30
+    ],
+    [
+     32
+    ],
+    [
+     33
+    ],
+    [
+     34
+    ],
+    [
+     36
+    ],
+    [
+     37
+    ],
+    [
+     38
+    ]
+   ],
+   "shape": [
+    32,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.linear_attn.in_proj_b.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ],
+    [
+     12
+    ],
+    [
+     13
+    ],
+    [
+     14
+    ],
+    [
+     16
+    ],
+    [
+     17
+    ],
+    [
+     18
+    ],
+    [
+     20
+    ],
+    [
+     21
+    ],
+    [
+     22
+    ],
+    [
+     24
+    ],
+    [
+     25
+    ],
+    [
+     26
+    ],
+    [
+     28
+    ],
+    [
+     29
+    ],
+    [
+     30
+    ],
+    [
+     32
+    ],
+    [
+     33
+    ],
+    [
+     34
+    ],
+    [
+     36
+    ],
+    [
+     37
+    ],
+    [
+     38
+    ]
+   ],
+   "shape": [
+    32,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.linear_attn.in_proj_qkv.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ],
+    [
+     12
+    ],
+    [
+     13
+    ],
+    [
+     14
+    ],
+    [
+     16
+    ],
+    [
+     17
+    ],
+    [
+     18
+    ],
+    [
+     20
+    ],
+    [
+     21
+    ],
+    [
+     22
+    ],
+    [
+     24
+    ],
+    [
+     25
+    ],
+    [
+     26
+    ],
+    [
+     28
+    ],
+    [
+     29
+    ],
+    [
+     30
+    ],
+    [
+     32
+    ],
+    [
+     33
+    ],
+    [
+     34
+    ],
+    [
+     36
+    ],
+    [
+     37
+    ],
+    [
+     38
+    ]
+   ],
+   "shape": [
+    8192,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.linear_attn.in_proj_z.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ],
+    [
+     12
+    ],
+    [
+     13
+    ],
+    [
+     14
+    ],
+    [
+     16
+    ],
+    [
+     17
+    ],
+    [
+     18
+    ],
+    [
+     20
+    ],
+    [
+     21
+    ],
+    [
+     22
+    ],
+    [
+     24
+    ],
+    [
+     25
+    ],
+    [
+     26
+    ],
+    [
+     28
+    ],
+    [
+     29
+    ],
+    [
+     30
+    ],
+    [
+     32
+    ],
+    [
+     33
+    ],
+    [
+     34
+    ],
+    [
+     36
+    ],
+    [
+     37
+    ],
+    [
+     38
+    ]
+   ],
+   "shape": [
+    4096,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.linear_attn.norm.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ],
+    [
+     12
+    ],
+    [
+     13
+    ],
+    [
+     14
+    ],
+    [
+     16
+    ],
+    [
+     17
+    ],
+    [
+     18
+    ],
+    [
+     20
+    ],
+    [
+     21
+    ],
+    [
+     22
+    ],
+    [
+     24
+    ],
+    [
+     25
+    ],
+    [
+     26
+    ],
+    [
+     28
+    ],
+    [
+     29
+    ],
+    [
+     30
+    ],
+    [
+     32
+    ],
+    [
+     33
+    ],
+    [
+     34
+    ],
+    [
+     36
+    ],
+    [
+     37
+    ],
+    [
+     38
+    ]
+   ],
+   "shape": [
+    128
+   ]
+  },
+  "model.language_model.layers.*.linear_attn.out_proj.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ],
+    [
+     10
+    ],
+    [
+     12
+    ],
+    [
+     13
+    ],
+    [
+     14
+    ],
+    [
+     16
+    ],
+    [
+     17
+    ],
+    [
+     18
+    ],
+    [
+     20
+    ],
+    [
+     21
+    ],
+    [
+     22
+    ],
+    [
+     24
+    ],
+    [
+     25
+    ],
+    [
+     26
+    ],
+    [
+     28
+    ],
+    [
+     29
+    ],
+    [
+     30
+    ],
+    [
+     32
+    ],
+    [
+     33
+    ],
+    [
+     34
+    ],
+    [
+     36
+    ],
+    [
+     37
+    ],
+    [
+     38
+    ]
+   ],
+   "shape": [
+    2048,
+    4096
+   ]
+  },
+  "model.language_model.layers.*.mlp.experts.down_proj": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     39
+    ]
+   ],
+   "shape": [
+    256,
+    2048,
+    512
+   ]
+  },
+  "model.language_model.layers.*.mlp.experts.gate_up_proj": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     39
+    ]
+   ],
+   "shape": [
+    256,
+    1024,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.mlp.gate.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     39
+    ]
+   ],
+   "shape": [
+    256,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.mlp.shared_expert.down_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     39
+    ]
+   ],
+   "shape": [
+    2048,
+    512
+   ]
+  },
+  "model.language_model.layers.*.mlp.shared_expert.gate_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     39
+    ]
+   ],
+   "shape": [
+    512,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.mlp.shared_expert.up_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     39
+    ]
+   ],
+   "shape": [
+    512,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.mlp.shared_expert_gate.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     39
+    ]
+   ],
+   "shape": [
+    1,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.post_attention_layernorm.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     39
+    ]
+   ],
+   "shape": [
+    2048
+   ]
+  },
+  "model.language_model.layers.*.self_attn.k_norm.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     3
+    ],
+    [
+     7
+    ],
+    [
+     11
+    ],
+    [
+     15
+    ],
+    [
+     19
+    ],
+    [
+     23
+    ],
+    [
+     27
+    ],
+    [
+     31
+    ],
+    [
+     35
+    ],
+    [
+     39
+    ]
+   ],
+   "shape": [
+    256
+   ]
+  },
+  "model.language_model.layers.*.self_attn.k_proj.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     3
+    ],
+    [
+     7
+    ],
+    [
+     11
+    ],
+    [
+     15
+    ],
+    [
+     19
+    ],
+    [
+     23
+    ],
+    [
+     27
+    ],
+    [
+     31
+    ],
+    [
+     35
+    ],
+    [
+     39
+    ]
+   ],
+   "shape": [
+    512,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.self_attn.o_proj.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     3
+    ],
+    [
+     7
+    ],
+    [
+     11
+    ],
+    [
+     15
+    ],
+    [
+     19
+    ],
+    [
+     23
+    ],
+    [
+     27
+    ],
+    [
+     31
+    ],
+    [
+     35
+    ],
+    [
+     39
+    ]
+   ],
+   "shape": [
+    2048,
+    4096
+   ]
+  },
+  "model.language_model.layers.*.self_attn.q_norm.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     3
+    ],
+    [
+     7
+    ],
+    [
+     11
+    ],
+    [
+     15
+    ],
+    [
+     19
+    ],
+    [
+     23
+    ],
+    [
+     27
+    ],
+    [
+     31
+    ],
+    [
+     35
+    ],
+    [
+     39
+    ]
+   ],
+   "shape": [
+    256
+   ]
+  },
+  "model.language_model.layers.*.self_attn.q_proj.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     3
+    ],
+    [
+     7
+    ],
+    [
+     11
+    ],
+    [
+     15
+    ],
+    [
+     19
+    ],
+    [
+     23
+    ],
+    [
+     27
+    ],
+    [
+     31
+    ],
+    [
+     35
+    ],
+    [
+     39
+    ]
+   ],
+   "shape": [
+    8192,
+    2048
+   ]
+  },
+  "model.language_model.layers.*.self_attn.v_proj.weight": {
+   "dtype": "BF16",
+   "indices": [
+    [
+     3
+    ],
+    [
+     7
+    ],
+    [
+     11
+    ],
+    [
+     15
+    ],
+    [
+     19
+    ],
+    [
+     23
+    ],
+    [
+     27
+    ],
+    [
+     31
+    ],
+    [
+     35
+    ],
+    [
+     39
+    ]
+   ],
+   "shape": [
+    512,
+    2048
+   ]
+  },
+  "model.language_model.norm.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    2048
+   ]
+  },
+  "model.visual.blocks.*.attn.proj.bias": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    1152
+   ]
+  },
+  "model.visual.blocks.*.attn.proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    1152,
+    1152
+   ]
+  },
+  "model.visual.blocks.*.attn.qkv.bias": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    3456
+   ]
+  },
+  "model.visual.blocks.*.attn.qkv.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    3456,
+    1152
+   ]
+  },
+  "model.visual.blocks.*.mlp.linear_fc1.bias": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    4304
+   ]
+  },
+  "model.visual.blocks.*.mlp.linear_fc1.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    4304,
+    1152
+   ]
+  },
+  "model.visual.blocks.*.mlp.linear_fc2.bias": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    1152
+   ]
+  },
+  "model.visual.blocks.*.mlp.linear_fc2.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    1152,
+    4304
+   ]
+  },
+  "model.visual.blocks.*.norm1.bias": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    1152
+   ]
+  },
+  "model.visual.blocks.*.norm1.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    1152
+   ]
+  },
+  "model.visual.blocks.*.norm2.bias": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    1152
+   ]
+  },
+  "model.visual.blocks.*.norm2.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     26
+    ]
+   ],
+   "shape": [
+    1152
+   ]
+  },
+  "model.visual.merger.linear_fc1.bias": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    4608
+   ]
+  },
+  "model.visual.merger.linear_fc1.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    4608,
+    4608
+   ]
+  },
+  "model.visual.merger.linear_fc2.bias": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    2048
+   ]
+  },
+  "model.visual.merger.linear_fc2.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    2048,
+    4608
+   ]
+  },
+  "model.visual.merger.norm.bias": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    1152
+   ]
+  },
+  "model.visual.merger.norm.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    1152
+   ]
+  },
+  "model.visual.patch_embed.proj.bias": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    1152
+   ]
+  },
+  "model.visual.patch_embed.proj.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    1152,
+    3,
+    2,
+    16,
+    16
+   ]
+  },
+  "model.visual.pos_embed.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    2304,
+    1152
+   ]
+  },
+  "mtp.fc.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    2048,
+    4096
+   ]
+  },
+  "mtp.layers.*.input_layernorm.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    2048
+   ]
+  },
+  "mtp.layers.*.mlp.experts.down_proj": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    256,
+    2048,
+    512
+   ]
+  },
+  "mtp.layers.*.mlp.experts.gate_up_proj": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    256,
+    1024,
+    2048
+   ]
+  },
+  "mtp.layers.*.mlp.gate.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    256,
+    2048
+   ]
+  },
+  "mtp.layers.*.mlp.shared_expert.down_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    2048,
+    512
+   ]
+  },
+  "mtp.layers.*.mlp.shared_expert.gate_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    512,
+    2048
+   ]
+  },
+  "mtp.layers.*.mlp.shared_expert.up_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    512,
+    2048
+   ]
+  },
+  "mtp.layers.*.mlp.shared_expert_gate.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    1,
+    2048
+   ]
+  },
+  "mtp.layers.*.post_attention_layernorm.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    2048
+   ]
+  },
+  "mtp.layers.*.self_attn.k_norm.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    256
+   ]
+  },
+  "mtp.layers.*.self_attn.k_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    512,
+    2048
+   ]
+  },
+  "mtp.layers.*.self_attn.o_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    2048,
+    4096
+   ]
+  },
+  "mtp.layers.*.self_attn.q_norm.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    256
+   ]
+  },
+  "mtp.layers.*.self_attn.q_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    8192,
+    2048
+   ]
+  },
+  "mtp.layers.*.self_attn.v_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     0
+    ]
+   ],
+   "shape": [
+    512,
+    2048
+   ]
+  },
+  "mtp.norm.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    2048
+   ]
+  },
+  "mtp.pre_fc_norm_embedding.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    2048
+   ]
+  },
+  "mtp.pre_fc_norm_hidden.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    2048
+   ]
+  }
+ },
+ "snapshot": "995ad96eacd98c81ed38be0c5b274b04031597b0",
+ "tensors": 1045
+}

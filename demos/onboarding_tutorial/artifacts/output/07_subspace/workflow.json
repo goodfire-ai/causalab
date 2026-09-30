@@ -1,0 +1,364 @@
+{
+  "output_dir": "07_subspace",
+  "steps": {
+    "clean_train": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "f4b980d7d01f5f1bed338e072cb546ee20e82e8d3a414ce95d46ff67d17f6781",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_clean.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "f4b980d7d01f5f1bed338e072cb546ee20e82e8d3a414ce95d46ff67d17f6781",
+      "points": 1,
+      "point_digests": [
+        "f4b980d7d01f5f1bed338e072cb546ee20e82e8d3a414ce95d46ff67d17f6781"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "clean_base.json",
+        "clean_cf.json",
+        "unpatched_cf.json",
+        "unpatched_logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "clean_base.json": "3c3c1e5b41aea7fd38b7eebb7d9d8bd8e0bb7fcf792c6e4bf9f1b0427f4e6190",
+        "clean_cf.json": "486890033b3b5cf2d1e0d6dccf2d88b6a37cf178abbdf735ab0b6b6cab94c93a",
+        "unpatched_cf.json": "9b0b27bbe9f08f2c2b7d8e2134862e8d55b6758e165ea304276b73a1c118b3eb",
+        "unpatched_logit_diff.json": "5c0aa0f10e08e40ac9f83aca421cfb1ac6be5c0d307a7add20d452c5739b7039"
+      },
+      "checks": {
+        "clean_base.json": "json",
+        "clean_cf.json": "json",
+        "unpatched_cf.json": "json",
+        "unpatched_logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "clean_test": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "8d4e8ca930a9856f9de1107d9a7ebf47270a85482dd23cfd29172ea1a35d9cb3",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_clean.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "8d4e8ca930a9856f9de1107d9a7ebf47270a85482dd23cfd29172ea1a35d9cb3",
+      "points": 1,
+      "point_digests": [
+        "8d4e8ca930a9856f9de1107d9a7ebf47270a85482dd23cfd29172ea1a35d9cb3"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "clean_base.json",
+        "clean_cf.json",
+        "unpatched_cf.json",
+        "unpatched_logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "clean_base.json": "39f2edc0911042698ae5035fde3d1feb17aa3d0d242bae4b5bb731d04fd7b1fa",
+        "clean_cf.json": "a532ee9978fc4c757f9f9f7039e2c865e009b208e62c7c92a575834859e80541",
+        "unpatched_cf.json": "297a3b972d9f10bd7ca79d2bdbd72a3717fb4b87c1e208e7245660ba3814a416",
+        "unpatched_logit_diff.json": "80a10b24db8556d46b1a42b76f416cf8ff3fa4a4fc1d823ee11073fc882870e6"
+      },
+      "checks": {
+        "clean_base.json": "json",
+        "clean_cf.json": "json",
+        "unpatched_cf.json": "json",
+        "unpatched_logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "full": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "39019e46d2dfdde0985402827c32ce93f9f2291b80a86ea4c79db21866d8c624",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_locate_scan.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "39019e46d2dfdde0985402827c32ce93f9f2291b80a86ea4c79db21866d8c624",
+      "points": 1,
+      "point_digests": [
+        "39019e46d2dfdde0985402827c32ce93f9f2291b80a86ea4c79db21866d8c624"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "iia.json": "e08ce87a9e25ed1464613400bf595c6c66ed9e5ee0d776ff5ceb1bcc53c28d13",
+        "logit_diff.json": "667dc030fc30bbf66bdf01a5da3c0bbe13d942e3615d6858777771450db8778b"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "fit": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "7998ce0c78a235b05fcdc50d1f07985c5058c67e00f88526efa7e09030c06b5c",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_das_fit.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "7998ce0c78a235b05fcdc50d1f07985c5058c67e00f88526efa7e09030c06b5c",
+      "points": 8,
+      "point_digests": [
+        "f6d6ed53244bd8b0688da1784428c4c5c584e801cb49b44512fcc4c896a30a7d",
+        "75f5e7759a3a9371cdaf23c94b99e7afa7ac4e5cfe4d479860dfccf46437c46b",
+        "3698027a327a3bb9dfc4d02a2209d467a520d4f2bde729e793478c2524976270",
+        "b2d4587da26101168bece6082f0f135f5f8a651d97c471aa200ecacd89bb954a",
+        "3450e773cc3c1b2b9bedc88754a05ba411d068ee09011075502a0f226a204f21",
+        "006b869dbe55059dd1ded547cdaf7e10df8bc6287f825545429c4f0fd938d94c",
+        "699c6dee7b4461f0f784cae1cb7386803f3f324bfc4c2de1424dea60dad64cb4",
+        "8f1aa056b118b2faee53449c291befdc0c5e6fac1ebc09dd11db196cc6181808"
+      ],
+      "coords": [
+        {
+          "featurizers.rot.k": 1
+        },
+        {
+          "featurizers.rot.k": 2
+        },
+        {
+          "featurizers.rot.k": 4
+        },
+        {
+          "featurizers.rot.k": 8
+        },
+        {
+          "featurizers.rot.k": 16
+        },
+        {
+          "featurizers.rot.k": 32
+        },
+        {
+          "featurizers.rot.k": 64
+        },
+        {
+          "featurizers.rot.k": 128
+        }
+      ],
+      "axes": [
+        "featurizers.rot.k"
+      ],
+      "files": [
+        "ce.json",
+        "fit_diagnostics.json",
+        "iia.json",
+        "rot.safetensors",
+        "train_eval.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 9,
+      "digests": {
+        "ce.json": "28b4c836e0239e2dec488981622be056d58a6f3530e352c8986570c0e36a9411",
+        "fit_diagnostics.json": "829793a4325bcf2b94400a1ecf4111c8eb12106da3ba5764b9263ca58171db22",
+        "iia.json": "cbf775e2bff7b82f3d23e964c8df887821e56eef7d22814c5a7aa9be787ef678",
+        "rot.safetensors": "44362bba5a41ab900ec2ecafdc053550ca7ce8d16243cc7a3e2f304b2f513871",
+        "train_eval.json": "28e10c163de7b684b85502358182256698fa9d0157495f44a333e0a13b53d901"
+      },
+      "checks": {
+        "ce.json": "json",
+        "fit_diagnostics.json": "json",
+        "iia.json": "json",
+        "rot.safetensors": "safetensors-header",
+        "train_eval.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "apply": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "fe8ee2a046f244f44c5bf1f31b7f8ab1ab8584662b95b7ecc438aae593e12be6",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_das_apply.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "fe8ee2a046f244f44c5bf1f31b7f8ab1ab8584662b95b7ecc438aae593e12be6",
+      "points": 8,
+      "point_digests": [
+        "e326942d411e606dc934153a53d8b260f9ac2f9ea1ebec1f310207b79be00375",
+        "f137946a72483a0878dca02e020779413e121ceed4030cc792aef9a1b3cf1dce",
+        "88125413bea64e056ac3c0851a259408bf6d9e6fef10c42257858a9159363279",
+        "ab7807c52756ce6c1f5077fb774b24c379c6d8ac037ca2179a71c822d71d5bd4",
+        "02b9a8d9d2c8397a98af1595f2939db54cd54445fa5f701f28dbe6b47184772c",
+        "67032f543b6a759fe9a81abc7ac71e0f67a5d69a4f41bd90b625bafa4e282cfc",
+        "05cc1b0fe457fc8f1643236208e4764483b8f48a36a77b0baef01ff2a6fbb540",
+        "1cdd596a1d1482f886e79e2441b2d1568d79319fec5cb0ee1a5d522dd5946c81"
+      ],
+      "coords": [
+        {
+          "featurizers.rot.k": 1
+        },
+        {
+          "featurizers.rot.k": 2
+        },
+        {
+          "featurizers.rot.k": 4
+        },
+        {
+          "featurizers.rot.k": 8
+        },
+        {
+          "featurizers.rot.k": 16
+        },
+        {
+          "featurizers.rot.k": 32
+        },
+        {
+          "featurizers.rot.k": 64
+        },
+        {
+          "featurizers.rot.k": 128
+        }
+      ],
+      "axes": [
+        "featurizers.rot.k"
+      ],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 9,
+      "digests": {
+        "iia.json": "91764dfb5eda3e0eb2c3e90c6d298e59cbe4a934ba06c873dc1ecc41f08d5fd9",
+        "logit_diff.json": "63e95ae427311067fca943d1eacda8bf208181a248bf8072b084ffdadda51817"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "test_curve": {
+      "type": "script",
+      "status": "completed",
+      "identity": "bd5744882ebce33e3fe6263c80594f098d283f918d8795d1a16a80efc4a210f4",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.io.plots.workflow_figures",
+      "script_sha256": "0de1b7ca714ef474db3ab9f3c7a879e000d5d314d214bea4221e88a361cd81a4",
+      "digest": "bd5744882ebce33e3fe6263c80594f098d283f918d8795d1a16a80efc4a210f4",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "apply/iia.json",
+        "plot": "lines",
+        "x": "featurizers.rot.k"
+      },
+      "input_digests": {
+        "table": "91764dfb5eda3e0eb2c3e90c6d298e59cbe4a934ba06c873dc1ecc41f08d5fd9"
+      },
+      "axes": [],
+      "files": [
+        "07_subspace_iia_by_k.json",
+        "07_subspace_iia_by_k.png"
+      ],
+      "digests": {
+        "07_subspace_iia_by_k.json": "7ff018e1e1ac574140000abcb0c90a2a94f6f93b77d5454701ba1cc34a23a0f1",
+        "07_subspace_iia_by_k.png": "e0f8100c70a5a9cb31bf17550a9e259f1513144ef96584df78e1d715887db924"
+      },
+      "checks": {
+        "07_subspace_iia_by_k.json": "json",
+        "07_subspace_iia_by_k.png": "png-signature"
+      },
+      "disposition": "accepted"
+    }
+  }
+}

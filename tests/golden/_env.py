@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 
 FIXTURES = Path(__file__).parent / "fixtures"
 GOLDEN_PROTOCOLS = Path(__file__).parent / "protocols"

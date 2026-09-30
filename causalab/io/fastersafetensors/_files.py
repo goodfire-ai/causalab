@@ -6,11 +6,11 @@ request — ``files_in_flight`` files at once, ``readers_per_file`` pieces of
 ``split_bytes`` each, device destinations through the engine's pinned
 staging ring. Rust never allocates a tensor.
 
-A tensor is read whole or as a :class:`~causalab.io.fastersafetensors._select.Selection`
+A tensor is read whole or as a `Selection`
 (a box plus the view that narrows it). The reads for a box come from
 ``_core.select_reads`` — the core's runs, coalesced under the profile's
 policy for the file's storage, each read with the placements that put its
-wanted bytes into the destination — and :func:`stage` turns them into
+wanted bytes into the destination — and `stage` turns them into
 ``read_job`` rows: the read shifted by the tensor's start, landing in the
 result tensor when the result is the box's bytes (whole tensors, shards,
 inner cuts) or in a scratch box that torch's ``copy_`` narrows when the
@@ -114,7 +114,7 @@ def available_bytes(free: int, reserved: int, allocated: int) -> int:
 
 
 def device_headroom(index: int) -> int:
-    """:func:`available_bytes` for CUDA device ``index``."""
+    """`available_bytes` for CUDA device ``index``."""
     free, _total = torch.cuda.mem_get_info(index)
     return available_bytes(
         free, torch.cuda.memory_reserved(index), torch.cuda.memory_allocated(index)
@@ -430,7 +430,7 @@ def gather(
     """Which tensors of which files a request touches, in data order per
     file, each with its selection resolved against the header. ``keys``
     restricts the request; ``select`` names must be loaded (a name outside
-    ``keys`` is a :class:`SelectError`, one in no file a ``KeyError``, as
+    ``keys`` is a [`SelectError`][], one in no file a ``KeyError``, as
     for ``keys``). Names are not checked for uniqueness across files here:
     ``load_files`` refuses a duplicate, ``explain`` describes it."""
     wanted = None if keys is None else set(keys)

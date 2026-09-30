@@ -1,9 +1,9 @@
 """Layer-band patching as one document (spec §2.9 ``intervened_models``).
 
-A natural claim about band patching — the sweep language cannot make one
-start-layer value expand into five or ten dependent writes, so each band
-needs its own explicit specification — is half right. The premise holds: a sweep expands one axis into **independent**
-points, and a band is one forward with several dependent writes. The conclusion
+A tempting claim says the sweep language cannot make one start-layer value
+expand into five or ten dependent writes, so each band needs its own
+explicit specification. The claim is half right. The premise holds: a sweep
+expands one axis into **independent** points, and a band is one forward with several dependent writes. The conclusion
 does not: ``intervened_models`` names the *set* of writes in force for one
 forward, so N bands over one table of per-layer writes are N entries in one
 document — one model load instead of N, at ~1–2 min each.
@@ -27,19 +27,22 @@ from pathlib import Path
 import pytest
 
 from causalab.cli import main
-from causalab.protocol.loader import load
-from causalab.protocol.plan import plan_point
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.pipeline import compile_protocol
+from causalab.neural.shared.plan import plan_point
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.tasks import TASKS_ROOT
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
-from tests.protocol._env import FIXTURES
+from tests.protocol._docs import UNWRITTEN, aggregation, saved
+from tests.protocol._env import FIXTURES, steps_of
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR
+
 
 pytestmark = pytest.mark.smoke
 
 REPO = Path(__file__).resolve().parents[4]
-PRESET = REPO / "causalab/configs/protocols/attention_band_patch.json"
+PRESET = PROTOCOLS_DIR / "attention_band_patch.json"
 
 
 # --------------------------------------------------------------------------- #
@@ -59,9 +62,9 @@ def test_the_preset_plans_one_shared_harvest_for_every_band(env) -> None:
     """Three bands, four forwards: one un-intervened harvest of all ten layers
     from the counterfactual, then one patched forward per band. Three separate
     documents would be three harvests and three model loads."""
-    loaded = load(PRESET, env)
-    assert len(loaded.expansion.points) == 1
-    assert plan_point(loaded.point_documents[0]).num_forwards == 4
+    loaded = compile_protocol(PRESET, env=env)
+    assert len(steps_of(loaded, env).points) == 1
+    assert plan_point(steps_of(loaded, env).documents[0]).num_forwards == 4
 
 
 def test_the_wide_band_is_the_two_narrow_ones_and_each_write_is_authored_once(
@@ -69,11 +72,11 @@ def test_the_wide_band_is_the_two_narrow_ones_and_each_write_is_authored_once(
 ) -> None:
     """What makes this one document rather than three: overlapping bands reuse
     writes instead of restating them."""
-    doc = load(PRESET, env).point_documents[0]
+    doc = steps_of(compile_protocol(PRESET, env=env), env).documents[0]
     models = doc.intervened_models
-    narrow = set(models["band5_L10"].writes) | set(models["band5_L15"].writes)
-    assert set(models["band10_L10"].writes) == narrow
-    assert len(doc.writes) == 10  # one per layer, not one per (layer, band)
+    narrow = set(models["band4_L9"].writes) | set(models["band4_L13"].writes)
+    assert set(models["band8_L9"].writes) == narrow
+    assert len(doc.writes) == 8  # one per layer, not one per (layer, band)
     assert all(len(set(m.writes)) == len(m.writes) for m in models.values())
 
 
@@ -87,7 +90,7 @@ def _band_doc(bands: dict[str, list[int]]) -> dict:
     layers = sorted({layer for span in bands.values() for layer in span})
     return {
         "header": {
-            "protocol_version": "3",
+            "protocol_version": "4",
             "description": "attention-output bands as intervened_models",
         },
         "model": {"key": TINY_LLAMA, "revision": "main", "dtype": "fp32"},
@@ -99,6 +102,20 @@ def _band_doc(bands: dict[str, list[int]]) -> dict:
             },
         },
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {
+                    "input": "counterfactual",
+                    "reads": [f"v_a{i}" for i in layers],
+                },
+                **{
+                    name: {
+                        "input": "base",
+                        "reads": [f"logits_{name}"],
+                        "writes": [f"w{i}" for i in span],
+                    }
+                    for name, span in bands.items()
+                },
+            },
             "positions": {"tap": {"index": -1}},
             "sites": {
                 **{
@@ -108,50 +125,24 @@ def _band_doc(bands: dict[str, list[int]]) -> dict:
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                **{
-                    f"v_a{i}": {
-                        "site": f"a{i}",
-                        "pos": "tap",
-                        "model": "original",
-                        "input": "counterfactual",
-                    }
-                    for i in layers
-                },
-                **{
-                    f"logits_{name}": {
-                        "site": "lm_head",
-                        "pos": -1,
-                        "model": name,
-                        "input": "base",
-                    }
-                    for name in bands
-                },
+                **{f"v_a{i}": {"site": f"a{i}", "pos": "tap"} for i in layers},
+                **{f"logits_{name}": {"site": "lm_head", "pos": -1} for name in bands},
             },
             "writes": {
                 f"w{i}": {"site": f"a{i}", "pos": "tap", "do": {"swap": f"v_a{i}"}}
                 for i in layers
             },
-            "intervened_models": {
-                name: {"input": "base", "writes": [f"w{i}" for i in span]}
-                for name, span in bands.items()
-            },
-            "metrics": {
-                f"iia_{name}": {
-                    "kind": "logit_diff",
-                    "of": f"logits_{name}",
-                    "a": "cf_answer",
-                    "b": "base_answer",
-                    "token_form": "space_prefixed",
-                }
-                for name in bands
-            },
             "save": [
-                {
-                    "value": f"iia_{name}",
-                    "model": name,
-                    "input": "base",
-                    "file_path": f"iia_{name}.json",
-                }
+                saved(
+                    f"logits_{name}",
+                    name,
+                    f"iia_{name}.json",
+                    aggregation(
+                        "logit_diff",
+                        a="cf_answer",
+                        b="base_answer",
+                    ),
+                )
                 for name in bands
             ],
         },
@@ -167,6 +158,8 @@ def _run(base: Path, document: dict) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),

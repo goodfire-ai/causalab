@@ -1,57 +1,42 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "The same interchange as 03, but through a principal basis instead of the whole residual stream: patch only the component of the answer slot that lies in the top-k directions of the harvested activations, and leave the orthogonal remainder alone. k is authored rather than swept because each basis is a separate fit -- the workflow runs this document once per k, and the file_path is what says which fit."
+    "protocol_version": "4",
+    "description": "Swap the component of block 26's answer-slot residual stream in the top-k principal directions, and measure interchange accuracy and logit difference on held-out pairs."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {
-    "base": {"dataset": "mcqa/data#test", "field": "input"},
-    "counterfactual": {"dataset": "mcqa/data#test", "field": "counterfactual_inputs[0]"}
+    "base": {"dataset": "mcqa/test_n64_s2", "field": "input"},
+    "counterfactual": {"dataset": "mcqa/test_n64_s2", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "positions": {"best": {"index": -1}},
     "sites": {
-      "target": {"component": "block_output", "layers": [14]},
+      "target": {"component": "block_output", "layers": [26]},
       "lm_head": {"component": "lm_head"}
     },
     "featurizers": {"pcs": {"kind": "pca", "k": 1, "file_path": "pca1/basis.safetensors"}},
     "reads": {
-      "v_cf": {
-        "site": "target",
-        "pos": "best",
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": "pcs"
-      },
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
+      "v_cf": {"site": "target", "pos": "best", "featurizer": "pcs"},
+      "logits": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "patch": {"site": "target", "pos": "best", "featurizer": "pcs", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "logit_diff": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
       {
-        "value": "logit_diff",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
         "file_path": "logit_diff.json"
       }
     ]

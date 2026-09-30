@@ -1,0 +1,32 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Ablation experiment: Zero the MLP output of gpt2-xl at layers 13, 14 and 15 at token 3, 'le', the last token of the subject (GPT-2 splits the prompt as The | Space | Need | le | is | in | downtown), then read P(Seattle) at the last position. The clean model gives P(Seattle) = 0.976."
+  },
+  "model": {"key": "openai-community/gpt2-xl"},
+  "data": {"inputs": ["The Space Needle is in downtown"]},
+  "method": {
+    "intervened_models": {
+      "ablated": {"input": "base", "reads": ["logits"], "writes": ["zero"]}
+    },
+    "sites": {
+      "mlp": {"component": "mlp_output", "layers": [13, 14, 15]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {"logits": {"site": "lm_head", "pos": -1}},
+    "writes": {
+      "zero": {"site": "mlp", "pos": 3, "do": {"swap": 0}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "ablated",
+        "aggregation": {
+          "kind": "class_probs",
+          "groups": {"Seattle": [" Seattle"]}
+        },
+        "file_path": "01_ablation_MLP_result.json"
+      }
+    ]
+  }
+}

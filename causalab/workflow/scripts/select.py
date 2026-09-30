@@ -17,10 +17,10 @@ next protocol needs (the locate → DAS handoff), as data instead of a notebook.
 ```
 
 Rows are grouped by the producing document's **sweep-coordinate columns** — read
-from the step's ``_step.json`` (:mod:`._sidecar`), not authored — and aggregated
+from the step's ``_step.json`` (`._sidecar`), not authored — and aggregated
 by mean over examples. ``choose`` then picks the best group and ``emit`` reads
 that group's columns. The exact rule, including when a table is ranked *as
-written*, is :func:`._sidecar.aggregate`.
+written*, is `._sidecar.aggregate`.
 
 ``choose`` is ``"max"``, ``"min"`` or ``"knee"``. The last is for a saturating
 curve — IIA against subspace rank — where the highest score is *not* the answer:
@@ -36,7 +36,7 @@ ordered by a cost axis:
 ```
 
 ``order`` defaults to the run's sole numeric sweep axis and is required when
-there is more than one. See :func:`_knee`.
+there is more than one. See `_knee`.
 
 Two behaviours v1 had as spec rules and this has as script behaviour, on
 purpose: the axes come from published data rather than from the document model,
@@ -135,9 +135,15 @@ def _knee(
     if band < 0:
         raise StepError(f"'tolerance' is not negative, got {band}")
 
-    best = grouped[value_column].max()
-    within = grouped[grouped[value_column] >= best - band]
-    return within[order].idxmin()
+    from causalab.analysis.selection import smallest_near_best
+
+    try:
+        indices = smallest_near_best(
+            grouped[value_column].tolist(), grouped[order].tolist(), tolerance=band
+        )
+    except ValueError as error:
+        raise StepError(str(error)) from error
+    return grouped.index[indices[0]]
 
 
 def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:

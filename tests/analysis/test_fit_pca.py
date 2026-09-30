@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 from causalab.analysis import fit_pca
 from causalab.io.step_io import StepError, read_tensor
 from tests.step_scripts import run_step
@@ -85,6 +85,30 @@ def test_k_beyond_the_available_rank_is_refused(tmp_path):
     with pytest.raises(StepError) as err:
         _fit(tmp_path, CROSS, k=5)
     assert "exceeds the rank available" in str(err.value)
+
+
+def test_k_equal_to_the_row_count_is_refused(tmp_path):
+    """Centering removes one degree of freedom, so n rows carry at most
+    n - 1 components with variance, and k = n is refused with the largest
+    legal k. With more dimensions than rows, the n-th component would be an
+    arbitrary null-space direction."""
+    acts = torch.randn(5, 8, generator=torch.Generator().manual_seed(0))
+    with pytest.raises(StepError) as err:
+        _fit(tmp_path, acts, k=5, tag="k5")
+    assert "exceeds the rank available" in str(err.value)
+    assert "n - 1 = 4" in str(err.value)
+    assert "Set k to at most 4" in str(err.value)
+    weight, spectrum = _fit(tmp_path, acts, k=4, tag="k4")
+    assert weight.shape == (8, 4)
+    assert min(row["explained_variance"] for row in spectrum) > 1e-6
+
+
+def test_a_single_row_is_refused_as_a_variance_of_one_row(tmp_path):
+    """One row has no variance at all; the refusal says so rather than
+    reporting a rank bound of zero."""
+    with pytest.raises(StepError) as err:
+        _fit(tmp_path, torch.ones(1, 3), k=1)
+    assert "at least 2 rows" in str(err.value)
 
 
 def test_a_one_dimensional_input_is_refused(tmp_path):

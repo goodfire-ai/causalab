@@ -1,6 +1,6 @@
 """The ATen semantics of the grouped-experts glue, written out in the order
 the CUDA kernels compute them — the contract the Triton kernels of
-:mod:`.moe_glue_triton` are held to, bit for bit.
+[`.moe_glue_triton`][causalab.neural.engines.pytorch_hooks.kernels.moe_glue_triton] are held to, bit for bit.
 
 Transformers' ``grouped_mm_experts_forward`` (and the engine's copy in
 ``experts_path.py``) surrounds its two grouped GEMMs with glue over
@@ -17,7 +17,7 @@ with the ATen source it was read from (torch 2.9.0):
   ``sortKeyValueInplace``): ``torch.sort(expert_ids)`` with ``stable=False``
   is nonetheless stable on CUDA for every length above 32 — a warp merge
   sort to 128, a block radix sort to 4096, cub's segmented radix sort
-  beyond — and unstable (bitonic) at 32 and below. :func:`stable_counting_sort`
+  beyond — and unstable (bitonic) at 32 and below. [`stable_counting_sort`][]
   is that stable order: within an expert, rows keep ascending original index.
 
 * **Gather** ``hidden_states[perm // top_k]``: a plain row gather forward;
@@ -29,8 +29,8 @@ with the ATen source it was read from (torch 2.9.0):
   (``H > 32``) re-reads the ``bf16`` output between duplicates, so the sum is
   rounded to the output dtype **after every addition**;
   ``indexing_backward_kernel_small_stride`` (``H ≤ 32``) accumulates the
-  duplicates in fp32 and rounds **once**. :func:`index_backward_rounding`
-  picks by width; :func:`gather_rows_backward` folds accordingly. (The CPU
+  duplicates in fp32 and rounds **once**. [`index_backward_rounding`][]
+  picks by width; [`gather_rows_backward`][] folds accordingly. (The CPU
   kernel, ``cpu/IndexKernel.cpp``, is the per-step fold in array order — the
   same as CUDA's wide kernel, which is what the CPU tests pin.)
 
@@ -41,7 +41,7 @@ with the ATen source it was read from (torch 2.9.0):
   ``thread_reduce_impl``) — one thread per output, **four interleaved fp32
   accumulators** (``vt0 = 4``): slot ``s`` lands in accumulator ``s % 4``,
   and the four are combined left to right, ``((a0 + a1) + a2) + a3``, then
-  rounded to ``X``. :func:`slot_sum_cuda_order`.
+  rounded to ``X``. [`slot_sum_cuda_order`][].
 
 * **Row sum** (the backward of the multiply for the routing weight:
   ``(grad * proj_out).sum(-1)``): a reduction along the fastest dimension
@@ -51,8 +51,8 @@ with the ATen source it was read from (torch 2.9.0):
   by position in the vector**, combines them left to right, then a warp
   shuffle tree pairs adjacent lanes ``(0,1), (2,3), …`` five times; for
   widths of 128 and below the lanes are unvectorized with ``vt0 = 4``
-  accumulators by iteration. :func:`row_sum_cuda_order` emulates the launch
-  configuration; :func:`row_sum_config` names it and refuses the
+  accumulators by iteration. [`row_sum_cuda_order`][] emulates the launch
+  configuration; [`row_sum_config`][] names it and refuses the
   configurations it does not model (a vector tail, a warp split at widths
   from 8192), so the fused path falls back there.
 
@@ -61,7 +61,7 @@ with the ATen source it was read from (torch 2.9.0):
   product rounded to ``X``. Backward: ``d_up = X(dh · silu)``, ``d_silu =
   X(dh · up)`` (the mul backward), then ``silu_backward`` in fp32,
   ``dy · s · (1 + x · (1 − s))`` with ``s = 1 / (1 + exp(-x))``, rounded
-  once. :func:`silu_mul_forward`, :func:`silu_mul_backward`. nvcc contracts
+  once. [`silu_mul_forward`][], [`silu_mul_backward`][]. nvcc contracts
   the backward's ``1 + x · (1 − s)`` into one fused multiply-add (📐
   on an H100: the Triton kernel matches ATen with ``libdevice.fma`` and not
   without, 333 of 3840 fp32 elements apart); plain torch has no fma, so this
@@ -166,7 +166,7 @@ def gather_rows_backward(
     top_k: int,
     rounding: IndexBackwardRounding,
 ) -> torch.Tensor:
-    """The gradient of :func:`gather_rows` for ``hidden``: each token's
+    """The gradient of [`gather_rows`][] for ``hidden``: each token's
     ``top_k`` sorted-array rows folded in ascending array position, rounded
     per ``rounding`` (module docstring)."""
     num_tokens = inv_perm.numel() // top_k
@@ -208,7 +208,7 @@ class RowSumConfig:
 def row_sum_config(rows: int, width: int) -> RowSumConfig:
     """``setReduceConfig`` for ``x.sum(-1)`` over a contiguous ``(rows,
     width)`` tensor whose rows start 16-byte aligned; refuses what
-    :func:`row_sum_cuda_order` does not emulate."""
+    [`row_sum_cuda_order`][] does not emulate."""
     vectorized = width > 128
     if vectorized and width % _INPUT_VEC:
         raise UnsupportedReduction("a vector tail", rows=rows, width=width)
@@ -286,7 +286,7 @@ def epilogue_backward(
     perm: torch.Tensor,
     top_k: int,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """``(d proj_out, d weights)`` of :func:`epilogue_forward`: row ``i`` of
+    """``(d proj_out, d weights)`` of [`epilogue_forward`][]: row ``i`` of
     the sorted array belongs to pair ``perm[i] = t · k + s``; ``d proj_out[i]
     = X(g[t] · w[t, s])`` rounded to ``proj_out``'s dtype, ``d weights[t, s]
     = rowsum(X(g[t] · proj_out[i]))`` in CUDA order, rounded to ``weights``'
@@ -312,7 +312,7 @@ def silu_mul_forward(gate_up: torch.Tensor) -> torch.Tensor:
 
 
 def silu_mul_backward(grad: torch.Tensor, gate_up: torch.Tensor) -> torch.Tensor:
-    """``d gate_up`` of :func:`silu_mul_forward`: the mul backward's two
+    """``d gate_up`` of [`silu_mul_forward`][]: the mul backward's two
     rounded products, then ``silu_backward`` in fp32 rounded once."""
     gate, up = gate_up.chunk(2, dim=-1)
     g = gate.float()

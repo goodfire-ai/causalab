@@ -1,67 +1,19 @@
-"""Site equivalence of two interventions (workflow spec §2.2, §5 rule 16).
+"""Compare intervention sites for control experiments.
 
-A control is compared against its target — a full-component swap against a
-learned subspace, a random rank-*k* basis against a fitted one — and the
-comparison means something only when the two act at **the same place in the
-same coordinate system**. "Same site" is not one field: two writes can share a
-component name and differ in layer coverage (one layer pinned, two swept; a
-band ``[3, 4]`` at one point, its layers one per point), in pre/post-projection
-site (``attention_premix`` is the o-projection's input in head space,
-``attention_output`` its output in the residual stream), in
-DeltaNet inclusion (a hybrid tower's layers carry two mixers), in routed-rank
-identity (which expert, how many are routed), or in whether they *share* one
-learned basis (a "control" scored in the fit's own rotation controls for
-nothing). So the comparison is a typed tuple, one per expanded point and
-write, and the verdict is the list of fields the two do not agree on.
+``SiteTuple`` describes the component, layer bands, selectors, feature shape,
+and coordinate sharing of a write. Coverage compares the set of per-point
+bands: a band intervention acts jointly on its layers. The comparison also
+checks whether two interventions share fitted coordinates.
 
-**What is in the tuple, and what is deliberately not.** Every field is a
-shape or coverage fact decidable from the document and the model's registry
-entry: no weights, no run. A featurizer's ``seed``, its ``init`` basis and the
-bytes of a loaded bundle are *values*, not coordinates — the whole point of a
-matched random control is that only the rotation's values differ — so none of
-them enters, and the corpus pair ``13_random_subspace_control_im.json`` /
-``04_das_im.json`` is equivalent. The model's realization (``model.key``,
-``dtype``, ``revision``) is not a site fact either; the workflow layer compares
-it under its own rule.
-
-**Coordinate sharing is decided, not guessed.** Inside one document a
-featurizer *name* is one stage instance (``build_stack`` caches by name), so
-two writes naming one featurizer share coordinates by construction. Across
-two documents a name is only a name — two ``rot`` featurizers in two documents
-are two independent draws — and sharing is a matter of bytes: a document that
-*loads* the bundle another one *saves* is scored in that other one's basis.
-What a script step does to a bundle it reads is not decidable at load, so a
-bundle drawn *from* a fit's bundle (``causalab.analysis.random_mask``) is
-``distinct`` here; the run-time ``produced_by`` stamp carries that chain.
-
-**Layer coverage is one helper, and a band is one site.** Under protocol
-v3 a site's ``layers`` is a *band* (IM spec §2.4): a non-empty, strictly
-increasing tuple of layer indices, ``(18,)`` for the ordinary one-layer site,
-one read, one write, one operand across every member. :func:`_site_layers`
-is the only place the field is read and hands the band on as the tuple it is;
-:func:`_layer_coverage` is the only place a side's layer coverage is formed,
-and it is the **set of per-point bands** — never the union of layer indices.
-So a target authored ``layers: [3, 4]`` (one band, one intervention across
-both layers) and a control swept ``layers: {sweep: [3, 4]}`` (two points, one
-layer each) are coverage-equal and intervention-different, and rule 16
-refuses the pair naming ``layers``, liftable by ``non_equivalence`` like every
-other field. The rationale: rule 16 pins that the control intervenes where
-the target does; unioning coverage would let per-layer controls certify a
-band target whose intervention no control ran. Reversing the decision (union
-coverage) is the one-line body of :func:`_layer_coverage`.
-
-Torch-free and imported only by the workflow document model: a comparison is
-between two documents, and the intervention compiler compiles one. It is a
-member of no shipped script's import closure and moves no digest
-(``tests/workflow/test_equivalence.py`` holds both).
-"""
+Controls declare any allowed differences through ``non_equivalence``. Comparison
+uses canonical documents and model metadata, so it can run before weights load."""
 
 from __future__ import annotations
 
 import dataclasses
 from typing import Any, Iterable, Sequence
 
-from causalab.protocol.errors import ValidationError
+from causalab.protocol.rules.errors import ValidationError
 from causalab.protocol.registry import (
     COMPONENT_STREAMS,
     ModelInfo,
@@ -78,7 +30,7 @@ from causalab.protocol.schema import (
     FeaturizerSpec,
     SiteSpec,
 )
-from causalab.protocol.shapes import FeatureShape
+from causalab.protocol.registry.shapes import FeatureShape
 
 __all__ = [
     "EQUIVALENCE_FIELDS",
@@ -111,7 +63,7 @@ EQUIVALENCE_FIELDS: tuple[str, ...] = (
 #: The fields whose per-point values are *sets* — coverage accumulates them
 #: by union across points, the others by collecting the values. ``layers`` is
 #: neither: a point's band is one value, and a side's coverage is the set of
-#: bands (:func:`_layer_coverage`).
+#: bands (`_layer_coverage`).
 _SET_FIELDS: frozenset[str] = frozenset({"stream", "sharing"})
 
 #: The site half of the tuple — what "the same address" means before any
@@ -137,8 +89,8 @@ class FeaturizerStage:
     (``group``), the axis it indexes and how many units of it (``axis``,
     ``units``) and the parameter dtype. Not the seed, not the init basis,
     not the bundle, not a gate's ``forward`` split (§2.5: it decides which
-    loss produced θ, not θ's shape — an ablation grid compares a soft-forward
-    and a hard-forward fit at one site as equivalent) — those are values."""
+    loss produced θ, not θ's shape — a soft-forward and a hard-forward
+    fit at one site compare as equivalent) — those are values."""
 
     kind: str
     k: Any = None
@@ -454,7 +406,7 @@ def sharing(a: Iterable[SiteTuple], b: Iterable[SiteTuple]) -> str:
 
 
 def compare(a: Iterable[SiteTuple], b: Iterable[SiteTuple]) -> tuple[str, ...]:
-    """The fields of :data:`EQUIVALENCE_FIELDS` the two coverages differ in,
+    """The fields of [`EQUIVALENCE_FIELDS`][] the two coverages differ in,
     in vocabulary order; ``()`` when they are site-equivalent. ``sharing`` is
     listed when the two *share* a coordinate system: a control scored in its
     target's own basis is the one difference that reads as agreement."""

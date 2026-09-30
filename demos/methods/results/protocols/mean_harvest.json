@@ -1,0 +1,20 @@
+{
+  "document": "protocols/mean_harvest.json",
+  "document_digest": "3498ea65bb35a3ecde9c5ed5d23fe3f7fd05951ca94781bab6551ac3a1b8fa05",
+  "run_digest": "3498ea65bb35a3ecde9c5ed5d23fe3f7fd05951ca94781bab6551ac3a1b8fa05",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 33.2,
+  "metrics": {
+    "saved_tensors": {
+      "acts.safetensors": {
+        "acts": [
+          3584
+        ]
+      }
+    }
+  }
+}

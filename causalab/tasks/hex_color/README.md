@@ -29,9 +29,10 @@ fields are imported (causalab recomputes tokens per tokenizer). Each record:
 The source dataset defined **seven** colour classes (adding `indigo`, hue 258°).
 `indigo` is **excluded at build time** because the golden fixture
 (Qwen3-4B-Instruct) cannot perceptually separate it from its neighbours (blue
-235°, purple 285°): it labels indigo swatches `"purple"` with ~0.999 confidence,
-which capped 7-colour balanced accuracy at ~0.80 — structurally below the
-0.9 floor the golden tier requires. Dropping indigo makes the task viable on the fixture and,
+235°, purple 285°): it labels indigo swatches `"purple"` with ~0.999 confidence.
+With every indigo swatch wrong, 7-colour balanced accuracy is at most
+6/7 ≈ 0.86, structurally below the 0.9 accuracy floor of the task's golden
+check. Dropping indigo makes the task viable on the fixture and,
 as a bonus, removes the only multi-token colour word (`"indigo" → ["ind",
 "igo"]`), so the six remaining colours are all single-token and the task needs
 **no bespoke `full_string_checker`** (see below).

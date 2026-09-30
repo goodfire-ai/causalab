@@ -2,7 +2,7 @@
 
 Split out of ``protocol/cli.py`` so the protocol package carries no workflow
 code: someone who wants only the intervention protocol imports only that.
-Dispatch between the two document types is :mod:`causalab.cli`.
+Dispatch between the two document types is [`causalab.cli`][].
 """
 
 from __future__ import annotations
@@ -10,31 +10,47 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
-from causalab.protocol.engine import DEFAULT_ENGINE
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.resolve import ResolutionEnv
-from causalab.protocol.loader import check_data_columns
+from causalab.protocol.lockstep import SOLO as SOLO_LOCKSTEP
+from causalab.protocol.parallel import ONE, ParallelGeometry, format_geometry
+from causalab.protocol.publish import SOLO, is_joiner
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.io.env import ResolutionEnv
+from causalab.protocol.rules.data import check_data_columns
 
-__all__ = ["main"]
+if TYPE_CHECKING:
+    from causalab.protocol.pipeline import AnswerCheck
+
+__all__ = ["check_geometry", "main"]
 
 
-def _pin_summary(pins: Any) -> str:
-    """``3 documents, 2 scripts, 1 dataset`` — the census by category, for
-    the `pin`, `run` and `explain` lines."""
-    parts = [
-        f"{len(entries)} {category if len(entries) != 1 else category[:-1]}"
-        for category, entries in pins.items()
-        if entries
-    ]
-    return ", ".join(parts) if parts else "nothing to pin"
+def check_geometry(geometry: ParallelGeometry) -> None:
+    """The one axis a workflow run cannot serve (``docs/model_parallelism.md``
+    §11): the runner is one process with one engine list, and a data-parallel
+    geometry would need every replica to run a different point shard of each
+    step — what ``fan_out.over.shards`` declares on a step instead. Refused
+    before any rank is spawned or joined, on every rank alike.
+
+    Raises:
+        ProtocolError: ``P4`` naming ``--parallel.data``.
+    """
+    if geometry.data > 1:
+        raise ProtocolError(
+            "P4",
+            f"--parallel {format_geometry(geometry)} asks for {geometry.data} "
+            "data-parallel replicas, and a workflow runs its steps in one process "
+            "with one engine list, so the data axis is not served under a workflow "
+            "(docs/model_parallelism.md §11): shard a step with "
+            "fan_out.over.shards, or run its document itself under dp",
+            path="--parallel.data",
+        )
 
 
 def main(args: argparse.Namespace, env: ResolutionEnv) -> int:
-    from causalab.protocol.compile import read_document
-    from causalab.protocol.loader import apply_overrides as _apply
-    from causalab.protocol.loader import load_text as _load_text
+    from causalab.protocol.pipeline import read_document
+    from causalab.io.sources import apply_overrides as _apply
+    from causalab.io.sources import load_text as _load_text
     from causalab.cli import register_model_key, wants_hf_registration
     from causalab.workflow.document import load_workflow
 
@@ -80,34 +96,49 @@ def main(args: argparse.Namespace, env: ResolutionEnv) -> int:
         args.document.resolve(),
         env,
         overrides=dict(args.parsed_set),
-        # `pin` exists to replace a stale section, so it is the one verb the
-        # section cannot refuse (§7); every other verb holds the document to it
-        hold_pins=args.verb != "pin",
     )
     if args.verb == "validate":
         if getattr(args, "data", False):
             for name in loaded.order:
                 inner = loaded.inner.get(name)
                 if inner is not None:
-                    check_data_columns(inner, env)
-        print(f"OK: {args.document} — {len(loaded.document.steps)} steps")
-        return 0
-    if args.verb == "pin":
-        # the census the load just made, written into the file as its last
-        # section (§7) — under `--set` the census describes the overridden
-        # closure, not the file's, so there is nothing honest to stamp
-        if args.parsed_set:
-            print(
-                "refused: pin stamps what the document as written touches; "
-                "--set describes another closure. Pin without --set, or write "
-                "the override into the document first",
-                file=sys.stderr,
-            )
-            return 1
-        from causalab.workflow.pins import stamp_pins
+                    check_data_columns(inner.compiled, env)
+        checked: dict[str, AnswerCheck] | None = None
+        if getattr(args, "tokenizer", False):
+            # the tokenizer passes of every static inner document, positions
+            # and answers; a step-dependent one resolves at its step
+            from causalab.workflow.runner import check_tokenization
 
-        stamp_pins(args.document, loaded.pins)
-        print(f"pinned {args.document} — {_pin_summary(loaded.pins)}")
+            checked = check_tokenization(loaded, env, positions=True)
+        print(f"OK: {args.document} — {len(loaded.document.steps)} steps")
+        if checked is not None:
+            deferred = [
+                name
+                for name in loaded.order
+                if name in loaded.inner and loaded.inner_digest_kind[name] != "campaign"
+            ]
+            # a metric over generated tokens is scored on the rows that
+            # generated a step, known only after the decode: its answers are
+            # checked when scored, and the line names them apart
+            when_scored = {
+                name: list(check.when_scored)
+                for name, check in checked.items()
+                if check.when_scored
+            }
+            print(
+                f"tokenizer: positions and metric answers resolve in {list(checked)}"
+                + (
+                    f"; the answers of {when_scored} are checked when scored, "
+                    "because they are read over generated tokens"
+                    if when_scored
+                    else ""
+                )
+                + (
+                    f"; {deferred} depend on earlier steps and resolve at their step"
+                    if deferred
+                    else ""
+                )
+            )
         return 0
     if args.verb == "digest":
         # the identities `--resume` compares, one per step in schedule order
@@ -137,53 +168,42 @@ def main(args: argparse.Namespace, env: ResolutionEnv) -> int:
             print("unchecked absolute paths (verified at run time):")
             for item in loaded.unchecked_paths:
                 print(f"  {item}")
-        # §7: a pinned document was just held to its section (rule 21) — say
-        # so; an unpinned one says how it gets pinned
-        if loaded.document.pins is not None:
-            print(f"pins      checked — {_pin_summary(loaded.pins)}")
-        else:
-            print(
-                f"pins      none — the first `run` stamps {_pin_summary(loaded.pins)}"
-                " into the document (or `causalab pin <wf>`)"
-            )
         return 0
-    # run — engines are optional, lazily-imported extras; --engine picks
-    # the list, choose_engine routes per protocol step
-    from causalab.cli import load_engines
+    # run — the one verb that constructs the engine: a lazily-imported extra;
+    # --engine named it, and every protocol step is held to it
+    from causalab.neural.shared.engine_router import route
     from causalab.workflow import run_workflow
 
-    if loaded.document.pins is None:
-        # §7: the first run of an unpinned workflow stamps it, so the next
-        # load holds the document to exactly the closure this run consumed.
-        # Under `--set` the census is the overridden closure, not the file's:
-        # nothing honest to write, and the run proceeds unpinned
-        if args.parsed_set:
-            print(
-                f"note: {args.document} is not pinned and --set is in effect, so "
-                "this run stamps nothing — run once without --set, or `causalab "
-                "pin` it",
-                file=sys.stderr,
-            )
-        else:
-            from causalab.workflow.pins import stamp_pins
-
-            stamp_pins(args.document, loaded.pins)
-            print(f"pinned {args.document} — {_pin_summary(loaded.pins)}")
-
+    # this process's place in a launched world (docs/model_parallelism.md
+    # §3, §11; causalab.cli sets both for a world above 1): the publisher every
+    # step's run context carries, and the lockstep the joiner's decisions
+    # travel on. World 1 — SOLO — publishes, joins, and decides for itself
+    publisher = getattr(args, "publisher", SOLO)
+    lockstep = getattr(args, "lockstep", SOLO_LOCKSTEP)
+    joins = is_joiner(publisher)
     result = run_workflow(
         loaded,
         env,
         args.out,
-        load_engines(
-            getattr(args, "engine", None) or DEFAULT_ENGINE,
-            args.device,
+        route(
+            args.engine,
+            device=args.device,
             cuda_graphs=getattr(args, "cuda_graphs", False),
             batch_rows=getattr(args, "batch_rows", None),
             fit_rows=getattr(args, "fit_rows", None),
+            # the same geometry as a document run's (docs/model_parallelism.md
+            # §2): every rank builds the same engine list
+            parallel=getattr(args, "parallel_geometry", ONE),
         ),
         resume=getattr(args, "resume", False),
         reuse_nondeterministic=getattr(args, "reuse_nondeterministic", False),
+        publisher=publisher,
+        lockstep=lockstep,
     )
+    if not joins:
+        # a rank that does not publish wrote nothing and says nothing; the
+        # joiner's lines below are the run's
+        return 0
     for name, entry in sorted(result.manifest["steps"].items()):
         files = ", ".join(entry.get("files", ()))
         print(f"{entry.get('status', 'completed')} {name}: {files}")

@@ -40,7 +40,7 @@ For each figure, ``candidates`` globs are tried **in list order** against the
 artifact root; the first glob that matches any file wins (the author's semantic
 ordering is authoritative). Within that glob's matches, filetype preference
 breaks ties: interactive/static HTML (iframe) > image (``<img>``) > PDF (iframe,
-last resort) — see :data:`FILETYPE_PREFERENCE`. A glob ending in ``.*`` is how an
+last resort) — see [`FILETYPE_PREFERENCE`][]. A glob ending in ``.*`` is how an
 author says "prefer the PNG twin over the PDF". Nothing matched -> the figure
 slot is **dropped** (and a build warning emitted), not rendered as a permanent
 placeholder; a row, section, or repeat-instance left with no surviving figure is
@@ -56,7 +56,7 @@ the start of each build, so rebuilds are idempotent (stable file set and size).
 
 A figure may carry an optional ``height`` (iframe embeds only): an integer is
 read as pixels (``480`` -> ``480px``), a string is used verbatim (``"60vh"``);
-the default is :data:`_DEFAULT_IFRAME_HEIGHT`. Images always fit their width.
+the default is `_DEFAULT_IFRAME_HEIGHT`. Images always fit their width.
 
 The ``intro`` block renders Markdown: a mapping renders each *value* as inline
 Markdown (tables, code, links), and a plain string renders as a Markdown block.

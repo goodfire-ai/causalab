@@ -1,0 +1,10 @@
+[
+  {
+    "example_id": "0",
+    "metric": "02_ablation_attention_heads_ablated",
+    "value": "{\"M\": 0.0012715586926788092, \"Z\": 0.015772679820656776}",
+    "unit": "fraction",
+    "estimand_version": "class_probs/v1",
+    "eligible": true
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "example_id": "0",
+    "metric": "02_ablation_attention_clean",
+    "value": "{\"M\": 0.08572501689195633, \"Z\": 0.5216473937034607}",
+    "unit": "fraction",
+    "estimand_version": "class_probs/v1",
+    "eligible": true
+  }
+]

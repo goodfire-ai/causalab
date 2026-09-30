@@ -1,37 +1,58 @@
-"""The ``causalab`` CLI: ``run · validate · explain · dry-run · digest · migrate``.
+"""CLI for intervention specifications, workflows and measurements.
 
-One entry point over **two document types**. Argument parsing and the
-resolution environment are shared; the verbs themselves are not:
-
-* an **intervention specification** → :mod:`causalab.protocol.cli`
-* a **workflow** document → :mod:`causalab.workflow.cli`
-
-Dispatch is on the document's ``steps`` section (workflow spec §1). Keeping it
-here is what lets ``protocol/`` carry no workflow code and ``workflow/`` depend
-on ``protocol/`` one way only — so the intervention protocol is usable on its
-own, which is the point of having two packages.
-
-``run`` needs an execution engine; the reference engine
-(:mod:`causalab.neural.engines.pytorch_hooks`) is imported lazily by whichever half
-needs it, so the pure verbs stay torch-free.
+Documents with ``steps`` dispatch to [`causalab.workflow.cli`][]; intervention
+specifications dispatch to [`causalab.protocol.reports`][]. Measurement commands use
+[`causalab.measurement`][]. Argument parsing and resolution are shared.
+Dispatch stays here so ``protocol/`` remains independent of ``workflow/``.
+Execution engines load lazily so validation and other pure verbs stay torch-free.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
-from causalab.protocol.engine import DEFAULT_ENGINE, ENGINE_CHOICES
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.neural.shared.engine_router import ENGINE_CHOICES, route_name
+from causalab.protocol.parallel import ONE, ParallelGeometry, parse_geometry
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.io.env import ResolutionEnv, file_env
 from causalab.protocol.schema import PRECISION_DTYPES
 
 from causalab.tasks import TASKS_ROOT
 
-__all__ = ["ensure_model_registered", "load_engines", "main", "register_model_key"]
+__all__ = ["ensure_model_registered", "main", "register_model_key"]
+
+logger = logging.getLogger(__name__)
+
+#: The one logger ``--verbose`` enables: the shared execution loop's progress
+#: lines ([`causalab.neural.shared.execution`][]). The flag configures this
+#: name, never the root logger, so no other module gains output from it.
+VERBOSE_LOGGER = "causalab.neural.shared.execution"
+
+
+def _configure_verbose(stream=sys.stderr) -> None:
+    """Attach one stderr handler to [`VERBOSE_LOGGER`][] at INFO, and raise
+    Hugging Face Hub's own logger to INFO so its download progress and
+    ``Still waiting to acquire lock`` lines show. Calling this twice adds no
+    second handler: the CLI's ``main`` runs in-process more than once in
+    tests, and a second run should print each line once."""
+    log = logging.getLogger(VERBOSE_LOGGER)
+    log.setLevel(logging.INFO)
+    if not any(getattr(h, "_causalab_verbose", False) for h in log.handlers):
+        handler = logging.StreamHandler(stream)
+        handler.setFormatter(logging.Formatter("%(asctime)s %(message)s", "%H:%M:%S"))
+        handler._causalab_verbose = True  # pyright: ignore[reportAttributeAccessIssue]
+        log.addHandler(handler)
+    # `huggingface_hub` installs its own stderr handler and sets its level
+    # from HF_HUB_VERBOSITY at import; import it here so this call comes
+    # after that and is not overwritten when the engine imports it later
+    from huggingface_hub.utils import logging as hf_logging
+
+    hf_logging.set_verbosity_info()
 
 
 def _parse_set(values: Sequence[str]) -> dict[str, Any]:
@@ -69,29 +90,34 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="causalab",
         description="Intervention specifications and workflows: run, validate, "
-        "explain, dry-run, digest, pin, migrate (docs/intervention_protocol.md, "
+        "explain, dry-run, digest, migrate (docs/intervention_protocol.md, "
         "docs/workflow_protocol.md).",
     )
     sub = parser.add_subparsers(dest="verb", required=True)
+    measure = sub.add_parser(
+        "measure",
+        help="measure and profile a workflow at one or two source revisions",
+        description="Measure workflows on one CPU or CUDA device with one rank. "
+        "Multi-GPU profiling artifact collection is not supported.",
+    )
+    measure.add_argument("document", type=Path)
+    measure.add_argument("--bindings", type=Path, required=True)
+    measure.add_argument("--out", type=Path, required=True)
+    measure.add_argument("--resume", action="store_true")
     migrate = sub.add_parser(
         "migrate",
-        help="rewrite earlier-version intervention specifications (v1's flat "
-        "sections, v2's scalar site 'layer'), a workflow's dotted "
-        "sites.<name>.layer ids, and the fenced JSON examples in markdown "
-        "files, as the current protocol_version, in place",
+        help="Update older JSON specifications and embedded Markdown examples to the current format.",
     )
     migrate.add_argument(
         "paths",
         type=Path,
         nargs="+",
-        help="JSON documents or markdown files (a YAML document is refused: "
-        "regroup it by hand); a document already at the current version is "
-        "left as it is",
+        help="JSON documents or Markdown files to update. Convert YAML documents manually.",
     )
     migrate.add_argument(
         "--check",
         action="store_true",
-        help="write nothing; exit 1 if any file would change",
+        help="Check for required changes; exit 1 if a file needs an update.",
     )
     for verb, help_text in (
         ("run", "validate, expand, plan, execute, stamp"),
@@ -105,66 +131,48 @@ def _build_parser() -> argparse.ArgumentParser:
             "resolve everything a run decides before weights load, and report it",
         ),
         ("digest", "the campaign digest"),
-        (
-            "pin",
-            "stamp a workflow's `pins` section — the digests of every document, "
-            "script, table, code module and file it touches — into the "
-            "workflow file (workflow documents only; `run` stamps an unpinned "
-            "workflow on its first run)",
-        ),
     ):
         p = sub.add_parser(verb, help=help_text)
-        p.add_argument("document", type=Path, help="a protocol JSON (or YAML) file")
+        p.add_argument(
+            "document",
+            type=Path,
+            help="Intervention or workflow document in JSON or YAML.",
+        )
         p.add_argument("--set", action="append", default=[], metavar="PATH=VALUE")
         p.add_argument(
             "--data-root",
             type=Path,
             default=TASKS_ROOT,
-            help="where dataset refs resolve (`<root>/<ref>.json`). Defaults to "
-            "the task packages themselves, so a shipped document resolves "
-            "with no flag: `<task>/data/<variant>#<split>` names the table "
-            "the task ships under causalab/tasks/<task>/data/",
+            help="Dataset root for <ref>.json references. Defaults to the installed task data.",
         )
         p.add_argument("--artifacts-root", type=Path, default=Path("."))
         p.add_argument(
             "--max-points",
             type=int,
             default=None,
-            help="override the sweep point cap (§5.14)",
+            help="Maximum number of points in a sweep.",
         )
         p.add_argument(
             "--register-from-hf",
             action="store_true",
-            help="resolve an unregistered model key from its HF config before "
-            "loading, instead of refusing [V4]. Opt-in: without it the pure "
-            "verbs stay registry-only, so a digest never depends on the "
-            "network. 'run' always does this — the flag is for the verbs that "
-            "otherwise never touch a model",
+            help="Read an unregistered model configuration from Hugging Face. The run command does this automatically.",
         )
         if verb == "validate":
             p.add_argument(
-                "--data", action="store_true", help="also check column references"
+                "--data",
+                action="store_true",
+                help="also check the resolved tables — column references, "
+                "thresholds, row roles, fit splits (the default; kept for "
+                "compatibility, it changes nothing)",
             )
-        if verb == "explain":
+        if verb in ("run", "validate", "explain", "dry-run"):
             p.add_argument(
                 "--engine",
                 choices=ENGINE_CHOICES,
-                default=None,
-                help="also route the document and print which engine would "
-                "serve it (or the §8 refusal). Loads engines, so `explain` "
-                "without it stays torch-free",
+                required=True,
+                help="Execution engine. 'auto' selects pytorch_hooks. Validation and reports check registered capabilities before an engine loads.",
             )
         if verb == "dry-run":
-            p.add_argument(
-                "--engine",
-                choices=ENGINE_CHOICES,
-                default=None,
-                help="also ask check_engine, per candidate engine, what it would "
-                "refuse — reported as a capability_shortfall, not raised; a "
-                "pinned engine's shortfall exits 1, under 'auto' only no "
-                "candidate serving does. Builds engines (no weights), so "
-                "`dry-run` without it stays torch-free",
-            )
             p.add_argument(
                 "--data",
                 action="store_true",
@@ -172,100 +180,113 @@ def _build_parser() -> argparse.ArgumentParser:
                 "declared row roles at every point (the `validate --data` pass); "
                 "a refusal is reported and exits 1",
             )
+        if verb in ("validate", "dry-run"):
+            # each verb its own text: only `validate` takes a workflow
+            scope = (
+                ". On a workflow, check every inner document that does not "
+                "depend on an earlier step"
+                if verb == "validate"
+                else ""
+            )
             p.add_argument(
-                "--shard-size",
-                type=_positive_int,
+                "--tokenizer",
+                action="store_true",
+                help="load the model's tokenizer, never its weights, and check "
+                "token positions and every metric's answer tokens as a run "
+                "checks them before the weights load; a refusal exits 1. The "
+                "tokenizer loads as a run loads it: from the Hugging Face "
+                "cache, or a download of its files when the Hub is reachable" + scope,
+            )
+        if verb in ("run", "dry-run"):
+            p.add_argument(
+                "--parallel",
                 default=None,
-                metavar="N",
-                help="plan `--points` shards of at most N points and report how "
-                "many the campaign needs (ceil(points / N))",
+                metavar="AXES",
+                help="the reference engine's parallel geometry, `tp=4,ep=8` over "
+                "the axes dp, pp, cp, tp, ep (data, pipeline, context, tensor, "
+                "expert), each 1 unless named (docs/model_parallelism.md §2). "
+                "The data axis has two modes (§8.3): `dp=2` (or `dp=2:points`) "
+                "shards the campaign's points across the replicas, exact by "
+                "construction; `dp=2:rows` runs every point on every replica "
+                "and splits each fit minibatch's rows across them, the loss "
+                "mean and the featurizer gradient averaged — a train document "
+                "only, with train.batch.pairs at least dp. "
+                "Execution, never identity: digests and stamps are unaffected "
+                "and the run receipt records it as execution.parallel. "
+                "`dry-run` checks the geometry against the model's registry "
+                "entry and the rows mode against the document before any "
+                "weights; `run` at a world above 1 spawns or joins the ranks — "
+                "for a workflow too, whose steps every rank then runs in "
+                "lockstep with the joiner alone writing the ROOT (§11); the "
+                "data axis is refused under a workflow, whose runner is one "
+                "process — shard a step with fan_out.over.shards instead",
             )
         if verb == "run":
             p.add_argument(
                 "--cuda-graphs",
                 action="store_true",
-                help="use CUDA replay for supported pytorch_hooks workloads",
+                help="Use CUDA replay for supported pytorch_hooks workloads.",
             )
             p.add_argument(
                 "--out",
                 type=Path,
                 required=True,
-                help="run output directory; for a workflow, the ROOT under "
-                "which the document's own output_dir is created (§1.1)",
+                help="Output directory. A workflow creates its declared output_dir beneath this path.",
             )
             p.add_argument(
                 "--resume",
                 action="store_true",
-                help="skip a step whose outputs exist with a matching stamped "
-                "digest (workflow documents only)",
+                help="Reuse workflow steps whose identity, runtime, and verified outputs match their saved records.",
             )
             p.add_argument(
                 "--reuse-nondeterministic",
                 action="store_true",
-                help="with --resume, also reuse steps declaring "
-                "is_deterministic: false",
+                help="Allow --resume to reuse steps with is_deterministic: false.",
             )
             p.add_argument(
                 "--device",
                 default="cpu",
-                help="torch device string for the reference engine "
-                "(cpu, cuda, cuda:1, mps)",
-            )
-            p.add_argument(
-                "--engine",
-                choices=ENGINE_CHOICES,
-                default=DEFAULT_ENGINE,
-                help="execution engine: 'auto' (default) is every installed "
-                "engine with the reference FIRST, routed by choose_engine "
-                "(§8); name one to pin it. Routing is §8's own answer, and "
-                "list order is preference, so anything the reference serves "
-                "behaves exactly as a pinned 'pytorch_hooks' would — while a "
-                "document only the nnsight engine can serve now runs instead "
-                "of refusing by name",
+                help="PyTorch device for the reference engine (cpu, cuda, cuda:1, "
+                "mps), or a comma list (cuda:0,cuda:1) placing the model's layers "
+                "across the devices of this process — contiguous even block "
+                "ranges in order, embedding first, head last; memory, not speed.",
             )
             p.add_argument(
                 "--dtype",
                 choices=PRECISION_DTYPES,
                 default=None,
-                help="shorthand for --set model.dtype=… — precision is a "
-                "document fact (§2.1), so an override enters the digest and "
-                "the record never lies about what produced the numbers",
+                help="Set model.dtype in the document. The selected precision enters its digest.",
+            )
+            p.add_argument(
+                "--record",
+                action="store_true",
+                help="Also write the run receipt protocol.json and the event stream events.jsonl into --out. Off by default: a run writes its saved tables only.",
             )
             p.add_argument(
                 "--points",
                 default=None,
                 metavar="START:STOP",
-                help="execute only this half-open point-index range of the "
-                "expanded campaign — the seam external schedulers shard on "
-                "(document runs only; digests and stamps are unaffected)",
+                help="Execute the point indices in [START, STOP) for an intervention document. Point digests stay the same.",
             )
             p.add_argument(
                 "--batch-rows",
                 type=_positive_int,
                 default=None,
                 metavar="N",
-                help="reference engine: run a forward group over more than N "
-                "rows as several forwards of at most N rows each, captures "
-                "concatenated in row order (§8, execution scale). Execution "
-                "only — the numbers equal the single-forward run up to dtype "
-                "rounding, and digests and stamps are unaffected. Bounds "
-                "no-grad forwards, including train.eval passes; a training "
-                "minibatch keeps its train.batch.pairs rows",
+                help="Maximum rows per inference forward in pytorch_hooks, including training evaluation. Results can vary with floating-point rounding.",
             )
             p.add_argument(
                 "--fit-rows",
                 type=_positive_int,
                 default=None,
                 metavar="N",
-                help="reference engine: bound how many rows one grad forward "
-                "of a fit covers — the members of a fit cohort are packed into "
-                "forwards of at most N rows each, a member's own minibatch "
-                "(train.batch.pairs rows) is never split, and without the flag "
-                "the bound is measured on the cohort's first step from the "
-                "device's free memory and recorded as "
-                "execution.fit_rows_resolved (§8, execution scale). Execution "
-                "only — digests and stamps are unaffected, and the receipt "
-                "records the bound as execution.fit_rows",
+                help="Maximum rows per training forward in pytorch_hooks. Each member's minibatch stays whole. Omit to measure a bound from available device memory. With --record the receipt records the bound.",
+            )
+            p.add_argument(
+                "-v",
+                "--verbose",
+                action="store_true",
+                help="Report progress on stderr: point selection, each point's model load, cohort fits, each point's run, and the output write. Also shows Hugging Face Hub download and lock-wait messages. Changes no output file.",
             )
     return parser
 
@@ -277,81 +298,19 @@ def _positive_int(text: str) -> int:
     return value
 
 
-def _env(args: argparse.Namespace) -> ResolutionEnv:
-    return ResolutionEnv(
-        # the shipped task tables stay reachable behind any --data-root
-        datasets=FileDatasets(root=args.data_root, fallback_roots=(TASKS_ROOT,)),
-        artifacts=FileArtifacts(root=args.artifacts_root),
-    )
-
-
-def load_engines(
-    choice: str,
-    device: str,
-    *,
-    cuda_graphs: bool = False,
-    batch_rows: int | None = None,
-    fit_rows: int | None = None,
-) -> list[Any]:
-    """Build the ``run`` verb's engine list — lazily, so the pure verbs stay
-    torch-free (importlib keeps the layering honest: ``protocol/`` never
-    links against an execution engine).
-
-    ``auto`` is every installed engine with the reference first — list order
-    is routing preference (§8), so pytorch_hooks serves what it can and the
-    nnsight engine picks up what it refuses. A missing optional engine is
-    only an error when named explicitly.
-
-    ``batch_rows`` is the reference engine's microbatch bound (``--batch-rows``)
-    and ``fit_rows`` its rows-per-grad-forward bound for a fit (``--fit-rows``);
-    the nnsight engine runs each group as one batch, has no grad path, and is
-    built without either."""
-    import importlib
-
-    engines: list[Any] = []
-    if choice in ("pytorch_hooks", "auto"):
-        try:
-            hooks = importlib.import_module("causalab.neural.engines.pytorch_hooks")
-        except ModuleNotFoundError as err:
-            raise ProtocolError(
-                "P2",
-                f"no execution engine available ({err}) — 'run' needs the "
-                "reference engine causalab.neural.engines.pytorch_hooks",
-            ) from err
-        # `fit_rows` only when set: the engine's default is None already, and
-        # passing it explicitly would make the kwarg part of the constructor
-        # contract for every stand-in
-        extra = {"fit_rows": fit_rows} if fit_rows is not None else {}
-        if cuda_graphs:
-            extra["cuda_graphs"] = True
-        engines.append(
-            hooks.PytorchHooksEngine(device=device, batch_rows=batch_rows, **extra)
-        )
-    if choice in ("nnsight", "auto"):
-        try:
-            tracing = importlib.import_module("causalab.neural.engines.nnsight_tracing")
-        except ModuleNotFoundError as err:
-            if choice == "nnsight":
-                raise ProtocolError(
-                    "P2",
-                    f"the nnsight engine is not installed ({err}) — install "
-                    "the 'nnsight' extra (pip install 'causalab[nnsight]')",
-                ) from err
-        else:
-            engines.append(tracing.NnsightEngine(device=device))
-    return engines
+def _parallel(args: argparse.Namespace) -> ParallelGeometry:
+    """The ``--parallel`` geometry, or the default (world 1) when the flag is
+    absent or the verb has none. Raises the grammar's ``P4``."""
+    text = getattr(args, "parallel", None)
+    return ONE if text is None else parse_geometry(text)
 
 
 def wants_hf_registration(args: argparse.Namespace) -> bool:
     """Whether this invocation may resolve an unregistered key over the network.
 
-    ``run`` touches the model anyway. For the pure verbs it is the author
-    saying so with ``--register-from-hf``: pre-flighting a document on an
-    unregistered model was impossible without it, and the documented
-    workaround — validate against a *similar* registered model — produces a
-    **false** refusal (`[V4] layer 36 out of range for the 36-layer model
-    'Qwen/Qwen3-4B-Instruct-2507'` on a valid 40-layer document). All three A3B
-    protocol runs wrote the same nine-line wrapper instead.
+    ``run`` allows registration; other verbs require ``--register-from-hf``.
+    Registration validates the requested model's geometry; substituting another
+    registered model can falsely reject valid layer indices.
     """
     return args.verb == "run" or bool(getattr(args, "register_from_hf", False))
 
@@ -363,7 +322,7 @@ def ensure_model_registered(args: argparse.Namespace) -> None:
     Called for ``run`` unconditionally and for the pure verbs only under
     ``--register-from-hf``, so the invariant survives: without the flag a
     digest never depends on the network."""
-    from causalab.protocol.compile import read_document
+    from causalab.protocol.pipeline import read_document
 
     # read through the compiler's own prefix, so `--set model.key=…` is applied
     # and the key read here is the one the compile will read
@@ -401,6 +360,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Parse, build the environment, and dispatch on document type."""
     parser = _build_parser()
     args = parser.parse_args(argv)
+    if args.verb == "measure":
+        from causalab.measurement.study.controller import run
+
+        try:
+            reports = run(args.document, args.bindings, args.out, resume=args.resume)
+        except (ValueError, RuntimeError, ProtocolError) as err:
+            print(f"refused: {err}", file=sys.stderr)
+            return 1
+        print(reports)
+        return 0
     if args.verb == "migrate":
         # a rewrite of files, not a compile: no environment, no dispatch
         from causalab.protocol.migrate import main as migrate_main
@@ -421,33 +390,60 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "and --engine nnsight pins an engine with no grad path, so the "
                 "two flags cannot be combined"
             )
+    if getattr(args, "verbose", False):
+        # before any dispatch, so a workflow run's protocol steps report too:
+        # they run through the same shared execution loop
+        _configure_verbose()
+    if getattr(args, "engine", None) is not None:
+        # the router's one decision, made once here: 'auto' becomes the engine
+        # name every verb below reads — the pure verbs hand it to
+        # pipeline.validate as the engine to hold the document to, `run`
+        # constructs it (causalab.neural.shared.engine_router)
+        args.engine = route_name(args.engine)
     args.parsed_set = _overrides(args)
-    env = _env(args)
+    # the shipped task tables stay reachable behind any --data-root
+    env = file_env(args.data_root, args.artifacts_root, fallback_roots=(TASKS_ROOT,))
     try:
-        from causalab.protocol.loader import load_text
+        # the geometry, parsed once here so both document types and both
+        # verbs read one ParallelGeometry; a malformed one is the grammar's
+        # P4 refusal, printed below like every other
+        args.parallel_geometry = _parallel(args)
+        if (
+            getattr(args, "engine", None) == "nnsight"
+            and args.parallel_geometry.world > 1
+        ):
+            # fail closed, like the two bounds: the nnsight engine is
+            # single-device (docs/model_parallelism.md §8.5), and a pinned
+            # nnsight run would drop the geometry while the receipt kept it
+            parser.error(
+                "--parallel is the reference engine's geometry, and --engine "
+                "nnsight pins a single-device engine, so the two flags cannot "
+                "be combined above a world of 1"
+            )
+        from causalab.io.sources import load_text
         from causalab.workflow.document import is_workflow
 
         if is_workflow(load_text(args.document)):
             if args.verb == "dry-run":
                 print(
                     "refused: dry-run is per intervention specification; the "
-                    "workflow has no dry run of its own — validate or explain "
+                    "workflow-level dry run is a follow-up — validate or explain "
                     "the workflow, and dry-run its documents one by one",
                     file=sys.stderr,
                 )
                 return 1
             from causalab.workflow import cli as workflow_cli
 
+            if args.verb == "run" and args.parallel_geometry.world > 1:
+                # docs/model_parallelism.md §3, §11: a workflow at a world
+                # above 1 launches like a document — after the one refusal
+                # the launch cannot serve, the data axis, refused by name
+                # here before any child starts and on every rank alike
+                workflow_cli.check_geometry(args.parallel_geometry)
+                return _launched(
+                    args, env, sys.argv[1:] if argv is None else argv, workflow_cli.main
+                )
             return workflow_cli.main(args, env)
-        if args.verb == "pin":
-            print(
-                "refused: pins are a workflow's — an intervention specification "
-                "carries no pins section and is pinned by the workflow that "
-                "runs it (workflow spec §7). Wrap the document in a workflow "
-                "step and pin that",
-                file=sys.stderr,
-            )
-            return 1
         if getattr(args, "resume", False):
             print(
                 "refused: --resume is a workflow flag — it reuses a published "
@@ -458,9 +454,79 @@ def main(argv: Sequence[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        from causalab.protocol import cli as protocol_cli
+        from causalab.protocol import reports as protocol_cli
 
+        if args.verb == "run" and args.parallel_geometry.world > 1:
+            return _launched(
+                args, env, sys.argv[1:] if argv is None else argv, protocol_cli.main
+            )
         return protocol_cli.main(args, env)
     except ProtocolError as err:
         print(f"refused: {err}", file=sys.stderr)
         return 1
+
+
+def _launched(
+    args: argparse.Namespace,
+    env: ResolutionEnv,
+    argv: Sequence[str],
+    run: Callable[[argparse.Namespace, ResolutionEnv], int],
+) -> int:
+    """A run at a world above 1 (``docs/model_parallelism.md`` §3) — of an
+    intervention specification or of a workflow, ``run`` being that document
+    type's ``main``.
+
+    [`detect`][causalab.neural.shared.parallel.launcher.detect] says what this
+    process is. The **parent** of a spawn — no ``WORLD_SIZE`` in the
+    environment — starts ``world`` children re-entering this very ``main``
+    with the same ``argv`` and exits with their status; it builds no engine
+    and loads no model. A **spawned** child or a **joined** rank
+    (``torchrun``, Slurm) pins its device (``cuda:LOCAL_RANK`` under
+    ``--device cuda``), joins the process group for the device's backend,
+    and runs the document as that rank: its publisher rides on every
+    engine request, so exactly one process writes the campaign — and, for a
+    workflow, its lockstep carries the joiner's per-process decisions to
+    every rank (§11; [`causalab.protocol.lockstep`][]), so the ranks run
+    the steps together and the joiner alone writes the ROOT.
+
+    Imported here, not at module scope, and torch-free on the parent's
+    path: the parent of a spawn imports no torch (its import would sit
+    serially ahead of every child's start), only a rank does, in ``enter``.
+    """
+    from causalab.neural.shared.parallel import launcher
+
+    geometry = args.parallel_geometry
+    detected = launcher.detect(geometry)
+    visible = launcher.visible_devices(args.device)
+    if isinstance(detected, launcher.Parent):
+        launcher.check_spawn_devices(geometry, args.device, visible=visible)
+        return launcher.spawn(geometry, argv, device=args.device)
+    args.device = launcher.device_for(detected, args.device, visible=visible)
+    publisher = launcher.enter(detected, geometry, args.device)
+    # the status the peers hear of through the rank's heartbeat (§3 "when a
+    # rank dies"): the run's, or a failure when it raised
+    status = 1
+    try:
+        args.publisher = publisher
+        args.lockstep = launcher.lockstep(publisher)
+        status = run(args, env)
+        return status
+    except RuntimeError as error:
+        # a backend failure outside this package's collectives (transformers'
+        # own dist calls in its styles): a dead peer is refused by name here
+        # and the process ends; torch's own distributed error with nobody
+        # lost is a refusal naming the rank; anything else is the traceback
+        # it was
+        refusal = launcher.hold_for_peer(error)
+        if refusal is not None:
+            raise refusal from error
+        raise
+    finally:
+        launcher.leave(publisher, status)
+
+
+if __name__ == "__main__":
+    # `python -m causalab.cli …` is what a launcher that runs a module per
+    # rank (`torchrun -m causalab.cli run …`) needs; the console script is
+    # the same `main`
+    raise SystemExit(main())

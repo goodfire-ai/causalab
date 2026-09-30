@@ -113,10 +113,10 @@ class TestCayleyMap:
         direction (``seed`` shared with the base draws ``x ∥ Q₀`` at ``k = 1``,
         pure cancellation in ``X⊥``); and **collinear** columns, the
         rank-deficient ``X⊥`` where the Woodbury form's conditioning is
-        quadratic in ``‖X‖`` (:class:`Cayley`, *Conditioning*).
+        quadratic in ``‖X‖`` ([`Cayley`][causalab.neural.shared.featurizers.stages.Cayley], *Conditioning*).
 
         In fp64 the residual is rounding — the formula is exact. In fp32 the
-        bound is :data:`FP32_STIEFEL_BOUND`, the map's own guarantee; measured,
+        bound is `FP32_STIEFEL_BOUND`, the map's own guarantee; measured,
         the two regimes share the same worst case at these sizes, so one bound
         serves both (see the constant)."""
         width = k + extra
@@ -262,7 +262,7 @@ class TestCayleyMap:
         """The vocabulary is a spec commitment (§2.5); the other two maps stay
         on torch's implementation. Read at ``original = 0``, where every map is
         exact, so the residual is the QR init's — tighter than
-        :data:`FP32_STIEFEL_BOUND`, which is about the chart away from it."""
+        `FP32_STIEFEL_BOUND`, which is about the chart away from it."""
         for parametrization in ("cayley", "matrix_exp", "stiefel"):
             stage = Subspace(12, 3, parametrization, seed=0)
             assert _orthonormality_error(stage.weight) < 1e-5
@@ -311,12 +311,12 @@ class TestConditioning:
 class TestPolicy:
     def test_the_maps_bound_stays_within_the_load_tolerance(self) -> None:
         """The two policies are distinct — this map's own fp32 guarantee
-        (:data:`FP32_STIEFEL_BOUND`, over the regimes the property test draws)
+        (`FP32_STIEFEL_BOUND`, over the regimes the property test draws)
         and what ``_init_basis`` accepts as a start — but the first must not
         drift past the second, or tightening one would silently retune the
         other. Outside those regimes nothing static bounds the deviation, which
         is why the fit *records* it
-        (:func:`~causalab.neural.engines.pytorch_hooks.train.fit_diagnostics`;
+        ([`fit_diagnostics`][causalab.neural.engines.pytorch_hooks.train.fit_diagnostics];
         the runtime check is ``test_train.py``'s subspace-diagnostic test)."""
         assert FP32_STIEFEL_BOUND <= ORTHONORMAL_TOLERANCE
 
@@ -456,8 +456,10 @@ class TestClampGate:
     def test_the_entry_identity_check_holds_the_map_in_both_directions(self) -> None:
         """A bundle fitted under one map is not a mask under the other, and an
         unstamped record is a sigmoid gate (fitted before the field existed)."""
-        from causalab.neural.shared.featurizers import _check_entry_identity
-        from causalab.protocol.errors import ProtocolError
+        from causalab.neural.shared.featurizers.build import (
+            _check_entry_identity,  # pyright: ignore[reportPrivateUsage]
+        )
+        from causalab.protocol.rules.errors import ProtocolError
         from causalab.protocol.schema import FeaturizerSpec
 
         clamp = FeaturizerSpec(kind="gate", parametrization="clamp")
@@ -674,14 +676,13 @@ class TestHardConcreteGate:
 
 def _theta_bundle(theta: torch.Tensor, **header):
     """A ``load_tensors`` over one hand-built fitted-gate bundle: ``theta`` and
-    the three header keys every gate load requires, plus ``header``."""
-    from causalab.neural.shared.services import TensorBundle
+    the two header keys every gate load requires, plus ``header``."""
+    from causalab.io.tensor_files import TensorBundle
 
     bundle = TensorBundle(
         tensors={"theta": theta},
         entry_coords={},
         header={
-            "produced_by": "b" * 64,
             "trained_on": "weekdays/data#train",
             "parametrization": "sigmoid",
             **header,
@@ -752,16 +753,13 @@ class TestGateInit:
         gate = stack.stages[0]
         assert isinstance(gate, Gate)
         assert torch.equal(gate.theta, theta) and gate.theta.requires_grad
-        fields = gate.identity_fields()
-        assert fields["init_produced_by"] == "b" * 64
-        assert fields["init_trained_on"] == "weekdays/data#train"
-        assert len(fields["init_digest"]) == 64
+        assert gate.identity_fields() == {"init_trained_on": "weekdays/data#train"}
 
     def test_a_saved_start_must_be_a_theta_of_this_gate(self) -> None:
-        """Same map, same layout, with a provenance: the checks a loaded gate
-        passes, applied to a start."""
+        """Same map, same layout: the checks a loaded gate passes, applied to
+        a start."""
         from causalab.neural.shared.featurizers import build_stack
-        from causalab.protocol.errors import ProtocolError
+        from causalab.protocol.rules.errors import ProtocolError
         from causalab.protocol.schema import FeaturizerSpec
 
         def build(spec: FeaturizerSpec, loader) -> None:
@@ -772,10 +770,6 @@ class TestGateInit:
             build(plain, self._bundle(torch.zeros(4), parametrization="clamp"))
         with pytest.raises(ProtocolError, match="has 4 units"):
             build(plain, self._bundle(torch.zeros(6)))
-        bundle = self._bundle(torch.zeros(4))
-        bundle("x").header.pop("produced_by")
-        with pytest.raises(ProtocolError, match="produced_by"):
-            build(plain, bundle)
 
 
 @pytest.mark.unit
@@ -784,7 +778,7 @@ def test_every_field_a_stage_can_stamp_is_an_artifact_identity_key() -> None:
     on the bundle-stamp path (``execution.featurizer_identity``), which refuses
     a key outside ``ARTIFACT_IDENTITY_KEYS`` — after the whole fit has run. The
     census in ``tests/protocol/test_model_realization.py`` reads the literal
-    keys a writer stamps — ``execution.py``'s, and since the change that
+    keys a writer stamps — ``execution.py``'s, and since the round that
     registered ``axis`` and ``forward``, the ``fields[...]`` assignments of
     ``Gate.identity_fields`` too, which is the census closed over *fields*.
     This one is closed over *classes*: ``stretch`` walked through a green
@@ -793,13 +787,11 @@ def test_every_field_a_stage_can_stamp_is_an_artifact_identity_key() -> None:
     here and its runtime keys checked against the closed schema, with no
     model and no run — the instance list is hand-maintained."""
     from causalab.neural.shared.featurizers import Gate, Subspace
-    from causalab.protocol.resolve import ARTIFACT_IDENTITY_KEYS
+    from causalab.io.env import ARTIFACT_IDENTITY_KEYS
 
     start_identity = {
-        "init_produced_by": "a" * 64,
         "init_trained_on": "weekdays/data#train",
         "init_components": [0, 1],
-        "init_digest": "b" * 64,
     }
     producers = [
         Gate(4),
@@ -852,7 +844,9 @@ class TestEntryIdentityStretch:
     swept apply authoring none would be split at 0, silently."""
 
     def _check(self, stamped: str | None, authored: tuple[float, float] | None):
-        from causalab.neural.shared.featurizers import _check_entry_identity
+        from causalab.neural.shared.featurizers.build import (
+            _check_entry_identity,  # pyright: ignore[reportPrivateUsage]
+        )
         from causalab.protocol.schema import FeaturizerSpec
 
         record = {"parametrization": "hard_concrete"}
@@ -864,13 +858,13 @@ class TestEntryIdentityStretch:
         _check_entry_identity(record, spec, "featurizer 'g' (fit/g.safetensors)")
 
     def test_a_non_default_stamp_is_refused_by_a_spec_authoring_none(self) -> None:
-        from causalab.protocol.errors import ProtocolError
+        from causalab.protocol.rules.errors import ProtocolError
 
         with pytest.raises(ProtocolError, match="fitted at stretch \\[-0.1, 1.5\\]"):
             self._check("[-0.1, 1.5]", None)
 
     def test_an_authored_stretch_is_compared_to_the_stamp(self) -> None:
-        from causalab.protocol.errors import ProtocolError
+        from causalab.protocol.rules.errors import ProtocolError
 
         with pytest.raises(ProtocolError, match="different thresholds"):
             self._check("[-0.1, 1.5]", (-0.2, 1.2))
@@ -1089,7 +1083,7 @@ class TestTopKReadout:
 
 @pytest.mark.unit
 class TestBudgetGate:
-    """§2.5 ``parametrization: budget`` — the budget parametrization's sparsity-loss-free mask:
+    """§2.5 ``parametrization: budget`` — a mask with no sparsity loss:
     ``σ(θ + c_k)`` with the shift solved so the mask sums to the step's budget,
     ``θ`` learned as a ranking, read out at a count."""
 
@@ -1142,7 +1136,7 @@ class TestBudgetGate:
     ) -> None:
         """Through the shift, ``Σ m`` is a constant of ``θ`` and its gradient
         vanishes; with ``stop_grad_shift`` the shift is a constant and the sum's
-        gradient is the plain ``σ'`` — the ``−c_k`` ablation."""
+        gradient is the plain ``σ'``."""
         for stop, expect_zero in ((False, True), (True, False)):
             gate = self._gate({"kind": "fixed", "k": 5}, stop_grad_shift=stop)
             total = gate.budget_mask(5).sum()
@@ -1342,7 +1336,7 @@ class TestPositionGate:
         naming positions and the window (not coordinates and the site), and a
         `top_k` beyond the window names positions. The sized twin builds."""
         from causalab.neural.shared.featurizers import build_stack
-        from causalab.protocol.errors import ProtocolError
+        from causalab.protocol.rules.errors import ProtocolError
         from causalab.protocol.schema import FeaturizerSpec
 
         def build(spec: FeaturizerSpec, theta: torch.Tensor) -> None:
@@ -1375,7 +1369,7 @@ class TestPositionGate:
         second window meets, `Gate.featurize`'s positions check being the
         backstop for a shape the sizing did not predict."""
         from causalab.neural.shared.featurizers import build_stack
-        from causalab.protocol.errors import ProtocolError
+        from causalab.protocol.rules.errors import ProtocolError
         from causalab.protocol.schema import FeaturizerSpec
 
         cache: dict = {}
@@ -1402,7 +1396,7 @@ class TestPositionGate:
 
     def test_a_value_without_the_window_is_refused(self) -> None:
         from causalab.neural.shared.featurizers import Gate
-        from causalab.protocol.errors import ProtocolError
+        from causalab.protocol.rules.errors import ProtocolError
 
         gate = Gate(3, axis="position")
         with pytest.raises(ProtocolError, match="positions axis"):
@@ -1479,8 +1473,10 @@ class TestPositionGate:
         """The identity stamp, both directions: a bundle fitted over
         positions refuses a document without `axis`, and an unstamped (or
         coordinate-fitted) bundle refuses a document with it."""
-        from causalab.neural.shared.featurizers import _check_entry_identity
-        from causalab.protocol.errors import ProtocolError
+        from causalab.neural.shared.featurizers.build import (
+            _check_entry_identity,  # pyright: ignore[reportPrivateUsage]
+        )
+        from causalab.protocol.rules.errors import ProtocolError
         from causalab.protocol.schema import parse_document
         from tests.protocol._docs import base_doc, in_order
 
@@ -1625,7 +1621,7 @@ class TestBudgetPool:
 
     def test_the_link_builds_missing_members_and_refuses_a_non_pool(self) -> None:
         from causalab.neural.shared.featurizers import Gate, link_budget_pools
-        from causalab.protocol.errors import ProtocolError
+        from causalab.protocol.rules.errors import ProtocolError
         from causalab.protocol.schema import FeaturizerSpec
 
         def spec(**kw) -> FeaturizerSpec:
@@ -1755,7 +1751,7 @@ class TestBudgetPool:
         """A member's build re-enters the link; the guard returns at once, so
         the depth is 2 whatever M is — and a sigmoid beside a clamp is refused."""
         from causalab.neural.shared.featurizers import Gate, link_budget_pools
-        from causalab.protocol.errors import ProtocolError
+        from causalab.protocol.rules.errors import ProtocolError
         from causalab.protocol.schema import FeaturizerSpec
 
         names = [f"g{i}" for i in range(12)]
@@ -1795,3 +1791,156 @@ class TestBudgetPool:
         }
         with pytest.raises(ProtocolError, match="parametrization"):
             link_budget_pools(mixed_specs, mixed, lambda n: mixed[n])
+
+
+@pytest.mark.unit
+class TestBoundaryGate:
+    """§2.5 ``parametrization: boundary`` — Boundless DAS (Wu et al. 2023): one
+    θ in ``[0, 1]``, the boundary as a fraction of the width (``β = θ·width``),
+    over the coordinate index of an ordered input. Soft ``σ((β − i)/T)``, hard
+    ``i < β`` (the soft mask at ½, as under every map), θ projected into
+    ``[0, 1]``; nothing per unit exists."""
+
+    def _gate(self, width: int, beta: float, **kw):
+        """A boundary gate at β coordinates (θ = β / width)."""
+        from causalab.neural.shared.featurizers import Gate
+
+        return Gate(
+            width, parametrization="boundary", init=torch.tensor([beta / width]), **kw
+        )
+
+    def test_the_soft_mask_is_a_sigmoid_over_the_coordinate_index(self) -> None:
+        gate = self._gate(5, 2.5)
+        assert gate.theta.shape == (1,)
+        logits = torch.tensor([2.5, 1.5, 0.5, -0.5, -1.5])
+        assert torch.allclose(gate.soft_mask(), torch.sigmoid(logits))
+        gate.temperature = 0.5  # the anneal target, the paper's T
+        assert torch.allclose(gate.soft_mask(), torch.sigmoid(logits / 0.5))
+        # the kept fraction the l1 term reads: ⌈β⌉ / width as T → 0
+        sharp = self._gate(10, 3.5)
+        sharp.temperature = 0.01
+        assert float(sharp.soft_mask().mean()) == pytest.approx(0.4, abs=1e-6)
+
+    def test_the_hard_mask_is_the_prefix_below_beta(self) -> None:
+        gate = self._gate(5, 2.5)
+        assert gate.hard_mask().tolist() == [1.0, 1.0, 1.0, 0.0, 0.0]
+        with torch.no_grad():
+            # the soft mask at ½: a β just past an integer keeps one more
+            gate.theta.fill_(0.4)  # β = 2.0
+            assert gate.hard_mask().tolist() == [1.0, 1.0, 0.0, 0.0, 0.0]
+            gate.theta.fill_(0.42)  # β = 2.1
+            assert gate.hard_mask().tolist() == [1.0, 1.0, 1.0, 0.0, 0.0]
+            gate.theta.fill_(0.0)
+            assert gate.hard_mask().sum() == 0
+            gate.theta.fill_(1.0)  # β = width
+        # β = width is the ungated rotation: featurize is the identity
+        gate.eval()
+        x = torch.randn(3, 5)
+        f, err = gate.featurize(x)
+        assert (
+            torch.equal(f, x)
+            and err is not None
+            and torch.equal(err, torch.zeros_like(x))
+        )
+
+    def test_fill_is_a_kept_fraction_and_the_default_start_is_the_half_prefix(
+        self,
+    ) -> None:
+        from causalab.neural.shared.featurizers import Gate
+
+        half = Gate(8, parametrization="boundary")
+        assert half.theta.item() == 0.5 and half.boundary() == 4.0
+        quarter = Gate(8, parametrization="boundary", init=0.25)
+        assert quarter.theta.item() == 0.25 and quarter.init_fill == 0.25
+        assert quarter.boundary() == 2.0 and float(quarter.hard_mask().sum()) == 2.0
+        # the poles are legal starts: β = 0 and β = width are real prefixes
+        assert Gate(8, parametrization="boundary", init=1.0).boundary() == 8.0
+        assert Gate(8, parametrization="boundary", init=0.0).boundary() == 0.0
+
+    def test_project_clips_theta_into_the_unit_interval(self) -> None:
+        gate = self._gate(4, 2.0)
+        with torch.no_grad():
+            gate.theta.fill_(9.0)
+        gate.project()
+        assert gate.theta.item() == 1.0 and gate.boundary() == 4.0
+        with torch.no_grad():
+            gate.theta.fill_(-3.0)
+        gate.project()
+        assert gate.theta.item() == 0.0
+        assert gate.dead_diagnostics() == {}  # no unit to freeze or reawaken
+
+    def test_the_hard_forward_keeps_the_prefix_with_the_soft_gradient(self) -> None:
+        """§2.5 the mapping form: ``forward: hard`` is ``mask > ½``, which is
+        ``i < β`` — the eval split itself — and the backward is the soft
+        mask's, ``width · Σ_i σ'((β − i)/T) / T`` (β = θ·width)."""
+        gate = self._gate(5, 2.5, forward="hard")
+        gate.train()
+        f, _ = gate.featurize(torch.ones(1, 5))
+        assert f.detach().tolist() == [[1.0, 1.0, 1.0, 0.0, 0.0]]
+        f.sum().backward()
+        s = torch.sigmoid(torch.tensor([2.5, 1.5, 0.5, -0.5, -1.5]))
+        assert gate.theta.grad is not None
+        assert float(gate.theta.grad) == pytest.approx(5 * float((s * (1 - s)).sum()))
+
+    def test_every_per_unit_reader_and_field_refuses_by_name(self) -> None:
+        from causalab.neural.shared.featurizers import Gate
+
+        gate = self._gate(4, 2.0)
+        with pytest.raises(ValueError, match="no per-unit threshold"):
+            gate.hard_threshold()
+        with pytest.raises(ValueError, match="no ranking"):
+            gate.ranking()
+        with pytest.raises(ValueError, match="no ranking"):
+            gate.rank()
+        with pytest.raises(ValueError, match="takes no group"):
+            Gate(4, parametrization="boundary", group="head", groups=(2, 2))
+        with pytest.raises(ValueError, match="takes no axis"):
+            Gate(4, parametrization="boundary", axis="position")
+        with pytest.raises(ValueError, match="no dead rule"):
+            Gate(4, parametrization="boundary", dead={"leak": 0.1})
+        with pytest.raises(ValueError, match="samples nothing"):
+            Gate(4, parametrization="boundary", stretch=(-0.1, 1.1))
+        with pytest.raises(ValueError, match="joins no pool"):
+            Gate(4, parametrization="boundary", pool="p")
+        with pytest.raises(ValueError, match="positive"):
+            Gate(4, parametrization="boundary", temperature=0.0)
+        with pytest.raises(ValueError, match="no ranking"):
+            Gate.from_theta(
+                torch.tensor([0.5]), width=4, parametrization="boundary", top_k=2
+            )
+        with pytest.raises(ValueError, match="needs the site width"):
+            Gate.from_theta(torch.tensor([0.5]), parametrization="boundary")
+        with pytest.raises(ValueError, match="needs 1 parameters"):
+            Gate.from_theta(torch.zeros(4), width=4, parametrization="boundary")
+
+    def test_a_loaded_boundary_gate_reproduces_the_mask_and_reloads_only_as_one(
+        self,
+    ) -> None:
+        from causalab.neural.shared.featurizers import Gate
+        from causalab.neural.shared.featurizers.build import (
+            _check_entry_identity,  # pyright: ignore[reportPrivateUsage]
+        )
+        from causalab.protocol.rules.errors import ProtocolError
+        from causalab.protocol.schema import FeaturizerSpec
+
+        fitted = self._gate(6, 3.7)
+        fitted.eval()
+        loaded = Gate.from_theta(
+            fitted.theta.detach(), width=6, parametrization="boundary"
+        )
+        loaded.eval()
+        assert torch.equal(loaded.hard_mask(), fitted.hard_mask())
+        assert float(loaded.hard_mask().sum()) == 4.0
+        assert loaded.boundary() == pytest.approx(3.7)
+        assert not loaded.theta.requires_grad
+        # rule 15: `parametrization` is stamped, so a boundary bundle reloads
+        # only under `boundary`, and a per-unit bundle never as a boundary
+        plain, bnd = (
+            FeaturizerSpec(kind="gate"),
+            FeaturizerSpec(kind="gate", parametrization="boundary"),
+        )
+        _check_entry_identity({"parametrization": "boundary"}, bnd, "w")
+        with pytest.raises(ProtocolError, match="fitted 'boundary'"):
+            _check_entry_identity({"parametrization": "boundary"}, plain, "w")
+        with pytest.raises(ProtocolError, match="parametrization='sigmoid'"):
+            _check_entry_identity({"parametrization": "sigmoid"}, bnd, "w")

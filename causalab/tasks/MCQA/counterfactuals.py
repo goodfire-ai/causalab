@@ -6,15 +6,16 @@ different causal hypotheses about the MCQA task.
 
 import random
 
-from causalab.causal.counterfactual_dataset import CounterfactualExample
-from causalab.causal.trace import CausalTrace
+from causalab.causal.counterfactuals import CounterfactualExample
+from causalab.causal.model import CausalTrace
+
 from .causal_models import (
-    positional_causal_model,
-    COLORS,
     ALPHABET,
+    COLORS,
     NUM_CHOICES,
-    TEMPLATES,
     OBJECTS,
+    TEMPLATES,
+    positional_causal_model,
 )
 
 
@@ -44,8 +45,8 @@ def sample_answerable_question() -> CausalTrace:
         "color": color,
     }
     for idx in range(NUM_CHOICES):
-        input_dict[f"choice{idx}"] = choices[idx]
-        input_dict[f"symbol{idx}"] = symbols[idx]
+        input_dict[f"choices[{idx}]"] = choices[idx]
+        input_dict[f"symbols[{idx}]"] = symbols[idx]
 
     # Create trace - answer_position will always be valid since color is in choices
     return positional_causal_model.new_trace(input_dict)
@@ -62,13 +63,13 @@ def same_symbol_different_position() -> CounterfactualExample:
 
     # Build input dict with swapped values (only input variables, not computed ones)
     cf_dict = {var: input_sample[var] for var in positional_causal_model.inputs}
-    cf_dict[f"choice{pos}"], cf_dict[f"choice{new_pos}"] = (
-        cf_dict[f"choice{new_pos}"],
-        cf_dict[f"choice{pos}"],
+    cf_dict[f"choices[{pos}]"], cf_dict[f"choices[{new_pos}]"] = (
+        cf_dict[f"choices[{new_pos}]"],
+        cf_dict[f"choices[{pos}]"],
     )
-    cf_dict[f"symbol{pos}"], cf_dict[f"symbol{new_pos}"] = (
-        cf_dict[f"symbol{new_pos}"],
-        cf_dict[f"symbol{pos}"],
+    cf_dict[f"symbols[{pos}]"], cf_dict[f"symbols[{new_pos}]"] = (
+        cf_dict[f"symbols[{new_pos}]"],
+        cf_dict[f"symbols[{pos}]"],
     )
 
     counterfactual = positional_causal_model.new_trace(cf_dict)
@@ -83,11 +84,11 @@ def different_symbol() -> CounterfactualExample:
 
     # Build input dict with new symbols (only input variables, not computed ones)
     cf_dict = {var: input_sample[var] for var in positional_causal_model.inputs}
-    current_symbols = [input_sample[f"symbol{i}"] for i in range(NUM_CHOICES)]
+    current_symbols = [input_sample[f"symbols[{i}]"] for i in range(NUM_CHOICES)]
     complement = [x for x in ALPHABET if x not in current_symbols]
     new_symbols = random.sample(complement, NUM_CHOICES)
     for i in range(NUM_CHOICES):
-        cf_dict[f"symbol{i}"] = new_symbols[i]
+        cf_dict[f"symbols[{i}]"] = new_symbols[i]
 
     counterfactual = positional_causal_model.new_trace(cf_dict)
     return {"input": input_sample, "counterfactual_inputs": [counterfactual]}

@@ -21,12 +21,14 @@ import pytest
 from safetensors.torch import load_file
 
 from causalab.cli import main
-from causalab.protocol.resolve import read_safetensors_metadata
+from causalab.io.env import read_safetensors_metadata
 from tests.neural.engines.pytorch_hooks.conftest import TINY_QWEN35_MOE
+
 from tests.protocol._env import FIXTURES
+from tests._helpers.paths import PROTOCOLS_DIR
 
 REPO = Path(__file__).resolve().parents[4]
-PROTOCOLS = REPO / "causalab/configs/protocols"
+PROTOCOLS = PROTOCOLS_DIR
 PINS = {
     "model.key": TINY_QWEN35_MOE,
     "model.dtype": "fp32",
@@ -52,7 +54,8 @@ def _fit_document(k_schedule: dict) -> dict:
         "parametrization": "budget",
         "k_schedule": k_schedule,
     }
-    fit["method"]["train"]["objective"] = [[1.0, "ce"]]
+    # the task term alone: the named `ce` term stays, and the saves that name it
+    del fit["method"]["train"]["objective"]["l1"]
     fit["method"]["train"].pop("anneal", None)
     fit["method"]["save"].append(
         {
@@ -90,6 +93,8 @@ def _workflow(tmp_path: Path, steps: dict[str, tuple[dict, dict]], out: str) -> 
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -215,4 +220,4 @@ def test_a_sampled_budget_needs_its_eval_cut_and_a_loaded_one_needs_top_k(
     )
     assert code == 0
     rows = json.loads((tmp_path / "run/curve/apply/iia.json").read_text())
-    assert len({row["produced_by"] for row in rows}) == 4
+    assert {row["featurizers.gate.top_k"] for row in rows} == {0, 1, 2, 4}

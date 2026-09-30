@@ -1,141 +1,127 @@
-# Causal Abstraction for Mechanistic Interpretability
+# Causal analysis of neural networks
 
-A framework for **mechanistic interpretability** — reverse-engineering the algorithms language models use internally using **causal abstraction**.
+Causalab helps you test hypotheses about how neural networks solve tasks. Define
+a causal model, align its variables with network components, and compare the
+effects of interventions in both models.
 
-You write a high-level causal model describing *how you think* an LM solves a task, then run experiments to test whether the LM's internal components actually implement that algorithm. Every experiment is a serializable **intervention protocol** — a JSON document naming sites, reads, edits, intervened models, and metrics — validated, digested, and executed by an engine. The document is the seam: engines (the pytorch-hooks reference engine and the nnsight tracing engine today; tensor-parallel engines tomorrow) implement against the same format.
+- **Experiments as JSON.** You write an experiment as a JSON document, and
+  the backend runs it. The same document states the model, the data, the
+  interventions and the measurements, so a result can be reproduced from it.
+- **Hypothesis testing.** Compare causal hypotheses on the same pairs of
+  inputs and find which one predicts the network's behavior under
+  intervention. See [hypothesis analysis](docs/hypothesis_analysis.md).
+- **Interpretability by gradient descent.** Train masks with
+  Desiderata-Based Masking (DBM) and rotations with distributed alignment
+  search (DAS) to find the units and subspaces that carry a variable. See the
+  [method guides](docs/methods/README.md).
 
-## Quick Start
+## Quick start
 
-1. **Clone and install:**
-   ```bash
-   git clone https://github.com/goodfire-ai/causalab.git
-   cd causalab
-   uv sync
-   ```
-   `uv sync` compiles the weight reader's Rust core
-   ([`docs/fastersafetensors.md`](docs/fastersafetensors.md)), so a Rust
-   toolchain is required: `rustup` on `PATH` (`rust-toolchain.toml` pins the
-   Rust version; rustup installs it on first use). The first build takes a minute or two;
-   later syncs rebuild only when a Rust source changes.
-   The interactive views — Jupyter, and the Dash/Cytoscape causal graphs — are
-   the `notebook` extra (`uv sync --extra notebook`). Everything below, the
-   demos and the whole matplotlib figure surface included, runs without it: a
-   headless install carries no web-app server.
-   Optional Linux GPU acceleration is available separately with
-   `uv sync --extra flash-attn` and `uv sync --extra flash-linear-attention`,
-   or both extras together. See [attention backends](docs/attention_backends.md)
-   for build requirements, backend selection, and the default fallbacks.
-2. **Run a demo.** [`demos/`](demos/) is one markdown file per research question, with the documents that answer it. Two need no GPU: [causal_model](demos/causal_model/causal_model.md), which has no network in it at all, and [01_define](demos/onboarding_tutorial/01_define.md). The eight onboarding demos that do need one total **5.4 minutes** of H100 time between them, the longest being 88 s. The format is [`docs/demos.md`](docs/demos.md).
-3. **Read the two specs.** [`docs/intervention_protocol.md`](docs/intervention_protocol.md) — the document format (sections, the `do` algebra, sweeps, validation, digests, the engine contract). [`docs/workflow_protocol.md`](docs/workflow_protocol.md) — chaining protocol runs with script steps: inputs, one Python script, declared outputs.
-   The guides beside them answer the questions the specs do not: [`docs/methods/`](docs/methods/README.md) has one how-to page per method family (DBM, DAS, PCA, SAE) with every field, its legality and the shipped templates to copy; [`docs/running_experiments.md`](docs/running_experiments.md) walks one experiment end to end and tabulates the hookpoint vocabulary per engine, and [`docs/qwen36-35b-a3b-architecture.html`](docs/qwen36-35b-a3b-architecture.html) is the annotated block diagram those hookpoints name (machine-checked against the component vocabulary by `tests/test_architecture_diagram.py`). [`docs/CODEBASE.md`](docs/CODEBASE.md) is the module map.
-4. **Run a shipped intervention specification:**
-   ```bash
-   uv run causalab explain  causalab/configs/protocols/interchange.json
-   uv run causalab run      causalab/configs/protocols/interchange.json \
-       --out runs/interchange --device cuda --dtype bf16
-   ```
-   A document is four groups — `header`, `model`, `data`, `method` (spec §1).
-   The **method** group is the transferable part; `model` and `data` name the
-   network, the rows and the precision, and `explain` prints the **method
-   digest** that says whether two documents are the same experiment on two
-   networks. A `protocol_version` 1 document is rewritten in place with
-   `uv run causalab migrate <file>`.
+The [onboarding tutorial](demos/onboarding_tutorial/01_ablation_MLP.md) builds
+one experiment step by step. Its first pages run on a laptop.
 
-## The CLI
+Install causalab from a clone:
 
-| verb | effect |
-|---|---|
-| `run <doc>` | validate, expand, plan, execute, stamp |
-| `validate <doc> [--data]` | the spec §5 load-error checklist; `--data` also checks column references |
-| `explain <doc>` | models, forward plan, point count, derived `requires`, digest, save products |
-| `digest <doc>` | the campaign digest |
-
-Common flags: `--set path=value` (ad-hoc override — exploration only), `--data-root` / `--artifacts-root` (resolution roots; the tables the tasks ship under `causalab/tasks/<task>/data/` are always reachable behind them), `--max-points` (override the sweep point cap), `--register-from-hf` (resolve an unregistered model key from its HF config — `run` always does; the pure verbs need the flag, so a digest never depends on the network), `--device` (engine placement, `run` only), `--batch-rows N` (reference-engine microbatch bound, `run` only — execution, recorded in the receipt and in no digest), `--engine` (`pytorch_hooks` · `nnsight` · `auto` — pin one, or let §8 route; on `explain` it previews the routing).
-
-`--dtype` (shorthand for `--set model.dtype=…`: precision is a document fact, so it enters the digest) and `--points START:STOP` (execute one shard of a swept campaign — the seam external schedulers dispatch on; digests are unaffected) are **intervention specifications only**; a workflow run refuses both. The same verbs dispatch on workflow documents (they carry a `steps` section), which take `--resume` (skip a step whose outputs carry a matching stamped digest) and `--reuse-nondeterministic` instead.
-
-`run` also writes `<out>/protocol.json`: the canonical document (every default materialized — dtype and quantization included), its digest, the per-point provenance digests, the method it was composed from, and an `execution` block (`batch_rows`). That file is what someone reproducing the run reads first.
-
-**Execution scale is not document vocabulary.** Documents and workflows never name devices, hosts, or job systems: engines own intra-run execution, and job dispatch is site tooling outside this repository (spec §8, "Execution scale").
-
-## Shipped documents
-
-The golden-corpus documents ship as user-facing presets in [`causalab/configs/protocols/`](causalab/configs/protocols/) — complete intervention specifications, network and all:
-
-| preset | experiment |
-|---|---|
-| `harvest` | activation harvesting at named sites/positions |
-| `interchange` | interchange intervention + IIA scoring |
-| `path_patching` | sender→receiver path patching with off-path freezing |
-| `attention_band_patch` | contiguous layer bands in one forward, several bands per document |
-| `multi_position_patch` | several writes on one site at disjoint positions |
-| `mean_harvest` / `mean_ablation` | harvest a corpus mean at save time, then swap it in |
-| `das` | trained orthogonal-subspace interchange (DAS) |
-| `dbm` | differential binary masking through a trained gate |
-| `random_subspace_control` | the matched-k random subspace every DAS cell is read against |
-| `hydra_effect` | resample-ablation + downstream direct-effect probes |
-| `probe_generate` / `probe_variable` | greedy-decode under a steer, read the continuation back |
-| `weekdays_locate_scan` | layer × position interchange scan (one shared harvest) |
-| `weekdays_das_sweep` | k × seed DAS fits at a located cell |
-| `weekdays_das_apply` | apply a fitted rotation (ArtifactIdentity-checked) |
-| `dbm_apply` | apply a fitted gate — DBM's held-out half of the pair above |
-
-A **fit** document's saved score is its *training* score: `dbm.json`'s and
-`weekdays_das_sweep.json`'s `iia.json` are computed over the split they trained
-on. The held-out number comes from the matching `*_apply` document, or from the
-fit's own `train_eval.json` when `train.eval` declares a split.
-
-[`causalab/configs/protocols/`](causalab/configs/protocols/) holds the shipped documents, one file per experiment; `interchange.json`, `das.json` and `dbm.json` are the three **method families** — interchange, a trained subspace, a trained gate — each carrying its own `train` block (spec §1, `docs/CODEBASE.md` §6). [`causalab/configs/workflows/weekdays_8b.json`](causalab/configs/workflows/weekdays_8b.json) chains locate → select → fit → apply → plots as one workflow document (two step types: `intervention_protocol` and `script`); [`causalab/configs/workflows/mean_ablation.json`](causalab/configs/workflows/mean_ablation.json) is the two-step one — harvest a corpus mean, then ablate that cell to it.
-
-The [joint DBM guide](docs/running_experiments.md)
-covers complete neuron gates, frozen replay and JSON export.
-
-## Repository layout
-
-```
-causalab/
-├── protocol/        # engine-free document layer: load, validate, canonicalize,
-│                    #   digest, sweep expansion, engine routing, workflow model, CLI
-├── neural/
-│   ├── shared/      # what every engine uses: sites, encoding, layouts,
-│   │                #   mechanisms, featurizers, metrics, outputs, executor base
-│   ├── engines/
-│   │   ├── pytorch_hooks/    # the reference engine: hooks, decode, train loop
-│   │   └── nnsight_tracing/  # the nnsight engine: traces (the 'nnsight' extra)
-│   └── token_positions.py
-├── analysis/        # numerical analysis a script step runs (fits, statistics, operands)
-├── workflow/        # the workflow runner: run-tree overlay, script invocation, manifest
-├── causal/          # causal model primitives
-├── tasks/           # task definitions (causal models + counterfactual generators)
-├── io/              # disk I/O + plotting primitives
-└── configs/         # protocols/ (one document per experiment) + workflows/
-                    #   — JSON, no Python config system
-demos/               # one markdown demo per research question + its documents
-docs/                # the two specs, plus CODEBASE.md, TESTS.md and the demo /
-                     #   experiment guides — read the directory for the rest
-scripts/             # maintenance entry points (dataset build, digest re-pinning)
-tests/               # tiered suite — see docs/TESTS.md
+```bash
+git clone https://github.com/goodfire-ai/causalab.git
+cd causalab
+uv sync
 ```
 
-## Core concepts
+The weight reader includes a Rust extension. Install `rustup` on `PATH` before
+running `uv sync`; `rust-toolchain.toml` selects the compiler version. See
+[standalone installation](docs/standalone_install.md) to build and share a wheel.
+For Jupyter and interactive causal graphs, use `uv sync --extra notebook`.
 
-For multi-token behaviors, [shared sequence analysis](docs/multi_token_analysis.md)
-keeps one next-token target per prediction while sharing intervention forwards,
-PCA harvests and logit-lens projections across target views.
+Run an intervention protocol on your CPU. This document swaps one activation
+of a tiny random Llama and saves two metric tables. The model has random
+weights, so the result checks the install and nothing more. The
+[onboarding tutorial](demos/onboarding_tutorial/01_ablation_MLP.md) explains
+each part of a protocol.
 
-[Fourier probes](docs/multi_token_analysis.md#fourier-probes-on-saved-activations)
-fit and replay periodic readouts over saved residuals or subspace coordinates.
+```json
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "The smallest real application of the interchange method: one swap at the last position of layer 0 in a tiny random Llama, on CPU, in fp32. Used by the standalone-install CI job to prove a hash-locked install can run an intervention specification end to end. The revision is a commit SHA, not a branch: this file is a CI assertion, and an upstream re-upload must not be able to move it."
+  },
+  "model": {                                    // the network, pinned to one commit
+    "key": "hf-internal-testing/tiny-random-LlamaForCausalLM",
+    "revision": "9fb191250dd56d0ba7ec9785a025ed29c03d5998",
+    "dtype": "fp32"
+  },
+  "data": {                                     // each example is a pair of prompts
+    "base": {"dataset": "weekdays/train", "field": "input"},
+    "counterfactual": {"dataset": "weekdays/train", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {                      // two forward passes per example
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "sites": {                                  // where in the network to read or write
+      "target": {"component": "block_output", "layers": [0]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {"v_cf": {"site": "target", "pos": -1}, "logits": {"site": "lm_head", "pos": -1}},
+    "writes": {                                 // put the counterfactual activation into the base run
+      "patch": {"site": "target", "pos": -1, "do": {"swap": "v_cf"}}
+    },
+    "save": [                                   // one metric table per entry
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "logit_diff.json"
+      }
+    ]
+  }
+}
+```
 
-- **Causal model**: your hypothesis about how the LM solves a task — variables, values, parent–child dependencies, mechanisms (`causalab/causal/`).
-- **Task**: a prompt distribution plus a causal model and counterfactual generators (`causalab/tasks/`).
-- **Method**: the `method` group of a document — what transfers (sites, reads, writes, intervened models, metrics, training, save) — as opposed to `model` and `data`, which name what it ran on. Two documents running one experiment on two networks differ only there, which a diff shows; there is no separate digest of the group.
-- **Intervention protocol**: one experiment as data — which activations are read, which are edited (`swap`, `add_scaled`, `gaussian`, …), in which intervened models, scored by which metrics. Sweeps expand a document into a campaign of points with content-deduped shared work.
-- **Workflow**: a chain of protocol executions plus script steps, with dependencies derived from references — never authored ordering. Everything a step declares is published where it lands; there is no save manifest.
+The file is
+[`demos/methods/protocols/minimal_cpu.json`](demos/methods/protocols/minimal_cpu.json).
+Show its plan, then run it. Both commands take a few seconds:
 
-## Tests
+```bash
+uv run causalab explain demos/methods/protocols/minimal_cpu.json \
+    --engine auto \
+    --data-root tests/protocol/fixtures/data
+uv run causalab run demos/methods/protocols/minimal_cpu.json \
+    --engine auto \
+    --data-root tests/protocol/fixtures/data \
+    --artifacts-root tests/protocol/fixtures/artifacts \
+    --out runs/minimal_cpu \
+    --device cpu
+# saved iia.json -> runs/minimal_cpu/iia.json
+# saved logit_diff.json -> runs/minimal_cpu/logit_diff.json
+# cells 2 / 2 eligible
+```
 
-See [`docs/TESTS.md`](docs/TESTS.md). CPU tiers run with `uv run pytest -m "not golden"` (what CI runs). The `golden` tier runs real models on an accelerator: paper-provenance goldens (`tests/golden/test_paper_goldens.py`), the chat-coherent drift pins (`tests/golden/drift/`), and the two engines' agreement sweep on the real Qwen3.6-35B-A3B (`tests/golden/test_a3b_engine_parity.py`).
+## Compute
 
-## History
+| Where | Use it for | Guide |
+|---|---|---|
+| Local | CPU or Apple-silicon runs with `--device cpu` or `--device mps`: the quick start, the first tutorials, small models | [Experiment guide](docs/running_experiments.md) |
+| Cluster | One or more GPUs with `--device cuda`, sharded runs, and SLURM jobs | [Running at scale](docs/running_experiments.md#7-running-at-scale), [model parallelism](docs/model_parallelism.md) |
+| NDIF | Remote runs on large models; the guide is a placeholder | [NDIF](docs/ndif.md) |
 
-The Hydra runner, `analyses/` chains, `methods/` as Python and SLURM dispatch were retired in the protocol refactor ([goodfire-ai/causalab#20](https://github.com/goodfire-ai/causalab/pull/20)). Their intervention cores return as shipped intervention specifications and workflows. The notebook demos return as [`demos/`](demos/) — markdown around runnable documents, since a notebook's reason to exist was carrying its own execution.
+Optional Linux GPU kernels use the `flash-attn` and `flash-linear-attention`
+extras; see [attention backends](docs/attention_backends.md).
+
+## Documentation
+
+| Tab | Use it to | Start here |
+|---|---|---|
+| Demos | Learn what causalab is, with no experiment in mind | [Onboarding tutorial](demos/onboarding_tutorial/01_ablation_MLP.md), then the other [tutorials](demos/README.md) |
+| Demos | Run a specific experiment | [How-to guides](docs/howtos.md): method templates, field rules and the [experiment guide](docs/running_experiments.md) |
+| Demos | Define a causal model for a task | [Causal model guide](docs/causal-models.md), then the [task models](demos/causal_models/README.md) and [`causalab/causal/`](causalab/causal/README.md) |
+| Development | Change causalab | [Architecture guide](docs/CODEBASE.md), then the [testing guide](docs/TESTS.md) |
+| Development | Write a tutorial, a paper replication or a guide | Style guides: [general writing](docs/STYLE_GUIDE.md), [tutorials](docs/demos.md), [paper replications](docs/paper_replications.md) |
+| API reference | Write causal models, tasks and analysis scripts | The API reference tab of the site, rendered from the docstrings of the packages you call |

@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "description": "The 05_variance_vs_cause demo end to end: harvest the located cell once, fit a principal basis at two widths, and run the same interchange through each. The two apply steps share one document and differ only in the fit they load and the k they declare, which is what makes the pair a controlled comparison rather than two experiments.",
-  "output_dir": "mcqa_pca",
+  "description": "Harvest block 26's answer slot, fit principal bases of width 1 and 32, apply each as an interchange on held-out pairs, and plot the explained-variance spectrum.",
+  "output_dir": "08_variance_vs_cause",
   "steps": {
     "harvest": {
       "type": "intervention_protocol",
@@ -52,7 +52,7 @@
         "x": "pc",
         "value": "explained_variance_ratio"
       },
-      "outputs": {"figure": "pca_spectrum.png"}
+      "outputs": {"figure": "08_variance_vs_cause_pca_spectrum.png", "plotted": {"file": "08_variance_vs_cause_pca_spectrum.json"}}
     }
   }
 }

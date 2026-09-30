@@ -1,23 +1,7 @@
-"""The workflow CLI's refusals, and the docs that quote one of them verbatim.
+"""Check workflow CLI refusals and every matching quote in tracked Markdown.
 
-`docs/running_experiments.md` prints the `--dtype` refusal *inside backticks*,
-as the line a reader compares their own terminal against — and nothing checked
-that the quote was still the message. A vocabulary sweep had to change
-both sides by hand ("intervention protocol" → "intervention specification"),
-and a pair kept in sync by hand is a pair that drifts; the commit message
-saying both sides were changed is not a guard.
-
-The same sweep then wrote the *tail* of the message into two demos, in italics,
-and a guard that read one named file saw neither. So the quotes are **found,
-not listed**: every tracked markdown file is searched for a quoted run that
-carries the message's signature, and each one found has to be a substring of
-what the CLI prints. Substring rather than prefix, because a demo quotes the
-half a reader needs and then explains.
-
-So this is `tests/protocol/test_vocabulary_census.py`'s guard one level down:
-docs and code agreeing, checked rather than asserted. The message is read out
-of the CLI's real stderr, not out of its source, so the test cannot pass
-against a string the CLI never prints.
+Quotes are found by a shared signature and checked against actual CLI stderr.
+A quote may contain any contiguous part of the message.
 """
 
 from __future__ import annotations
@@ -30,10 +14,15 @@ import pytest
 
 from causalab.cli import main
 from tests._helpers.tracked import tracked_files
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.unit
 
 ROOT = Path(__file__).resolve().parents[2]
+
+#: A shipped intervention specification — any document without a ``steps``
+#: section reaches the `--resume` refusal, which fires before the compile.
+LOCATE = PROTOCOLS_DIR / "weekdays_locate_scan.json"
 
 #: The run of words a quote of the refusal is recognized by. The head of the
 #: message (`docs/running_experiments.md`) and its tail (the demos) overlap on
@@ -60,12 +49,11 @@ FENCE = re.compile(r"```.*?```", re.S)
 #: line, and the CLI never printed it.
 BLOCKQUOTE = re.compile(r"^[ \t]*>[ \t]?", re.M)
 
-#: How many files quoted the refusal when the finder was written:
-#: `docs/running_experiments.md`, `demos/README.md`,
-#: `demos/onboarding_tutorial/03_localize.md`,
-#: `demos/weekdays_geometry/weekdays_geometry.md`. A floor, not a pin — a
-#: finder that finds nothing passes for the wrong reason.
-QUOTING_FILES_FLOOR = 4
+#: Two demo pages quote the refusal (the demos README and the weekdays
+#: geometry replication; the onboarding tutorial's quote left with its
+#: rewrite). Keep a floor so a broken finder cannot pass by returning no
+#: quotes.
+QUOTING_FILES_FLOOR = 2
 
 
 def _refusal(tmp_path: Path, capsys) -> str:
@@ -78,7 +66,16 @@ def _refusal(tmp_path: Path, capsys) -> str:
     document = tmp_path / "workflow.json"
     document.write_text(json.dumps({"version": "1", "steps": {}}))
     code = main(
-        ["run", str(document), "--out", str(tmp_path / "out"), "--dtype", "bf16"]
+        [
+            "run",
+            "--engine",
+            "auto",
+            str(document),
+            "--out",
+            str(tmp_path / "out"),
+            "--dtype",
+            "bf16",
+        ]
     )
     assert code == 1, "--dtype on a workflow is refused (§9)"
     return capsys.readouterr().err.strip()
@@ -89,7 +86,7 @@ def _normalized(text: str) -> str:
 
 
 def _quotes() -> dict[str, list[str]]:
-    """Every quoted run carrying :data:`SIGNATURE`, whitespace-normalized, by
+    """Every quoted run carrying `SIGNATURE`, whitespace-normalized, by
     file — from the tracked markdown tree, so a new copy is found and an
     untracked one (a worktree, a build) is not."""
     out: dict[str, list[str]] = {}
@@ -110,6 +107,27 @@ def test_dtype_is_refused_on_a_workflow(tmp_path, capsys) -> None:
     assert "intervention specification" in message, (
         "the refusal names the object §11.1 calls an intervention specification"
     )
+
+
+def test_resume_is_refused_on_an_intervention_specification(tmp_path, capsys) -> None:
+    """`--resume` reuses a published step whose identity and files still
+    match; an intervention specification run has no step boundaries to
+    resume at (IM spec §9), so `run --resume` on one is refused."""
+    code = main(
+        [
+            "run",
+            "--engine",
+            "auto",
+            str(LOCATE),
+            "--out",
+            str(tmp_path / "out"),
+            "--resume",
+            "--artifacts-root",
+            str(tmp_path),
+        ]
+    )
+    assert code == 1
+    assert "--resume is a workflow flag" in capsys.readouterr().err
 
 
 def test_every_doc_that_quotes_the_refusal_quotes_it_verbatim(tmp_path, capsys) -> None:

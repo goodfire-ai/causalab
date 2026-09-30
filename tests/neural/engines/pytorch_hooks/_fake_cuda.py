@@ -63,11 +63,16 @@ class _Stream:
 class FakeCuda:
     """Installed on ``torch.cuda`` for one test. ``captures`` lists every
     graph captured and the ``pool=`` it was captured into, in order;
-    ``pools`` every memory pool constructed."""
+    ``pools`` every memory pool constructed; ``routed`` the allocator
+    routing calls (``GraphPool.allocating``: ``begin``, ``end``, ``release``
+    with the pool id) in order, and ``routing`` the pool allocations are
+    routed to at any moment (``None`` outside a warm-up)."""
 
     def __init__(self) -> None:
         self.captures: list[FakeGraph] = []
         self.pools: list[FakeMemPool] = []
+        self.routed: list[tuple[str, tuple[int, int]]] = []
+        self.routing: tuple[int, int] | None = None
 
     def install(self, monkeypatch: pytest.MonkeyPatch) -> "FakeCuda":
         fake = self
@@ -87,6 +92,19 @@ class FakeCuda:
         def no_memory_guard(*_args: Any, **_kwargs: Any) -> tuple[int, int]:
             raise AssertionError("the capture path consulted the memory guard")
 
+        def begin_routing(_device: int, pool_id: tuple[int, int]) -> None:
+            assert fake.routing is None, "allocations already routed to a pool"
+            fake.routing = pool_id
+            fake.routed.append(("begin", pool_id))
+
+        def end_routing(_device: int, pool_id: tuple[int, int]) -> None:
+            assert fake.routing == pool_id
+            fake.routing = None
+            fake.routed.append(("end", pool_id))
+
+        def release_routing(_device: int, pool_id: tuple[int, int]) -> None:
+            fake.routed.append(("release", pool_id))
+
         monkeypatch.setattr(
             torch.cuda, "device", lambda _device: contextlib.nullcontext()
         )
@@ -96,12 +114,25 @@ class FakeCuda:
             torch.cuda, "stream", lambda _stream: contextlib.nullcontext()
         )
         monkeypatch.setattr(torch.cuda, "synchronize", lambda *_a, **_k: None)
+        monkeypatch.setattr(torch.cuda, "current_device", lambda: 0)
         monkeypatch.setattr(torch.cuda, "empty_cache", lambda: None)
         monkeypatch.setattr(torch.cuda, "CUDAGraph", FakeGraph)
         monkeypatch.setattr(torch.cuda, "graph", graph)
         monkeypatch.setattr(torch.cuda, "MemPool", mempool)
         monkeypatch.setattr(torch.cuda, "mem_get_info", no_memory_guard)
         monkeypatch.setattr(torch.cuda, "memory_snapshot", no_memory_guard)
+        # the allocator's pool routing: installed whatever the build has
+        # (``raising=False``) — ``test_the_pool_routing_bindings_exist`` is
+        # the check that the real names are still there
+        monkeypatch.setattr(
+            torch._C, "_cuda_beginAllocateToPool", begin_routing, raising=False
+        )
+        monkeypatch.setattr(
+            torch._C, "_cuda_endAllocateToPool", end_routing, raising=False
+        )
+        monkeypatch.setattr(
+            torch._C, "_cuda_releasePool", release_routing, raising=False
+        )
         return self
 
     @property

@@ -1,102 +1,32 @@
-"""Taps *inside* the attention function, where no forward hook can reach.
+"""Read and write tensors inside eager attention.
 
-Four of the mixer's tensors are not module boundaries. ``transformers`` computes
-them inside one call::
+Query and key are attention-call arguments after RoPE; key precedes
+``repeat_kv``. Scores are the softmax input, probabilities its output,
+and ``z`` the attention call's return. Editing a returned probability
+tensor at a module hook would occur after the value multiply consumed it.
 
-    attn_output, attn_weights = attention_interface(
-        self, query_states, key_states, value_states, attention_mask, ...)
+The executor selects eager attention for these taps. This context registers
+an eager wrapper for one forward and restores the previous registry state
+on exit. ``TorchFunctionMode`` intercepts ``F.softmax`` inside the real
+attention call. It checks that exactly one matching softmax runs. Other
+softmax entry points and ambiguous families are rejected.
 
-so ``query`` and ``key`` are that call's *arguments* (post-RoPE, and for ``key``
-before ``repeat_kv``), the scores are the softmax's input several lines further
-in, and ``z`` is the call's return. A ``register_forward_hook`` on the mixer
-fires after all of it, which is why writing the attention pattern was already a
-special case: by then the tensor has been consumed.
+Score edits feed the model's softmax. Probability edits feed its value
+multiply. The model therefore performs its own attention computation.
+The registry permits the supported mechanisms on scores and restricts
+probability writes to swaps, which preserve row normalization.
 
-📐 That is measured, not assumed. ``self_attn`` *returns*
-``(attn_output, attn_weights)``, so a ``register_forward_hook`` that rewrites
-element 1 looks like it should work — and changes a tensor nothing downstream
-reads. The same silent-no-op shape as writing ``router_logits``, and measured
-the same way: 0.0 change in the logits. **Reading** the pattern is still an
-ordinary module tap, because the mixer hands it back; only the write has to come
-through here.
+The ``"eager"`` registry entry is process-global while installed. Managers
+share one dispatcher: each adds its tap table to ``_TABLES``; the first
+installs the entry and the last removes it. Two managers tapping one mixer
+at once are refused by name.
 
-How the call is intercepted
----------------------------
-
-``transformers`` resolves the function per forward::
-
-    attention_interface = ALL_ATTENTION_FUNCTIONS.get_interface(
-        self.config._attn_implementation, eager_attention_forward)
-
-📐 ``"eager"`` is **not** registered by default, so that call falls through to
-the module's own ``eager_attention_forward``. Registering ``"eager"`` therefore
-*inserts* a wrapper rather than replacing one, and removing the key restores the
-original behaviour exactly. The executor temporarily selects eager for
-forwards using these taps, so this is the only implementation to wrap.
-
-The registry entry is process-global while installed, so this context manager
-must wrap the single forward it applies to and nothing wider.
-
-The scores, and why nothing is transcribed
-------------------------------------------
-
-The scores have no name in the eager function's signature — they are a local,
-between the ``matmul`` and the ``softmax``. #53 reached the pattern by calling
-the real function and then **redoing** the two lines after the softmax, which
-works but duplicates library internals and has to resolve a per-family
-``eager_attention_forward`` to do it.
-
-The scores need no such thing. A :class:`torch.overrides.TorchFunctionMode`
-entered around — and only around — the real call intercepts
-``torch.nn.functional.softmax`` where it happens:
-
-* **reading** its input is ``attention_scores``;
-* **writing** its input is a write the model's own softmax then consumes, so the
-  rows it produces still sum to 1 *by construction*. Nothing is reimplemented,
-  so nothing can drift.
-
-📐 Measured on all three CI fixtures (transformers 5.16): exactly **one**
-``F.softmax`` call inside the tapped eager, an observe-only pass is
-bit-identical (logits maxdiff 0.0), ``softmax(captured scores)`` equals the
-returned ``attn_weights`` to 0.0, and knocking one head off one token moved the
-qwen fixture's logits by 0.3114.
-
-Two guards the design has to carry, both because the mode is a blunt instrument:
-
-* it matches ``torch.nn.functional.softmax`` **only** — not ``torch.softmax``,
-  not ``Tensor.softmax`` — and **counts** the calls. A family whose eager calls
-  softmax twice (soft-capping, a sliding-window pass) is refused by name rather
-  than tapped at whichever one came first;
-* it is entered around the ``real(...)`` call and nothing wider, so it cannot
-  see another module's arithmetic even though it is process-global while active.
-
-Writing the pattern needs no recompute either
----------------------------------------------
-
-#53 carried a pattern edit forward by calling the real eager function and then
-**redoing** the two lines that follow its softmax::
-
-    value_states = repeat_kv(value, module.num_key_value_groups)
-    attn_output = torch.matmul(edited, value_states).transpose(1, 2).contiguous()
-
-That worked, and it was pinned by an identity-edit test — but it duplicated
-library internals, and it had to resolve a second per-family symbol
-(``repeat_kv``) to do it, which GPT-2 does not even export.
-
-Intercepting the softmax's **output** removes all of it. The mode returns the
-edited pattern *into* the eager function, which then does its own value multiply
-with its own code. The identity-edit test that used to guard the transcription
-is now trivially satisfied, which is exactly the point: there is nothing left to
-drift.
-
-Why every mechanism is legal on the scores
-------------------------------------------
-
-``attention_probs`` accepts only ``swap``: a delta or a scale leaves rows that no
-longer sum to 1, and nothing downstream renormalizes them. One step earlier that
-objection disappears. Attention knockout is ``delta: -1e4``; head boosting is a
-scale; and the softmax cleans up after both. This is the write surface the
-pattern could not be.
+Under context parallelism (model_parallelism.md §8.4) the wrapper is
+installed for every forward. The ``query`` and ``key`` taps run on the
+rank's own chunk; keys and values are then gathered over the context group
+along the position axis, the query stays local, and the mask becomes the
+whole frame's causal mask at this rank's query rows. The frame is the one
+the executor bound around the forward (``context.current()``).
 """
 
 from __future__ import annotations
@@ -109,7 +39,8 @@ from typing import Any, Callable, Iterator, Mapping
 import torch
 from torch.overrides import TorchFunctionMode
 
-from causalab.protocol.errors import ProtocolError
+from causalab.neural.shared.parallel.context import SequenceFrame, current
+from causalab.protocol.rules.errors import ProtocolError
 
 __all__ = [
     "INTERFACE_SLOTS",
@@ -217,108 +148,182 @@ def _has(taps: "tuple[InterfaceTap, ...]", slot: str) -> bool:
     return any(tap.slot == slot for tap in taps)
 
 
+#: The tap tables of every installed manager, most recent last; a mixer is
+#: looked up across them (module docstring, "one entry, many managers").
+_TABLES: list[Mapping[int, "tuple[InterfaceTap, ...]"]] = []
+#: The registry state the first manager found, restored by the last.
+_ENTRY: dict[str, Any] = {"count": 0, "had_key": False, "previous": None}
+
+
+def _entries(module: Any) -> "tuple[InterfaceTap, ...]":
+    key = id(module)
+    for table in reversed(_TABLES):
+        entries = table.get(key)
+        if entries:
+            return entries
+    return ()
+
+
+def _chunked() -> SequenceFrame | None:
+    """The forward's frame when its positions are split over a context group
+    above one (§8.4), else ``None``."""
+    frame = current()
+    return frame if frame is not None and frame.size > 1 else None
+
+
+def _gather_kv(
+    frame: SequenceFrame,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    dtype: torch.dtype,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """The whole frame's keys and values from every rank's chunk, and the
+    causal mask of the whole frame at this rank's query rows. The gathered
+    keys feed **this rank's** queries, so the gather is the faithful one
+    (``SequenceFrame.gather_faithful``, §7): in backward the gradient of
+    chunk ``j``'s keys sums every rank's queries' contribution."""
+    return (
+        frame.gather_faithful(key, 2),
+        frame.gather_faithful(value, 2),
+        frame.attention_mask(dtype),
+    )
+
+
+def _dispatch(
+    module: Any,
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    attention_mask: torch.Tensor | None,
+    scaling: float,
+    dropout: float = 0.0,
+    **kwargs: Any,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    # Resolved from the MODULE's own modeling file, per call: while the
+    # registry entry is installed it intercepts every attention forward, so
+    # borrowing one family's function would silently replace another's math
+    # (gemma-2's eager soft-caps the logits, say).
+    real = module_eager_attention(module)
+    entries = _entries(module)
+    frame = _chunked()
+    if not entries and frame is None:
+        return real(
+            module,
+            query,
+            key,
+            value,
+            attention_mask,
+            scaling=scaling,
+            dropout=dropout,
+            **kwargs,
+        )
+
+    query = _apply(entries, "query", query)
+    key = _apply(entries, "key", key)
+    if frame is not None:
+        key, value, attention_mask = _gather_kv(frame, key, value, query.dtype)
+
+    wants_softmax = any(_has(entries, slot) for slot in _SOFTMAX_SLOTS)
+    if not wants_softmax:
+        out, weights = real(
+            module,
+            query,
+            key,
+            value,
+            attention_mask,
+            scaling=scaling,
+            dropout=dropout,
+            **kwargs,
+        )
+        return _apply(entries, "z", out), weights
+
+    def on_scores(scores: torch.Tensor) -> torch.Tensor:
+        return _apply(entries, "scores", scores)
+
+    def on_probs(probs: torch.Tensor) -> torch.Tensor:
+        # Returning the edited pattern is the whole write: the model's own
+        # eager function receives it and does its own value multiply, so
+        # nothing here has to know what that multiply is.
+        return _apply(entries, "probs", probs)
+
+    mode = _SoftmaxTap(
+        on_scores if _has(entries, "scores") else None,
+        on_probs if _has(entries, "probs") else None,
+    )
+    with mode:
+        out, weights = real(
+            module,
+            query,
+            key,
+            value,
+            attention_mask,
+            scaling=scaling,
+            dropout=dropout,
+            **kwargs,
+        )
+    _check_one_softmax(module, mode.calls)
+    return _apply(entries, "z", out), weights
+
+
+def _install(registry: Any) -> None:
+    if _ENTRY["count"] == 0:
+        _ENTRY["had_key"] = "eager" in registry
+        _ENTRY["previous"] = registry["eager"] if _ENTRY["had_key"] else None
+        registry["eager"] = _dispatch
+    _ENTRY["count"] += 1
+
+
+def _uninstall(registry: Any) -> None:
+    _ENTRY["count"] -= 1
+    if _ENTRY["count"]:
+        return
+    if _ENTRY["had_key"]:
+        registry["eager"] = _ENTRY["previous"]
+    else:
+        _unregister(registry, "eager")
+    _ENTRY["had_key"], _ENTRY["previous"] = False, None
+
+
 @contextlib.contextmanager
 def attention_interface_taps(
     taps: Mapping[int, "tuple[InterfaceTap, ...]"],
 ) -> Iterator[None]:
-    """Install reads and edits inside the eager attention function.
+    """Install reads and edits inside the eager attention function — and,
+    under context parallelism, the all-gather of keys and values (module
+    docstring), for every mixer of the forward.
 
     Args:
         taps: ``id(mixer module) -> taps``. A mixer absent from the mapping is
             untouched and pays only a dict lookup, which is what keeps a tap at
-            one layer from changing any other layer's arithmetic.
+            one layer from changing any other layer's arithmetic. The mapping
+            is read live, so entries added while the manager is entered are
+            seen by the next call.
     The ``"eager"`` registry key is removed on exit (or restored, if something
-    else had registered one), which puts ``get_interface`` back on the module
-    default.
+    else had registered one) once the last manager leaves, which puts
+    ``get_interface`` back on the module default.
+
+    Raises:
+        ValueError: a mixer already tapped by an installed manager.
     """
     from transformers.modeling_utils import ALL_ATTENTION_FUNCTIONS
 
-    if not taps:
+    if not taps and _chunked() is None:
         yield
         return
-
-    def wrapper(
-        module: Any,
-        query: torch.Tensor,
-        key: torch.Tensor,
-        value: torch.Tensor,
-        attention_mask: torch.Tensor | None,
-        scaling: float,
-        dropout: float = 0.0,
-        **kwargs: Any,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        # Resolved from the MODULE's own modeling file, per call: while the
-        # registry entry is installed it intercepts every attention forward, so
-        # borrowing one family's function would silently replace another's math
-        # (gemma-2's eager soft-caps the logits, say).
-        real = module_eager_attention(module)
-        entries = taps.get(id(module), ())
-        if not entries:
-            return real(
-                module,
-                query,
-                key,
-                value,
-                attention_mask,
-                scaling=scaling,
-                dropout=dropout,
-                **kwargs,
-            )
-
-        query = _apply(entries, "query", query)
-        key = _apply(entries, "key", key)
-
-        wants_softmax = any(_has(entries, slot) for slot in _SOFTMAX_SLOTS)
-        if not wants_softmax:
-            out, weights = real(
-                module,
-                query,
-                key,
-                value,
-                attention_mask,
-                scaling=scaling,
-                dropout=dropout,
-                **kwargs,
-            )
-            return _apply(entries, "z", out), weights
-
-        def on_scores(scores: torch.Tensor) -> torch.Tensor:
-            return _apply(entries, "scores", scores)
-
-        def on_probs(probs: torch.Tensor) -> torch.Tensor:
-            # Returning the edited pattern is the whole write: the model's own
-            # eager function receives it and does its own value multiply, so
-            # nothing here has to know what that multiply is.
-            return _apply(entries, "probs", probs)
-
-        mode = _SoftmaxTap(
-            on_scores if _has(entries, "scores") else None,
-            on_probs if _has(entries, "probs") else None,
+    shared = {key for table in _TABLES for key in table} & set(taps)
+    if shared:
+        raise ValueError(
+            f"attention_interface_taps: {len(shared)} mixer(s) are already tapped "
+            "by an installed manager; two managers on one mixer would let the "
+            "inner's edits replace the outer's"
         )
-        with mode:
-            out, weights = real(
-                module,
-                query,
-                key,
-                value,
-                attention_mask,
-                scaling=scaling,
-                dropout=dropout,
-                **kwargs,
-            )
-        _check_one_softmax(module, mode.calls)
-        return _apply(entries, "z", out), weights
-
-    had_key = "eager" in ALL_ATTENTION_FUNCTIONS
-    previous = ALL_ATTENTION_FUNCTIONS["eager"] if had_key else None
-    ALL_ATTENTION_FUNCTIONS["eager"] = wrapper
+    _TABLES.append(taps)
+    _install(ALL_ATTENTION_FUNCTIONS)
     try:
         yield
     finally:
-        if had_key:
-            ALL_ATTENTION_FUNCTIONS["eager"] = previous
-        else:
-            _unregister(ALL_ATTENTION_FUNCTIONS, "eager")
+        _TABLES.remove(taps)
+        _uninstall(ALL_ATTENTION_FUNCTIONS)
 
 
 def module_eager_attention(module: Any) -> Callable[..., Any]:

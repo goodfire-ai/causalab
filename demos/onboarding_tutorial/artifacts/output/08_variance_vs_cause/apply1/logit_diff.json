@@ -1,0 +1,514 @@
+[
+  {
+    "example_id": "0",
+    "metric": "logit_diff",
+    "value": -9.4375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "logit_diff",
+    "value": -7.75,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "logit_diff",
+    "value": -13.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "logit_diff",
+    "value": -9.8125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "logit_diff",
+    "value": -7.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "logit_diff",
+    "value": -9.5,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "logit_diff",
+    "value": -11.8125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "logit_diff",
+    "value": -10.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "logit_diff",
+    "value": -11.0,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "logit_diff",
+    "value": -9.9375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "logit_diff",
+    "value": -10.4375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "logit_diff",
+    "value": -11.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "logit_diff",
+    "value": -2.0,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "logit_diff",
+    "value": -8.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "logit_diff",
+    "value": -7.5625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "logit_diff",
+    "value": -12.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "logit_diff",
+    "value": -7.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "logit_diff",
+    "value": -10.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "logit_diff",
+    "value": -11.0625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "logit_diff",
+    "value": -9.1875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "logit_diff",
+    "value": -10.0,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "logit_diff",
+    "value": -11.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "logit_diff",
+    "value": -12.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "logit_diff",
+    "value": -11.4375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "logit_diff",
+    "value": -9.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "logit_diff",
+    "value": -10.4375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "logit_diff",
+    "value": -4.5,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "logit_diff",
+    "value": -8.9375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "logit_diff",
+    "value": -9.75,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "logit_diff",
+    "value": -11.4375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "logit_diff",
+    "value": -10.5,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "logit_diff",
+    "value": -12.4375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "logit_diff",
+    "value": -8.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "logit_diff",
+    "value": -6.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "logit_diff",
+    "value": -11.6875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "logit_diff",
+    "value": -12.1875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "logit_diff",
+    "value": -10.75,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "logit_diff",
+    "value": -13.125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "logit_diff",
+    "value": -10.125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "logit_diff",
+    "value": -13.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "logit_diff",
+    "value": -8.9375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "logit_diff",
+    "value": -4.125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "logit_diff",
+    "value": -3.125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "logit_diff",
+    "value": -11.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "logit_diff",
+    "value": -9.9375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "logit_diff",
+    "value": -10.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "logit_diff",
+    "value": -10.3125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "logit_diff",
+    "value": -2.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "logit_diff",
+    "value": -10.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "logit_diff",
+    "value": -9.5625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "logit_diff",
+    "value": -8.0625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "logit_diff",
+    "value": -9.5625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "logit_diff",
+    "value": -10.5,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "logit_diff",
+    "value": -12.5625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "logit_diff",
+    "value": -9.8125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "logit_diff",
+    "value": -1.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "logit_diff",
+    "value": -10.0625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "logit_diff",
+    "value": -10.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "logit_diff",
+    "value": -8.5,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "logit_diff",
+    "value": -9.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "logit_diff",
+    "value": -11.5625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "logit_diff",
+    "value": -10.8125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "logit_diff",
+    "value": -7.0,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "logit_diff",
+    "value": -10.5625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  }
+]

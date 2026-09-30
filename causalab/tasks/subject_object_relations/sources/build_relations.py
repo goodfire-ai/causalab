@@ -94,7 +94,7 @@ def _decode_literal_escapes(s: str) -> str:
 def _to_named_template(raw: str) -> str:
     """Rewrite a source template's single positional ``{}`` slot to ``{subject}``.
 
-    causalab's token-position parser (``causalab/neural/token_positions.py``)
+    causalab's token-position parser (``causalab/tasks/token_positions.py``)
     matches ``\\{([^}]+)\\}`` named placeholders and fills them from trace
     variables, so a positional ``{}`` slot would not resolve.
     """
@@ -219,7 +219,7 @@ def _assert_no_literal_escapes(record: dict) -> None:
     """No extracted string value retains a literal ``\\u`` / ``\\x`` escape.
 
     Post-normalization guard: catches an upstream double-escape that
-    :func:`_decode_literal_escapes` failed to cover, before it round-trips into a
+    `_decode_literal_escapes` failed to cover, before it round-trips into a
     committed, unscoreable value.
     """
 

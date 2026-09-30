@@ -1,0 +1,52 @@
+{
+  "header": {
+    "protocol_version": "3",
+    "description": "migrate_v3 fixture: interchange (trimmed from causalab/configs/protocols/interchange.json)"
+  },
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#train",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "sites": {
+      "target": {"component": "block_output", "layers": [18]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "model": "original", "input": "counterfactual"},
+      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
+    },
+    "writes": {
+      "patch": {"site": "target", "pos": -1, "do": {"swap": "v_cf"}}
+    },
+    "intervened_models": {
+      "patched": {"input": "base", "writes": ["patch"]}
+    },
+    "metrics": {
+      "iia": {
+        "kind": "match",
+        "of": "logits",
+        "expected": "cf_answer"
+      },
+      "logit_diff": {
+        "kind": "logit_diff",
+        "of": "logits",
+        "a": "cf_answer",
+        "b": "base_answer"
+      }
+    },
+    "save": [
+      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
+      {
+        "value": "logit_diff",
+        "model": "patched",
+        "input": "base",
+        "file_path": "logit_diff.json"
+      }
+    ]
+  }
+}

@@ -1,10 +1,10 @@
 """End-to-end corpus execution on tiny-random (CPU) through the real CLI.
 
-The golden corpus authors Llama-3.1-8B; ``--set`` overrides (spec §9)
+The golden corpus authors Qwen3-8B; ``--set`` overrides (spec §9)
 retarget the model key and layer/head indices at tiny scale — the
 documents' semantics are untouched, which is exactly what the override
 mechanism is for. The sweep/train corpus files (04, 05, 07) stay off the
-CPU budget per the phase plan; the fit→apply roundtrip below covers the
+CPU budget; the fit→apply roundtrip below covers the
 train path end to end at tiny scale instead, including the
 ArtifactIdentity stamp-and-check cycle that corpus 09 specifies.
 
@@ -26,7 +26,7 @@ import pytest
 from safetensors.torch import load_file
 
 from causalab.cli import main
-from causalab.protocol.resolve import FileDatasets, read_safetensors_metadata
+from causalab.io.env import read_safetensors_metadata
 
 from tests.protocol._env import CORPUS_DIR, FIXTURES
 from tests.neural.engines.pytorch_hooks._drive import base_data_section  # noqa: F401  (tier anchor)
@@ -50,6 +50,8 @@ def _run(name: str, roots: tuple[Path, Path], out: Path, *overrides: str) -> int
     data_root, artifacts_root = roots
     argv = [
         "run",
+        "--engine",
+        "auto",
         str(CORPUS_DIR / name),
         "--data-root",
         str(data_root),
@@ -181,17 +183,11 @@ def test_fit_then_apply_roundtrip(roots, tmp_path):
     assert bundle_path.is_file()
     fitted = load_file(str(bundle_path))
     assert fitted["weight"].shape == (16, 4)
-    # the header records *what* the fit read, not just what it was called:
-    # trained_on_digest is the content digest of the rows the trained_on ref
-    # selected (§2.2, §8) — the same digest the fitting point's canonical
-    # form carries, and never a hash of the name
+    # the header records the ref the fit read (§8); which bytes that ref
+    # resolved to is the receipt's canonical form (data.*.digest), not a stamp
     stamped = read_safetensors_metadata(bundle_path)
     assert stamped is not None
     assert stamped["trained_on"] == "weekdays/data#train"
-    assert stamped["trained_on_digest"] == FileDatasets(root=data_root).digest(
-        stamped["trained_on"]
-    )
-    assert "weekdays" not in stamped["trained_on_digest"]
 
     # stage the fitted bundle as 09's artifact and apply it
     target = artifacts_root / "artifacts/tiny/rot_k4.safetensors"
@@ -270,13 +266,12 @@ def test_08_seed_sweep_fits_three_genuinely_different_rotations(roots, tmp_path)
 def test_the_train_eval_score_reaches_the_run_tree(roots, tmp_path):
     """``train.eval`` is computed, so it must be saved (§2.12).
 
-    Corpus 08 declares ``eval: {split: weekdays/data#test, metrics: [iia]}`` and
-    saves ``iia`` to ``iia.json``. Before this fix ``_run_eval``'s return value
+    Corpus 08 declares ``eval: {split: weekdays/data#test, aggregations: {iia:
+    …}}`` and saves the same aggregation to ``iia.json``. Before this fix ``_run_eval``'s return value
     was consumed only inside the ``early_stop`` branch and then dropped, so
     ``iia.json`` held the **train** score under a name every reader took for
-    the eval one — and the causal protocol's "report training and evaluation
-    results together" was unsatisfiable without re-running the fit as five
-    extra apply documents.
+    the eval one — and reporting training and evaluation results together
+    was impossible without re-running the fit as five extra apply documents.
 
     The eval score is a sibling record, not a column: it is measured on a
     different split, i.e. a different population from ``iia.json``'s rows.
@@ -301,15 +296,18 @@ def test_the_train_eval_score_reaches_the_run_tree(roots, tmp_path):
         assert record["featurizers"] == ["rot"]
         assert isinstance(record["metrics"]["iia"], float)
 
-    # the join to the metric table is the point digest, and the two numbers
-    # are different populations — so at least one must actually differ, or
-    # the "eval" score is just the train score wearing a different name
+    # the join to the metric table is the point's coordinates (the swept
+    # seed: a metric row's axis column, a train_eval record's `coords`), and
+    # the two numbers are different populations — so at least one must
+    # actually differ, or the "eval" score is just the train score wearing a
+    # different name
     train = table_frame(out / "iia.json")
-    train_mean = train[train["metric"] == "iia"].groupby("produced_by")["value"].mean()
-    assert set(record["point"] for record in records) == set(train_mean.index)
+    train_mean = train[train["metric"] == "iia"].groupby("train.seed")["value"].mean()
+    seeds = [record["coords"]["train.seed"] for record in records]
+    assert set(seeds) == set(train_mean.index)
     assert any(
-        record["metrics"]["iia"] != pytest.approx(train_mean[record["point"]])
-        for record in records
+        record["metrics"]["iia"] != pytest.approx(train_mean[seed])
+        for record, seed in zip(records, seeds)
     )
 
 
@@ -358,6 +356,8 @@ def test_explain_and_digest_work_on_every_corpus_file(roots, capsys):
                     str(data_root),
                     "--artifacts-root",
                     str(artifacts_root),
+                    # `digest` alone takes no engine
+                    *(() if verb == "digest" else ("--engine", "auto")),
                 ]
             )
             assert code == 0, f"{verb} failed on {path.name}"
@@ -375,13 +375,12 @@ def test_run_output_is_stamped(roots, tmp_path):
         )
         == 0
     )
-    from causalab.protocol.resolve import read_safetensors_metadata
+    from causalab.io.env import read_safetensors_metadata
 
     meta = read_safetensors_metadata(tmp_path / "acts_L24_ans.safetensors")
     assert meta is not None
     assert meta["model_key"] == TINY_LLAMA
     assert meta["engine"] == "pytorch_hooks"
-    assert len(meta["produced_by"]) == 64
 
 
 def test_11_probe_generate_runs_and_scores(roots, tmp_path):
@@ -399,7 +398,7 @@ def test_11_probe_generate_runs_and_scores(roots, tmp_path):
 
 
 def test_12_probe_variable_scores_every_step_and_reports_what_was_said(roots, tmp_path):
-    """The probe-variable surface end to end: a metric per decode step, an ids-domain
+    """The decode-step surface end to end: a metric per decode step, an ids-domain
     metric that never touches the vocabulary, and a `variable` anchor whose
     misses come back as data.
 

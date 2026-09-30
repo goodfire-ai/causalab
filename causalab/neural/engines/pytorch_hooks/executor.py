@@ -1,37 +1,18 @@
-"""Point-protocol execution over raw pytorch hooks (spec §4).
+"""Execute a concrete protocol point through PyTorch hooks.
 
-One :class:`PointExecutor` runs one concrete document: forward groups are
-``original`` on every input it is read on plus each intervened model on
-its declared input; groups run lazily in operand-dependency order (the
-validated-acyclic model graph); within a group every in-force write applies
-at its address — absolute first, additive deltas summed, renormalize last
-against the pre-write norm — and reads see the fully written state because
-pytorch fires hooks in module-execution order and chains their return
-values at one module.
+Forward groups run lazily in operand dependency order. The executor
+installs writes before captures at a shared address. Absolute writes apply
+first, additive deltas sum, and renormalization uses the pre-write norm.
+ExecutorBase handles positions, gathers, featurizers, and shared write math.
 
-The document-and-contract half (positions, gathers, featurizers, the write
-math) is :class:`~causalab.neural.shared.executor_base.ExecutorBase`; this
-module is the hook half: the group forward, the greedy decode, and the
-install/capture plumbing.
+``batch_rows`` divides a group into row windows. Positions use the common
+padded frame; operands and Gaussian draws are sliced by row. Captures join
+in row order. Each decoding window continues immediately after its prefill.
+Batching can change dtype rounding.
 
-A group runs as one forward per **row window** — the whole batch unless the
-executor was built with ``batch_rows`` (§8, execution scale), in which case
-ceil(rows / batch_rows) forwards of at most ``batch_rows`` rows each, the
-same hook wiring installed over each row slice, captures concatenated in row
-order and a decoding window decoded right after its prefill. The document
-never sees the cut: positions resolve in the shared padded frame, tensor
-operands and ``gaussian`` draws are sliced by row, and the result equals the
-single-forward run up to dtype rounding.
-
-The plumbing mirrors the oracle library
-(``tests/neural/activations/hook_oracle.py``): reads/writes on a module's
-``out`` side ride ``register_forward_hook`` (tuple outputs normalized),
-``in``-side taps ride ``register_forward_pre_hook``; writes install before
-captures at the same module so a same-address read sees the write.
-
-v1 boundaries, refused legibly rather than approximated: ragged per-row
-position widths on an *write* (equal width required to batch the scatter),
-and ragged widths on a *saved* read (nothing to stack into a tensor file).
+Input taps use pre-hooks and output taps use forward hooks. Interior taps
+wrap the corresponding attention, expert, or delta functions. Ragged writes
+and saves follow the declared protocol policy.
 """
 
 from __future__ import annotations
@@ -56,20 +37,29 @@ from causalab.neural.engines.pytorch_hooks.experts_interface import (
     experts_interface_taps,
 )
 from causalab.neural.engines.pytorch_hooks.experts_path import lean_experts_path
+from causalab.neural.engines.pytorch_hooks.kernels.fused_norms import (
+    fused_norm_path,
+)
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
+from causalab.neural.engines.pytorch_hooks.stages import (
+    StageForward,
+    TrainedOwner,
+    hook_placement,
+)
 from causalab.neural.shared.encoding import (
     Continuation,
     EncodedBatch,
     continuation_frame,
     resolve_steps,
 )
-from causalab.neural.shared.executor_base import (
+from causalab.neural.shared.executor import (
     ExecutorBase,
     ForwardCache,
     Interning,
     PrefixKey,
     PrefixPlan,
     RaggedValue,
+    Reuse,
     RowWindow,
     TapKey,
     document_seed,
@@ -82,8 +72,21 @@ from causalab.neural.shared.fires import (
     check_fires,
     group_label,
 )
-from causalab.neural.shared.head import head_module, taps_head
-from causalab.protocol.shapes import FeatureShape
+from causalab.neural.engines.pytorch_hooks.rows import WHOLE, RowSplit
+from causalab.neural.shared.head import ReadTap, head_module, taps_head
+from causalab.neural.shared.parallel.agreements import (
+    Agreements,
+    summed_fires,
+    whole_steps,
+)
+from causalab.neural.shared.parallel.collective import SOLO
+from causalab.neural.shared.parallel.mismatch import shared_mismatch
+from causalab.neural.shared.parallel.context import SequenceFrame, activate
+from causalab.neural.shared.parallel.fragments import Fragments
+from causalab.neural.shared.parallel.placement import ExpertLocal, StageLocal
+from causalab.neural.shared.parallel.placements import ROUTER_SCORES
+from causalab.neural.shared.parallel.taps import IDENTITY_TAP, TapFragments
+from causalab.protocol.registry.shapes import FeatureShape
 from causalab.neural.shared.gdn_short.binding import short_seq_kernel_path
 from causalab.neural.shared.kernels import torch_kernel_path
 from causalab.neural.shared.layout import (
@@ -92,17 +95,25 @@ from causalab.neural.shared.layout import (
     tap_tensor,
     to_contract,
 )
-from causalab.neural.shared.mechanisms import operand_names
+from causalab.neural.shared.plan import group_reads, write_names
 from causalab.neural.shared.sites import (
     ResolvedSite,
     Writeback,
     adapter_of,
     resolve_site,
 )
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.plan import generated_budget
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.neural.shared.plan import GroupKey
+from causalab.protocol.positions.encoding import generated_budget
 from causalab.protocol.registry import walk
-from causalab.protocol.schema import LAYERLESS_COMPONENTS, ReadSpec, SiteSpec, WriteSpec
+from causalab.protocol.schema import (
+    LAYERLESS_COMPONENTS,
+    ReadRef,
+    ReadSpec,
+    SiteSpec,
+    WriteSpec,
+    operand_reads,
+)
 
 __all__ = [
     "ForwardCache",
@@ -123,7 +134,7 @@ def has_recurrent_layers(config: Any) -> bool:
 
 
 #: the layer types a hybrid decoder indexes its mask mapping by
-#: (``config.layer_types[i]``) that :func:`prompt_masks` has a mask for: the
+#: (``config.layer_types[i]``) that [`prompt_masks`][] has a mask for: the
 #: causal mask for an attention layer, the 2-D padding mask for a DeltaNet
 #: one. A closed table, not a structural guess — a family declaring a type
 #: outside it (a sliding window beside its recurrent layers, say) is refused
@@ -144,7 +155,7 @@ def prompt_masks(
     decoder indexes by layer type — one entry per type ``config.layer_types``
     declares, the causal mask for its attention layers and the 2-D padding
     mask its DeltaNet layers multiply their states by
-    (:data:`PROMPT_MASK_TYPES`; any other declared type is refused ``P4`` by
+    ([`PROMPT_MASK_TYPES`][]; any other declared type is refused ``P4`` by
     name, before any mask is built).
 
     Transformers' builder of that second mask
@@ -195,7 +206,7 @@ class PointExecutor(ExecutorBase):
 
     #: the executor a fit's eval passes run on, built on the first pass
     #: (``train._eval_executor``) and kept for the rest of the fit. Lives here
-    #: rather than on :class:`ExecutorBase` because this engine is the one that
+    #: rather than on [`ExecutorBase`][causalab.neural.shared.executor.base.ExecutorBase] because this engine is the one that
     #: trains, and the point executor is the one object whose lifetime is the
     #: fit's. A class-level default rather than an ``__init__`` override, so
     #: the base constructor's keyword-only signature stays type-checked at
@@ -207,17 +218,39 @@ class PointExecutor(ExecutorBase):
     graph_cache: Any = None
     eval_executor: "PointExecutor | None" = None
 
-    #: The request's ``decoding`` block (:attr:`~causalab.protocol.engine.
-    #: ExecutionRequest.decoding`), set by the engine after construction —
-    #: ``None`` (every non-behavioral request) is the greedy argmax, byte for
+    #: ``whole`` / ``fragment`` over the engine's collective
+    #: (``docs/model_parallelism.md`` §4): every hook body makes its tensor
+    #: whole through this before the shared read / write math and fragments
+    #: the result after (`_tap`). The default is world 1 — the
+    #: identity, no collective — set per executor by ``make_executor`` from
+    #: the engine's collective. A class-level default for the same reason
+    #: ``eval_executor`` is one.
+    fragments: Fragments = Fragments(SOLO)
+
+    #: This replica's share of every fit minibatch under data parallelism
+    #: over rows (``docs/model_parallelism.md`` §8.3; ``rows.py``): the
+    #: identity — every row — unless the engine set an active split. A
+    #: class-level default for the same reason ``fragments`` is one.
+    rows: RowSplit = WHOLE
+
+    #: The position frame of the forward window in flight under context
+    #: parallelism (``docs/model_parallelism.md`` §8.4; ``parallel/context.py``):
+    #: bound by `_forward_window` for its duration, ``None`` at
+    #: ``cp=1`` and between windows. Every tap of the window carries it, so
+    #: a ``SequenceSharded`` placement gathers by the frame's chunks. (The
+    #: role frames of the position resolver are `frame`, a method.)
+    sequence: SequenceFrame | None = None
+
+    #: The run's ``decoding`` block ([`decoding`][causalab.protocol.engine.RunContext.decoding]), set by the engine after construction —
+    #: ``None`` (every non-behavioral run) is the greedy argmax, byte for
     #: byte the decode before the field existed; ``sampled`` draws each token
-    #: through :func:`_draw` from a generator seeded once per decode window.
+    #: through `_draw` from a generator seeded once per decode window.
     #: A class-level default for the same reason ``eval_executor`` is one.
     decoding: Mapping[str, Any] | None = None
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        #: prebuilt masks of recent prompt-only forwards (:meth:`_model_forward`),
+        #: prebuilt masks of recent prompt-only forwards (`_model_forward`),
         #: keyed by a window's shape and its rows' first real tokens. Bounded
         #: by the FIFO there (four entries), with no release hook: an eager
         #: executor is discarded with its frames. The graph executor's own
@@ -230,6 +263,123 @@ class PointExecutor(ExecutorBase):
         ``continuations.json`` for a decoding request."""
         return dict(self._continuations)
 
+    def _tap(self, site: ResolvedSite) -> TapFragments:
+        """The ``whole`` / ``fragment`` pair a hook body on ``site`` runs
+        through (§4): the executor's fragments at the site's placement — its
+        stage-*interior* placement under a pipeline (§6.5): the hook is the
+        owner stage's, and the broadcast to the other stages is the forward
+        group's post-forward step — with the routing flag and the expert
+        count the experts interior needs. A module-boundary tap whose
+        integral tensor is the remapped routing table itself (``expert_idx``)
+        is flagged ``routing_table``, so its ``whole`` is the §6.3
+        reconstruction. Under context parallelism the tap carries the
+        window's frame (§8.4)."""
+        return TapFragments(
+            self.fragments,
+            hook_placement(site.placement),
+            remapped_routing=site.remapped_routing,
+            num_experts=self.bundle.info.num_experts,
+            routing_table=(
+                site.remapped_routing and site.shape.integral and site.kind != "experts"
+            ),
+            frame=self.sequence,
+        )
+
+    def _sequence_frame(
+        self, batch: EncodedBatch, window: RowWindow
+    ) -> SequenceFrame | None:
+        """The position frame ``window``'s forward runs in under context
+        parallelism (§8.4): the whole padded frame's mask over the window's
+        rows, from which every rank reads its chunk — ``None`` at ``cp=1``.
+
+        Raises:
+            ParseError: ``P4`` naming ``--parallel.context`` — the frame is
+                shorter than the context group.
+        """
+        if self.fragments.size("context") == 1:
+            return None
+        return SequenceFrame(
+            self.fragments.collective, batch.attention_mask[window.slice]
+        )
+
+    def _refuse_decode(self) -> None:
+        """A decode under ``cp > 1`` is refused by name (§8.4): its steps
+        would each be one position on one rank with the KV cache split
+        across the group. Identical on every rank — the group size is the
+        geometry's.
+
+        Raises:
+            ProtocolError: ``P4`` naming ``--parallel.context``.
+        """
+        size = self.fragments.size("context")
+        if size == 1:
+            return
+        raise ProtocolError(
+            "P4",
+            f"--parallel.context: a decode (a read at a generated position) is not "
+            f"served under cp={size}: the continuation's steps would each be one "
+            "position on one rank with the KV cache split across the context "
+            "group (docs/model_parallelism.md §8.4); run a decoding document at cp=1",
+        )
+
+    @property
+    def _stages(self) -> StageForward:
+        """This rank's pipeline stage (``stages.py``, §6.5): the stage forward
+        and who installs which hook. Built from the bundle and the collective
+        at each use, so a collective bound after construction is honoured;
+        world 1 is one stage and costs a size lookup. The placed copy is
+        checked against the stage once per window (`_forward_window`)."""
+        return StageForward.of(self.bundle, self.fragments.collective)
+
+    def share_routing_mismatch(
+        self,
+        addresses: Mapping[
+            Any, tuple[ResolvedSite, list[tuple[str, WriteSpec, ResolvedSite]]]
+        ],
+        stages: StageForward,
+    ) -> None:
+        """Make this rank's routing-mismatch record the owners' (§6.5;
+        ``parallel/mismatch.py``): for every write at a stage-local address
+        the owning stage's counts — made in its hook, where an expert-keyed
+        write joins slots by expert — are broadcast over the pipeline and
+        merged here, so the publisher's ``routing_mismatch.json`` is world
+        1's whichever stage the write sits on. Called once per window where
+        the fire tally is agreed, on every rank alike; a pipeline of one is
+        the identity and touches neither the collective nor the pending
+        counts (world 1 stays bit for bit)."""
+        collective = self.fragments.collective
+        if collective.size("pipeline") == 1:
+            return
+        owners = stages.write_owners(addresses)
+        if not owners:
+            return
+        self._routing_mismatch = shared_mismatch(
+            self.routing_mismatch, owners, collective
+        )
+
+    def _read_taps(
+        self, model: str, input_role: str, reads: Iterable[tuple[str, ReadSpec]]
+    ) -> dict[str, ReadTap]:
+        """The base rule (`ExecutorBase._read_taps`), with a projecting
+        read's head run as the pipeline runs it ([`StageForward.projected`][]):
+        the head's weights live on the last stage alone — every other stage
+        holds a stand-in for it (``sharding.place_stage``) — so the last
+        stage projects the broadcast ``ln_final`` rows and the value is
+        broadcast, the same tensor on every rank as the world-1 run's. At one
+        stage the base rule's taps are returned as they are."""
+        taps = super()._read_taps(model, input_role, reads)
+        stages = self._stages
+        if stages.stages == 1:
+            return taps
+        return {
+            rname: (
+                dataclasses.replace(tap, project=stages.projected(tap.project))
+                if tap.project is not None
+                else tap
+            )
+            for rname, tap in taps.items()
+        }
+
     @contextlib.contextmanager
     def _attention_backend(self, sites: Iterable[ResolvedSite]) -> Iterator[None]:
         """Expose attention interiors only while the forward needs them.
@@ -239,7 +389,9 @@ class PointExecutor(ExecutorBase):
         and expert taps keep the selected backend. The pattern's read is a
         module tap but still needs eager to return the attention weights.
         """
-        needs_eager = any(
+        # under context parallelism every attention forward gathers its keys
+        # and values inside the eager function (§8.4), tapped or not
+        needs_eager = self.fragments.size("context") > 1 or any(
             site.interface_slot is not None and site.kind not in {"delta", "experts"}
             for site in sites
         )
@@ -311,9 +463,8 @@ class PointExecutor(ExecutorBase):
         if (model, input_role) in self._groups_run:
             return
         all_taps = [
-            (rname, read)
-            for rname, read in self.doc.reads.items()
-            if str(read.model) == model and str(read.input) == input_role
+            (ref.read, self.doc.reads[ref.read])
+            for ref in group_reads(self.doc, model, input_role)
         ]
         depth = 0
         taps: list[tuple[str, ReadSpec]] = []
@@ -327,15 +478,20 @@ class PointExecutor(ExecutorBase):
                 depth = max(depth, budget)
 
         if depth:
+            self._refuse_decode()  # not served under context parallelism (§8.4)
             self.eos_token_ids()  # Validate stopping before the first forward.
 
         # an `lm_head` read at named positions taps `ln_final` and projects
         # the gathered rows through the head itself (shared/head.py) — unless
-        # this executor differentiates through it (`_read_taps`); every other
-        # read taps the site it names
+        # this executor differentiates through it, or runs under a pipeline
+        # above one stage (`_read_taps`); every other read taps the site it
+        # names. What a stage does not serve is refused at the site the read
+        # names, whichever the forward captures for it
         read_taps = self._read_taps(model, input_role, taps)
+        stages = self._stages
         for rname, tap in read_taps.items():
             _refuse_interior(f"read {rname!r}", tap.site)
+            stages.refuse_unserved(f"read {rname!r}", tap.site)
         capture_sites = {rname: tap.capture for rname, tap in read_taps.items()}
         # A continuation read at lm_head is served from kept ln_final
         # activations (d_model, not vocab) and projected at its addressed
@@ -347,6 +503,7 @@ class PointExecutor(ExecutorBase):
         }
         for rname, site in gen_sites.items():
             _refuse_interior(f"read {rname!r}", site)
+            stages.refuse_unserved(f"read {rname!r}", site)
         gen_capture_sites = {
             rname: (
                 resolve_site(self.bundle, SiteSpec(component="ln_final"))
@@ -367,40 +524,43 @@ class PointExecutor(ExecutorBase):
         # value (`_may_intern`). What a fit *can* share is the rest: the
         # source forward's raw capture is a leaf the trained featurizer is
         # applied to afterwards, so serving it keeps the gradient path intact.
-        group_digest = self._group_digest(model, input_role)
-        digest = group_digest if not depth and self._may_intern(model) else None
+        group_key = self._group_key(model, input_role)
+        # the key this pass shares through the store under — None when it may
+        # not be served or published at all
+        shared_key = group_key if not depth and self._may_intern(model) else None
         interned = self._interned(
-            digest, (tap_key(site) for site in capture_sites.values())
+            shared_key, (tap_key(site) for site in capture_sites.values())
         )
         decoded: Decoded | None = None
         if interned is not None:
             capture, idx_capture = interned
             # the pass that produced these captures counted its writes'
             # firings (§4 "Fires"); they are this point's counts for the group
-            assert digest is not None and self.interning is not None
-            served_fires = self.interning.cache.fires.get(digest)
+            assert shared_key is not None and self.interning is not None
+            served_fires = self.interning.cache.fires.get(shared_key)
             if served_fires:
                 self.fires[(model, input_role)] = dict(served_fires)
         else:
             capture, idx_capture, decoded = self._forward_group(
                 model,
                 input_role,
-                digest=digest,
+                shared_key=shared_key,
                 capture_sites=capture_sites,
                 depth=depth,
                 gen_capture_sites=gen_capture_sites,
                 # the prefix arithmetic (§4 "Resume") is keyed by the group's
-                # digest whether or not the group may be *served*: the blocks
+                # key whether or not the group may be *served*: the blocks
                 # below its first write are fit-constant even when it is not
-                prefix=self._prefix_plan(group_digest) if not depth else None,
+                prefix=self._prefix_plan(group_key) if not depth else None,
             )
 
         batch = self._batch(input_role)
         for rname, read in taps:
             tap = read_taps[rname]
             key = tap_key(tap.capture)
-            self._read_values[rname] = self._finalize_read(
-                rname,
+            ref = ReadRef(rname, model)
+            self._read_values[ref] = self._finalize_read(
+                ref,
                 read,
                 tap.site,
                 capture[key],
@@ -422,10 +582,10 @@ class PointExecutor(ExecutorBase):
                 gen_capture_sites=gen_capture_sites,
             )
         # this pass has gathered everything it reads from the raw capture;
-        # the store owes the digest one pass fewer, and drops the capture
+        # the store owes the key one pass fewer, and drops the capture
         # once no sharer is left (§3 — a capture lives with its sharers, not
         # with the request)
-        self._settle(digest)
+        self._settle(shared_key)
         self._groups_run.add((model, input_role))
 
     def _forward_group(
@@ -433,7 +593,7 @@ class PointExecutor(ExecutorBase):
         model: str,
         input_role: str,
         *,
-        digest: str | None,
+        shared_key: GroupKey | None,
         capture_sites: Mapping[str, ResolvedSite],
         depth: int,
         gen_capture_sites: Mapping[str, ResolvedSite],
@@ -443,12 +603,12 @@ class PointExecutor(ExecutorBase):
         tables, and — for a decoding group — what the decode produced.
 
         What it captures is this point's taps **unioned with every other
-        address the campaign asks of the same digest** (§3): that union is
-        what lets the single pass a shared digest earns serve every point, and
+        address the campaign asks of the same group key** (§3): that union is
+        what lets the single pass a shared key earns serve every point, and
         it is why an eliding engine has to stop at the deepest tap of the
         union rather than of the point that happened to run first.
 
-        The group runs as one forward per row window (:meth:`_row_windows`;
+        The group runs as one forward per row window (`_row_windows`;
         one window unless ``batch_rows`` is set), each with the same hook
         wiring over its own row slice; captures are concatenated in row
         order, so what comes back is indistinguishable from a single forward
@@ -460,42 +620,41 @@ class PointExecutor(ExecutorBase):
         "Resume"): each window starts at the block below which the forward is
         ``original``'s when the store holds that block's incoming residual
         for these rows, and stores the residuals later groups will want on
-        its way (:meth:`_forward_window`).
+        its way (`_forward_window`).
 
         **The write set is one transaction** (§4 "Fires"), by three
         choices this method keeps in this order: the whole set is resolved
         and built before any hook is installed, every hook edits a clone
-        rather than the module's storage, and :meth:`_publish` — the only
+        rather than the module's storage, and `_publish` — the only
         step that lets another point see this pass — runs after the last
         window has returned *and* after every member's fire count has been
-        checked (:func:`~causalab.neural.shared.fires.check_fires`). A member
+        checked ([`check_fires`][]). A member
         that fails to resolve, mismatches its operand's shape or fires other
         than the count its kind declares therefore refuses the point with
         nothing published, memoized or written; the counts of a pass that
         did run are the group's ``fires`` record, kept with the store so a
-        point served this digest records them too.
+        point served this key records them too. ``shared_key`` is that key —
+        ``None`` for a pass that may neither be served nor published.
         """
         # operands first — the acyclic model graph is the schedule skeleton
-        write_names: tuple[str, ...] = ()
-        if model != "original":
-            im = self.doc.intervened_models[model]
-            write_names = tuple(im.writes) if isinstance(im.writes, tuple) else ()
-            for ename in write_names:
-                for operand in operand_names(self.doc.writes[ename].do.payload):
-                    if operand in self.doc.reads:
-                        self.read_value(operand)
+        names = write_names(self.doc, model) or ()
+        for ename in names:
+            for ref in operand_reads(self.doc, self.doc.writes[ename].do):
+                self.read_value(ref)
 
         batch = self._batch(input_role)
-        addresses = self._resolve_write_addresses(write_names)
+        addresses = self._resolve_write_addresses(names)
+        stages = self._stages
         for site, _ in addresses.values():
             _refuse_interior(f"write at {site.component!r}", site)
         # this point's taps first, then the campaign's — the sites another
         # point will ask of this same forward, so it never has to run it again
         shared_sites: list[ResolvedSite] = []
-        if digest is not None and self.interning is not None:
-            for spec in self.interning.cache.wanted.get(digest, ()):
+        if shared_key is not None and self.interning is not None:
+            for spec in self.interning.cache.wanted.get(shared_key, ()):
                 site = resolve_site(self.bundle, spec)
                 _refuse_interior(f"shared read at {site.component!r}", site)
+                stages.refuse_unserved(f"shared read at {site.component!r}", site)
                 shared_sites.append(site)
         tapped: list[ResolvedSite] = [*capture_sites.values(), *shared_sites]
         for name, site in gen_capture_sites.items():
@@ -532,7 +691,23 @@ class PointExecutor(ExecutorBase):
                 )
                 # every member fired the count its kind declares for this
                 # forward, or the point is refused here — before this window's
-                # captures join the group's and before anything is published
+                # captures join the group's and before anything is published;
+                # the count is the whole pipeline's, summed over the stages
+                # that own the module (§6.5; the identity at world 1)
+                tally = summed_fires(tally, Agreements(self.fragments.collective))
+                # and what the owner's hooks recorded beside their count —
+                # an expert-keyed write's routing-mismatch tally — reaches
+                # every stage at the same point (§6.5; the identity at world 1)
+                self.share_routing_mismatch(addresses, stages)
+                # a state writer's steps are the frame's positions, which the
+                # context ranks partition (§8.4): its fired steps are unioned
+                # over the context group before the declaration is checked
+                tally = whole_steps(
+                    tally,
+                    self.fragments.collective,
+                    _state_members(addresses),
+                    padded_len=batch.padded_len,
+                )
                 check_fires(group_label(model, input_role), tally)
                 fires.fold(tally)
                 for key, value in capture.items():
@@ -541,7 +716,19 @@ class PointExecutor(ExecutorBase):
                     idx_parts.setdefault(key, []).append(value)
                 if depth:
                     decoded = self._decode_window(
-                        batch, window, prefill, depth=depth, sites=gen_capture_sites
+                        batch,
+                        window,
+                        prefill,
+                        depth=depth,
+                        sites=gen_capture_sites,
+                        # the same resolved write set, kept in force through
+                        # the steps when the model declares it (§2.9)
+                        writes=addresses
+                        if self._writes_during_generation(model)
+                        else None,
+                        input_role=input_role,
+                        fires=fires,
+                        group=group_label(model, input_role),
                     )
                     token_parts.append(decoded.generated)
                     for key, value in decoded.steps.items():
@@ -554,13 +741,13 @@ class PointExecutor(ExecutorBase):
         record = fires.record()
         if record:
             self.fires[(model, input_role)] = record
-            if digest is not None and self.interning is not None:
-                self.interning.cache.fires[digest] = record
+            if shared_key is not None and self.interning is not None:
+                self.interning.cache.fires[shared_key] = record
         # only what a tap actually filled: a placeholder whose module never ran
         # would hand a later point an empty capture instead of letting it run
         # the forward
         self._publish(
-            digest,
+            shared_key,
             f"{model}/{input_role}",
             {key: value for key, value in capture.items() if value.numel()},
             idx_capture,
@@ -593,16 +780,16 @@ class PointExecutor(ExecutorBase):
 
         ``resume`` is the resume decision for this call — the block to start
         at, the residual to hand it, the prefixes to store on the way — and is
-        normally derived here from ``prefix`` through :meth:`_prefix_window`.
+        normally derived here from ``prefix`` through `_prefix_window`.
         A cohort forward (``cohort.py``) hands in a *callable* deriving it
         over several executors' rows; it is called inside the stack, after
         the attention backend for this forward is set, because a prefix key
-        carries the backend it was computed under (:meth:`_prefix_key`) and
+        carries the backend it was computed under (`_prefix_key`) and
         a key derived outside would name the document's backend for a
         residual computed under eager.
 
         Hooks see contract tensors of the window's row count, and the writers
-        they call were built for this window (:meth:`_build_write_hooks`), so
+        they call were built for this window (`_build_write_hooks`), so
         the row a hook holds and the row the write math addresses agree.
 
         **Resume** (§4). With a ``prefix`` plan whose block the store already
@@ -610,28 +797,48 @@ class PointExecutor(ExecutorBase):
         below it are swapped out of the model's block list for the duration
         of the call — block 0 for one that returns the cached residual, the
         rest for pass-throughs — and put back in a ``finally``
-        (:func:`_resumed`). Embeddings, the causal mask and the rotary tables
+        (`_resumed`). Embeddings, the causal mask and the rotary tables
         are computed before the block loop and still are; block ``L`` then
         receives exactly the tensor it would have computed, and every hook on
         it and above fires as usual. Whatever the store lacks and a later
         group wants is captured on the way by a *first* pre-hook on the wanted
-        blocks (:func:`_storing_prefix`), so a write landing on a block's
+        blocks (`_storing_prefix`), so a write landing on a block's
         input never reaches the stored residual — and only down to the plan's
         ``write_depth``, below which this pass is still the un-intervened one.
         """
         capture: dict[TapKey, torch.Tensor] = {}
         # the routing table alongside each experts-interface capture — what the
-        # `expert:` sub-axis joins on (executor_base._expert_selected)
+        # `expert:` sub-axis joins on (executor.base._expert_selected)
         idx_capture: dict[TapKey, torch.Tensor] = {}
+        # this rank's pipeline stage (§6.5): a hook is installed on the stage
+        # holding its module, a write is applied there and skipped elsewhere
+        # (its member stays declared in every rank's tally, so the summed count
+        # meets the declaration), and a stage-local capture is broadcast from
+        # its owner after the forward so every rank's cache holds it
+        stages = self._stages
+        stages.check_placement(self.bundle)
         with contextlib.ExitStack() as hooks:
+            # the position frame this window's forward runs in under context
+            # parallelism (§8.4): bound for the attention and kernel wrappers,
+            # and carried by every tap built below; None at cp=1
+            self.sequence = self._sequence_frame(batch, window)
+            hooks.callback(setattr, self, "sequence", None)
+            hooks.enter_context(activate(self.sequence))
             # a model off CUDA runs transformers' torch kernels whatever the
             # environment installed (shared/kernels.py); entered before the
             # delta taps so they wrap the implementation that will run
-            hooks.enter_context(torch_kernel_path(self.bundle.model))
+            hooks.enter_context(
+                torch_kernel_path(
+                    self.bundle.model, on_cuda=self.bundle.devices.is_cuda
+                )
+            )
             # short sequences on CUDA run the single-chunk kernel
             # (shared/gdn_short/); entered after that guard so it wraps the
             # kernel it bound, before the taps so they see it
             hooks.enter_context(short_seq_kernel_path(self.bundle.model))
+            # the norms and the rotary embedding run as fused kernels where
+            # each call's plan admits it (kernels/fused_norms.py)
+            hooks.enter_context(fused_norm_path(self.bundle.model))
             # Four of the mixer's tensors — and the attention pattern's *write*
             # — are not module boundaries: transformers computes them inside one
             # `attention_interface(...)` call, so a forward hook on the mixer
@@ -644,65 +851,28 @@ class PointExecutor(ExecutorBase):
             delta: dict[Any, list[DeltaTap]] = {}
             batch_size = window.size
 
-            for site, fn in write_hooks:
-                if site.kind == "experts":
-                    assert site.interface_slot is not None
-                    experts.setdefault(id(site.module), []).append(
-                        ExpertsTap(
-                            slot=site.interface_slot,
-                            edit=_experts_edit(site, fn, batch_size),
-                        )
-                    )
-                    continue
-                if site.kind == "delta":
-                    assert site.interface_slot is not None
-                    if site.interface_slot == "state":
-                        # a state write must feed forward, so it rides the
-                        # stepwise substitution's own surface — `fn` here IS
-                        # the per-step writer (_build_write_hooks)
-                        delta.setdefault(site.module, []).append(
-                            DeltaTap(slot="state", edit_state=fn)
-                        )
-                        continue
-                    delta.setdefault(site.module, []).append(
-                        DeltaTap(
-                            slot=site.interface_slot,
-                            edit=_interface_edit(site, fn, batch_size),
-                        )
-                    )
-                    continue
-                if site.interface_slot is not None:
-                    interface.setdefault(id(site.module), []).append(
-                        InterfaceTap(
-                            slot=site.interface_slot,
-                            edit=_interface_edit(site, fn, batch_size),
-                        )
-                    )
-                    continue
-                hooks.enter_context(
-                    _installed(
-                        site.module,
-                        site.kind,
-                        fn,
-                        shape=site.shape,
-                        tuple_index=site.tuple_index,
-                        batch_size=batch_size,
-                        writeback=site.writeback,
-                        site_name=f"{site.component} at layer {site.layer}",
-                    )
-                )
+            self._enter_write_hooks(
+                hooks, write_hooks, interface, experts, delta, batch_size, stages
+            )
             for site in tapped:
                 key = tap_key(site)
                 if key in capture:
                     continue
                 capture[key] = torch.empty(0)  # placeholder; filled by the tap
+                if not stages.installs(site):
+                    continue  # filled by the owner's broadcast after the forward
                 if site.kind == "experts":
                     assert site.interface_slot is not None
                     experts.setdefault(id(site.module), []).append(
                         ExpertsTap(
                             slot=site.interface_slot,
                             read=_experts_capture(
-                                capture, idx_capture, key, site, batch_size
+                                capture,
+                                idx_capture,
+                                key,
+                                site,
+                                batch_size,
+                                self._tap(site),
                             ),
                         )
                     )
@@ -712,7 +882,9 @@ class PointExecutor(ExecutorBase):
                     delta.setdefault(site.module, []).append(
                         DeltaTap(
                             slot=site.interface_slot,
-                            read=_interface_capture(capture, key, site, batch_size),
+                            read=_interface_capture(
+                                capture, key, site, batch_size, self._tap(site)
+                            ),
                         )
                     )
                     continue
@@ -721,7 +893,9 @@ class PointExecutor(ExecutorBase):
                     interface.setdefault(id(site.module), []).append(
                         InterfaceTap(
                             slot=site.interface_slot,
-                            read=_interface_capture(capture, key, site, batch_size),
+                            read=_interface_capture(
+                                capture, key, site, batch_size, self._tap(site)
+                            ),
                         )
                     )
                     continue
@@ -734,6 +908,7 @@ class PointExecutor(ExecutorBase):
                         shape=site.shape,
                         tuple_index=site.tuple_index,
                         batch_size=batch_size,
+                        tap=self._tap(site),
                     )
                 )
             hooks.enter_context(
@@ -751,7 +926,8 @@ class PointExecutor(ExecutorBase):
             )
             hooks.enter_context(
                 delta_kernel_taps(
-                    {mixer: tuple(entries) for mixer, entries in delta.items()}
+                    {mixer: tuple(entries) for mixer, entries in delta.items()},
+                    model=self.bundle.model,
                 )
             )
             if resume is None:
@@ -760,14 +936,23 @@ class PointExecutor(ExecutorBase):
                 resume = resume()
             blocks = self.bundle.blocks
             last = len(blocks) - 1
+            # the residual entering a block is stored by the stage holding it;
+            # every other stage records the key alone (`_ABSENT`, below), so
+            # the store's keys — what the next window's start is decided from
+            # — agree on every rank (§3, "never branch on rank")
+            absent_prefixes: list[PrefixKey] = []
             for key, rows in resume.store.items():
                 assert self.interning is not None
+                if not stages.owns_block(min(key[3], last)):
+                    absent_prefixes.append(key)
+                    continue
                 hooks.enter_context(
                     _storing_prefix(
                         blocks[min(key[3], last)],
                         self.interning.cache.prefixes,
                         key,
                         rows,
+                        device=self.bundle.devices.device_of(min(key[3], last)),
                     )
                 )
             if resume.cached is not None:
@@ -777,7 +962,8 @@ class PointExecutor(ExecutorBase):
                 _refuse_sites_below(
                     resume.start, [site for site, _ in write_hooks], tapped
                 )
-                hooks.enter_context(_resumed(blocks, resume.start, resume.cached))
+                if stages.swaps(resume.start):
+                    hooks.enter_context(_resumed(blocks, resume.start, resume.cached))
             if depth == 0 and not taps_head(
                 [*tapped, *(site for site, _ in write_hooks)]
             ):
@@ -786,30 +972,147 @@ class PointExecutor(ExecutorBase):
                 # every block: the model runs without its vocabulary
                 # projection, and a projecting read (shared/head.py) does its
                 # own over the rows it gathered. A decode keeps it: the
-                # prefill's logits pick the first token
+                # prefill's logits pick the first token. Under a pipeline the
+                # swap lands on the last stage's head and on the stand-ins
+                # every other stage holds for it (sharding.place_stage); the
+                # empty logits it leaves are what the stages broadcast
                 hooks.enter_context(_without_head(self.bundle))
             with torch.enable_grad() if self.grad_enabled else torch.no_grad():
-                prefill = self._model_forward(batch, depth, window)
+                prefill = self._model_forward(
+                    batch,
+                    depth,
+                    window,
+                    resume.start if resume.cached is not None else 0,
+                    # a graded forward with a write is `loss.backward()`-ed on
+                    # every rank: the residual crossing a stage boundary then
+                    # carries the gradient back, and what this rank did not
+                    # compute is attached to its graph (stages.py, §7)
+                    backward=self.grad_enabled and bool(write_hooks),
+                )
+            stages.broadcast_captures(tapped, capture, idx_capture)
+            stages.attach_received(tapped, capture, prefill)
+            if self.interning is not None:
+                for key in absent_prefixes:
+                    self.interning.cache.prefixes[key] = _ABSENT
             if resume.cached is not None and self.interning is not None:
                 # tallied once the pass has returned: a raising pass skipped
                 # nothing. A captured cohort's worker resumes from a buffer of
                 # its own and has no store to tell (graph_cohort.py)
                 self.interning.cache.resumed.append(resume.start)
+                if self.interning.counted and prefix is not None:
+                    self.interning.cache.decisions.append(
+                        Reuse("resumed", f"{prefix.base_key}@{resume.start}")
+                    )
         return capture, idx_capture, prefill
 
-    def _model_forward(self, batch, depth, window):
+    def _enter_write_hooks(
+        self,
+        hooks: contextlib.ExitStack,
+        write_hooks: Sequence[tuple[ResolvedSite, Callable[..., Any]]],
+        interface: dict[int, list[InterfaceTap]],
+        experts: dict[int, list[ExpertsTap]],
+        delta: dict[Any, list[DeltaTap]],
+        batch_size: int,
+        stages: StageForward,
+    ) -> None:
+        """Install one forward's write hooks: module-boundary writers enter
+        ``hooks`` directly; attention-interface, experts and DeltaNet writers
+        are collected into the per-module tables the caller installs as one
+        interception each. A site another pipeline stage holds is skipped
+        (``stages.installs``); every edit runs through this rank's tap
+        fragments (`_tap`). Shared by the prefill
+        (`_forward_window`) and by a decode whose model keeps its
+        writes in force (`_decode_window`)."""
+        for site, fn in write_hooks:
+            if not stages.installs(site):
+                continue
+            if site.kind == "experts":
+                assert site.interface_slot is not None
+                experts.setdefault(id(site.module), []).append(
+                    ExpertsTap(
+                        slot=site.interface_slot,
+                        edit=_experts_edit(site, fn, batch_size, self._tap(site)),
+                    )
+                )
+                continue
+            if site.kind == "delta":
+                assert site.interface_slot is not None
+                if site.interface_slot == "state":
+                    # a state write must feed forward, so it rides the
+                    # stepwise substitution's own surface — `fn` here IS
+                    # the per-step writer (_build_write_hooks)
+                    delta.setdefault(site.module, []).append(
+                        DeltaTap(slot="state", edit_state=fn)
+                    )
+                    continue
+                delta.setdefault(site.module, []).append(
+                    DeltaTap(
+                        slot=site.interface_slot,
+                        edit=_interface_edit(site, fn, batch_size, self._tap(site)),
+                    )
+                )
+                continue
+            if site.interface_slot is not None:
+                interface.setdefault(id(site.module), []).append(
+                    InterfaceTap(
+                        slot=site.interface_slot,
+                        edit=_interface_edit(site, fn, batch_size, self._tap(site)),
+                    )
+                )
+                continue
+            _refuse_unfragmentable_write(site)
+            hooks.enter_context(
+                _installed(
+                    site.module,
+                    site.kind,
+                    fn,
+                    shape=site.shape,
+                    tuple_index=site.tuple_index,
+                    batch_size=batch_size,
+                    writeback=site.writeback,
+                    site_name=f"{site.component} at layer {site.layer}",
+                    tap=self._tap(site),
+                )
+            )
+
+    def _model_forward(
+        self, batch, depth, window, start: int = 0, *, backward: bool = False
+    ):
+        """The model call over ``window``'s rows — through this rank's
+        pipeline stage (``stages.py``, §6.5), which at world 1 is the call
+        itself; ``start`` is the block a resumed forward begins at (0 for a
+        whole one), what decides which stages run and which receive;
+        ``backward`` says the graph will be backward'ed, so the residuals
+        crossing the stage boundaries carry the gradient back (§7). Under
+        context parallelism (§8.4) the call receives this rank's chunk of
+        the padded frame — the ids, the mask and the position ids alike, so
+        rotary embeddings see the frame's positions — and the attention
+        and DeltaNet wrappers bound to the window's frame do the rest.
+
+        A prompt-only forward of a hybrid family at ``cp=1``, ``pp=1`` gets
+        its masks prebuilt ([`prompt_masks`][]): transformers would
+        otherwise decide per forward, with a ``torch.all`` over the mask — a
+        device→host round trip before the first layer launches — whether its
+        DeltaNet layers see a padding mask at all. Under a context group the
+        frame's wrappers own the masks; under a pipeline the embedding the
+        builder reads is a stand-in on every stage but the first, and the
+        stages' mask arithmetic is the model's own either way."""
         input_ids = batch.input_ids[window.slice]
         attention_mask: Any = batch.attention_mask[window.slice]
         position_ids = batch.position_ids()[window.slice]
-        if depth == 0 and has_recurrent_layers(self.bundle.model.config):
-            # a prompt-only forward of a hybrid family gets its masks
-            # prebuilt (:func:`prompt_masks`): transformers would otherwise
-            # decide per forward, with a ``torch.all`` over the mask — a
-            # device→host round trip before the first layer launches —
-            # whether its DeltaNet layers see a padding mask at all. Keyed by
-            # the window's shape and its rows' first real tokens, which is
-            # what a left-padded mask is; a handful kept, since a cohort
-            # frame is rebuilt per forward and repeats only by composition
+        if self.sequence is not None:
+            input_ids = self.sequence.narrow(input_ids)
+            attention_mask = self.sequence.narrow(attention_mask)
+            position_ids = self.sequence.narrow(position_ids)
+        elif (
+            depth == 0
+            and self.fragments.size("pipeline") == 1
+            and has_recurrent_layers(self.bundle.model.config)
+        ):
+            # keyed by the window's shape and its rows' first real tokens,
+            # which is what a left-padded mask is; a handful kept, since a
+            # cohort frame is rebuilt per forward and repeats only by
+            # composition
             key = (tuple(input_ids.shape), batch.first_reals[window.slice])
             masks = self._prompt_masks.get(key)
             if masks is None:
@@ -820,17 +1123,29 @@ class PointExecutor(ExecutorBase):
                     del self._prompt_masks[next(iter(self._prompt_masks))]
                 self._prompt_masks[key] = masks
             attention_mask = masks
-        return self.bundle.model(
+        return self._stages.forward(
+            self.bundle.model,
+            hidden_size=self.bundle.info.hidden_size,
+            device=self.bundle.devices.embedding,
             input_ids=input_ids,
             attention_mask=attention_mask,
             position_ids=position_ids,
             # Enable the cache only when decode will consume it. Keeping it
             # disabled otherwise preserves the kernel path used by goldens.
             use_cache=depth > 0,
+            start=start,
+            backward=backward,
         )
 
+    def trained_owner(self, names: Iterable[str]) -> TrainedOwner:
+        """The pipeline stage that computes the gradients of the featurizers
+        ``names`` — the owner of their sites (``stages.py``, §7); the fit
+        syncs the trained parameters from it after each update. Nothing is
+        owned at world 1; featurizers on two stages are refused by name."""
+        return self._stages.trained_owner(names, self.featurizer_sites)
+
     def _resume_for(self, prefix: PrefixPlan | None, window: RowWindow) -> "Resume":
-        """This window's resume decision (:meth:`_prefix_window`), as the
+        """This window's resume decision (`_prefix_window`), as the
         forward consumes it: ``start`` is the deepest *stored* depth the window
         can use, not the plan's ceiling, and every prefix it stores covers the
         window's rows whole."""
@@ -858,11 +1173,11 @@ class PointExecutor(ExecutorBase):
         Keys carry the plan's depth; the block a depth names is that depth
         clamped to the loaded model, so a write past every block reads as
         "start at the last block" and two such plan depths share one block —
-        the :data:`~causalab.protocol.plan.PAST_BLOCKS` key and the last
+        the [`PAST_BLOCKS`][causalab.protocol.positions.alignment.PAST_BLOCKS] key and the last
         block's key then hold the same tensor, a deliberate duplicate that
         keeps the refcount in plan coordinates.
         Only a family whose decoder loop was verified against the swap
-        resumes (:data:`_RESUMABLE_MODEL_TYPES`); any other runs whole and
+        resumes (`_RESUMABLE_MODEL_TYPES`); any other runs whole and
         stores nothing.
         """
         if prefix is None or self.interning is None or not _resumable(self.bundle):
@@ -872,7 +1187,7 @@ class PointExecutor(ExecutorBase):
         ceiling = min(prefix.resume_at, last)
         # the depths any stored prefix of this identity can have are the
         # campaign's wanted ones, so those are the candidates to look up
-        depths = sorted(cache.wanted_prefix_depths.get(prefix.base_digest, ()))
+        depths = sorted(cache.wanted_prefix_depths.get(prefix.base_key, ()))
         start = 0
         cached: torch.Tensor | None = None
         for candidate in reversed(depths):
@@ -893,7 +1208,7 @@ class PointExecutor(ExecutorBase):
             # revisits a pair — storing it now would leak the residual to the
             # end of the request (the storing pass itself has not settled yet,
             # so a depth it will read is still positive here)
-            if cache.prefix_owed.get((prefix.base_digest, candidate), 0) <= 0:
+            if cache.prefix_owed.get((prefix.base_key, candidate), 0) <= 0:
                 continue
             key = self._prefix_key(prefix, window, candidate)
             if key not in cache.prefixes:
@@ -929,6 +1244,13 @@ class PointExecutor(ExecutorBase):
         *,
         depth: int,
         sites: Mapping[str, ResolvedSite],
+        writes: Mapping[
+            Any, tuple[ResolvedSite, list[tuple[str, WriteSpec, ResolvedSite]]]
+        ]
+        | None = None,
+        input_role: str = "base",
+        fires: GroupFires | None = None,
+        group: str = "",
     ) -> Decoded:
         """Greedy-decode ``window``'s rows from their prefill, capturing every
         continuation tap per step.
@@ -938,18 +1260,23 @@ class PointExecutor(ExecutorBase):
         generated position has activations — including the last, whose
         ``lm_head`` value is the distribution *after* it (§2.3).
 
-        **Write hooks are gone by now**: they lived in the prefill's
-        ``ExitStack``, which closed before this runs. That is the whole of
-        "writes are prefill-only" — an intervention reaches the continuation
-        through the first token's logits and through what it left in the KV
-        cache, and nothing re-fires per step.
+        **The prefill's write hooks are gone by now**: they lived in the
+        prefill's ``ExitStack``, which closed before this runs. Without
+        ``writes`` that is the whole of prefill-only writes — an intervention
+        reaches the continuation through the first token's logits and through
+        what it left in the KV cache, and nothing re-fires per step. With
+        ``writes`` — the model's resolved write set, handed over when it
+        declares ``writes_during_generation`` (§2.9) — the same writes are
+        installed again for the loop and fire once per step at the token being
+        decoded; each step is one forward, checked and folded into ``fires``
+        like the prefill (§4 "Fires").
         """
+        self._refuse_decode()  # not served under context parallelism (§8.4)
         mask = batch.attention_mask[window.slice]
         next_pos = batch.position_ids()[window.slice][:, -1:]
         # one generator per decode window, seeded from the request: the same
-        # seed under the same geometry draws the same tokens (a claim the CPU
-        # fixtures make and the golden tier checks on a GPU); `None` for a
-        # deterministic decode
+        # seed under the same geometry draws the same tokens (tested on CPU
+        # fixtures, assumed on a GPU); `None` for a deterministic decode
         generator = _generator(self.decoding, prefill.logits.device)
         nxt = _draw(prefill.logits[:, -1:, :], self.decoding, generator)
 
@@ -962,12 +1289,36 @@ class PointExecutor(ExecutorBase):
         idx_steps: dict[TapKey, list[torch.Tensor]] = {}
         cache = prefill.past_key_values
         with contextlib.ExitStack() as hooks:
-            hooks.enter_context(torch_kernel_path(self.bundle.model))
+            hooks.enter_context(
+                torch_kernel_path(
+                    self.bundle.model, on_cuda=self.bundle.devices.is_cuda
+                )
+            )
             hooks.enter_context(short_seq_kernel_path(self.bundle.model))
+            # the norms and the rotary embedding run as fused kernels where
+            # each call's plan admits it (kernels/fused_norms.py)
+            hooks.enter_context(fused_norm_path(self.bundle.model))
             interface: dict[int, list[InterfaceTap]] = {}
             experts: dict[int, list[ExpertsTap]] = {}
             delta: dict[Any, list[DeltaTap]] = {}
             batch_size = window.size
+            step_tally: list[FireTally] = [FireTally()]
+            members: tuple[str, ...] = ()
+            if writes:
+                members = tuple(
+                    ename for _, entries in writes.values() for ename, _, _ in entries
+                )
+                self._enter_write_hooks(
+                    hooks,
+                    self._build_decode_write_hooks(
+                        writes, input_role, batch, window, step_tally
+                    ),
+                    interface,
+                    experts,
+                    delta,
+                    batch_size,
+                    self._stages,
+                )
             for site in sites.values():
                 key = tap_key(site)
                 if key in steps:
@@ -980,7 +1331,11 @@ class PointExecutor(ExecutorBase):
                         ExpertsTap(
                             slot=site.interface_slot,
                             read=_experts_accumulate(
-                                steps[key], idx_steps[key], site, batch_size
+                                steps[key],
+                                idx_steps[key],
+                                site,
+                                batch_size,
+                                self._tap(site),
                             ),
                         )
                     )
@@ -990,7 +1345,9 @@ class PointExecutor(ExecutorBase):
                     delta.setdefault(site.module, []).append(
                         DeltaTap(
                             slot=site.interface_slot,
-                            read=_interface_accumulate(steps[key], site, batch_size),
+                            read=_interface_accumulate(
+                                steps[key], site, batch_size, self._tap(site)
+                            ),
                         )
                     )
                     continue
@@ -999,7 +1356,9 @@ class PointExecutor(ExecutorBase):
                     interface.setdefault(id(site.module), []).append(
                         InterfaceTap(
                             slot=site.interface_slot,
-                            read=_interface_accumulate(steps[key], site, batch_size),
+                            read=_interface_accumulate(
+                                steps[key], site, batch_size, self._tap(site)
+                            ),
                         )
                     )
                     continue
@@ -1011,6 +1370,7 @@ class PointExecutor(ExecutorBase):
                         shape=site.shape,
                         tuple_index=site.tuple_index,
                         batch_size=batch_size,
+                        tap=self._tap(site),
                     )
                 )
             hooks.enter_context(
@@ -1036,6 +1396,9 @@ class PointExecutor(ExecutorBase):
                     finished |= nxt == eos
                 mask = torch.cat([mask, torch.ones_like(nxt)], dim=1)
                 next_pos = next_pos + 1
+                if writes:
+                    step_tally[0] = FireTally()
+                    step_tally[0].declare(members, 1)
                 with torch.enable_grad() if self.grad_enabled else torch.no_grad():
                     out = self.bundle.model(
                         input_ids=nxt,
@@ -1044,6 +1407,12 @@ class PointExecutor(ExecutorBase):
                         past_key_values=cache,
                         use_cache=True,
                     )
+                if writes:
+                    # every member fired once in this step's forward, or the
+                    # point is refused here, as after the prefill
+                    check_fires(group, step_tally[0])
+                    if fires is not None:
+                        fires.fold(step_tally[0])
                 cache = out.past_key_values
                 nxt = _draw(out.logits[:, -1:, :], self.decoding, generator)
                 nxt = torch.where(finished, torch.full_like(nxt, pad), nxt)
@@ -1105,6 +1474,7 @@ class PointExecutor(ExecutorBase):
 
         head = None
         for rname, read in gen_taps:
+            ref = ReadRef(rname, model)
             site = gen_sites[rname]
             capture_site = gen_capture_sites[rname]
             stacked = decoded.steps[tap_key(capture_site)]
@@ -1121,7 +1491,7 @@ class PointExecutor(ExecutorBase):
                 )
                 for row in range(rows)
             ]
-            self._read_steps[rname] = per_row
+            self._read_steps[ref] = per_row
             project = None
             if capture_site is not site:  # ln_final kept, lm_head owed
                 head = head or head_module(self.bundle)
@@ -1131,13 +1501,13 @@ class PointExecutor(ExecutorBase):
                 if (
                     not read.featurizer
                     and read.dims is None
-                    and not any(entry.value == rname for entry in self.doc.save)
+                    and ref not in self._saved_raw
                     and not self.grad_enabled
                 ):
-                    self._deferred_heads[rname] = head
+                    self._deferred_heads[ref] = head
                     project = None
-            self._read_values[rname] = self._finalize_read(
-                rname,
+            self._read_values[ref] = self._finalize_read(
+                ref,
                 read,
                 site,
                 stacked,
@@ -1163,7 +1533,7 @@ class PointExecutor(ExecutorBase):
         tally: FireTally,
     ) -> list[tuple[ResolvedSite, Callable[..., Any]]]:
         """One in-place writer per written-to tap, applying every write at that
-        address in class order (the shared write math, executor_base), for
+        address in class order (the shared write math, ``executor/writes.py``), for
         the forward over ``rows``.
 
         Returns the *site* rather than its parts: a tap may be a module
@@ -1173,7 +1543,7 @@ class PointExecutor(ExecutorBase):
         applies (§4 "Fires"): a module-boundary, interface, experts or
         kernel-boundary writer is declared to fire once in this forward, a
         state writer once per distinct step its rows address
-        (``executor_base._state_step_writer``).
+        (``executor.writes._state_step_writer``).
         """
         hooks: list[tuple[ResolvedSite, Callable[..., Any]]] = []
         for site, entries in addresses.values():
@@ -1181,7 +1551,7 @@ class PointExecutor(ExecutorBase):
             if site.kind == "delta" and site.interface_slot == "state":
                 # the one address whose writer is per-step (step, S) -> S:
                 # a state edit feeds forward, so the whole-tensor contract
-                # cannot express it (executor_base._state_step_writer)
+                # cannot express it (executor.writes._state_step_writer)
                 hooks.append(
                     (
                         site,
@@ -1200,6 +1570,72 @@ class PointExecutor(ExecutorBase):
                     ),
                 )
             )
+        return hooks
+
+    def _writes_during_generation(self, model: str) -> bool:
+        """§2.9: whether ``model`` keeps its writes in force through the decode
+        steps. The un-intervened model has no writes and never does."""
+        im = self.doc.intervened_models.get(model)
+        return im is not None and bool(im.writes_during_generation)
+
+    def _build_decode_write_hooks(
+        self,
+        addresses: Mapping[
+            Any, tuple[ResolvedSite, list[tuple[str, WriteSpec, ResolvedSite]]]
+        ],
+        input_role: str,
+        batch: EncodedBatch,
+        rows: RowWindow,
+        tally: list[FireTally],
+    ) -> list[tuple[ResolvedSite, Callable[..., Any]]]:
+        """One writer per written-to tap for a **decode step** (§2.9
+        ``writes_during_generation``): writes land on the token being decoded,
+        whatever prompt-frame form their ``pos`` took. Query-axis tensors
+        carry that token alone, at position 0; key-axis tensors include the
+        cached prefix, so the current token is their last position
+        (rule 16 admits only the two forms that mean "this token": ``all`` and
+        ``{"index": -1}``). ``tally`` is a one-element holder: the loop swaps
+        in a fresh [`FireTally`][] per step, so each step is checked as the
+        forward it is.
+        """
+        hooks: list[tuple[ResolvedSite, Callable[..., Any]]] = []
+        for site, entries in addresses.values():
+            members = tuple(ename for ename, _, _ in entries)
+            if site.kind == "delta" and site.interface_slot == "state":
+                raise ProtocolError(
+                    "P4",
+                    f"write(s) {list(members)} address 'delta_state' in a model "
+                    "that keeps its writes in force during generation: a state "
+                    "write is applied per recurrence step of the prompt, and a "
+                    "decode step's state has no prompt steps to address",
+                    reason="unsupported_mechanism",
+                )
+
+            def apply(
+                tensor: torch.Tensor,
+                routing: torch.Tensor | None = None,
+                *,
+                site: ResolvedSite = site,
+                entries: list[tuple[str, WriteSpec, ResolvedSite]] = entries,
+                members: tuple[str, ...] = members,
+            ) -> None:
+                tally[0].fired(members)
+                key_axis = site.shape.has_contract_form and any(
+                    axis.kind == "position" and axis.name == "key"
+                    for axis in site.shape.axes
+                )
+                position = tensor.shape[1] - 1 if key_axis else 0
+                self._apply_writes_to_contract(
+                    entries,
+                    input_role,
+                    batch,
+                    tensor,
+                    per_row=[[position] for _ in range(rows.size)],
+                    rows=rows,
+                    routing=routing,
+                )
+
+            hooks.append((site, apply))
         return hooks
 
     def _address_writer(
@@ -1274,12 +1710,12 @@ def _concat_rows(parts: list[torch.Tensor]) -> torch.Tensor:
 #: causal mask(s) and the rotary tables computed *before* the loop, and no
 #: per-layer arithmetic outside the block itself (a residual scale, an every-k
 #: cross-attention). Per-layer metadata read *off the layer object* is fine —
-#: :class:`_StandIn` falls through for it; a choice indexed off
+#: `_StandIn` falls through for it; a choice indexed off
 #: ``config.layer_types[i]`` is fine too, since the swap keeps every block at
 #: its own index; and the ``all_hidden_states`` collection every loop keeps
 #: under ``output_hidden_states`` is harmless only because nothing in causalab
 #: requests it — reads come from hooks, and below ``start`` that tuple would
-#: hold the stand-ins' outputs. Spelled as :attr:`ModelInfo.family` spells
+#: hold the stand-ins' outputs. Spelled as [`ModelInfo.family`][causalab.protocol.registry.models.ModelInfo.family] spells
 #: them — the **text** config's ``model_type`` (``registry.model_info_from_hf_config``
 #: peels ``text_config``), which is why the multimodal families appear as
 #: ``*_text``: a real Qwen3.5/3.6-MoE or Gemma-3 checkpoint tops its config
@@ -1307,15 +1743,30 @@ _RESUMABLE_MODEL_TYPES: frozenset[str] = frozenset(
 
 def _resumable(bundle: ModelBundle) -> bool:
     """Whether the loaded model's family is one the resume swap is verified
-    for — the family the loader resolved (:attr:`ModelInfo.family`, the text
+    for — the family the loader resolved ([`ModelInfo.family`][causalab.protocol.registry.models.ModelInfo.family], the text
     config's ``model_type``), never the wrapper config's own spelling, and
     not the adapter's structural family either: the allow-list names the
     decoder *loop*, code the model class carries, not the module tree, and
     ``adapter.family`` (``llama_tree``) is coarser than that question. On a
-    caller-owned bundle (:meth:`ModelBundle.from_model`) the family is the
+    caller-owned bundle ([`ModelBundle.from_model`][]) the family is the
     caller's assertion, so a fork with a patched loop is theirs to keep off
     the list."""
     return bundle.info.family in _RESUMABLE_MODEL_TYPES
+
+
+def _state_members(
+    addresses: Mapping[
+        Any, tuple[ResolvedSite, list[tuple[str, WriteSpec, ResolvedSite]]]
+    ],
+) -> tuple[str, ...]:
+    """The write members landing on a DeltaNet ``state`` slot — the per-step
+    writers, whose firings are positions of the frame (``whole_steps``)."""
+    return tuple(
+        ename
+        for site, entries in addresses.values()
+        if site.kind == "delta" and site.interface_slot == "state"
+        for ename, _, _ in entries
+    )
 
 
 def _refuse_sites_below(start: int, *groups: Iterable[ResolvedSite]) -> None:
@@ -1399,7 +1850,7 @@ class _Passthrough(_StandIn):
 
 class _ElidedHead(_StandIn):
     """Stands in for the vocabulary head of a forward nothing reads or
-    writes the head on (:func:`_without_head`): returns an **empty** tensor
+    writes the head on (`_without_head`): returns an **empty** tensor
     where the logits would be. Empty rather than the residual it was handed,
     so the one legitimate consumer of a model output's ``.logits`` — the
     decode, which never runs under an elided head — would fail on its first
@@ -1413,18 +1864,18 @@ class _ElidedHead(_StandIn):
 def _without_head(bundle: ModelBundle) -> Iterator[None]:
     """Run the model without its vocabulary projection for the span of one
     forward: the head module — where the family's tree puts it
-    (``adapter.tree.lm_head``) — is swapped for :class:`_ElidedHead` and put
+    (``adapter.tree.lm_head``) — is swapped for `_ElidedHead` and put
     back in a ``finally``. Everything before it runs as it did, every hook
     below it fires as usual, and the head's own ``[rows·seq, d_model] ×
     [d_model, vocab]`` GEMM never launches; a read that wants the head at
     its positions runs the module itself over what it gathered
     (``shared/head.py``).
 
-    Like :func:`_resumed` this **mutates the shared bundle** for the span of
+    Like `_resumed` this **mutates the shared bundle** for the span of
     the call and is not re-entrant: no other forward, swap or
     ``state_dict()`` may run on the model while a window is inside it. The
     caller has checked that no tap and no write of this forward addresses
-    the head (:func:`~causalab.neural.shared.head.taps_head`) — a hook on
+    the head ([`taps_head`][]) — a hook on
     the swapped-out module would silently never fire."""
     path = adapter_of(bundle).tree.lm_head
     parent_path, _, name = path.rpartition(".")
@@ -1450,8 +1901,8 @@ def _resumed(blocks: Any, depth: int, cached: torch.Tensor) -> Iterator[None]:
     it (a test's block counter, a stray capture) sees nothing, which is the
     truth. The decoder loop this relies on — ``hidden_states`` as the first
     positional argument, a bare tensor returned — is the one the families in
-    :data:`_RESUMABLE_MODEL_TYPES` were read to have; every other family is
-    refused by :func:`_resumable`.
+    `_RESUMABLE_MODEL_TYPES` were read to have; every other family is
+    refused by `_resumable`.
 
     This **mutates the shared bundle** for the span of the call and is not
     re-entrant: the loaded model is one object per process, so nothing else
@@ -1469,6 +1920,12 @@ def _resumed(blocks: Any, depth: int, cached: torch.Tensor) -> Iterator[None]:
     finally:
         for i, block in enumerate(originals):
             blocks[i] = block
+
+
+#: The store's entry for a prefix another pipeline stage holds (§6.5): the
+#: key is present on every rank — the resume decision reads the keys — and
+#: the residual lives on the stage owning the block it enters.
+_ABSENT = torch.empty(0)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1490,6 +1947,8 @@ def _storing_prefix(
     sink: dict[PrefixKey, torch.Tensor],
     key: PrefixKey,
     rows: slice | None = None,
+    *,
+    device: torch.device | None = None,
 ) -> Iterator[None]:
     """Store the residual entering ``block`` under ``key`` — detached, as it
     arrives, before any other pre-hook on the block runs; ``rows`` narrows it
@@ -1497,14 +1956,27 @@ def _storing_prefix(
 
     ``prepend=True`` is what makes an intervened pass a safe source: a write
     landing on this block's *input* rides a later pre-hook and returns edited
-    arguments, and this hook has already seen the originals. The tensor is
-    kept as is rather than cloned — no hook mutates its arguments in place
-    (the write hooks clone first), and the block reads it without writing.
+    arguments, and this hook has already seen the originals. A whole-batch
+    prefix is kept as is rather than cloned: no hook mutates its arguments in
+    place (the write hooks clone first), and the block reads it without
+    writing. A row slice is cloned. A slice of the batch tensor is a view, and
+    a view pins the whole window's residual for as long as the prefix lives,
+    which for a minibatch slice is the fit's lifetime (sec. 4 "Fits"). A
+    sixteen-row slice out of a 512-row window would pin 32 times the bytes it
+    records, and a cohort stores one such slice per member per step.
+
+    ``device`` is the block's own (``DeviceMap.device_of``): this hook runs
+    before the loader's crossing moves the residual there, so on a placed
+    model the stored tensor is moved itself — the resume cache holds every
+    prefix on the device of the block it enters, which is where
+    `_CachedResidual` hands it back and where a cohort concatenates
+    its members' prefixes. On one device the move is the identity.
     """
 
     def hook(_module: Any, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
         hidden = args[0] if args else kwargs["hidden_states"]
-        sink[key] = hidden.detach() if rows is None else hidden[rows].detach()
+        kept = hidden.detach() if rows is None else hidden[rows].detach().clone()
+        sink[key] = kept if device is None else kept.to(device)
 
     handle = block.register_forward_pre_hook(hook, prepend=True, with_kwargs=True)
     try:
@@ -1517,21 +1989,38 @@ def _storing_prefix(
 # hook plumbing (mirrors the oracle's _install / capture helpers)
 # --------------------------------------------------------------------------- #
 
+#: The world-1 ``whole`` / ``fragment``: the identity, no collective — what a
+#: hook installed without a site's tap runs through.
+
 
 def _interface_edit(
-    site: ResolvedSite, write: Callable[[torch.Tensor], None], batch_size: int
+    site: ResolvedSite,
+    write: Callable[[torch.Tensor], None],
+    batch_size: int,
+    tap: TapFragments = IDENTITY_TAP,
 ) -> Callable[[torch.Tensor], torch.Tensor]:
     """Adapt an in-place contract-shaped writer to the interface's protocol.
 
     The manager hands out a clone and takes back a replacement, which is why
     this can convert, mutate and convert back without any of it reaching the
     model's own storage.
+
+    Under tensor parallelism (§6.2) the slot is this rank's head shard: it is
+    made whole before the conversion and the write — so a ``head:`` slice and
+    the write math see the global head order — and the edited tensor is
+    fragmented back to the rank's heads before it re-enters the library's own
+    math (the value multiply, for the pattern). Replicated slots (every
+    DeltaNet slot) pass through the identity.
     """
 
     def edit(native: torch.Tensor) -> torch.Tensor:
+        native = tap.whole(native)
         contract = to_contract(native, site.shape, batch_size=batch_size)
         write(contract)
-        return from_contract(contract, site.shape, batch_size=batch_size, native=native)
+        edited = from_contract(
+            contract, site.shape, batch_size=batch_size, native=native
+        )
+        return tap.fragment(edited)
 
     return edit
 
@@ -1541,22 +2030,27 @@ def _interface_capture(
     key: Any,
     site: ResolvedSite,
     batch_size: int,
+    tap: TapFragments = IDENTITY_TAP,
 ) -> Callable[[torch.Tensor], None]:
-    """The read half — the same contract shape ``_capturing`` produces."""
+    """The read half — the same contract shape ``_capturing`` produces, made
+    whole first (§6.2)."""
 
     def read(native: torch.Tensor) -> None:
-        sink[key] = to_contract(native, site.shape, batch_size=batch_size)
+        sink[key] = to_contract(tap.whole(native), site.shape, batch_size=batch_size)
 
     return read
 
 
 def _interface_accumulate(
-    sink: list[torch.Tensor], site: ResolvedSite, batch_size: int
+    sink: list[torch.Tensor],
+    site: ResolvedSite,
+    batch_size: int,
+    tap: TapFragments = IDENTITY_TAP,
 ) -> Callable[[torch.Tensor], None]:
     """The read half for a decode: append per step, as ``_accumulating`` does."""
 
     def read(native: torch.Tensor) -> None:
-        sink.append(to_contract(native, site.shape, batch_size=batch_size))
+        sink.append(to_contract(tap.whole(native), site.shape, batch_size=batch_size))
 
     return read
 
@@ -1568,32 +2062,43 @@ def _contract_idx(idx: torch.Tensor, batch_size: int) -> torch.Tensor:
 
 
 def _experts_edit(
-    site: ResolvedSite, write: Callable[..., None], batch_size: int
+    site: ResolvedSite,
+    write: Callable[..., None],
+    batch_size: int,
+    tap: TapFragments,
 ) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]:
     """Adapt an in-place contract-shaped writer to the experts interface.
 
-    Same contract as :func:`_interface_edit`: the manager hands out a clone in
+    Same contract as `_interface_edit`: the manager hands out a clone in
     the taps' token-major form, this converts it to ``(batch, position,
     feature)``, lets the shared write math mutate it, and converts back. The
     routing table rides along in contract form, ``(batch, position, top_k)``:
     it is what an expert-keyed gate at this address keys its parameters by
-    (``executor_base._written_value``).
+    (``executor.writes._written_value``).
 
     A site naming an ``expert`` writes only that expert's rows: the write math
     runs over the whole contract tensor as usual, and the merge keeps its
     result exactly where the routing table names that expert — an expert no
     token chose therefore receives a write that lands nowhere, the data-fact
     twin of the width-0 read.
+
+    Under expert parallelism (§6.3) the routing table is made global first,
+    the token-major view is made whole (this rank's slots plus every other
+    rank's, an exact sum), the write runs on the global view, and the result
+    is fragmented back to the slots this rank owns.
     """
 
     def edit(native: torch.Tensor, idx: torch.Tensor) -> torch.Tensor:
+        idx = tap.routing(idx)
+        native = tap.whole(native)
         contract = to_contract(native, site.shape, batch_size=batch_size)
         idx_c = _contract_idx(idx, batch_size)  # (b, s, top_k)
         if site.expert is None:
             write(contract, routing=idx_c)
-            return from_contract(
+            edited = from_contract(
                 contract, site.shape, batch_size=batch_size, native=native
             )
+            return tap.fragment(edited, routing=idx)
         original = contract.clone()
         write(contract, routing=idx_c)
         top_k = idx_c.shape[-1]
@@ -1605,7 +2110,8 @@ def _experts_edit(
             .reshape(contract.shape)
         )
         merged = torch.where(mask, contract, original)
-        return from_contract(merged, site.shape, batch_size=batch_size, native=native)
+        edited = from_contract(merged, site.shape, batch_size=batch_size, native=native)
+        return tap.fragment(edited, routing=idx)
 
     return edit
 
@@ -1616,13 +2122,14 @@ def _experts_capture(
     key: Any,
     site: ResolvedSite,
     batch_size: int,
+    tap: TapFragments,
 ) -> Callable[[torch.Tensor, torch.Tensor], None]:
     """The read half — the same contract shape ``_capturing`` produces, plus
-    the routing table the ``expert:`` sub-axis joins on."""
+    the routing table the ``expert:`` sub-axis joins on, both global (§6.3)."""
 
     def read(native: torch.Tensor, idx: torch.Tensor) -> None:
-        sink[key] = to_contract(native, site.shape, batch_size=batch_size)
-        idx_sink[key] = _contract_idx(idx, batch_size)
+        sink[key] = to_contract(tap.whole(native), site.shape, batch_size=batch_size)
+        idx_sink[key] = _contract_idx(tap.routing(idx), batch_size)
 
     return read
 
@@ -1632,6 +2139,7 @@ def _experts_accumulate(
     idx_sink: list[torch.Tensor],
     site: ResolvedSite,
     batch_size: int,
+    tap: TapFragments,
 ) -> Callable[[torch.Tensor, torch.Tensor], None]:
     """The read half for a decode: append per step, as ``_accumulating`` does.
 
@@ -1643,10 +2151,39 @@ def _experts_accumulate(
     """
 
     def read(native: torch.Tensor, idx: torch.Tensor) -> None:
-        sink.append(to_contract(native, site.shape, batch_size=batch_size))
-        idx_sink.append(_contract_idx(idx, batch_size))
+        sink.append(to_contract(tap.whole(native), site.shape, batch_size=batch_size))
+        idx_sink.append(_contract_idx(tap.routing(idx), batch_size))
 
     return read
+
+
+def _refuse_unfragmentable_write(site: ResolvedSite) -> None:
+    """Refuse a module-boundary write the router's expert-parallel payload
+    cannot land faithfully (§6.3, §6.6), before any forward.
+
+    ``EpRouterParallel`` zeroes the scores of the slots this rank's experts
+    do not own: a write on the scores (``router_scores``, ``ExpertLocal``)
+    would need the routing table to fragment, which a module tap does not
+    carry, so it is refused by name rather than landed on a guess; its read
+    is served (the ``whole`` is the exact sum). A write on the indices
+    (``expert_idx``) *is* served: the tap is the routing table itself, and
+    ``_installed`` re-masks the scores to the edited table
+    (``TapFragments.rescore``), so the two stay one routing.
+    """
+    placement = site.placement
+    if isinstance(placement, StageLocal):
+        placement = placement.inner
+    if site.kind not in ("in", "out") or not isinstance(placement, ExpertLocal):
+        return
+    raise ProtocolError(
+        "P4",
+        f"a write on {site.component!r} at layer {site.layer} under expert "
+        "parallelism: each rank holds the slots of its own experts and landing "
+        "the edit needs the routing table, which this module tap does not carry "
+        "— read the component, or run the write at ep=1 "
+        "(docs/model_parallelism.md §6.3, §6.6)",
+        reason="component_unavailable",
+    )
 
 
 def _refuse_interior(what: str, site: ResolvedSite) -> None:
@@ -1683,31 +2220,45 @@ def _installed(
     batch_size: int = 1,
     writeback: Writeback | None = None,
     site_name: str = "this site",
+    tap: TapFragments = IDENTITY_TAP,
 ) -> Iterator[None]:
     """Install an in-place write hook, converting to the executor's contract.
 
     ``write`` always sees a ``(batch, position, feature)`` tensor and mutates it
     in place; the model always gets its native shape back. For the default
-    ``native`` is handed to :func:`from_contract` because a fused tap's other
+    ``native`` is handed to [`from_contract`][] because a fused tap's other
     splits live in it and have to survive the write untouched.
 
     An input tap may declare a ``writeback`` when the enclosing forward has
     already saved that input for a residual addition: the delta is added to
     the declared target's output, at the payload element that target's own tap
     names, without changing what reads capture at the input tap.
+
+    ``tap`` is the site's ``whole`` / ``fragment`` (§4): the native tensor is
+    made whole before the conversion and the write, and the edited tensor
+    fragmented back to this rank's part before it returns to the model. The
+    default is the world-1 identity. A write to the routing table itself
+    (``expert_idx`` under expert parallelism) also re-masks the router's
+    expert-local scores to the edited table (§6.3, ``TapFragments.rescore``):
+    which experts a slot belongs to moved, and its score's owner with it.
     """
     writeback_delta: torch.Tensor | None = None
     if kind == "out":
 
         def out_hook(_m: Any, _i: Any, out: Any) -> Any:
-            native = tap_tensor(out, tuple_index).clone()
+            native = tap.whole(tap_tensor(out, tuple_index)).clone()
             contract = to_contract(native, shape, batch_size=batch_size)
             write(contract)
-            return rebuild_payload(
-                out,
-                tuple_index,
-                from_contract(contract, shape, batch_size=batch_size, native=native),
+            edited = from_contract(
+                contract, shape, batch_size=batch_size, native=native
             )
+            if tap.routing_table:
+                out = rebuild_payload(
+                    out,
+                    ROUTER_SCORES,
+                    tap.rescore(tap_tensor(out, ROUTER_SCORES), edited),
+                )
+            return rebuild_payload(out, tuple_index, tap.fragment(edited))
 
         handle = module.register_forward_hook(out_hook)
     else:
@@ -1715,11 +2266,11 @@ def _installed(
         def pre_hook(_m: Any, args: tuple[Any, ...]) -> tuple[Any, ...]:
             nonlocal writeback_delta
             original = args[0]
-            native = original.clone()
+            native = tap.whole(original).clone()
             contract = to_contract(native, shape, batch_size=batch_size)
             write(contract)
-            rewritten = from_contract(
-                contract, shape, batch_size=batch_size, native=native
+            rewritten = tap.fragment(
+                from_contract(contract, shape, batch_size=batch_size, native=native)
             )
             if writeback is not None:
                 if writeback_delta is not None:
@@ -1770,20 +2321,22 @@ def _capturing(
     shape: FeatureShape,
     tuple_index: int | None = None,
     batch_size: int = 1,
+    tap: TapFragments = IDENTITY_TAP,
 ) -> Iterator[None]:
-    """Capture a tap's tensor, in the executor's contract shape."""
+    """Capture a tap's tensor — made whole through ``tap`` (§4) — in the
+    executor's contract shape."""
     if kind == "out":
 
         def out_hook(_m: Any, _i: Any, out: Any) -> None:
             sink[key] = to_contract(
-                tap_tensor(out, tuple_index), shape, batch_size=batch_size
+                tap.whole(tap_tensor(out, tuple_index)), shape, batch_size=batch_size
             )
 
         handle = module.register_forward_hook(out_hook)
     else:
 
         def pre_hook(_m: Any, args: tuple[Any, ...]) -> None:
-            sink[key] = to_contract(args[0], shape, batch_size=batch_size)
+            sink[key] = to_contract(tap.whole(args[0]), shape, batch_size=batch_size)
 
         handle = module.register_forward_pre_hook(pre_hook)
     try:
@@ -1801,8 +2354,9 @@ def _accumulating(
     shape: FeatureShape,
     tuple_index: int | None = None,
     batch_size: int = 1,
+    tap: TapFragments = IDENTITY_TAP,
 ) -> Iterator[None]:
-    """Like :func:`_capturing`, but append instead of overwrite.
+    """Like `_capturing`, but append instead of overwrite.
 
     A decode calls the same modules once per step, so the single-tensor sink
     would keep only the last step. Continuation reads need every step, and
@@ -1813,14 +2367,18 @@ def _accumulating(
 
         def out_hook(_m: Any, _i: Any, out: Any) -> None:
             sink.append(
-                to_contract(tap_tensor(out, tuple_index), shape, batch_size=batch_size)
+                to_contract(
+                    tap.whole(tap_tensor(out, tuple_index)),
+                    shape,
+                    batch_size=batch_size,
+                )
             )
 
         handle = module.register_forward_hook(out_hook)
     else:
 
         def pre_hook(_m: Any, args: tuple[Any, ...]) -> None:
-            sink.append(to_contract(args[0], shape, batch_size=batch_size))
+            sink.append(to_contract(tap.whole(args[0]), shape, batch_size=batch_size))
 
         handle = module.register_forward_pre_hook(pre_hook)
     try:

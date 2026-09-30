@@ -23,9 +23,10 @@ from safetensors.torch import load_file
 from causalab.cli import main
 from tests.neural.engines.pytorch_hooks.conftest import TINY_QWEN35_MOE
 from tests.protocol._env import FIXTURES
+from tests._helpers.paths import PROTOCOLS_DIR
 
 REPO = Path(__file__).resolve().parents[4]
-PROTOCOLS = REPO / "causalab/configs/protocols"
+PROTOCOLS = PROTOCOLS_DIR
 PINS = {
     "model.key": TINY_QWEN35_MOE,
     "model.dtype": "fp32",
@@ -57,21 +58,18 @@ def _apply_document(
     if rank:
         method["save"].append({"kind": "rank", "file_path": "rank.json"})
     if base_metric:
-        method["reads"]["logits_base"] = {
-            "site": "lm_head",
-            "pos": -1,
-            "model": "original",
+        # the same margin on the un-intervened model, read on base (§2.9)
+        method["reads"]["logits_base"] = {"site": "lm_head", "pos": -1}
+        method["intervened_models"]["original_base"] = {
             "input": "base",
+            "reads": ["logits_base"],
         }
-        method["metrics"]["iia_base"] = {
-            **method["metrics"]["iia"],
-            "of": "logits_base",
-        }
+        (iia,) = [e for e in method["save"] if e["file_path"] == "iia.json"]
         method["save"].append(
             {
-                "value": "iia_base",
-                "model": "original",
-                "input": "base",
+                "read": "logits_base",
+                "model": "original_base",
+                "aggregation": iia["aggregation"],
                 "file_path": "iia_base.json",
             }
         )
@@ -100,6 +98,8 @@ def _run(tmp_path: Path, steps: dict[str, tuple[dict, dict]], out: str) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -117,10 +117,12 @@ def _values(table: Path) -> list[float]:
     return [float(r["value"]) for r in json.loads(table.read_text())]
 
 
-def _by_point(table: Path, column: str = "value") -> dict[str, list]:
-    out: dict[str, list] = {}
+def _by_point(table: Path, column: str = "value") -> dict[int, list]:
+    """A metric table's values grouped by the point's one coordinate, the
+    swept ``top_k`` (a metric row names its point by its coordinate columns)."""
+    out: dict[int, list] = {}
     for row in json.loads(table.read_text()):
-        out.setdefault(row["produced_by"], []).append(row[column])
+        out.setdefault(row["featurizers.gate.top_k"], []).append(row[column])
     return out
 
 

@@ -12,7 +12,6 @@
    "result": "Friday"
   },
   "result": "Friday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "development",
   "string_mode": "exact"
  },
@@ -29,7 +28,6 @@
    "result": "Tuesday"
   },
   "result": "Tuesday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "development",
   "string_mode": "exact"
  },
@@ -46,7 +44,6 @@
    "result": "Sunday"
   },
   "result": "Sunday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "development",
   "string_mode": "exact"
  },
@@ -63,7 +60,6 @@
    "result": "Wednesday"
   },
   "result": "Wednesday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "development",
   "string_mode": "exact"
  },
@@ -80,7 +76,6 @@
    "result": "Thursday"
   },
   "result": "Thursday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "reserve",
   "string_mode": "exact"
  },
@@ -97,7 +92,6 @@
    "result": "Saturday"
   },
   "result": "Saturday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "reserve",
   "string_mode": "exact"
  },
@@ -114,7 +108,6 @@
    "result": "Monday"
   },
   "result": "Monday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "reserve",
   "string_mode": "exact"
  },
@@ -131,7 +124,6 @@
    "result": "Wednesday"
   },
   "result": "Wednesday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "reserve",
   "string_mode": "exact"
  },
@@ -148,7 +140,6 @@
    "result": "Thursday"
   },
   "result": "Thursday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "confirmation",
   "string_mode": "exact"
  },
@@ -165,7 +156,6 @@
    "result": "Saturday"
   },
   "result": "Saturday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "confirmation",
   "string_mode": "exact"
  },
@@ -182,7 +172,6 @@
    "result": "Monday"
   },
   "result": "Monday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "confirmation",
   "string_mode": "exact"
  },
@@ -199,7 +188,6 @@
    "result": "Sunday"
   },
   "result": "Sunday",
-  "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
   "split": "confirmation",
   "string_mode": "exact"
  }

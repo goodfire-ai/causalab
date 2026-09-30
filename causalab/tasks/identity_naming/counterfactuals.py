@@ -5,7 +5,7 @@ computation. Each example gets a different template, but phrasing is not
 a causal variable — it's metadata on the dataset row.
 """
 
-from causalab.causal.counterfactual_dataset import CounterfactualExample
+from causalab.causal.counterfactuals import CounterfactualExample
 
 
 def _sample_trace(model, template, rng):

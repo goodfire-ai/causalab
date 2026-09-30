@@ -25,9 +25,10 @@ from causalab.neural.shared.kernels import (
     torch_implementation,
 )
 from causalab.protocol.schema import PROTOCOL_VERSION, parse_document
-from causalab.protocol.validate import validate_document
+from causalab.protocol.rules.document import validate_document
 
-from tests.protocol._docs import in_order
+from tests.protocol._docs import in_order, saved
+
 
 pytestmark = pytest.mark.smoke
 
@@ -73,18 +74,10 @@ def _executor(bundle: NnsightBundle, component: str) -> TracePointExecutor:
         "model": {"key": "test", "revision": "main"},
         "data": {"base": {"dataset": "inline", "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": {"component": component, "layers": [0]}},
-            "reads": {
-                "r": {"site": "tap", "pos": -1, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": -1}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
     doc = parse_document(in_order(raw))

@@ -1,8 +1,8 @@
 """Tests for ``causalab.io.sae_checkpoints`` — foreign SAE checkpoint readers.
 
 Pure tensor reads (no GPU, no model load): a tiny synthetic vanilla SAE
-checkpoint exercises :func:`read_sae_decoder`, and a tiny synthetic
-block/Grassmannian SAE checkpoint exercises :func:`load_block_sae_frame`
+checkpoint exercises [`read_sae_decoder`][causalab.io.sae_checkpoints.read_sae_decoder], and a tiny synthetic
+block/Grassmannian SAE checkpoint exercises [`load_block_sae_frame`][causalab.io.sae_checkpoints.load_block_sae_frame]
 (orthonormal frame, ``dim_mask`` restriction, metadata, error paths).
 """
 

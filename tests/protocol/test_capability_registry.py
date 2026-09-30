@@ -1,5 +1,6 @@
-"""The capability registry at load: two component mismatches, the write
-policy, the load-decidable predicates, and the all-MoE tower with no dense MLP.
+"""The capability registry at load: the two ``entity`` mismatches, the write
+policy, the load-decidable predicates, and the all-MoE tower's missing dense
+MLP.
 
 Every refusal here has its valid-passes twin, and
 the valid twins pin their **digest** to the value the base computed for the
@@ -18,8 +19,8 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ProtocolError, ValidationError
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
 from causalab.protocol.registry import (
     CAPABILITIES,
     INTERIOR_ROWS,
@@ -39,13 +40,14 @@ from causalab.protocol.registry import (
     unavailable_at_load,
     write_policy_refusal,
 )
-from causalab.protocol.shapes import bs_flat_heads
+from causalab.protocol.registry.shapes import bs_flat_heads
 from causalab.protocol.schema import MECHANISMS, parse_document
-from causalab.protocol.validate import validate_document
+from causalab.protocol.rules.document import validate_document
 
 from tests._helpers.refusal_snapshot import A3B, MOE
 from tests.protocol._docs import base_doc, in_order
 from tests.protocol._env import FIXTURES, build_env
+
 
 pytestmark = pytest.mark.unit
 
@@ -60,21 +62,24 @@ DEMO_HEAD_SCAN = (
 
 #: Digests of the three valid documents below, pinned so that `validate`
 #: refusing more at load never moves a byte of what it accepts. First computed on
-#: the base before the registry existed; re-pinned once for the protocol v2
+#: the base (before the registry); re-pinned once for the protocol v2
 #: canonical form (the four groups, §1), which moved every digest by design. Re-pinned again
 #: for protocol v3: `layers`, a band, moved every layered site's bytes.
+#: And for protocol v4 (reads-first): the reads-on-models block moved every
+#: document's bytes — re-pinned once more when it landed on the retired
+#: ``token_form``, which these literals no longer spell.
 BASE_DIGEST_EXPERT_FACE = (
-    "5ef26a30435dc8db124342db79a39e6bdcfc47d7fd35a4bade9eddff41160d9a"
+    "a84edd907544bbc1bb88321b6d42e5a1406ec2456957b4ebfb5436f92e17d013"
 )
 BASE_DIGEST_ROUTED_OUTPUT = (
-    "b474ac7c871da94789b9da708a3ce524cfd67f9b0e052c45506fb45819500405"
+    "4b291579c2ee0101260f116e9f502a91b8bef0facb6050756621d82ab0c48906"
 )
 BASE_DIGEST_SCORES_DELTA = (
-    "1b3e3ae5b49b6c9f616f4008c1268d354c2a09d00944d32f62184f7e91c8cd3f"
+    "984158c0f5e6985f11ffd1912b052e160f96b71a85595f78837970dd892870b2"
 )
-#: Digests for the interior q/k/v on the `gpt2` entry — documents the base before
-#: the per-family tap table accepted at load and the run then refused (entry 23
-#: of the refusal snapshot); the
+#: Digests for the interior q/k/v on the `gpt2` entry — documents the base
+#: before the per-family tap table accepted at load and the run then refused
+#: (``fixtures/refusal_snapshot.json`` entry 23); the
 #: per-family tap table accepts them at both and moves no byte. First computed
 #: on that base with its own code (a `git archive` export); re-pinned once under
 #: protocol v2, whose four-group canonical form moved every digest —
@@ -82,17 +87,17 @@ BASE_DIGEST_SCORES_DELTA = (
 #: (`layer` → `layers`, a band), the same kind of change.
 BASE_DIGEST_GPT2_INTERIOR = {
     "attention_query_pre_rope": (
-        "d4feb4126e816a8e79d580252a6e4aacca8a3c99f2416d8988dec8d5d2eebb3b"
+        "0880fed905697b6ea028ae25d350028ddda68a8a651b549fa8eb58ff78fafb21"
     ),
     "attention_key_pre_rope": (
-        "d25b2410536f2ad921634df70e0a1762c26c9a1205ae3f0c8fbeade07795e99a"
+        "d583532a035b5a8026db52f46a5bf3a403fc7307f6b945bdbe2ec39ac70927bc"
     ),
     "attention_value_states": (
-        "4584b99c89051c3845e07d70eeecbada05c4be2e05c5e44b593b5dcccc43efed"
+        "c108d3b42f22e2ca2c00595f166f3fec58b5dd92bfba80763bfa9fd40c8652a1"
     ),
 }
 BASE_DIGEST_GPT2_QUERY_HEAD_2 = (
-    "9dca7261a36baa2dce0b1a0483266f72758f7057fcf3ba1bcaa1dfe350ed3344"
+    "9ca6abe2cb4ce98fc7d21906287509201266a2bb3bb784a7e13a01ee029490aa"
 )
 
 
@@ -247,7 +252,7 @@ def test_a_write_to_a_read_only_component_is_refused_at_load() -> None:
     err = _refusal(raw)
     assert err.path == "writes.patch.do" and err.reason == "unsupported_mechanism"
     assert "no write may change" in str(err)
-    assert "write 'router_scores' to reweight" in str(err)
+    assert "Write 'router_scores' to reweight" in str(err)
 
 
 def test_a_swap_of_the_routing_table_still_loads() -> None:
@@ -280,9 +285,8 @@ def test_a_moe_component_on_a_dense_model_is_refused_at_load() -> None:
     `moe` predicate does, from the entry's `num_experts`."""
     raw = base_doc()
     raw["method"]["sites"]["tgt"] = {"component": "routed_output", "layers": [3]}
-    _validate(raw)  # validate has no model; canonicalization does
     with pytest.raises(ValidationError) as err:
-        canonicalize(in_order(raw), ENV)
+        _validate(raw)  # the checklist reads the registry's static entry
     assert err.value.path == "sites.tgt.component"
     assert err.value.reason == "component_unavailable"
     assert "needs a sparse-MoE block" in str(err.value)
@@ -422,7 +426,7 @@ def test_an_entry_without_a_family_sizes_like_one_with() -> None:
 #: qwen3_5_moe_text. The keys of the table are exactly these.
 MEASURED_MODEL_TYPES = frozenset({"gpt2", "llama", "qwen3_5_moe_text"})
 
-#: The fixtures' widths (same job), for the shape agreement below.
+#: The fixtures' widths (same load), for the shape agreement below.
 FIXTURE_STUBS = {
     "gpt2": dict(num_heads=4, num_kv_heads=4, head_dim=8),
     "llama": dict(num_heads=4, num_kv_heads=4, head_dim=4),
@@ -501,6 +505,18 @@ def test_only_the_attention_interior_carries_overrides() -> None:
     }
 
 
+def test_the_gpt2_xl_alias_row_is_the_same_model() -> None:
+    """`openai-community/gpt2-xl` is an alias row for `gpt2-xl` — the same
+    checkpoint under its organization-prefixed Hub id, registered twice
+    because a key is looked up as spelled. Field for field identical, so a
+    correction to one row cannot be silently absent from the other."""
+    canonical = dataclasses.asdict(get_model_info("gpt2-xl"))
+    alias = dataclasses.asdict(get_model_info("openai-community/gpt2-xl"))
+    assert alias.pop("key") == "openai-community/gpt2-xl"
+    assert canonical.pop("key") == "gpt2-xl"
+    assert alias == canonical
+
+
 def test_every_family_in_the_table_is_a_measured_model_type() -> None:
     """Census: a family named in an override is a `model_type` the registry
     meets — carried by a registered entry, and one of the three fixtures'."""
@@ -518,6 +534,7 @@ def test_every_family_in_the_table_is_a_measured_model_type() -> None:
         "gpt2",
         "gpt2-xl",
         "Qwen/Qwen3-4B-Instruct-2507",
+        "Qwen/Qwen3-8B",
         "google/gemma-2-2b-it",
         A3B,
     ):
@@ -616,13 +633,11 @@ def test_predicates_decide_offline_for_a_family_in_the_table() -> None:
 
 def test_the_gate_is_refused_at_load_on_a_family_without_one() -> None:
     """The run refused `attention_gate` on GPT-2 and llama by name
-    (entry 24 of the refusal snapshot); `validate` now refuses it offline, V4,
-    no new rule."""
+    (``fixtures/refusal_snapshot.json`` entry 24); `validate` now refuses it offline, V4, no new rule."""
     raw = base_doc()
     raw["method"]["sites"]["tgt"] = {"component": "attention_gate", "layers": [3]}
-    _validate(raw)  # validate has no model; canonicalization does
     with pytest.raises(ValidationError) as err:
-        canonicalize(in_order(raw), ENV)
+        _validate(raw)  # the checklist reads the registry's static entry
     assert err.value.rule == 4 and err.value.path == "sites.tgt.component"
     assert err.value.reason == "component_unavailable"
     assert "needs an output gate" in str(err.value)
@@ -687,7 +702,7 @@ def test_a_row_cannot_be_inconsistent() -> None:
 def test_the_retired_spellings_are_the_rows_aliases() -> None:
     """Every alias of the vocabulary is exactly one row's `aliases` cell, with
     the deprecation version the alias table records (`schema.DEPRECATED_IN`):
-    the ``attention_value`` rename and the eight DeltaNet folds."""
+    the earlier rename and the eight DeltaNet folds."""
     from causalab.protocol.schema import DEPRECATED_COMPONENTS, DEPRECATED_IN
 
     row = CAPABILITIES["attention_premix"]

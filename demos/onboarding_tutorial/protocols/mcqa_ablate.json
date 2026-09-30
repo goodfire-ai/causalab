@@ -1,56 +1,43 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Zero-ablate the residual stream at the answer slot, one layer at a time, and ask whether the model still answers. A swap whose operand is the literal 0.0 is the ablation: with no featurizer the feature space is the whole vector, so the write replaces the activation and the error term contributes nothing. Scored against base_answer rather than cf_answer -- this document has no counterfactual, and the question is whether the model survives, not whether it can be redirected. 16 layers over 64 rows."
+    "protocol_version": "4",
+    "description": "Zero the residual stream at the answer slot one layer at a time on 64 original MCQA prompts, and measure how often the model still gives its original answer."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {"base": {"dataset": "mcqa/pairs_n64_s0", "field": "input"}},
   "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["logits_clean"]},
+      "ablated": {"input": "base", "reads": ["logits"], "writes": ["zero"]}
+    },
     "positions": {"slot": {"index": -1}},
     "sites": {
       "target": {
         "component": "block_output",
         "layers": {
-          "sweep": {"range": [0, 16]}
+          "sweep": {"range": [0, 28]}
         }
       },
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "logits": {"site": "lm_head", "pos": -1, "model": "ablated", "input": "base"},
-      "logits_clean": {"site": "lm_head", "pos": -1, "model": "original", "input": "base"}
+      "logits": {"site": "lm_head", "pos": -1},
+      "logits_clean": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "zero": {"site": "target", "pos": "slot", "do": {"swap": 0.0}}
     },
-    "intervened_models": {
-      "ablated": {"input": "base", "writes": ["zero"]}
-    },
-    "metrics": {
-      "accuracy": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "base_answer",
-        "token_form": "space_prefixed"
-      },
-      "accuracy_clean": {
-        "kind": "match",
-        "of": "logits_clean",
-        "expected": "base_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
       {
-        "value": "accuracy",
+        "read": "logits",
         "model": "ablated",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "base_answer"},
         "file_path": "accuracy.json"
       },
       {
-        "value": "accuracy_clean",
+        "read": "logits_clean",
         "model": "original",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "base_answer"},
         "file_path": "accuracy_clean.json"
       }
     ]

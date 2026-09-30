@@ -1514,7 +1514,7 @@ def plot_features_3d(
 ) -> None:
     """Plot training features + centroids colored by causal parameter (3D).
 
-    Thin wrapper around :func:`plot_3d` — see its docstring for details.
+    Thin wrapper around [`plot_3d`][] — see its docstring for details.
     """
     plot_3d(
         features=features,
@@ -1547,7 +1547,7 @@ def plot_manifold_3d(
 ) -> None:
     """Plot features + manifold mesh surface colored by causal parameter.
 
-    Thin wrapper around :func:`plot_3d` — see its docstring for details.
+    Thin wrapper around [`plot_3d`][] — see its docstring for details.
     """
     plot_3d(
         features=features,

@@ -5,9 +5,8 @@ document declaring the same map replays it to the fit's own number.
 
 The failure this pins: the gate stamped ``stretch`` into its identity fields
 before ``stretch`` was an ArtifactIdentity key, so the first real fit
-trained to the end and raised at
-its first save — ``unknown ArtifactIdentity fields ['stretch']`` — a path no
-unit test reached because ``run_training`` alone saves nothing.
+trained to the end and raised at its first save —
+``unknown ArtifactIdentity fields ['stretch']`` — a path no unit test reached because ``run_training`` alone saves nothing.
 """
 
 from __future__ import annotations
@@ -20,16 +19,17 @@ import pytest
 from safetensors.torch import load_file
 
 from causalab.cli import main
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import read_safetensors_metadata
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.env import read_safetensors_metadata
 from causalab.protocol.schema import hard_concrete_threshold
 from tests.neural.engines.pytorch_hooks.conftest import TINY_QWEN35_MOE
 from tests.protocol._docs import in_order
 from tests.protocol._env import FIXTURES, build_env
+from tests._helpers.paths import PROTOCOLS_DIR
 
 REPO = Path(__file__).resolve().parents[4]
-PROTOCOLS = REPO / "causalab/configs/protocols"
+PROTOCOLS = PROTOCOLS_DIR
 PINS = {
     "model.key": TINY_QWEN35_MOE,
     "model.dtype": "fp32",
@@ -51,7 +51,10 @@ def _fit_document(*, stretch: list[float] | None, fill: float) -> dict:
         "init": {"fill": fill},
         **({"stretch": stretch} if stretch is not None else {}),
     }
-    fit["method"]["train"]["objective"] = [[1.0, "ce"], [0.01, {"l0": "gate"}]]
+    # `l0` is the hard-concrete penalty (§2.11): it takes the `l1` term's place
+    objective = fit["method"]["train"]["objective"]
+    del objective["l1"]
+    objective["l0"] = {"weight": 0.01, "l0": "gate"}
     fit["method"]["train"].pop("anneal", None)
     return fit
 
@@ -123,6 +126,8 @@ def _run(tmp_path: Path, fit_doc: Path, apply_doc: Path, out: str) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -183,9 +188,11 @@ def test_a_non_default_stretch_is_part_of_the_identity(tmp_path: Path) -> None:
     _check_replay(run, stretch=stretch)
     env = build_env(run)  # `fit/gate.safetensors` resolves under the run tree
     with pytest.raises(ValidationError) as err:
-        load(in_order(_pinned(_apply_document(stretch=None))), env)
+        compile_protocol(in_order(_pinned(_apply_document(stretch=None))), env=env)
     assert err.value.rule == 15 and "fitted at stretch" in str(err.value)
     with pytest.raises(ValidationError) as err:
-        load(in_order(_pinned(_apply_document(stretch=[-0.2, 1.2]))), env)
+        compile_protocol(
+            in_order(_pinned(_apply_document(stretch=[-0.2, 1.2]))), env=env
+        )
     assert err.value.rule == 15 and "'stretch'" in str(err.value)
-    load(in_order(_pinned(_apply_document(stretch=stretch))), env)
+    compile_protocol(in_order(_pinned(_apply_document(stretch=stretch))), env=env)

@@ -1,5 +1,5 @@
 """A conditional over a **behavioral** step's real decision record, on the
-tiny fixture (workflow spec §2.8) — the engine variant of the layer's test.
+tiny fixture (workflow spec §2.8; the engine variant of T10).
 
 `tests/workflow/test_conditional.py` proves the layer on a CPU chain whose
 decision comes from a `decision` step over a script's values object. This
@@ -74,6 +74,8 @@ def _run_cli(root: Path, workflow: Path, out: Path) -> int:
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(workflow),
             "--data-root",
             str(root),

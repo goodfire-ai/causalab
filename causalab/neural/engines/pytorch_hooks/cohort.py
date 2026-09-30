@@ -1,29 +1,21 @@
-"""Several executors' forward groups as **one** model call (spec §4, "Cohorts").
+"""Run compatible fits in one model forward.
 
-A fit's optimizer step runs the trained model's group over one minibatch.
-When several points fit together — the same realization over the same rows
-in the same frame (:func:`~causalab.protocol.plan.fit_cohorts`) — their steps
-are one forward: the rows are the concatenation of every member's minibatch,
-each member's writes land on its own rows at its own address (any layer), the
-taps are the union, and each member reads its own rows back out of the
-capture. Nothing in the model couples rows, so member ``p``'s logits are what
-its own forward would have produced, up to the rounding of a different batch
-shape; the summed loss then backpropagates into disjoint parameters, and each
-member's gradient is exactly its own.
+A cohort concatenates its members' minibatches. Each member writes and
+reads its own rows, while the forward captures the union of taps.
+The summed loss differentiates into separate parameter sets. Batch shape
+can affect floating-point rounding.
 
-Resume (§4) composes: the forward starts at the deepest block every member
-holds a stored prefix for, hands block ``L`` the members' residuals
-concatenated, and stores each depth a member's plan wants under that member's
-own key — its rows only.
+Prefix resume starts at the deepest block for which every member has
+stored input. Captures are stored under each member's key with its rows.
+This path handles changing trained groups. Constant groups use the campaign
+store; decoding, dynamic operand dependencies, and per-step DeltaNet state
+writes use the individual executor path. ``batchable`` checks eligibility.
 
-What runs here is a fit's **inner** passes — minibatch and eval executors,
-whose interning handles are not counted — and only groups the store cannot
-serve: the trained model's, which changes every step. Everything else stays
-on the executor's own path (:meth:`PointExecutor._run_group`): ``original``
-and every fit-constant group (served from the store), a group that decodes,
-a group fed by a read off a non-constant model (an operand order the single
-forward cannot honour), and a state write on the Gated DeltaNet interior
-(its writer is per step, not per tensor). :func:`batchable` says which.
+Under a pipeline (model_parallelism.md §6.5, §8.3) members may write on
+different stages. Each member's write fires on the stage holding its module
+alone, so a member's tally is summed over the pipeline
+(``agreements.summed_fires``) before its declaration is checked; the
+members' parameters are synced from their owners by the training loop.
 """
 
 # pyright: reportPrivateUsage=false
@@ -46,7 +38,7 @@ from causalab.neural.engines.pytorch_hooks.executor import (
     _resumable,
 )
 from causalab.neural.shared.encoding import EncodedBatch
-from causalab.neural.shared.executor_base import (
+from causalab.neural.shared.executor import (
     PrefixKey,
     PrefixPlan,
     RowWindow,
@@ -60,10 +52,11 @@ from causalab.neural.shared.fires import (
     group_label,
 )
 from causalab.neural.shared.head import ReadTap
-from causalab.neural.shared.mechanisms import operand_names
+from causalab.neural.shared.parallel.agreements import Agreements, summed_fires
+from causalab.neural.shared.plan import group_reads, is_unwritten, write_names
 from causalab.neural.shared.sites import ResolvedSite, resolve_site
-from causalab.protocol.plan import generated_budget
-from causalab.protocol.schema import ReadSpec
+from causalab.protocol.positions.encoding import generated_budget
+from causalab.protocol.schema import ReadRef, ReadSpec, operand_reads
 
 __all__ = ["Entry", "batchable", "cohort_entries", "groups_read_by", "run_groups"]
 
@@ -84,20 +77,16 @@ def batchable(entry: Entry) -> bool:
     and whose writes include no per-step state edit."""
     ex, model, role = entry.executor, entry.model, entry.input_role
     doc = ex.doc
-    if model == "original" or ex._may_intern(model):
+    if is_unwritten(doc, model) or ex._may_intern(model):
         return False
-    for read in doc.reads.values():
-        if str(read.model) == model and str(read.input) == role:
-            if generated_budget(doc, read.pos) is not None:
-                return False
-    im = doc.intervened_models[model]
-    writes = im.writes if isinstance(im.writes, tuple) else ()
-    for ename in writes:
+    for ref in group_reads(doc, model, role):
+        if generated_budget(doc, doc.reads[ref.read].pos) is not None:
+            return False
+    for ename in write_names(doc, model) or ():
         write = doc.writes[ename]
-        for operand in operand_names(write.do.payload):
-            if operand in doc.reads:
-                if str(doc.reads[operand].model) not in ex.fit_constant_models:
-                    return False
+        for ref in operand_reads(doc, write.do):
+            if ref.model not in ex.fit_constant_models:
+                return False
         site = resolve_site(ex.bundle, doc.sites[str(write.site)])
         if site.kind == "delta" and site.interface_slot == "state":
             return False
@@ -117,6 +106,9 @@ class _Part:
     #: the projection between them (``shared/head.py``)
     read_taps: dict[str, ReadTap]
     hooks: list[tuple[ResolvedSite, Callable[..., Any]]]
+    #: the written-to addresses the hooks were built for: what the owning
+    #: stage recorded there is shared over the pipeline with the tally
+    addresses: Mapping[Any, tuple[ResolvedSite, list[tuple[str, Any, ResolvedSite]]]]
     prefix: PrefixPlan | None
     #: this member's writers count their firings here (§4 "Fires")
     tally: FireTally
@@ -130,13 +122,13 @@ def run_groups(
 ) -> None:
     """Run every entry's group, all on one input role, as one forward over
     the concatenation of their rows; fill each executor's read values for
-    the group as :meth:`PointExecutor._run_group` would have.
+    the group as `PointExecutor._run_group` would have.
 
     One entry runs on its executor's own path. Several must share the model,
     the input role, the grad mode, the campaign store and the frame width —
-    what :func:`~causalab.protocol.plan.fit_cohorts` promised of the points
+    what [`fit_cohorts`][causalab.neural.shared.plan.fit_cohorts] promised of the points
     and the loop promised of the executors it hands in; a disagreement is a
-    programming error and raises. Every entry must be :func:`batchable`.
+    programming error and raises. Every entry must be [`batchable`][].
 
     ``frame`` is the members' concatenated batch when the caller holds a
     persistent one — a captured cohort (``graph_cohort.py``) stages tokens
@@ -174,24 +166,20 @@ def run_groups(
     for entry in entries:
         ex, model = entry.executor, entry.model
         ex.check_write_widths()
-        ex.check_answer_forms()
         taps = [
-            (rname, read)
-            for rname, read in ex.doc.reads.items()
-            if str(read.model) == model and str(read.input) == role
+            (ref.read, ex.doc.reads[ref.read])
+            for ref in group_reads(ex.doc, model, role)
         ]
         read_taps = ex._read_taps(model, role, taps)
         for rname, tap in read_taps.items():
             _refuse_interior(f"read {rname!r}", tap.site)
         # operands first, as the executor's own path does — the source
         # groups, served from the store or run once per slice
-        im = ex.doc.intervened_models[model]
-        write_names = tuple(im.writes) if isinstance(im.writes, tuple) else ()
-        for ename in write_names:
-            for operand in operand_names(ex.doc.writes[ename].do.payload):
-                if operand in ex.doc.reads:
-                    ex.read_value(operand)
-        addresses = ex._resolve_write_addresses(write_names)
+        names = write_names(ex.doc, model) or ()
+        for ename in names:
+            for ref in operand_reads(ex.doc, ex.doc.writes[ename].do):
+                ex.read_value(ref)
+        addresses = ex._resolve_write_addresses(names)
         for site, _ in addresses.values():
             _refuse_interior(f"write at {site.component!r}", site)
         batch = ex._batch(role)
@@ -207,7 +195,8 @@ def run_groups(
                 taps=taps,
                 read_taps=read_taps,
                 hooks=ex._build_write_hooks(addresses, role, batch, window, tally),
-                prefix=ex._prefix_plan(ex._group_digest(model, role)),
+                addresses=addresses,
+                prefix=ex._prefix_plan(ex._group_key(model, role)),
                 tally=tally,
             )
         )
@@ -257,15 +246,33 @@ def run_groups(
             else lambda: _cohort_resume(parts, lead),
         )
 
+    # the count compared to each member's declaration is the whole
+    # pipeline's (docs/model_parallelism.md §6.5): a member's write fires on
+    # the stage holding its module alone, and one cohort's members may sit
+    # on different stages, so each member's tally is summed over the stages
+    # before the check — in member order, the same on every rank, since the
+    # entries are the campaign's points in campaign order; the identity at
+    # world 1. A state writer, whose steps the context ranks partition
+    # (`whole_steps`), is never batchable.
+    agreements = Agreements(lead.fragments.collective)
+    # every agreement first, every check after: a check that refuses on one
+    # rank must not leave another rank waiting on a later member's collective
+    tallies: list[FireTally] = []
     for part in parts:
+        tallies.append(summed_fires(part.tally, agreements))
+        # the owner's routing-mismatch counts beside its tally (§6.5), the
+        # member's own stage forward being the lead's
+        ex = part.entry.executor
+        ex.share_routing_mismatch(part.addresses, ex._stages)
+    for part, tally in zip(parts, tallies):
         ex = part.entry.executor
         # every member's writers fired the count their kind declares in this
         # one forward, or the member's point is refused — the same check the
         # solo path makes per window (§4 "Fires"); the record is the member's
         label = group_label(part.entry.model, role)
-        check_fires(label, part.tally)
+        check_fires(label, tally)
         fires = GroupFires()
-        fires.fold(part.tally)
+        fires.fold(tally)
         record = fires.record()
         if record:
             ex.fires[(part.entry.model, role)] = record
@@ -273,8 +280,9 @@ def run_groups(
             tap = part.read_taps[rname]
             key = tap_key(tap.capture)
             idx = idx_capture.get(key)
-            ex._read_values[rname] = ex._finalize_read(
-                rname,
+            ref = ReadRef(rname, part.entry.model)
+            ex._read_values[ref] = ex._finalize_read(
+                ref,
                 read,
                 tap.site,
                 capture[key][part.rows],
@@ -327,7 +335,7 @@ def _cohort_resume(parts: Sequence[_Part], lead: PointExecutor) -> Resume:
     residuals handed to block 12 are the members' own, concatenated. Each
     member then stores every wanted depth up to its own ``write_depth`` the
     store lacks, under its own key and over its own rows, exactly as its
-    solo pass would (:meth:`PointExecutor._prefix_window`).
+    solo pass would (`PointExecutor._prefix_window`).
     """
     nothing = Resume(start=0, cached=None, store={})
     if lead.interning is None or not _resumable(lead.bundle):
@@ -342,7 +350,7 @@ def _cohort_resume(parts: Sequence[_Part], lead: PointExecutor) -> Resume:
             continue
         ceiling = min(plan.resume_at, last)
         held: set[int] = set()
-        for depth in cache.wanted_prefix_depths.get(plan.base_digest, ()):
+        for depth in cache.wanted_prefix_depths.get(plan.base_key, ()):
             if not 0 < min(depth, last) <= ceiling:
                 continue
             key = part.entry.executor._prefix_key(plan, part.window, depth)
@@ -361,7 +369,7 @@ def _cohort_resume(parts: Sequence[_Part], lead: PointExecutor) -> Resume:
             # itself, or a past-every-block depth clamped to the last block
             depth = next(
                 d
-                for d in sorted(cache.wanted_prefix_depths[plan.base_digest])
+                for d in sorted(cache.wanted_prefix_depths[plan.base_key])
                 if min(d, last) == start
                 and part.entry.executor._prefix_key(plan, part.window, d)
                 in cache.prefixes
@@ -377,10 +385,10 @@ def _cohort_resume(parts: Sequence[_Part], lead: PointExecutor) -> Resume:
         plan = part.prefix
         if plan is None:
             continue
-        for depth in sorted(cache.wanted_prefix_depths.get(plan.base_digest, ())):
+        for depth in sorted(cache.wanted_prefix_depths.get(plan.base_key, ())):
             if min(depth, last) < max(start, 1) or depth > plan.write_depth:
                 continue
-            if cache.prefix_owed.get((plan.base_digest, depth), 0) <= 0:
+            if cache.prefix_owed.get((plan.base_key, depth), 0) <= 0:
                 continue
             key = part.entry.executor._prefix_key(plan, part.window, depth)
             if key not in cache.prefixes and key not in store:
@@ -388,23 +396,24 @@ def _cohort_resume(parts: Sequence[_Part], lead: PointExecutor) -> Resume:
     return Resume(start=start, cached=cached, store=store)
 
 
-def groups_read_by(doc: Any, reads: Sequence[str]) -> list[tuple[str, str]]:
-    """The ``(model, input)`` groups the named reads are taken on, in first
-    appearance order — what a loss or an eval pass needs run."""
+def groups_read_by(doc: Any, reads: Sequence[ReadRef | str]) -> list[tuple[str, str]]:
+    """The ``(model, input)`` groups the bound reads are taken on, in first
+    appearance order — what a loss or an eval pass needs run. A bare name is
+    the read's one binding, as on the executor surface."""
     out: list[tuple[str, str]] = []
-    for name in reads:
-        read = doc.reads[name]
-        group = (str(read.model), str(read.input))
+    for read in reads:
+        ref = doc.bound(read) if isinstance(read, str) else read
+        group = doc.group_of(ref)
         if group not in out:
             out.append(group)
     return out
 
 
 def cohort_entries(
-    executors: Sequence[tuple[PointExecutor, Sequence[str]]],
+    executors: Sequence[tuple[PointExecutor, Sequence[ReadRef | str]]],
 ) -> Mapping[str, list[Entry]]:
     """The batchable entries of several executors, by input role: for each
-    executor, the groups its named reads need that :func:`batchable` admits.
+    executor, the groups its named reads need that [`batchable`][] admits.
     Whatever is left out runs on the executor's own path when the read is
     asked for."""
     by_role: dict[str, list[Entry]] = {}

@@ -517,7 +517,7 @@ def plot_receptive_field(
 ) -> None:
     """Render the receptive-field decision map to ``output_path`` (HTML).
 
-    Thin I/O wrapper over :func:`build_receptive_field_figure`; all field/overlay
+    Thin I/O wrapper over [`build_receptive_field_figure`][]; all field/overlay
     arguments are forwarded as keywords. Supports 2-D and 3-D (inferred from the
     coordinate arrays). When ``figure_format`` is ``"png"``/``"pdf"`` a static twin
     is written alongside the HTML (best-effort — needs kaleido). The HTML embeds

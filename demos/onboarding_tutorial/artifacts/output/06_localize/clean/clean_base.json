@@ -1,0 +1,514 @@
+[
+  {
+    "example_id": "0",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "clean_base",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "clean_base",
+    "value": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  }
+]

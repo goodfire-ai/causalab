@@ -1,0 +1,35 @@
+{
+  "version": "1",
+  "description": "The PCA basis das_pca_init.json starts from, end to end: harvest block 23's answer-slot residual over the training pairs, then fit a rank-16 principal basis on it (causalab.analysis.fit_pca, a script step, so the basis carries the harvest's model realization and site in its ArtifactIdentity). The fit's basis.safetensors is what das_pca_init.json names at artifacts/weekdays/qwen25_7b/pca/block_output_L23.safetensors; scripts/run_all.py copies it there, because a repo-relative artifact path is a fixed address, not a step output.",
+  "output_dir": "pca_basis",
+  "steps": {
+    "harvest": {
+      "type": "intervention_protocol",
+      "document": "../protocols/pca_harvest.json"
+    },
+    "pca": {
+      "type": "script",
+      "script": {
+        "module": "causalab.analysis.fit_pca"
+      },
+      "inputs": {
+        "acts": {
+          "step": "harvest",
+          "file": "acts.safetensors"
+        },
+        "k": 16
+      },
+      "outputs": {
+        "weight": "basis.safetensors",
+        "spectrum": {
+          "file": "spectrum.json",
+          "columns": {
+            "pc": "int64",
+            "explained_variance": "float64",
+            "explained_variance_ratio": "float64"
+          }
+        }
+      }
+    }
+  }
+}

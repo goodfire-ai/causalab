@@ -1,0 +1,6338 @@
+[
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 0.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 1.5,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 2.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 3.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 4.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 6.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 8.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 12.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "0",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "flipped",
+    "value": 0.0,
+    "writes.push.do.add_scaled.alpha": 16.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  }
+]

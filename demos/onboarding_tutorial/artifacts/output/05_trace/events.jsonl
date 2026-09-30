@@ -1,0 +1,14 @@
+{"schema_version": 1, "event": "phase_started", "seq": 0, "ts": "2026-09-22T14:58:43.562633+00:00", "payload": {"step": "scan", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 1, "ts": "2026-09-22T14:58:55.002226+00:00", "payload": {"step": "scan", "files": ["p.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 2, "ts": "2026-09-22T14:58:55.002298+00:00", "payload": {"step": "scan", "status": "completed", "forwards": 589}}
+{"schema_version": 1, "event": "phase_started", "seq": 3, "ts": "2026-09-22T14:58:55.002369+00:00", "payload": {"step": "heatmap", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 4, "ts": "2026-09-22T14:58:55.271209+00:00", "payload": {"step": "heatmap", "files": ["05_trace_p_q_grid.json", "05_trace_p_q_grid.png"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 5, "ts": "2026-09-22T14:58:55.271269+00:00", "payload": {"step": "heatmap", "status": "completed"}}
+{"schema_version": 1, "event": "campaign_terminal", "seq": 6, "ts": "2026-09-22T14:58:55.272444+00:00", "payload": {"outcome": "completed", "steps": {"scan": "completed", "heatmap": "completed"}}}
+{"schema_version": 1, "event": "phase_started", "seq": 7, "ts": "2026-09-24T17:34:55.851835+00:00", "payload": {"step": "scan", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 8, "ts": "2026-09-24T17:35:06.878982+00:00", "payload": {"step": "scan", "files": ["p.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 9, "ts": "2026-09-24T17:35:06.879062+00:00", "payload": {"step": "scan", "status": "completed", "forwards": 589}}
+{"schema_version": 1, "event": "phase_started", "seq": 10, "ts": "2026-09-24T17:35:06.880670+00:00", "payload": {"step": "heatmap", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 11, "ts": "2026-09-24T17:35:07.088026+00:00", "payload": {"step": "heatmap", "files": ["05_trace_p_q_grid.json", "05_trace_p_q_grid.png"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 12, "ts": "2026-09-24T17:35:07.088085+00:00", "payload": {"step": "heatmap", "status": "completed"}}
+{"schema_version": 1, "event": "campaign_terminal", "seq": 13, "ts": "2026-09-24T17:35:07.089572+00:00", "payload": {"outcome": "completed", "steps": {"scan": "completed", "heatmap": "completed"}}}

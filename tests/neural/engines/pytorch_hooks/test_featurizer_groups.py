@@ -39,11 +39,14 @@ import pytest
 import torch
 
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
-from causalab.neural.shared.featurizers import Gate, _stage_width, build_stack
-from causalab.neural.shared.services import TensorBundle
+from causalab.neural.shared.featurizers import Gate, build_stack
+from causalab.neural.shared.featurizers.build import (
+    _stage_width,  # pyright: ignore[reportPrivateUsage]
+)
+from causalab.io.tensor_files import TensorBundle
 from causalab.neural.shared.sites import resolve_site
-from causalab.neural.shared.streams import stream_at
-from causalab.protocol.errors import ProtocolError, ValidationError
+from causalab.neural.shared.model_tree import stream_at
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
 from causalab.protocol.registry import (
     component_shape,
     gate_group_map,
@@ -56,9 +59,43 @@ from causalab.protocol.schema import FeaturizerSpec, SiteSpec
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_QWEN35_MOE
+from tests.protocol._docs import UNWRITTEN, saved
 
 TEXT = "the quick brown fox jumps"
 CF_TEXT = "a slow green turtle sleeps"
+
+#: The un-intervened network read on base, beside `UNWRITTEN` on the
+#: counterfactual (§2.9's names for a network read un-intervened on both).
+ORIGINAL_BASE = "original_base"
+INPUT_OF = {ORIGINAL_BASE: "base", UNWRITTEN: "counterfactual", "masked": "base"}
+
+
+def _bound_doc(
+    reads: dict[str, tuple[str, dict[str, Any]]], **method: Any
+) -> dict[str, Any]:
+    """A document over ``reads`` — ``name: (model, address)`` — with every
+    model listing the reads taken on it (``masked`` landing ``writes``) and
+    every read saved as a tensor under its own name."""
+    models: dict[str, dict[str, Any]] = {}
+    for name, (model, _) in reads.items():
+        models.setdefault(model, {"input": INPUT_OF[model], "reads": []})
+        models[model]["reads"].append(name)
+    models["masked"]["writes"] = list(method["writes"])
+    return {
+        "header": {"protocol_version": "4"},
+        "model": {"key": "test", "revision": "main"},
+        "data": base_data_section(with_counterfactual=True),
+        "method": {
+            "intervened_models": models,
+            **method,
+            "reads": {name: address for name, (_, address) in reads.items()},
+            "save": [
+                saved(name, model, f"{name}.safetensors")
+                for name, (model, _) in reads.items()
+            ],
+        },
+    }
+
 
 #: (component, layer) for the fixture's two head-major families.
 FULL_ATTENTION = ("attention_premix", 3)
@@ -218,55 +255,28 @@ def _head_dbm_doc(component: str, layer: int) -> dict[str, Any]:
     """A DBM-shaped document on one head-major site: the counterfactual premix
     read through the gate, swapped into the base run through the same gate,
     plus the plain reads the hand computation needs."""
-    reads = {
-        "v_cf": {
-            "site": "tgt",
-            "pos": -1,
-            "model": "original",
-            "input": "counterfactual",
-            "featurizer": "gate",
+    return _bound_doc(
+        {
+            "v_cf": (UNWRITTEN, {"site": "tgt", "pos": -1, "featurizer": "gate"}),
+            "pre_base": (ORIGINAL_BASE, {"site": "tgt", "pos": -1}),
+            "pre_cf": (UNWRITTEN, {"site": "tgt", "pos": -1}),
+            "out_base": (ORIGINAL_BASE, {"site": "out", "pos": -1}),
+            "out_masked": ("masked", {"site": "out", "pos": -1}),
         },
-        "pre_base": {"site": "tgt", "pos": -1, "model": "original", "input": "base"},
-        "pre_cf": {
-            "site": "tgt",
-            "pos": -1,
-            "model": "original",
-            "input": "counterfactual",
+        sites={
+            "tgt": {"component": component, "layers": [layer]},
+            "out": {"component": "attention_output", "layers": [layer]},
         },
-        "out_base": {"site": "out", "pos": -1, "model": "original", "input": "base"},
-        "out_masked": {"site": "out", "pos": -1, "model": "masked", "input": "base"},
-    }
-    return {
-        "header": {"protocol_version": "3"},
-        "model": {"key": "test", "revision": "main"},
-        "data": base_data_section(with_counterfactual=True),
-        "method": {
-            "sites": {
-                "tgt": {"component": component, "layers": [layer]},
-                "out": {"component": "attention_output", "layers": [layer]},
-            },
-            "featurizers": {"gate": {"kind": "gate", "group": "head"}},
-            "reads": reads,
-            "writes": {
-                "mask": {
-                    "site": "tgt",
-                    "pos": -1,
-                    "featurizer": "gate",
-                    "do": {"swap": "v_cf"},
-                }
-            },
-            "intervened_models": {"masked": {"input": "base", "writes": ["mask"]}},
-            "save": [
-                {
-                    "value": name,
-                    "model": spec["model"],
-                    "input": spec["input"],
-                    "file_path": f"{name}.safetensors",
-                }
-                for name, spec in reads.items()
-            ],
+        featurizers={"gate": {"kind": "gate", "group": "head"}},
+        writes={
+            "mask": {
+                "site": "tgt",
+                "pos": -1,
+                "featurizer": "gate",
+                "do": {"swap": "v_cf"},
+            }
         },
-    }
+    )
 
 
 def _out_proj(bundle: ModelBundle, layer: int) -> torch.nn.Linear:
@@ -674,6 +684,8 @@ class TestExpertNeuronGroupMap:
             EXPERTS,
             D_EXPERT,
         )
+        # an indexed map (§2.5 `boundary`): one β whatever the width
+        assert gate_param_shape(None, None, 320, parametrization="boundary") == (1,)
 
 
 # --------------------------------------------------------------------------- #
@@ -687,106 +699,52 @@ def _expert_dbm_doc(pos: Any = -1) -> dict[str, Any]:
     through the same gate, a plain gate doing the same on the shared expert,
     plus the raw reads the hand computation needs (both inputs' activations
     and routing tables)."""
-    reads = {
-        "routed_cf": {
-            "site": "routed",
-            "pos": pos,
-            "model": "original",
-            "input": "counterfactual",
-            "featurizer": "routed_gate",
+    return _bound_doc(
+        {
+            "routed_cf": (
+                UNWRITTEN,
+                {"site": "routed", "pos": pos, "featurizer": "routed_gate"},
+            ),
+            "shared_cf": (
+                UNWRITTEN,
+                {"site": "shared", "pos": pos, "featurizer": "shared_gate"},
+            ),
+            "pre_base": (ORIGINAL_BASE, {"site": "routed", "pos": pos}),
+            "pre_cf": (UNWRITTEN, {"site": "routed", "pos": pos}),
+            "idx_base": (ORIGINAL_BASE, {"site": "idx", "pos": pos}),
+            "idx_cf": (UNWRITTEN, {"site": "idx", "pos": pos}),
+            "post": ("masked", {"site": "routed", "pos": pos}),
+            "shared_base": (ORIGINAL_BASE, {"site": "shared", "pos": pos}),
+            "shared_raw_cf": (UNWRITTEN, {"site": "shared", "pos": pos}),
+            "shared_post": ("masked", {"site": "shared", "pos": pos}),
         },
-        "shared_cf": {
-            "site": "shared",
-            "pos": pos,
-            "model": "original",
-            "input": "counterfactual",
-            "featurizer": "shared_gate",
-        },
-        "pre_base": {
-            "site": "routed",
-            "pos": pos,
-            "model": "original",
-            "input": "base",
-        },
-        "pre_cf": {
-            "site": "routed",
-            "pos": pos,
-            "model": "original",
-            "input": "counterfactual",
-        },
-        "idx_base": {"site": "idx", "pos": pos, "model": "original", "input": "base"},
-        "idx_cf": {
-            "site": "idx",
-            "pos": pos,
-            "model": "original",
-            "input": "counterfactual",
-        },
-        "post": {"site": "routed", "pos": pos, "model": "masked", "input": "base"},
-        "shared_base": {
-            "site": "shared",
-            "pos": pos,
-            "model": "original",
-            "input": "base",
-        },
-        "shared_raw_cf": {
-            "site": "shared",
-            "pos": pos,
-            "model": "original",
-            "input": "counterfactual",
-        },
-        "shared_post": {
-            "site": "shared",
-            "pos": pos,
-            "model": "masked",
-            "input": "base",
-        },
-    }
-    return {
-        "header": {"protocol_version": "3"},
-        "model": {"key": "test", "revision": "main"},
-        "data": base_data_section(with_counterfactual=True),
-        "method": {
-            "sites": {
-                "routed": {"component": "expert_activation", "layers": [MOE_LAYER]},
-                "shared": {
-                    "component": "shared_expert_activation",
-                    "layers": [MOE_LAYER],
-                },
-                "idx": {"component": "expert_idx", "layers": [MOE_LAYER]},
+        sites={
+            "routed": {"component": "expert_activation", "layers": [MOE_LAYER]},
+            "shared": {
+                "component": "shared_expert_activation",
+                "layers": [MOE_LAYER],
             },
-            "featurizers": {
-                "routed_gate": {"kind": "gate", "group": "expert_neuron"},
-                "shared_gate": {"kind": "gate"},
-            },
-            "reads": reads,
-            "writes": {
-                "mask_routed": {
-                    "site": "routed",
-                    "pos": pos,
-                    "featurizer": "routed_gate",
-                    "do": {"swap": "routed_cf"},
-                },
-                "mask_shared": {
-                    "site": "shared",
-                    "pos": pos,
-                    "featurizer": "shared_gate",
-                    "do": {"swap": "shared_cf"},
-                },
-            },
-            "intervened_models": {
-                "masked": {"input": "base", "writes": ["mask_routed", "mask_shared"]}
-            },
-            "save": [
-                {
-                    "value": name,
-                    "model": spec["model"],
-                    "input": spec["input"],
-                    "file_path": f"{name}.safetensors",
-                }
-                for name, spec in reads.items()
-            ],
+            "idx": {"component": "expert_idx", "layers": [MOE_LAYER]},
         },
-    }
+        featurizers={
+            "routed_gate": {"kind": "gate", "group": "expert_neuron"},
+            "shared_gate": {"kind": "gate"},
+        },
+        writes={
+            "mask_routed": {
+                "site": "routed",
+                "pos": pos,
+                "featurizer": "routed_gate",
+                "do": {"swap": "routed_cf"},
+            },
+            "mask_shared": {
+                "site": "shared",
+                "pos": pos,
+                "featurizer": "shared_gate",
+                "do": {"swap": "shared_cf"},
+            },
+        },
+    )
 
 
 def _aligned_by_hand(
@@ -1002,12 +960,7 @@ class TestExpertSwap:
             "component": "block_input",
             "layers": [MOE_LAYER],
         }
-        doc["method"]["reads"]["routed_cf"] = {
-            "site": "other",
-            "pos": -1,
-            "model": "original",
-            "input": "counterfactual",
-        }
+        doc["method"]["reads"]["routed_cf"] = {"site": "other", "pos": -1}
         executor = executor_for(
             doc, moe, base_texts=[TEXT], counterfactual_texts=[CF_TEXT]
         )

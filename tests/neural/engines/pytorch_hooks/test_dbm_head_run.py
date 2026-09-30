@@ -29,16 +29,17 @@ from safetensors.torch import load_file, save_file
 from causalab.cli import main
 from causalab.neural.engines.pytorch_hooks.train import _regularizer, fit_diagnostics
 from causalab.neural.shared.featurizers import Gate
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import build_artifact_identity, read_safetensors_metadata
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.env import build_artifact_identity, read_safetensors_metadata
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_QWEN35_MOE
 from tests.protocol._env import FIXTURES, build_env
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR
 
 REPO = Path(__file__).resolve().parents[4]
-PROTOCOLS = REPO / "causalab/configs/protocols"
+PROTOCOLS = PROTOCOLS_DIR
 
 TINY = {"model.key": TINY_QWEN35_MOE, "model.dtype": "fp32"}
 
@@ -61,7 +62,6 @@ def _stamped_head_gate(
     target = root / "fit/gate.safetensors"
     target.parent.mkdir(parents=True, exist_ok=True)
     identity = build_artifact_identity(
-        produced_by="0" * 64,
         model_key="Qwen/Qwen3.6-35B-A3B",
         model_revision="main",
         model_dtype="bf16",
@@ -81,8 +81,8 @@ class TestPresetsOffline:
     def test_the_fit_preset_validates_with_one_theta_per_query_head(
         self, tmp_path: Path
     ) -> None:
-        loaded = load(PROTOCOLS / "dbm_head.json", build_env(tmp_path))
-        gate = loaded.canonical_document["method"]["featurizers"]["gate"]
+        loaded = compile_protocol(PROTOCOLS / "dbm_head.json", env=build_env(tmp_path))
+        gate = loaded.canonical["method"]["featurizers"]["gate"]
         assert gate["group"] == "head"
         assert gate["width"] == 16 * 256  # Qwen3.6: 16 query heads of 256
         assert gate["params"] == {"theta": [16]}
@@ -98,12 +98,11 @@ class TestPresetsOffline:
             site={"component": "attention_premix", "layers": [19]},
             group_map=[16, 256],
         )
-        loaded = load(PROTOCOLS / "dbm_head_apply.json", build_env(tmp_path))
-        assert loaded.document.train is None
-        assert (
-            "content_digest"
-            in loaded.canonical_document["method"]["featurizers"]["gate"]
+        loaded = compile_protocol(
+            PROTOCOLS / "dbm_head_apply.json", env=build_env(tmp_path)
         )
+        assert loaded.document.train is None
+        assert "content_digest" in loaded.canonical["method"]["featurizers"]["gate"]
 
     def test_the_apply_preset_refuses_a_deltanet_fit_by_its_site(
         self, tmp_path: Path
@@ -117,7 +116,7 @@ class TestPresetsOffline:
             group_map=[32, 128],
         )
         with pytest.raises(ValidationError) as err:
-            load(PROTOCOLS / "dbm_head_apply.json", build_env(tmp_path))
+            compile_protocol(PROTOCOLS / "dbm_head_apply.json", env=build_env(tmp_path))
         assert err.value.rule == 15
         assert "ArtifactIdentity mismatch on 'site'" in str(err.value)
 
@@ -127,9 +126,9 @@ class TestPresetsOffline:
         """``attention_premix`` exists only on a full-attention layer; the
         DeltaNet analogue is ``delta_premix``, which the description says."""
         with pytest.raises(ValidationError) as err:
-            load(
+            compile_protocol(
                 PROTOCOLS / "dbm_head.json",
-                build_env(tmp_path),
+                env=build_env(tmp_path),
                 overrides={"sites.target.layers": 18},
             )
         assert err.value.rule == 4
@@ -219,6 +218,8 @@ def _run_workflow(base: Path, document: dict) -> tuple[int, Path]:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),

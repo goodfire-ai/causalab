@@ -3,11 +3,11 @@
 Two tiers already existed and are easy to confuse. ``tests/golden/
 test_a3b_engine_parity.py`` compares causalab's two *engines* with each other;
 ``tests/neural/engines/pytorch_hooks/test_write_oracle.py`` compares causalab
-against an *independent* raw-hook oracle. This module is the second kind. It
+against an *independent* raw-hook oracle. This module is the second kind: it
 extends that tier to two more families — ``qwen35moe`` (the hybrid tower on
 ``tiny-random/qwen3.5-moe``, CPU, fp32) and ``qwen36_a3b`` (the real
-``Qwen/Qwen3.6-35B-A3B``, GPU, bf16, ``-m golden``) — and records what a
-certification needs to record to be reproducible.
+``Qwen/Qwen3.6-35B-A3B``, GPU, bf16, ``-m golden``) — and records the
+eight fields a certification carries.
 
 **What is compared.** Every case drives the same intervention through the
 reference engine (an intervention specification, ``PointExecutor``) and
@@ -25,21 +25,32 @@ and the ``lm_head`` logits.
 means ``hook_oracle_lib.delta_recurrence``: ``torch_recurrent_gated_delta_rule``
 transcribed one operation at a time, which is the formulation under which the
 engine defines the per-step interior. It is held to the engine at a **bit-exact**
-band in fp32 (:data:`BANDS`), and that band is what turns the known failure
-mode — an oracle expanded in a different association than the model — into a
-mutation check: reassociating one sum in the oracle by one ulp
+band in fp32 (`BANDS`), and that band is what turns an order-of-operations
+mismatch into a mutation check: reassociating one sum in the oracle by one ulp
 fails the certification on an intermediate component while the logits alone
 would still pass (``test_family_certification.py``, T6). The chunked kernel is
 *another* association of the same sums, and the record measures the gap
 (``measurements.chunked_vs_stepwise_kernel_output``) rather than absorbing it.
 
-**The eight fields** (:data:`MIXING_S20_FIELDS`) live under ``certification`` in
+**The engine runs its library path.** The engine can swap optional kernels
+into the forward — the single-chunk Gated DeltaNet kernel for short sequences
+(``CAUSALAB_GDN_SHORT_SEQ``) and the fused MoE glue (``CAUSALAB_MOE_GLUE``) —
+each certified against the library by its own goldens at its own band. This
+certification is about the hook machinery, so the engine side of every capture
+runs under `tests._helpers.kernel_paths.library_kernel_paths` (both off)
+and the oracle sees the same library operations; the record's
+``context.kernel_paths`` is read from the environment inside that scope, so it
+attests the setting the capture ran under rather than asserting it. A bf16-scale
+disagreement here is therefore a placement or ordering fault, never a kernel's
+documented rounding.
+
+**The eight fields** (`CERTIFICATION_FIELDS`) live under ``certification`` in
 each record, in the goldens' existing shape otherwise (``family``, ``values``,
 ``tolerance``, ``context`` …). Provenance reuses the landed spellings: the
-causalab revision is :func:`causalab.provenance.runtime_identity` (its
-``resolved_revision`` / ``tree_digest`` / ``dirty``), the model revision is the
-bundle's requested revision beside the hub snapshot it resolved to, under the
-same ``requested_revision`` / ``resolved_revision`` names.
+causalab revision is [`causalab.provenance.runtime_identity`][] (its
+``source_kind`` / ``tree_digest``), the model revision is the bundle's
+requested revision beside the hub snapshot it resolved to, under
+``requested_revision`` / ``resolved_revision``.
 """
 
 from __future__ import annotations
@@ -55,11 +66,14 @@ import torch
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle
 from causalab.neural.shared.encoding import encode
+from causalab.protocol.schema import PROTOCOL_VERSION
 from causalab.provenance import runtime_identity
 
+from tests._helpers.kernel_paths import kernel_paths_in_force, library_kernel_paths
 from tests.neural.engines.pytorch_hooks import hook_oracle_lib as oracle_lib
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import OracleShim
+from tests.protocol._docs import saved
 
 __all__ = [
     "BANDS",
@@ -68,7 +82,7 @@ __all__ = [
     "COUNTERFACTUAL_TEXT",
     "FAMILIES",
     "GOLDENS_DIR",
-    "MIXING_S20_FIELDS",
+    "CERTIFICATION_FIELDS",
     "Band",
     "Capture",
     "FamilySpec",
@@ -87,7 +101,7 @@ GOLDENS_DIR = Path(__file__).resolve().parent / "goldens"
 #: ``certification`` block carries — censused by
 #: ``test_family_certification.py::test_the_record_carries_exactly_the_eight_fields``
 #: (T5), in the pattern of ``tests/protocol/test_vocabulary_census.py``.
-MIXING_S20_FIELDS: tuple[str, ...] = (
+CERTIFICATION_FIELDS: tuple[str, ...] = (
     "model_revision",
     "causalab_revision",
     "attn_implementation",
@@ -119,7 +133,7 @@ class FamilySpec:
     dtype: str
     device: str
     #: ``"cpu"`` runs under ``-m "not golden"``; ``"golden"`` is the accelerator
-    #: tier.
+    #: tier the nightly runs.
     tier: str
 
 
@@ -140,8 +154,8 @@ FAMILIES: dict[str, FamilySpec] = {
     ),
 }
 
-#: The certified record files. The three frozen goldens beside them carry no
-#: ``certification`` block and are never regenerated (docs/TESTS.md).
+#: The record files this certification owns. The three frozen goldens beside
+#: them carry no ``certification`` block and are never regenerated (docs/TESTS.md).
 CERTIFIED_FAMILIES: tuple[str, ...] = tuple(FAMILIES)
 
 
@@ -317,22 +331,31 @@ def _site(component: str, layer: int | None) -> dict[str, Any]:
     )
 
 
-def _save(name: str, model: str, input_role: str) -> dict[str, str]:
-    return {
-        "value": name,
-        "model": model,
-        "input": input_role,
-        "file_path": f"{name}.safetensors",
-    }
+#: The un-intervened model on each input, named as `causalab migrate` names
+#: them when the network is read un-intervened on both roles (§2.9).
+_ORIGINAL = {"base": "original_base", "counterfactual": "original_counterfactual"}
 
 
 def _doc(with_counterfactual: bool) -> dict[str, Any]:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=with_counterfactual),
-        "method": {"sites": {}, "reads": {}, "save": []},
+        "method": {"intervened_models": {}, "sites": {}, "reads": {}, "save": []},
     }
+
+
+def _read(
+    doc: dict[str, Any], name: str, model: str, input_role: str, **address: Any
+) -> None:
+    """Declare read ``name`` at ``address``, list it on ``model`` (declaring the
+    model on ``input_role`` if this is its first read) and save its tensor."""
+    method = doc["method"]
+    method["reads"][name] = dict(address)
+    entry = method["intervened_models"].setdefault(model, {"input": input_role})
+    assert entry["input"] == input_role, (model, entry["input"], input_role)
+    entry.setdefault("reads", []).append(name)
+    method["save"].append(saved(name, model, f"{name}.safetensors"))
 
 
 def _engine(
@@ -359,13 +382,7 @@ def _engine_reads(
         doc["method"]["sites"][site] = _site(case.component, layer)
         for role in ("base", "counterfactual"):
             name = f"r{i}_{role}"
-            doc["method"]["reads"][name] = {
-                "site": site,
-                "pos": "all",
-                "model": "original",
-                "input": role,
-            }
-            doc["method"]["save"].append(_save(name, "original", role))
+            _read(doc, name, _ORIGINAL[role], role, site=site, pos="all")
             names[name] = (role, _read_id("family", case, layer))
     executor = _engine(doc, bundle, with_counterfactual=True)
     out: dict[str, dict[str, torch.Tensor]] = {"base": {}, "counterfactual": {}}
@@ -392,53 +409,23 @@ def _engine_write(
     doc["method"]["sites"]["tap"] = _site(case.component, layer)
     doc["method"]["sites"]["lm_head"] = {"component": "lm_head"}
     pos = {"index": case.pos}
-    doc["method"]["reads"]["v_cf"] = {
-        "site": "tap",
-        "pos": pos,
-        "model": "original",
-        "input": operand_input,
-    }
-    doc["method"]["reads"]["clean"] = {
-        "site": "lm_head",
-        "pos": {"index": -1},
-        "model": "original",
+    doc["method"]["intervened_models"]["patched"] = {
         "input": "base",
+        "reads": [],
+        "writes": ["patch"],
     }
-    doc["method"]["reads"]["after"] = {
-        "site": "lm_head",
-        "pos": {"index": -1},
-        "model": "patched",
-        "input": "base",
-    }
-    doc["method"]["reads"]["logits_all"] = {
-        "site": "lm_head",
-        "pos": "all",
-        "model": "patched",
-        "input": "base",
-    }
-    doc["method"]["save"] += [
-        _save("v_cf", "original", operand_input),
-        _save("clean", "original", "base"),
-        _save("after", "patched", "base"),
-        _save("logits_all", "patched", "base"),
-    ]
+    _read(doc, "v_cf", _ORIGINAL[operand_input], operand_input, site="tap", pos=pos)
+    _read(doc, "clean", _ORIGINAL["base"], "base", site="lm_head", pos={"index": -1})
+    _read(doc, "after", "patched", "base", site="lm_head", pos={"index": -1})
+    _read(doc, "logits_all", "patched", "base", site="lm_head", pos="all")
     ds_names: dict[str, str] = {}
     for j, (component, role) in enumerate(case.downstream):
         site, name = f"ds{j}_site", f"ds{j}"
         doc["method"]["sites"][site] = _site(component, layers[role])
-        doc["method"]["reads"][name] = {
-            "site": site,
-            "pos": "all",
-            "model": "patched",
-            "input": "base",
-        }
-        doc["method"]["save"].append(_save(name, "patched", "base"))
+        _read(doc, name, "patched", "base", site=site, pos="all")
         ds_names[name] = f"ds/{component}.L{layers[role]}"
     doc["method"]["writes"] = {
         "patch": {"site": "tap", "pos": pos, "do": {"swap": "v_cf"}}
-    }
-    doc["method"]["intervened_models"] = {
-        "patched": {"input": "base", "writes": ["patch"]}
     }
     executor = _engine(doc, bundle, with_counterfactual=True)
     out = {
@@ -675,11 +662,8 @@ def _resolved_model_revision(bundle: ModelBundle) -> str | None:
 def _provenance(bundle: ModelBundle) -> tuple[dict[str, Any], dict[str, Any]]:
     identity = runtime_identity()
     causalab_revision = {
-        "version": identity.version,
         "source_kind": identity.source_kind,
-        "resolved_revision": identity.resolved_revision,
         "tree_digest": identity.tree_digest,
-        "dirty": identity.dirty,
     }
     model_revision = {
         "key": bundle.key,
@@ -690,9 +674,15 @@ def _provenance(bundle: ModelBundle) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 def _context() -> dict[str, str]:
+    """Capture provenance; ``kernel_paths`` is what the environment holds at the
+    call (inside `capture_family`'s scope: the library setting)."""
     import transformers
 
-    return {"torch": torch.__version__, "transformers": transformers.__version__}
+    return {
+        "torch": torch.__version__,
+        "transformers": transformers.__version__,
+        "kernel_paths": kernel_paths_in_force(),
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -721,10 +711,17 @@ class Capture:
 def capture_family(bundle: ModelBundle, family: str) -> Capture:
     """Run every case through the engine and the oracle and build the record.
 
-    The bundle must be the family's realization (:data:`FAMILIES`): eager
+    The bundle must be the family's realization ([`FAMILIES`][causalab.protocol.registry.families.FAMILIES]): eager
     attention, the declared dtype. The comparison is engine vs oracle in this
-    process; the pins are the engine's values.
+    process; the pins are the engine's values. The whole capture runs under
+    `library_kernel_paths` (module docstring): the oracle reads neither
+    variable, so this is the engine's setting alone, and ``context`` records it.
     """
+    with library_kernel_paths():
+        return _capture_family(bundle, family)
+
+
+def _capture_family(bundle: ModelBundle, family: str) -> Capture:
     spec = FAMILIES[family]
     assert bundle.model.config._attn_implementation == "eager"
     assert bundle.dtype == spec.dtype, (bundle.dtype, spec.dtype)
@@ -816,7 +813,7 @@ def capture_family(bundle: ModelBundle, family: str) -> Capture:
             "max": max(logit_diffs.values()),
         },
     }
-    assert tuple(certification) == MIXING_S20_FIELDS
+    assert tuple(certification) == CERTIFICATION_FIELDS
     record: dict[str, Any] = {
         "attn_implementation": bundle.model.config._attn_implementation,
         "captured_from": "hook_oracle",
@@ -872,12 +869,12 @@ def check_certification_fields(
     record: Mapping[str, Any],
 ) -> tuple[list[str], list[str]]:
     """``(missing, extra)`` of the record's ``certification`` key set against
-    :data:`MIXING_S20_FIELDS` — the census guard's comparison (T5)."""
+    `CERTIFICATION_FIELDS` — the census guard's comparison (T5)."""
     block = record.get("certification")
     if not isinstance(block, Mapping):
-        return list(MIXING_S20_FIELDS), []
+        return list(CERTIFICATION_FIELDS), []
     have = set(block)
-    want = set(MIXING_S20_FIELDS)
+    want = set(CERTIFICATION_FIELDS)
     return sorted(want - have), sorted(have - want)
 
 

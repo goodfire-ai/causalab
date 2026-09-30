@@ -4,11 +4,8 @@
   "certification": {
     "attn_implementation": "eager",
     "causalab_revision": {
-      "dirty": false,
-      "resolved_revision": "f0051d7623d96162f2ed07a23afa16ed90b38d39",
       "source_kind": "editable",
-      "tree_digest": "ca2a2ab8293a34b0ef7a06abf9047357b8ccf9fcb4a0ab2506b651495fea189c",
-      "version": "0.0.1"
+      "tree_digest": "ca2a2ab8293a34b0ef7a06abf9047357b8ccf9fcb4a0ab2506b651495fea189c"
     },
     "dtype": "bf16",
     "hook_names": [
@@ -128,6 +125,7 @@
     }
   },
   "context": {
+    "kernel_paths": "CAUSALAB_GDN_SHORT_SEQ=0;CAUSALAB_MOE_GLUE=off",
     "torch": "2.9.0+cu128",
     "transformers": "5.16.1"
   },

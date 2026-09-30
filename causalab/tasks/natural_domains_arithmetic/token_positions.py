@@ -5,11 +5,11 @@ Supports multi-template tasks: when multiple templates are provided,
 token positions are resolved per-example based on trace["template"].
 """
 
-from causalab.neural.token_positions import (
+from causalab.tasks.token_positions import (
     build_token_positions,
     TokenPosition,
 )
-from causalab.neural.token_positions import LMPipeline
+from causalab.tasks.token_positions import LMPipeline
 
 from typing import Any
 

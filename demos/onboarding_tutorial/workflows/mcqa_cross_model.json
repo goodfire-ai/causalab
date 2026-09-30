@@ -1,13 +1,13 @@
 {
   "version": "1",
-  "description": "The 07_cross_model demo's control arm: harvest the answer-slot activation of the instruction-tuned model and graft it back into the same model. This is the notebook's own validation scenario -- source and target the same checkpoint -- and it has to reproduce an ordinary interchange, because that is what it is. It runs, which is what makes the cross-checkpoint arm's refusal a statement about the two models rather than about the graft.",
-  "output_dir": "mcqa_cross_same",
+  "description": "Control arm: harvest the answer-slot activation of Qwen2.5-1.5B-Instruct and graft it back into the same model.",
+  "output_dir": "10_cross_model_control",
   "steps": {
     "source": {
       "type": "intervention_protocol",
       "document": "../protocols/mcqa_source_harvest.json",
       "set": {
-        "model.key": "meta-llama/Llama-3.2-1B-Instruct"
+        "model.key": "Qwen/Qwen2.5-1.5B-Instruct"
       }
     },
     "graft": {

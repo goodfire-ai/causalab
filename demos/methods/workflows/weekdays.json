@@ -1,0 +1,81 @@
+{
+  "version": "1",
+  "description": "weekdays: locate a layer x position cell -> DAS k x seed fits at it -> apply the best fit on test; scan heatmap + IIA-vs-k curves. The rank comes off the IIA-versus-k CURVE (`choose: knee`), not from the highest score: on a saturated curve the argmax is whichever near-tied k the table lists first.",
+  "output_dir": "weekdays",
+  "steps": {
+    "locate": {
+      "type": "intervention_protocol",
+      "document": "../protocols/weekdays_locate_scan.json"
+    },
+    "best": {
+      "type": "script",
+      "script": {"module": "causalab.workflow.scripts.select"},
+      "inputs": {
+        "table": {"step": "locate", "file": "iia.json"},
+        "choose": "max",
+        "emit": {"best_layer": "sites.target.layers", "best_pos": "positions.tap"}
+      },
+      "outputs": {
+        "values": {
+          "file": "values.json",
+          "keys": {"best_layer": 23, "best_pos": {"index": -1}}
+        }
+      }
+    },
+    "fit": {
+      "type": "intervention_protocol",
+      "document": "../protocols/weekdays_das_sweep.json",
+      "set": {
+        "positions.best": {"artifact": "best", "key": "best_pos"},
+        "sites.target.layers": {"artifact": "best", "key": "best_layer"}
+      }
+    },
+    "best_fit": {
+      "type": "script",
+      "script": {"module": "causalab.workflow.scripts.select"},
+      "inputs": {
+        "table": {"step": "fit", "file": "iia.json"},
+        "choose": "knee",
+        "order": "featurizers.rot.k",
+        "emit": {"best_k": "featurizers.rot.k", "best_seed": "train.seed"}
+      },
+      "outputs": {
+        "values": {"file": "values.json", "keys": {"best_k": 8, "best_seed": 0}}
+      }
+    },
+    "apply": {
+      "type": "intervention_protocol",
+      "document": "../protocols/weekdays_das_apply.json",
+      "set": {
+        "featurizers.rot.file_path": "fit/rot.safetensors",
+        "featurizers.rot.k": {"artifact": "best_fit", "key": "best_k"},
+        "featurizers.rot.entry": {
+          "k": {"artifact": "best_fit", "key": "best_k"},
+          "seed": {"artifact": "best_fit", "key": "best_seed"}
+        }
+      }
+    },
+    "scan_heatmap": {
+      "type": "script",
+      "script": {"module": "causalab.io.plots.workflow_figures"},
+      "inputs": {
+        "table": {"step": "locate", "file": "iia.json"},
+        "plot": "heatmap",
+        "x": "sites.target.layers",
+        "y": "positions.tap"
+      },
+      "outputs": {"figure": "scan_iia.png", "plotted": {"file": "scan_iia.json"}}
+    },
+    "iia_by_k": {
+      "type": "script",
+      "script": {"module": "causalab.io.plots.workflow_figures"},
+      "inputs": {
+        "table": {"step": "fit", "file": "iia.json"},
+        "plot": "lines",
+        "x": "featurizers.rot.k",
+        "series": "train.seed"
+      },
+      "outputs": {"figure": "iia_by_k.png", "plotted": {"file": "iia_by_k.json"}}
+    }
+  }
+}

@@ -1,12 +1,9 @@
-"""The knob of the single-chunk kernel: how long a sequence it takes.
+"""Select the longest sequence served by the short delta kernel.
 
-``CAUSALAB_GDN_SHORT_SEQ`` names the longest sequence :mod:`.binding` routes
-to the kernel — 16 where Triton is importable (the kernel's 16-row tile,
-which the workflow's 13-token sequences fill; the 32-row tile is opt-in),
-``0`` to keep the bound kernel for everything. Nothing else about the kernel
-is configurable from outside: its dot precision is a module constant of
-:mod:`.triton_kernel`, and FLA's own knobs are FLA's own environment
-(``docs/attention_backends.md``).
+``CAUSALAB_GDN_SHORT_SEQ`` defaults to 16 when Triton is available.
+A value of zero keeps the bound kernel for all calls; the 32-row tile is
+opt-in. Dot precision is fixed in ``triton_kernel``. FLA settings remain
+separate and are listed in ``docs/attention_backends.md``.
 """
 
 from __future__ import annotations
@@ -26,13 +23,13 @@ __all__ = [
     "ShortSeqKernelOptions",
 ]
 
-#: The chunk kernel's module global — the one of :data:`.kernels.KERNEL_GLOBALS`
+#: The chunk kernel's module global — the one of `.kernels.KERNEL_GLOBALS`
 #: the binding rebinds (the recurrent kernel has no chunk).
 CHUNK_KERNEL_GLOBAL = "torch_chunk_gated_delta_rule"
 
-#: The environment variable :meth:`ShortSeqKernelOptions.from_env` reads: the
+#: The environment variable [`ShortSeqKernelOptions.from_env`][] reads: the
 #: longest sequence routed to the single-chunk kernel, ``0`` to disable it,
-#: unset for :data:`DEFAULT_SHORT_SEQ` where Triton is importable.
+#: unset for [`DEFAULT_SHORT_SEQ`][] where Triton is importable.
 ENV_SHORT_SEQ = "CAUSALAB_GDN_SHORT_SEQ"
 
 #: The default threshold: the kernel's 16-row tile, which the workflow's
@@ -55,7 +52,7 @@ class KernelOptionError(ValueError):
 class ShortSeqKernelOptions:
     """Where the single-chunk kernel takes over from the installed chunk
     kernel: a call whose sequence is at most ``threshold`` tokens (and starts
-    from a zero state, on CUDA — :func:`.binding.selects_single_chunk`) runs
+    from a zero state, on CUDA — [`.binding.selects_single_chunk`][causalab.neural.shared.gdn_short.binding.selects_single_chunk]) runs
     the single-chunk kernel; every other call runs what was bound.
     ``threshold == 0`` installs nothing."""
 
@@ -75,7 +72,7 @@ class ShortSeqKernelOptions:
         cls, environ: Mapping[str, str] | None = None
     ) -> "ShortSeqKernelOptions":
         """``CAUSALAB_GDN_SHORT_SEQ`` as an integer threshold; unset or empty
-        means :data:`DEFAULT_SHORT_SEQ` when Triton is importable (the kernel
+        means [`DEFAULT_SHORT_SEQ`][] when Triton is importable (the kernel
         needs nothing else that a CUDA model does not already have) and
         disabled otherwise."""
         env = os.environ if environ is None else environ

@@ -6,7 +6,7 @@ sites left it there. ``causalab run <das_doc>.json --device cuda`` then died in
 ``Subspace.featurize`` with ``Expected all tensors to be on the same device,
 but got mat2 is on cpu, different from other tensors on cuda:0`` — every
 document with a featurizer (DAS, DBM, das-apply, PCA, gates, SAE), i.e. the
-headline analyses, was CPU-only. The corpus tests all run tiny-random on
+headline analysis node, was CPU-only. The corpus tests all run tiny-random on
 CPU, which is why nothing caught it.
 
 The placement assertions are device-parametrized over whatever the box has, so
@@ -32,7 +32,7 @@ from causalab.neural.shared.featurizers import (
     Subspace,
     build_stack,
 )
-from causalab.neural.engines.pytorch_hooks.loading import TensorBundle
+from causalab.io.tensor_files import TensorBundle
 from causalab.protocol.schema import FeaturizerSpec
 
 pytestmark = pytest.mark.unit

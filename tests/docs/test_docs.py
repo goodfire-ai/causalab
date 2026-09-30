@@ -1,30 +1,8 @@
-"""The docs are executed, not trusted.
+"""Check documentation against the current files and CLI.
 
-`tests/demos/test_demos.py` already does this for `demos/` — every document
-loads, every link resolves, every quoted digest is real. `docs/` had none of it,
-and prose rots the same way there: a renamed flag, a retired metric kind or a
-mistyped example leaves the markdown reading exactly as before.
-
-Three of the four checks are that method pointed at `docs/`. The fourth is the
-half nothing covered anywhere, and it is the one that catches real defects:
-
-**Documented commands are parsed by the real parser.** `causalab`'s options are
-defined once, in `causalab.cli._build_parser`. Until now nothing compared a
-documented invocation against them, so a doc could name a flag the CLI refuses
-and read perfectly — exactly the defect class this catches (a documented
-`--dtype` on a verb that has none). Every `causalab …` line in every fenced
-code block of `docs/`, `README.md` and the demos is normalized and handed to
-`parse_args`, so an unsupported flag, an unknown verb, a bad `choices` value
-and a missing required option all fail CI.
-
-Why parse rather than execute. `parse_args` *is* the executable content of a
-command line for this purpose: it is where a flag either exists or does not, and
-it needs no model, no data root and no accelerator, so the check runs in the
-unit tier over every documented command rather than over the two that happen
-to be cheap. Executing the documents themselves is what
-`tests/neural/.../test_run_corpus.py` and the demo suite already do.
-
-"""
+Parse commands with the real argument parser, load complete JSON examples, and
+check links, quoted digests, and module paths. Coverage includes nested reference
+pages. Architecture tables may select the entry points useful to a reader."""
 
 from __future__ import annotations
 
@@ -39,6 +17,9 @@ from pathlib import Path
 from typing import NamedTuple
 
 import pytest
+
+from tests.protocol._env import steps_of
+from tests._helpers.paths import METHODS_DIR
 
 pytestmark = pytest.mark.unit
 
@@ -113,7 +94,7 @@ def _live_docs() -> tuple[Path, ...]:
     Cached: the parametrize decorators below call it at collection, several
     times, and `intervention_protocol.md` alone is ~1.7k lines.
     """
-    out = tuple(sorted((*DOCS.glob("*.md"), *DOCS.glob("methods/*.md"))))
+    out = tuple(sorted(DOCS.rglob("*.md")))
     assert out, "no docs found — the glob is wrong"
     return out
 
@@ -176,7 +157,7 @@ def _commands_in(block: str) -> list[str]:
 def _argv(command: str) -> list[str]:
     """A documented command as the argument list the CLI would receive.
 
-    Placeholders (`<doc>`, `${SHARD}`, `$(…)`) become a single
+    Placeholders (`<doc>`, `${SLURM_ARRAY_TASK_ID}`, `$(…)`) become a single
     token: they stand where a reader supplies a value, and what is under test is
     the *flags*, not the paths. One tokenization for every check here, so the
     parse test and the digest filter cannot drift apart.
@@ -380,9 +361,9 @@ def test_a_documented_document_loads(path: Path, index: int, raw: dict) -> None:
     and asserting it validates would be asserting something the example never
     claimed. What is checked is every example that is complete enough to run.
     """
-    from causalab.protocol.errors import ValidationError
-    from causalab.protocol.loader import load
-    from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+    from causalab.protocol.rules.errors import ValidationError
+    from causalab.protocol.pipeline import compile_protocol
+    from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
     from causalab.tasks import TASKS_ROOT
 
     env = ResolutionEnv(
@@ -390,17 +371,18 @@ def test_a_documented_document_loads(path: Path, index: int, raw: dict) -> None:
         artifacts=FileArtifacts(root=REPO),
     )
     try:
-        load(raw, env)
+        compile_protocol(raw, env=env)
     except ValidationError as error:
         # A doc may legitimately show a model the static registry does not
         # carry — `running_experiments.md` documents exactly that case, and the
         # `--register-from-hf` flag for it. Registry membership is an
         # environment fact, not a property of the document. What has *already
-        # passed* when this V4 fires is everything up to it in `load`: the
-        # strict parse, sweep expansion and the whole §5 checklist on every
-        # point (`loader.py` validates each point before canonicalizing). What
-        # is out of reach is canonicalization and so the digest — the one step
-        # that asks the registry for the model's widths — and only for a
+        # passed* when this V4 fires is everything up to it in
+        # `compile_protocol`: the strict parse, and the §5 checklist over one
+        # representative per axis value, which `build`'s guard consults before
+        # a refusal raised in `canonicalize` gets out. What is out of reach is
+        # canonicalization and so the digest — the one step that asks the
+        # registry for the model's widths — and only for a
         # document whose model this tree cannot size. Every violation in an
         # aggregate has to be that one, or something real is being skipped.
         # (`ResolutionEnv(model_info=…)` is the seam that would put these
@@ -409,6 +391,169 @@ def test_a_documented_document_loads(path: Path, index: int, raw: dict) -> None:
         violations = getattr(error, "errors", (error,))
         if not all(e.rule == 4 and e.path == "model.key" for e in violations):
             raise
+
+
+# --------------------------------------------------------------------------- #
+# the layout of a documented command
+# --------------------------------------------------------------------------- #
+
+#: The fence languages whose bodies are shell commands.
+SHELL_LANGUAGES = frozenset({"bash", "sh"})
+
+#: A flag: one or two dashes, then a letter. `--` alone ends the options and
+#: `-1` is a value.
+FLAG = re.compile(r"^--?[A-Za-z]")
+
+#: The operators that end one command and start the next on the same line.
+CHAIN = re.compile(r"\s(?:&&|\|\||\||;)\s")
+
+#: The start of a heredoc (`<<'PY'`, `<<EOF`); its body is not shell.
+HEREDOC = re.compile(r"<<-?\s*['\"]?(\w+)['\"]?")
+
+#: Programs whose `-m` names the module to run, so it is part of the command.
+MODULE_RUNNERS = frozenset({"python", "python3", "torchrun"})
+
+
+def _flag_count(tokens: list[str], module_runner: bool) -> int:
+    return sum(
+        1
+        for token in tokens
+        if FLAG.match(token) and not (module_runner and token == "-m")
+    )
+
+
+def _shell_commands(block: str) -> list[list[str]]:
+    """The commands of one shell fence, each as its physical lines.
+
+    Continuation lines join their command, comment lines and heredoc bodies
+    drop out, and a chain (`a && b`) splits into one command per program.
+    """
+    commands: list[list[str]] = []
+    current: list[str] = []
+    heredoc_end: str | None = None
+    for line in block.splitlines():
+        if heredoc_end is not None:
+            heredoc_end = None if line.strip() == heredoc_end else heredoc_end
+            continue
+        code = re.split(r"(?:^|\s)#", line, maxsplit=1)[0].rstrip()
+        if not code and not current:
+            continue
+        if match := HEREDOC.search(code):
+            heredoc_end = match.group(1)
+        current.append(code.removesuffix("\\").rstrip())
+        if not code.endswith("\\"):
+            commands.append(current)
+            current = []
+    if current:
+        commands.append(current)
+    out: list[list[str]] = []
+    for command in commands:
+        segments: list[list[str]] = [[]]
+        for line in command:
+            parts = CHAIN.split(line)
+            segments[-1].append(parts[0])
+            segments.extend([part] for part in parts[1:])
+        out.extend(segments)
+    return out
+
+
+def _flag_layout_errors(block: str) -> list[str]:
+    """The commands in ``block`` that break the one-flag-per-line layout.
+
+    A command with at most one flag may sit on one line. A command with two or
+    more keeps its first line free of flags and has one flag per continuation
+    line (docs/STYLE_GUIDE.md, Shell commands).
+    """
+    errors: list[str] = []
+    for command in _shell_commands(block):
+        lines: list[list[str]] = []
+        for line in command:
+            text = PLACEHOLDER.sub("PLACEHOLDER", line)
+            try:
+                lines.append(shlex.split(text))
+            except ValueError:
+                lines.append(text.split())
+        words = [
+            word
+            for tokens in lines
+            for word in tokens
+            if "=" not in word or FLAG.match(word)
+        ]
+        program = next((w for w in words if w not in ("uv", "run")), "")
+        module_runner = program.rsplit("/", 1)[-1] in MODULE_RUNNERS
+        counts = [_flag_count(tokens, module_runner) for tokens in lines]
+        if sum(counts) >= 2 and (counts[0] > 0 or max(counts) > 1):
+            errors.append(" \\ ".join(command).strip())
+    return errors
+
+
+def test_the_flag_layout_check_catches_flags_on_one_line() -> None:
+    """The check itself, on the layouts it must refuse and accept."""
+    assert _flag_layout_errors("causalab run a.json --engine auto --out o\n")
+    assert _flag_layout_errors("causalab run a.json --engine auto \\\n    --out o\n")
+    assert not _flag_layout_errors(
+        "uv run causalab run a.json \\\n    --engine auto \\\n    --out o\n"
+    )
+    assert not _flag_layout_errors("uv sync --extra notebook\n")
+    assert not _flag_layout_errors(
+        "python3 -m venv .venv && source .venv/bin/activate\n"
+    )
+    assert not _flag_layout_errors("uv run python - <<'PY'\nx = f(--a, --b)\nPY\n")
+
+
+@pytest.mark.parametrize("path", _markdown(), ids=_ids(_markdown()))
+def test_each_flag_of_a_documented_command_has_its_own_line(path: Path) -> None:
+    """A reader copies a command and edits one flag. One flag per line makes the
+    flag easy to find and the edit a one-line diff."""
+    errors = [
+        error
+        for info, body in FENCE.findall(path.read_text())
+        if info.split()[:1] and info.split()[0] in SHELL_LANGUAGES
+        for error in _flag_layout_errors(body)
+    ]
+    assert not errors, (
+        f"{path.relative_to(REPO)}: put each flag on its own continuation line "
+        f"(docs/STYLE_GUIDE.md, Shell commands):\n" + "\n".join(errors)
+    )
+
+
+#: A colour set inside a Mermaid diagram (`fill:#fff`, `color:white`).
+MERMAID_COLOUR = re.compile(
+    r"\b(?:fill|color|stroke)\s*:\s*(?!transparent\b|none\b)[#\w]"
+)
+
+
+@pytest.mark.parametrize("path", _markdown(), ids=_ids(_markdown()))
+def test_a_mermaid_diagram_takes_its_colours_from_the_theme(path: Path) -> None:
+    """The site's theme sets the label colour for each scheme. A fixed node
+    colour keeps its value in both schemes, so the labels lose contrast in one
+    of them (docs/STYLE_GUIDE.md, Diagrams)."""
+    coloured = [
+        line.strip()
+        for body in _fenced(path.read_text(), "mermaid")
+        for line in body.splitlines()
+        if re.match(r"\s*(?:classDef|style)\s", line) and MERMAID_COLOUR.search(line)
+    ]
+    assert not coloured, f"{path.relative_to(REPO)}: colours in a diagram {coloured}"
+
+
+def test_the_readme_protocol_is_the_file_it_runs() -> None:
+    """The quick start shows a protocol and runs a file. Without its comments,
+    the copy must be that file, or the reader reads one experiment and runs
+    another."""
+    readme = (REPO / "README.md").read_text()
+    shown = [
+        json.loads(COMMENT.sub("", block))
+        for block in _fenced(readme, "json")
+        if '"header"' in block
+    ]
+    runs = {
+        match
+        for command in _commands(readme)
+        for match in re.findall(r"\S+\.json", command)
+    }
+    assert len(shown) == 1 and len(runs) == 1, (shown, runs)
+    assert shown[0] == json.loads((REPO / runs.pop()).read_text())
 
 
 # --------------------------------------------------------------------------- #
@@ -511,7 +656,7 @@ def test_quoted_digests_are_real(path: Path) -> None:
 
     This found four stale digests in `running_experiments.md`'s `explain`
     output on its first run — the block claims to be pasted output and had
-    drifted from what the command prints. That is the defect class exactly.
+    drifted from what the command prints.
     """
     blocks = _checkable_blocks(path.read_text())
     if not blocks:
@@ -538,15 +683,15 @@ def _real_digests(data_root: Path, artifacts_root: Path) -> frozenset[str]:
 
     Two sources, because the docs quote both: a document shown inline in a
     fence, and a **shipped** document the docs run by path
-    (`causalab/configs/workflows/weekdays_8b.json` and its steps — a workflow
+    (`demos/methods/workflows/weekdays.json` and its steps — a workflow
     contributes its own digest plus each step's inner and stamped ones, which
     is where §9's example output comes from).
 
     Cached per pair of roots: it loads every shipped config and workflow, and
     each doc that quotes a digest would otherwise redo that.
     """
-    from causalab.protocol.loader import load
-    from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+    from causalab.protocol.pipeline import compile_protocol
+    from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
     from causalab.workflow.document import load_workflow
     from causalab.tasks import TASKS_ROOT
 
@@ -557,10 +702,10 @@ def _real_digests(data_root: Path, artifacts_root: Path) -> frozenset[str]:
     real: set[str] = set()
     for _p, _i, raw in WHOLE_DOCUMENTS:
         with contextlib.suppress(Exception):
-            loaded = load(raw, env)
-            real.add(loaded.document_digest)
-            real.update(loaded.point_digests)
-    for shipped in sorted((REPO / "causalab" / "configs").glob("**/*.json")):
+            loaded = compile_protocol(raw, env=env)
+            real.add(loaded.digests.document)
+            real.update(steps_of(loaded, env).digests)
+    for shipped in sorted(METHODS_DIR.glob("*/*.json")):
         raw_text = shipped.read_text()
         with contextlib.suppress(Exception):
             if '"steps"' in raw_text:
@@ -569,9 +714,9 @@ def _real_digests(data_root: Path, artifacts_root: Path) -> frozenset[str]:
                 real.update(workflow.inner_digests.values())
                 real.update(workflow.step_digests.values())
             else:
-                loaded = load(shipped, env)
-                real.add(loaded.document_digest)
-                real.update(loaded.point_digests)
+                loaded = compile_protocol(shipped, env=env)
+                real.add(loaded.digests.document)
+                real.update(steps_of(loaded, env).digests)
     return frozenset(real)
 
 
@@ -613,7 +758,7 @@ def _rooted_paths(text: str) -> list[str]:
       prose that names a path without marking it as a value is making a claim
       about the tree;
     * **globs and placeholders** (`tests/tasks/<task>/pinned_samples.json`,
-      `causalab/configs/protocols/*.json`) — a shape, not a file.
+      `demos/methods/protocols/*.json`) — a shape, not a file.
     """
     out = []
     for raw in BACKTICKED.findall(_prose(text)):
@@ -632,11 +777,28 @@ def _rooted_paths(text: str) -> list[str]:
     return out
 
 
+def _roots(path: Path) -> tuple[Path, ...]:
+    """Where a document's rooted paths resolve: the repository root for every
+    document, and for a replication package's page also ``demos/papers/``.
+    Every package's commands run from that directory, so a page's
+    `workflows/scripts/<name>/figure.py` is the folder's file, not the
+    repository's."""
+    if path.is_relative_to(REPO / "demos" / "papers"):
+        return (REPO, path.parent)
+    return (REPO,)
+
+
 @pytest.mark.parametrize("path", _markdown(), ids=_ids(_markdown()))
 def test_rooted_paths_resolve(path: Path) -> None:
-    """A path written from the repo root has to exist at the repo root."""
+    """A path written from the repo root has to exist at the repo root, or for
+    a replication package's page in ``demos/papers/`` (`_roots`)."""
+    roots = _roots(path)
     missing = sorted(
-        {p for p in _rooted_paths(path.read_text()) if not (REPO / p).exists()}
+        {
+            p
+            for p in _rooted_paths(path.read_text())
+            if not any((root / p).exists() for root in roots)
+        }
     )
     assert not missing, (
         f"{path.relative_to(REPO)} names paths that are not in the tree: {missing}. "
@@ -657,55 +819,52 @@ PACKAGE_HEADING = re.compile(
     r"^#{2,3} .*\(`(causalab/[a-z0-9_/]+)/`\)\s*$", re.MULTILINE
 )
 
-#: The package maps this guard covers, pinned rather than discovered. Without
-#: it, a heading reformatted to append anything after the backticked path stops
-#: matching `PACKAGE_HEADING`, and that section leaves the guard in silence —
-#: the failure this whole file argues against. The set is small and closed, so
-#: naming it costs one line per package.
+#: Expected tables of selected module entry points. Pin this set so a changed
+#: heading cannot silently remove a table from the checks.
 GUARDED_PACKAGES = frozenset(
     {
         "causalab/causal",
         "causalab/protocol",
-        "causalab/neural/shared",
-        "causalab/neural/engines/pytorch_hooks",
-        "causalab/neural/engines/nnsight_tracing",
+        "causalab/workflow",
+        "causalab/measurement",
     }
 )
 
-#: A table row whose first cell is nothing but bare module names — one, or
-#: several grouped into one row. That shape is what distinguishes a *package
-#: module map* from the other tables the docs draw: §3's two-engine capability
-#: table has no module cells at all, and §4's step-script table lists paths
-#: across four packages (`causalab/io/step_io.py`), so neither is a claim about
-#: one directory's contents and neither is checked here.
-MODULE_ROW = re.compile(r"^\|\s*((?:`[a-z0-9_]+\.py`[,\s]*)+)\|", re.MULTILINE)
+#: Rows that name modules relative to the package heading.
+MODULE_ROW = re.compile(r"^\|\s*((?:`[a-z0-9_/]+\.py`[,\s]*)+)\|", re.MULTILINE)
 
 
-def _is_reexport_shim(module: Path) -> bool:
-    """A module whose only statement is a star-import.
+def _is_star_import_forwarder(module: Path) -> bool:
+    """A module whose only statement is a star import forwards another module.
 
-    The `neural/shared/` extraction left seven of these behind in
-    `engines/pytorch_hooks/` to keep the old import paths alive for one
-    deprecation beat. CODEBASE.md describes them in prose rather than giving
-    each a table row, so they are excluded here — detected by what they *are*,
-    so that when the beat ends and they are deleted this test needs no edit.
-
-    Stated as a property of the parsed module rather than as
-    ``"import *" in text``, which would also match a mention in a docstring or
-    a ``# noqa``, over a line budget that is slack on files all exactly seven
-    lines long. This is a docs guard; it must not itself become the reason a
-    module quietly stops being documented.
+    The docstring and ``from __future__`` imports are ignored, so a shim copied
+    from a neighbour's header is still detected.
     """
     body = [
         node
         for node in ast.parse(module.read_text()).body
-        if not (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant))
+        if not (
+            (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant))
+            or (isinstance(node, ast.ImportFrom) and node.module == "__future__")
+        )
     ]
     return (
         len(body) == 1
         and isinstance(body[0], ast.ImportFrom)
         and any(alias.name == "*" for alias in body[0].names)
     )
+
+
+def test_no_module_is_a_star_import_forwarder() -> None:
+    """The mechanical half of CODEBASE.md's rule that no module exists only to
+    forward another module's names. A forwarder that lists its names is a
+    review-time check."""
+    forwarders = sorted(
+        path.relative_to(REPO).as_posix()
+        for path in (REPO / "causalab").rglob("*.py")
+        if _is_star_import_forwarder(path)
+    )
+    assert forwarders == [], f"star-import forwarders on the tree: {forwarders}"
 
 
 def _module_tables() -> list[tuple[str, set[str], set[str]]]:
@@ -733,14 +892,14 @@ def _module_tables() -> list[tuple[str, set[str], set[str]]]:
         documented = {
             name
             for cell in MODULE_ROW.findall(text[match.end() : end])
-            for name in re.findall(r"`([a-z0-9_]+\.py)`", cell)
+            for name in re.findall(r"`([a-z0-9_/]+\.py)`", cell)
         }
         if not documented:
             continue
         live = {
-            p.name
-            for p in directory.glob("*.py")
-            if p.name != "__init__.py" and not _is_reexport_shim(p)
+            p.relative_to(directory).as_posix()
+            for p in directory.rglob("*.py")
+            if p.name != "__init__.py"
         }
         out.append((package, documented, live))
     guarded = {package for package, _documented, _live in out}
@@ -760,21 +919,11 @@ MODULE_TABLES = _module_tables()
 @pytest.mark.parametrize(
     ("package", "documented", "live"), MODULE_TABLES, ids=[t[0] for t in MODULE_TABLES]
 )
-def test_a_module_table_matches_its_package(
+def test_documented_modules_exist(
     package: str, documented: set[str], live: set[str]
 ) -> None:
-    """A per-module table is complete in both directions.
-
-    Both halves are defects with a history. A row for a module that is gone
-    sends a reader to a file that does not exist (`protocol/workflow.py` sat in
-    §2 for weeks after the workflow document model moved to
-    `workflow/document.py`). A module with no row is worse in a doc that
-    presents itself as *the* module map: §2 was missing `errors.py`,
-    `method.py`, `shapes.py` and `validate.py`, and the engine table four more,
-    so the map read as complete while omitting eight files.
-    """
-    assert documented == live, (
-        f"{package} and its CODEBASE.md table disagree — "
-        f"table rows with no module: {sorted(documented - live)}; "
-        f"modules with no table row: {sorted(live - documented)}"
+    """Architecture tables describe selected entry points that must exist."""
+    assert documented <= live, (
+        f"{package}: documented modules missing from the package: "
+        f"{sorted(documented - live)}"
     )

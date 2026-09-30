@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
+from causalab.neural.shared.parallel.agreements import AGREEMENT_VARIABLE
 
 TINY_LLAMA = "hf-internal-testing/tiny-random-LlamaForCausalLM"
 TINY_GPT2 = "hf-internal-testing/tiny-random-gpt2"
@@ -54,3 +55,41 @@ def qwen35moe_bundle() -> ModelBundle:
 @pytest.fixture()
 def oracle(bundle: ModelBundle) -> OracleShim:
     return OracleShim(hf_model=bundle.model)
+
+
+# --------------------------------------------------------------------------- #
+# the §7 gradient agreement check, on in every training scenario and smoke
+# --------------------------------------------------------------------------- #
+
+#: What the simulated training scenarios set ``CAUSALAB_GRADIENT_AGREEMENT``
+#: to (``docs/model_parallelism.md`` §7): bit identity across the ranks
+#: before the guard's mean — the simulator's fixed-order collectives deliver
+#: it, and every simulated fit is held bit-identical to world 1 anyway.
+GRADIENT_AGREEMENT_SIMULATED = "0"
+#: Real-backend gradient agreement, relative to the largest entry. The
+#: reference gloo fp32 fits on CPU have zero measured disagreement. Allow
+#: about eight fp32 ulps for larger groups and backend reduction order,
+#: including the NCCL variants of these smokes. This remains over five
+#: orders below the 1 - 1/size >= 1/2 disagreement of a partial gradient
+#: (agreements.relative_disagreement), so broken gradient pairing fails.
+#: Re-measure the reference when a new backend has nonzero disagreement.
+GRADIENT_AGREEMENT_GLOO = "1e-6"
+GRADIENT_AGREEMENT_GLOO_MEASURED = 0.0
+assert float(GRADIENT_AGREEMENT_GLOO) > GRADIENT_AGREEMENT_GLOO_MEASURED
+assert float(GRADIENT_AGREEMENT_GLOO) < 0.5 / 1e5, "five orders below a partial"
+
+
+@pytest.fixture
+def checked_gradients_simulated(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The §7 check on at bit identity for a simulated training scenario:
+    the real ``run_cohort_training`` reads the variable once per fit."""
+    monkeypatch.setenv(AGREEMENT_VARIABLE, GRADIENT_AGREEMENT_SIMULATED)
+
+
+@pytest.fixture
+def checked_gradients_gloo(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The §7 check on at the measured band for a ``gloo`` training smoke:
+    the spawned ranks inherit the environment, so every fit the smoke runs
+    — the parity runs and the torchrun-style mutation children alike — is
+    checked, and a pairing mutation is refused through the variable."""
+    monkeypatch.setenv(AGREEMENT_VARIABLE, GRADIENT_AGREEMENT_GLOO)

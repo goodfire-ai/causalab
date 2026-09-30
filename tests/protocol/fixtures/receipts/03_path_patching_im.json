@@ -1,0 +1,209 @@
+{
+  "canonical": {
+    "data": {
+      "base": {
+        "dataset": "ioi/test",
+        "digest": "dac534640ce2fc9266c75f2f98c6ba67ffc71ce69a04c01e5a83a907d24680cc",
+        "field": "input"
+      },
+      "counterfactual": {
+        "dataset": "ioi/test",
+        "digest": "dac534640ce2fc9266c75f2f98c6ba67ffc71ce69a04c01e5a83a907d24680cc",
+        "field": "counterfactual_inputs[0]"
+      }
+    },
+    "header": {
+      "protocol_version": "4"
+    },
+    "method": {
+      "intervened_models": {
+        "final": {
+          "input": "base",
+          "reads": [
+            "logits"
+          ],
+          "writes": [
+            "inject"
+          ]
+        },
+        "original_base": {
+          "input": "base",
+          "reads": [
+            "v_a10",
+            "v_a11"
+          ]
+        },
+        "original_counterfactual": {
+          "input": "counterfactual",
+          "reads": [
+            "v_sender"
+          ]
+        },
+        "patched": {
+          "input": "base",
+          "reads": [
+            "v_receiver"
+          ],
+          "writes": [
+            "freeze_10",
+            "freeze_11",
+            "swap_sender"
+          ]
+        }
+      },
+      "reads": {
+        "logits": {
+          "pos": {
+            "index": -1
+          },
+          "site": "lm_head"
+        },
+        "v_a10": {
+          "pos": {
+            "index": -1
+          },
+          "site": "a10"
+        },
+        "v_a11": {
+          "pos": {
+            "index": -1
+          },
+          "site": "a11"
+        },
+        "v_receiver": {
+          "pos": {
+            "index": -1
+          },
+          "site": "receiver"
+        },
+        "v_sender": {
+          "pos": {
+            "index": -1
+          },
+          "site": "sender"
+        }
+      },
+      "save": [
+        {
+          "aggregation": {
+            "a": "answer",
+            "b": "cf_answer",
+            "kind": "logit_diff"
+          },
+          "file_path": "logit_diff.json",
+          "model": "final",
+          "read": "logits"
+        }
+      ],
+      "sites": {
+        "a10": {
+          "component": "attention_output",
+          "layers": [
+            10
+          ]
+        },
+        "a11": {
+          "component": "attention_output",
+          "layers": [
+            11
+          ]
+        },
+        "lm_head": {
+          "component": "lm_head"
+        },
+        "receiver": {
+          "component": "block_input",
+          "layers": [
+            12
+          ]
+        },
+        "sender": {
+          "component": "attention_premix",
+          "head": 9,
+          "layers": [
+            9
+          ]
+        }
+      },
+      "writes": {
+        "freeze_10": {
+          "do": {
+            "swap": {
+              "model": "original_base",
+              "read": "v_a10"
+            }
+          },
+          "pos": {
+            "index": -1
+          },
+          "site": "a10"
+        },
+        "freeze_11": {
+          "do": {
+            "swap": {
+              "model": "original_base",
+              "read": "v_a11"
+            }
+          },
+          "pos": {
+            "index": -1
+          },
+          "site": "a11"
+        },
+        "inject": {
+          "do": {
+            "swap": {
+              "model": "patched",
+              "read": "v_receiver"
+            }
+          },
+          "pos": {
+            "index": -1
+          },
+          "site": "receiver"
+        },
+        "swap_sender": {
+          "do": {
+            "swap": {
+              "model": "original_counterfactual",
+              "read": "v_sender"
+            }
+          },
+          "pos": {
+            "index": -1
+          },
+          "site": "sender"
+        }
+      }
+    },
+    "model": {
+      "dtype": "fp32",
+      "key": "Qwen/Qwen3-8B",
+      "revision": "main"
+    }
+  },
+  "document_digest": "ba4a54dbaa40644165040e2ea8d71ea8ea7c0d528391cc0a4d7aec7aa61a0846",
+  "execution": {
+    "batch_rows": null,
+    "device": null,
+    "fit_rows": null,
+    "model_source": "loaded",
+    "parallel": {
+      "context": 1,
+      "data": 1,
+      "data_mode": "points",
+      "expert": 1,
+      "launcher": "solo",
+      "pipeline": 1,
+      "tensor": 1,
+      "world": 1
+    }
+  },
+  "points": [
+    {
+      "coords": {},
+      "digest": "ba4a54dbaa40644165040e2ea8d71ea8ea7c0d528391cc0a4d7aec7aa61a0846",
+      "index": 0
+    }
+  ]
+}

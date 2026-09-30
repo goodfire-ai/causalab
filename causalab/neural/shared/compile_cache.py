@@ -1,95 +1,31 @@
-"""Where compiled kernels live across jobs: one shared root, namespaced by the
-toolchain that compiled them (``CAUSALAB_COMPILE_CACHE``).
+"""Configure a shared cache for compiled kernels.
 
-A run on a Gated DeltaNet model compiles kernels before its first forward:
-Triton builds FLA's delta-rule kernels, TileLang builds the Hopper backward
-kernels (several seconds each), and a run that compiles the forward with
-``torch.compile`` adds Inductor's artifacts. Each compiler keeps its own
-on-disk cache under the user's home directory by default, so a fresh machine,
-a fresh container or another user pays the whole compile again — 20–30 s on a
-six-step Qwen3.6-35B-A3B workflow — while a shared filesystem the jobs
-already have could hold the artifacts once.
+The cache is opt-in: ``CAUSALAB_COMPILE_CACHE`` names the root, and with the
+variable unset or empty each compiler keeps its own default cache. The root
+may already exist (for example ``mkdir -m 2770 <path>`` on a volume several
+users mount), or configuration creates it on first use.
 
-Setting ``CAUSALAB_COMPILE_CACHE=/shared/path`` points every compiler a run
-uses at that root. What keeps concurrent jobs from clobbering each other is
-the layout, not locking: artifacts land under a **signature** of the
-toolchain that produced them — the versions of torch, its CUDA runtime,
-triton, tilelang, flash-linear-attention and transformers, the CPython ABI
-tag, and the GPU's name and compute capability — so two jobs share a
-directory exactly when they would produce interchangeable artifacts, and two
-environments that would not never see each other's files::
+Artifacts use a signature of PyTorch, CUDA, Triton, TileLang, FLA,
+Transformers, the CPython ABI, and GPU identity. The ABI protects Triton's
+compiled Python launchers. Each signature contains ``toolchain.json`` and
+separate Triton, TileLang, and Inductor directories. An Inductor policy
+can add a directory suffix.
 
-    <root>/<signature>/toolchain.json      what the signature stands for
-    <root>/<signature>/triton/             TRITON_CACHE_DIR
-    <root>/<signature>/tilelang/           TILELANG_CACHE_DIR
-    <root>/<signature>/inductor[-<policy>] TORCHINDUCTOR_CACHE_DIR
+Compilers and the manifest publish files through atomic renames. Concurrent
+writers are supported; delayed NFS visibility can cause duplicate builds.
+A later run replaces a truncated manifest.
 
-The CPython ABI is in the signature because Triton's cache holds more than
-device code: its CUDA backend compiles a C launcher module into the same
-directory, keyed on the launcher *source* and the platform
-(``triton/runtime/build.py::compile_module_from_src``, ``platform_key`` =
-machine, system, architecture) — not on the interpreter that will import it.
-Inductor's FX graph key carries ``sys.version``; Triton's does not, so the
-namespace has to.
+Shared roots use group-write and setgid permissions with the root's group.
+Configuration widens the process umask, affecting later files too.
+Compiler artifacts execute code, so every writer must be trusted by jobs
+that read the root. World-write permission produces a warning.
 
-**Concurrent writers.** Within one directory each compiler publishes an
-artifact by writing a temporary file and renaming it into place — Triton's
-``FileCacheManager.put`` (a ``tmp.pid_*`` directory, then ``os.replace``),
-TileLang 0.1.14's ``KernelCache._atomic_write`` (a ``.<name>.<pid>_<uuid>.tmp``
-sibling, ``fsync``, ``os.replace``), Inductor's ``codecache.write_atomic``
-(a ``.<pid>.<tid>.tmp`` sibling, ``rename``) — and reads a key only once its
-files exist. A rename is atomic per directory on POSIX filesystems, NFS
-included, so a reader sees a whole artifact or none; NFS attribute caching
-can make a reader briefly miss a file another node just published, and a miss
-recompiles the same bytes, which is benign. The manifest here is written the
-same way, once, and a truncated one (an unclean node shutdown between the
-write and the writeback) is replaced on the next run.
-
-**The root is opt-in.** With the variable unset or empty, nothing changes:
-every compiler keeps its own default cache, and no machine is opted in by
-accident. ``CAUSALAB_COMPILE_CACHE=<path>`` names the root; the directory may
-already exist (an operator's ``mkdir -m 2770 <path>`` on a volume several
-users mount) or be created here on first use. A root whose mode is
-group-writable is *shared* (:func:`is_shared`): the directories created there
-are made group-writable and setgid and take the root's group, and the process
-umask is widened once to allow group writes so the compilers' own per-kernel
-directories are too (:func:`_prepare_directories` says why each part is
-needed and what it costs). Any other root is personal and left to the umask.
-
-**Who is on the other side of the root.** The artifacts are cubins and
-shared objects every participating job's compiler *loads into its process*,
-and none of the three caches is a trust boundary — so a shared root is a
-statement that everyone in its group may run code in everyone else's jobs.
-Keep a root writable by no one outside that group; a world-writable root is
-warned about, shared or personal.
-
-Three things are deliberately **not** here. A captured CUDA graph cannot be
-serialized, so every process still captures its own (``cuda_graphs.py``).
-FLA's autotune "cache" (``FLA_CACHE_MODE``) reads configuration files FLA
-ships per GPU; nothing a run generates, so nothing to share. And the model
-weights have their own cache (the Hugging Face hub's).
-
-All three variables are read by their compilers when a kernel is first
-compiled, not at import (Triton's ``knobs.cache.dir`` per cache manager,
-TileLang's ``EnvVar`` descriptor, Inductor's ``cache_dir()`` per call), so
-:func:`configure` may run any time before the first forward. The loaders call
-it as a model lands on its device rather than the CLI at startup, because the
-library is imported at least as often as it is run from the command line and
-the device is only known once a model is placed; the setting is process-wide,
-so the last call wins, and a process spanning unlike GPUs labels one
-namespace with the other's manifest (the compilers' own keys still carry the
-architecture, so artifacts are not confused — only the label is).
-
-While the root is set it is the one setting: an explicit ``TRITON_CACHE_DIR``,
-``TILELANG_CACHE_DIR`` or ``TORCHINDUCTOR_CACHE_DIR`` in the environment is
-overridden, with a warning, rather than honoured. The specific variable does
-not win over the general one here because the point of the root is that the
-three compilers' artifacts sit in *one* namespace: a Triton directory kept
-outside it would be unsigned, and its launcher module would be exactly the
-ABI hazard above. An operator who wants one compiler elsewhere runs without
-a root (``CAUSALAB_COMPILE_CACHE=``). A root that cannot be created or written
-is a warning too, not a failed model load: the compilers keep their own
-defaults.
+Loaders configure the cache before the first CUDA forward. Settings are
+process-wide and the latest call wins. With unlike GPUs in one process,
+the signature can describe the latest device while compiler keys still
+separate architectures. Explicit compiler cache variables are overridden
+with a warning; an unusable root leaves compiler defaults in place.
+See ``docs/cuda_graphs.md`` for operation and measurement guidance.
 """
 
 from __future__ import annotations
@@ -152,10 +88,19 @@ class Toolchain:
     @classmethod
     def detect(cls, device: Any) -> "Toolchain | None":
         """The toolchain of ``device``, or ``None`` off CUDA — the compilers
-        this module points at build for CUDA devices only."""
+        this module points at build for CUDA devices only. A comma list (a
+        layer placement, ``DeviceMap.parse``) is read at its first device:
+        the compiler variables are process-wide, so one process has one
+        layout, and a placement's devices are assumed to be one node's
+        GPUs of one model."""
         import torch
 
-        dev = torch.device(device)
+        from causalab.neural.shared.devices import normalize_device
+
+        if isinstance(device, str):
+            dev = normalize_device(device.split(",")[0])
+        else:
+            dev = torch.device(device)
         if dev.type != "cuda" or not torch.cuda.is_available():
             return None
         index = dev.index if dev.index is not None else torch.cuda.current_device()
@@ -233,8 +178,8 @@ def layout(
     root: str | Path, toolchain: Toolchain, *, inductor_policy: str | None = None
 ) -> CacheLayout:
     """The layout for ``toolchain`` under ``root``. ``inductor_policy`` names
-    a compilation policy whose lowerings Inductor's own key does not see (a
-    compile's set of retained eager operators, say); it gets its own
+    a compilation policy whose lowerings Inductor's own key does not see (the
+    experimental DeltaNet runner's retained eager operators); it gets its own
     Inductor directory beside the plain one, named by a readable slug of the
     policy plus a hash of its exact text, so two policies that read alike
     never share one."""
@@ -258,13 +203,13 @@ def configure(
 ) -> CacheLayout | None:
     """Point the compilers at the shared root, when there is one.
 
-    ``root`` defaults to :data:`ENV`; with the variable unset or empty there
+    ``root`` defaults to [`ENV`][]; with the variable unset or empty there
     is no root. With no root, or off CUDA, nothing changes and ``None`` is
     returned.
     Otherwise the toolchain of ``device`` is detected (or taken from
     ``toolchain``), its directories are created (group-writable, setgid and
     in the root's group when the root is shared, see
-    :func:`_prepare_directories`), the manifest is written
+    `_prepare_directories`), the manifest is written
     if absent or empty, the three compiler variables are set, and the layout
     is returned. A root that cannot be created or written is logged as a
     warning and leaves the compilers on their own defaults (``None``).
@@ -322,12 +267,12 @@ GROUP_SHARED_MODE = 0o2770
 
 
 def is_shared(bits: int) -> bool:
-    """Whether a root with these permission bits is one several users write into: its
-    own mode says so — the group-write bit an operator set (``mkdir -m
-    2770``). Read off the root, not off the caller's account: a user whose
-    primary group happens to be the volume's would otherwise take a personal
-    path on a shared root and leave ``0o755`` directories the next user cannot
-    complete."""
+    """Whether a root with these permission bits is one several users write
+    into: its own mode says so — the group-write bit an operator set
+    (``mkdir -m 2770``). Read off the root, not off the caller's account: a
+    user whose primary group happens to be the volume's would otherwise take
+    a personal path on a shared root and leave ``0o755`` directories the next
+    user cannot complete."""
     return bool(bits & stat.S_IWGRP)
 
 
@@ -335,12 +280,12 @@ def _prepare_directories(chosen: CacheLayout) -> None:
     """Create the root (if needed) and the layout's directories.
 
     **A shared root is shared across users.** A root whose mode is
-    group-writable (:func:`is_shared`) is one several users write into. Every
+    group-writable ([`is_shared`][]) is one several users write into. Every
     directory this module creates there is made
-    :data:`GROUP_SHARED_MODE`, and — because the compilers create their own
+    [`GROUP_SHARED_MODE`][], and — because the compilers create their own
     per-kernel directories under the process umask, which by default denies
     the group write — the process umask is widened once to allow group writes
-    (:func:`_allow_group_writes`). Without that, a second user could read the
+    (`_allow_group_writes`). Without that, a second user could read the
     first user's kernels but not complete a kernel directory the first user's
     killed job left partial, or compile the same missing kernel at the same
     time: both end in ``EACCES`` inside the compiler. The umask change is
@@ -364,7 +309,7 @@ def _prepare_directories(chosen: CacheLayout) -> None:
     with that toolchain loads.
 
     Directories created under a shared root also take the root's *group*
-    (:func:`_adopt_group`): a setgid root hands it down on its own, but a
+    (`_adopt_group`): a setgid root hands it down on its own, but a
     root that is merely group-writable gives each new directory its
     creator's primary group — on a system with per-user primary groups, one
     nobody else is in — and the ``2770`` applied next would then lock every

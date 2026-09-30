@@ -24,16 +24,18 @@ import torch
 from safetensors.torch import load_file
 
 from causalab.cli import main
-from causalab.protocol.resolve import read_safetensors_metadata
+from causalab.io.env import read_safetensors_metadata
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import aggregation, saved
 from tests.protocol._env import FIXTURES, fixture_input_overrides
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.smoke
 
 REPO = Path(__file__).resolve().parents[4]
-METHODS = str(REPO / "causalab/configs/protocols")
+METHODS = str(PROTOCOLS_DIR)
 
 
 def _fixture_inputs(name: str) -> dict[str, str]:
@@ -61,6 +63,8 @@ def _run_workflow(base: Path, document: dict) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -171,8 +175,10 @@ def test_every_entry_carries_its_own_provenance(swept_run):
     entries = json.loads(stamped["entries"])
     assert entries["weight[k=2,seed=1]"]["coords"] == {"k": 2, "seed": 1}
     assert entries["weight[k=4,seed=0]"]["k"] == "4"
-    digests = {record["produced_by"] for record in entries.values()}
-    assert len(digests) == 4  # one provenance unit per point
+    coords = {
+        json.dumps(record["coords"], sort_keys=True) for record in entries.values()
+    }
+    assert len(coords) == 4  # one entry per point, named by its coordinates
     assert "k" not in stamped  # k varies, so the file cannot claim one
 
 
@@ -199,6 +205,8 @@ def test_an_unselected_load_refuses_before_anything_runs(tmp_path):
     code = main(
         [
             "validate",
+            "--engine",
+            "auto",
             str(wf_dir / "wf.json"),
             "--data-root",
             str(FIXTURES / "data"),
@@ -215,32 +223,21 @@ def test_an_unselected_load_refuses_before_anything_runs(tmp_path):
 
 
 def _harvest_doc(reduce: bool) -> dict:
-    entry = {
-        "value": "acts",
-        "model": "original",
-        "input": "base",
-        "file_path": "acts.safetensors",
-    }
-    if reduce:
-        entry["reduce"] = "mean"
+    entry = saved(
+        "acts", "original", "acts.safetensors", **({"reduce": "mean"} if reduce else {})
+    )
     return {
         "header": {
-            "protocol_version": "3",
+            "protocol_version": "4",
             "description": "harvest one site over the train split",
         },
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": {"base": {"dataset": "weekdays/data#train", "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["acts"]}},
             "positions": {"tap": {"index": -1}},
             "sites": {"target": {"component": "block_output", "layers": [0]}},
-            "reads": {
-                "acts": {
-                    "site": "target",
-                    "pos": "tap",
-                    "model": "original",
-                    "input": "base",
-                }
-            },
+            "reads": {"acts": {"site": "target", "pos": "tap"}},
             "save": [entry],
         },
     }
@@ -249,12 +246,15 @@ def _harvest_doc(reduce: bool) -> dict:
 def _ablate_doc() -> dict:
     return {
         "header": {
-            "protocol_version": "3",
+            "protocol_version": "4",
             "description": "mean-ablate the site by swapping in the corpus mean",
         },
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": {"base": {"dataset": "weekdays/data#test", "field": "input"}},
         "method": {
+            "intervened_models": {
+                "ablated": {"input": "base", "reads": ["logits"], "writes": ["ablate"]}
+            },
             "positions": {"tap": {"index": -1}},
             "sites": {
                 "target": {"component": "block_output", "layers": [0]},
@@ -268,34 +268,21 @@ def _ablate_doc() -> dict:
                     "entry": {"slot": "acts"},
                 }
             },
-            "reads": {
-                "logits": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "ablated",
-                    "input": "base",
-                }
-            },
+            "reads": {"logits": {"site": "lm_head", "pos": -1}},
             "writes": {
                 "ablate": {"site": "target", "pos": "tap", "do": {"swap": "mu"}},
             },
-            "intervened_models": {"ablated": {"input": "base", "writes": ["ablate"]}},
-            "metrics": {
-                "ld": {
-                    "kind": "logit_diff",
-                    "of": "logits",
-                    "a": "base_answer",
-                    "b": "cf_answer",
-                    "token_form": "space_prefixed",
-                }
-            },
             "save": [
-                {
-                    "value": "ld",
-                    "model": "ablated",
-                    "input": "base",
-                    "file_path": "ld.json",
-                }
+                saved(
+                    "logits",
+                    "ablated",
+                    "ld.json",
+                    aggregation(
+                        "logit_diff",
+                        a="base_answer",
+                        b="cf_answer",
+                    ),
+                )
             ],
         },
     }

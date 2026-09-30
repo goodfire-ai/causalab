@@ -55,6 +55,8 @@ from causalab.neural.engines.pytorch_hooks.loading import ModelBundle
 from causalab.neural.shared.gather import _dense_index
 from causalab.protocol.schema import PROTOCOL_VERSION
 
+from tests.protocol._docs import saved
+
 from ._drive import base_data_section, executor_for
 from .test_train import BASES, COUNTERFACTUALS
 
@@ -162,36 +164,25 @@ def _swap_doc(layer: int = 1) -> dict:
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "sites": {
                 "tgt": {"component": "block_output", "layers": [layer]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tgt",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "logits": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tgt", "pos": {"index": -1}},
+                "logits": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {
                 "patch": {"site": "tgt", "pos": {"index": -1}, "do": {"swap": "v_cf"}}
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "save": [
-                {
-                    "value": "logits",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "l.safetensors",
-                }
-            ],
+            "save": [saved("logits", "patched", "l.safetensors")],
         },
     }
 
@@ -264,7 +255,7 @@ def test_our_code_reads_no_scalar_back_inside_a_forward(
     device sync on the launch queue; none comes from the executor's read and
     write paths. The position frame's per-row ``first_real`` (``encoding.py``,
     📐 52 per forward on this shape) is the frame's own cost, excluded here as
-    it is from the budget — it belongs to the position frame."""
+    it is from the budget."""
     census = _run(qwen35moe_bundle)
     for forward in (1, 2):
         syncs = {
@@ -280,9 +271,9 @@ def test_the_landing_copies_only_what_the_hook_edits_in_place(
 ) -> None:
     census = _run(qwen35moe_bundle)
     patched = census.ours[2]
-    assert not _by_site(census, 2, "executor_base.py:_written_value"), dict(patched)
+    assert not _by_site(census, 2, "writes.py:_written_value"), dict(patched)
     assert _by_site(census, 2, "executor.py:out_hook") == {"clone": 1}, dict(patched)
-    assert _by_site(census, 2, "executor_base.py:_apply_writes_to_contract") == {
+    assert _by_site(census, 2, "writes.py:_apply_writes_to_contract") == {
         "index_put_": 1
     }, dict(patched)
 

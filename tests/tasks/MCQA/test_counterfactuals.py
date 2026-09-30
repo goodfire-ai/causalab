@@ -6,16 +6,16 @@ It verifies that counterfactuals are generated correctly and can distinguish
 between causal variables.
 """
 
-from causalab.causal.causal_utils import can_distinguish_with_dataset
-from causalab.tasks.MCQA.causal_models import positional_causal_model, NUM_CHOICES
-from causalab.tasks.MCQA.counterfactuals import (
-    sample_answerable_question,
-    same_symbol_different_position,
-    different_symbol,
-    random_counterfactual,
-)
 import pytest
 
+from causalab.causal.model_comparison import can_distinguish_with_dataset
+from causalab.tasks.MCQA.causal_models import NUM_CHOICES, positional_causal_model
+from causalab.tasks.MCQA.counterfactuals import (
+    different_symbol,
+    random_counterfactual,
+    same_symbol_different_position,
+    sample_answerable_question,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -32,14 +32,14 @@ def test_sample_answerable_question():
 
         print(f"Sample {i + 1}:")
         print(f"  Object-Color: {trace['object']}, {trace['color']}")
-        print(f"  Choices: {trace['choice0']}, {trace['choice1']}")
-        print(f"  Symbols: {trace['symbol0']}, {trace['symbol1']}")
+        print(f"  Choices: {trace['choices[0]']}, {trace['choices[1]']}")
+        print(f"  Symbols: {trace['symbols[0]']}, {trace['symbols[1]']}")
         print(f"  Answer position: {trace['answer_position']}")
         print(f"  Answer: {trace['answer']}")
 
         # Verify it's answerable (color is in choices)
         color = trace["color"]
-        choices = [trace[f"choice{j}"] for j in range(NUM_CHOICES)]
+        choices = [trace[f"choices[{j}]"] for j in range(NUM_CHOICES)]
         assert color in choices, f"Color {color} should be in choices {choices}"
 
         # Verify answer is not None
@@ -47,7 +47,7 @@ def test_sample_answerable_question():
         assert trace["answer"] is not None, "Should have valid answer"
 
         # Verify symbols are unique
-        symbols = [trace[f"symbol{j}"] for j in range(NUM_CHOICES)]
+        symbols = [trace[f"symbols[{j}]"] for j in range(NUM_CHOICES)]
         assert len(symbols) == len(set(symbols)), "Symbols should be unique"
 
         # Verify choices are unique
@@ -70,9 +70,11 @@ def test_same_symbol_different_position():
         counter_trace = example["counterfactual_inputs"][0]
 
         print(f"Pair {i + 1}:")
-        print(f"  Input symbols: {input_trace['symbol0']}, {input_trace['symbol1']}")
         print(
-            f"  Counter symbols: {counter_trace['symbol0']}, {counter_trace['symbol1']}"
+            f"  Input symbols: {input_trace['symbols[0]']}, {input_trace['symbols[1]']}"
+        )
+        print(
+            f"  Counter symbols: {counter_trace['symbols[0]']}, {counter_trace['symbols[1]']}"
         )
         print(
             f"  Input answer position: {input_trace['answer_position']} -> {input_trace['answer']}"
@@ -82,8 +84,8 @@ def test_same_symbol_different_position():
         )
 
         # Verify symbols SET is the same (they're swapped in position)
-        input_symbols = {input_trace[f"symbol{j}"] for j in range(NUM_CHOICES)}
-        counter_symbols = {counter_trace[f"symbol{j}"] for j in range(NUM_CHOICES)}
+        input_symbols = {input_trace[f"symbols[{j}]"] for j in range(NUM_CHOICES)}
+        counter_symbols = {counter_trace[f"symbols[{j}]"] for j in range(NUM_CHOICES)}
         assert input_symbols == counter_symbols, (
             "Same symbols should be used (but swapped)"
         )
@@ -96,10 +98,10 @@ def test_same_symbol_different_position():
         # Verify symbols and choices were swapped together
         pos = input_trace["answer_position"]
         new_pos = counter_trace["answer_position"]
-        assert input_trace[f"choice{pos}"] == counter_trace[f"choice{new_pos}"], (
+        assert input_trace[f"choices[{pos}]"] == counter_trace[f"choices[{new_pos}]"], (
             "Choices should be swapped"
         )
-        assert input_trace[f"symbol{pos}"] == counter_trace[f"symbol{new_pos}"], (
+        assert input_trace[f"symbols[{pos}]"] == counter_trace[f"symbols[{new_pos}]"], (
             "Symbols should be swapped"
         )
 
@@ -122,23 +124,25 @@ def test_different_symbol():
         counter_trace = example["counterfactual_inputs"][0]
 
         print(f"Pair {i + 1}:")
-        print(f"  Input symbols: {input_trace['symbol0']}, {input_trace['symbol1']}")
         print(
-            f"  Counter symbols: {counter_trace['symbol0']}, {counter_trace['symbol1']}"
+            f"  Input symbols: {input_trace['symbols[0]']}, {input_trace['symbols[1]']}"
+        )
+        print(
+            f"  Counter symbols: {counter_trace['symbols[0]']}, {counter_trace['symbols[1]']}"
         )
         print(f"  Input answer: {input_trace['answer']}")
         print(f"  Counter answer: {counter_trace['answer']}")
 
         # Verify all symbols are different
-        input_symbols = {input_trace[f"symbol{j}"] for j in range(NUM_CHOICES)}
-        counter_symbols = {counter_trace[f"symbol{j}"] for j in range(NUM_CHOICES)}
+        input_symbols = {input_trace[f"symbols[{j}]"] for j in range(NUM_CHOICES)}
+        counter_symbols = {counter_trace[f"symbols[{j}]"] for j in range(NUM_CHOICES)}
         assert input_symbols.isdisjoint(counter_symbols), (
             "All symbols should be different"
         )
 
         # Verify choices are the same
         for j in range(NUM_CHOICES):
-            assert input_trace[f"choice{j}"] == counter_trace[f"choice{j}"], (
+            assert input_trace[f"choices[{j}]"] == counter_trace[f"choices[{j}]"], (
                 f"Choice {j} should be same in both"
             )
 

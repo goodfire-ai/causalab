@@ -1,33 +1,24 @@
 {
   "version": "1",
-  "description": "The 03_localize demo end to end: scan the (layer x position) grid, render it, and reduce it to the one cell the next stage would target. Nothing orders these steps -- `heatmap` and `best` both reference `scan`, so the runner derives that they may run together the moment the scan finishes.",
-  "output_dir": "mcqa_locate",
+  "description": "Measure clean accuracy, scan the layer-position grid, and plot the population pattern, and summarize variance in the first successful answer-slot layer.",
+  "output_dir": "06_localize",
   "steps": {
+    "clean": {"type": "intervention_protocol", "document": "../protocols/mcqa_clean.json"},
     "scan": {"type": "intervention_protocol", "document": "../protocols/mcqa_locate_scan.json"},
     "heatmap": {
       "type": "script",
-      "script": {"module": "causalab.io.plots.workflow_figures"},
+      "script": {"path": "scripts/plot_localize.py"},
       "inputs": {
         "table": {"step": "scan", "file": "iia.json"},
-        "plot": "heatmap",
-        "x": "sites.target.layers",
-        "y": "positions.tap"
-      },
-      "outputs": {"figure": "iia_heatmap.png", "plotted": {"file": "iia_heatmap.json"}}
-    },
-    "best": {
-      "type": "script",
-      "script": {"module": "causalab.workflow.scripts.select"},
-      "inputs": {
-        "table": {"step": "scan", "file": "iia.json"},
-        "choose": "max",
-        "emit": {"best_layer": "sites.target.layers", "best_pos": "positions.tap"}
+        "pairs": {"path": "../artifacts/data/mcqa/pairs_n64_s0.json"},
+        "clean_base": {"step": "clean", "file": "clean_base.json"},
+        "clean_cf": {"step": "clean", "file": "clean_cf.json"},
+        "unpatched_cf": {"step": "clean", "file": "unpatched_cf.json"}
       },
       "outputs": {
-        "values": {
-          "file": "values.json",
-          "keys": {"best_layer": 0, "best_pos": {"index": -6}}
-        }
+        "figure": "06_localize_iia_heatmap.png",
+        "plotted": {"file": "06_localize_plotted.json"},
+        "summary": {"file": "06_localize_summary.json"}
       }
     }
   }

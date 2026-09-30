@@ -1,4 +1,4 @@
-"""Featurizers evaluated once per step (:func:`featurizer_cache`), and the
+"""Featurizers evaluated once per step ([`featurizer_cache`][causalab.neural.shared.featurizers.sharing.featurizer_cache]), and the
 Cayley map's launch diet — both without a change of result.
 
 The finding this answers (profiling campaign ``fullprof0910``, the DAS step
@@ -11,7 +11,7 @@ check is a hidden host synchronization.
 
 Two contracts, pinned separately because they fail separately:
 
-* **the map's numbers are unchanged** — the rewritten :class:`Cayley.forward`
+* **the map's numbers are unchanged** — the rewritten [`Cayley.forward`][causalab.neural.shared.featurizers.stages.Cayley.forward]
   is compared *bit for bit*, forward and backward, against the previous
   spelling (kept verbatim here as the oracle) over the property test's draws,
   including the zero ``original`` a fit starts from and the collinear columns
@@ -46,8 +46,10 @@ from causalab.neural.shared.featurizers import (
     Cayley,
     Gate,
     Subspace,
-    _leaf_edges,  # pyright: ignore[reportPrivateUsage]
     featurizer_cache,
+)
+from causalab.neural.shared.featurizers.sharing import (
+    _leaf_edges,  # pyright: ignore[reportPrivateUsage]
 )
 
 TRAINED_KEY = "parametrizations.weight.original"
@@ -179,7 +181,7 @@ class TestCayleyMapIsBitIdentical:
         """``torch.linalg.inv`` is ``inv_ex`` followed by
         ``_linalg_check_errors``, a device-to-host copy of the info tensor on
         every call; the Schur system is nonsingular by construction
-        (:class:`Cayley`), so the check is dropped unconditionally — not only
+        ([`Cayley`][causalab.neural.shared.featurizers.stages.Cayley]), so the check is dropped unconditionally — not only
         inside CUDA-graph capture, where it used to be."""
         stage = _subspace(32, 4)
         _set_original(stage, _draw(32, 4, 1, 0.3, False))
@@ -243,7 +245,7 @@ def _uses(stage: Subspace, x: torch.Tensor, f: torch.Tensor) -> list[torch.Tenso
 def _fit_step(
     stage: Subspace, x: torch.Tensor, f: torch.Tensor, scope: Any
 ) -> tuple[list[torch.Tensor], torch.Tensor, _OpCounter]:
-    """One step's forward and backward over :func:`_uses`; the outputs, the
+    """One step's forward and backward over `_uses`; the outputs, the
     parameter's gradient and the ops the backward issued."""
     with scope:
         outputs = _uses(stage, x, f)
@@ -760,7 +762,9 @@ class TestIsolatedScope:
         assert not torch.equal(before, after)
 
     def test_an_isolated_scope_outside_any_scope_leaves_none_behind(self) -> None:
-        from causalab.neural.shared.featurizers import _SCOPE  # pyright: ignore[reportPrivateUsage]
+        from causalab.neural.shared.featurizers.sharing import (
+            _SCOPE,  # pyright: ignore[reportPrivateUsage]
+        )
 
         stage = _subspace(16, 4)
         with featurizer_cache(isolated=True):

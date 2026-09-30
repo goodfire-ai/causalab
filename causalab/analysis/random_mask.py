@@ -51,7 +51,7 @@ Every header field of the input is copied verbatim — identity, the per-entry
 table, and anything a future gate kind records there — so the output is
 addressable exactly where the fit was, and an apply document that names the
 fit's bundle accepts the control at the same address. Provenance is then the
-runner's: it stamps ``produced_by`` and ``engine`` for this step, and inherits
+runner's: it stamps ``engine`` for this step, and inherits
 the fit's identity from the tensor input, so nothing here has to claim it.
 
 A grouped gate (``group: head``, ``group: expert_neuron``) or a position gate
@@ -60,6 +60,14 @@ per unit — one per head, the ``(num_experts, d_expert)`` table, or one per
 position of the window — so the count matched and the units drawn are heads,
 expert neurons or positions, and the ``group`` / ``group_map`` / ``axis`` the
 fit stamped come through with the rest of the header.
+
+A ``boundary`` bundle (Boundless DAS, §2.5) is refused: its ``theta`` is one
+β over the ordered coordinates of the rotation it sits behind, not one entry
+per unit, so there is no set of units to resample. The size-matched control
+for a boundary fit is a random basis at the learned rank ``⌈θ · width⌉``
+(``hard_mask_size`` in the ``fit_diagnostics.json`` beside the bundle) —
+``demos/methods/protocols/random_subspace_control.json`` with ``k`` set to it — and
+the refusal names the fraction the bundle holds.
 
 The draw is a pure function of ``seed`` and the entry: each ``theta`` is drawn
 through its own generator, seeded from ``(seed, entry key)``, so an entry's
@@ -78,7 +86,11 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from causalab.io.step_io import StepError
-from causalab.protocol.schema import FEATURIZER_SLOTS, hard_concrete_threshold
+from causalab.protocol.schema import (
+    FEATURIZER_SLOTS,
+    GATE_MAPS,
+    hard_concrete_threshold,
+)
 
 __all__ = ["main"]
 
@@ -96,7 +108,7 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
     from causalab.io.tensor_files import load_file, save_file
 
     from causalab.io.step_io import entry_table
-    from causalab.protocol.resolve import read_safetensors_metadata
+    from causalab.io.env import read_safetensors_metadata
 
     source = inputs["gate"]
     if not isinstance(source, (str, Path)):
@@ -164,6 +176,26 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
             "take yet; draw the control per pool outside it"
         )
     maps = {key: _parametrization(metadata, entries, key) for key in thetas}
+    boundaries = [
+        key for key, m in maps.items() if m in GATE_MAPS and GATE_MAPS[m].indexed
+    ]
+    if boundaries:
+        # one β over an ordered basis (§2.5 `boundary`): no units to resample.
+        # The natural control is a random basis at the learned rank, and the
+        # refusal says which rank that is
+        fractions = ", ".join(
+            f"{key!r}: θ = {float(thetas[key].view(-1)[0]):.3f}" for key in boundaries
+        )
+        raise StepError(
+            f"random_mask: {source} holds a boundary gate ({', '.join(boundaries)}) "
+            "— its theta is one boundary over the ordered coordinates of the "
+            "rotation it sits behind, the kept fraction rather than one entry per "
+            "unit, so there is no set of units to resample. The size-matched "
+            "control for a boundary fit is a random basis at the learned rank "
+            f"⌈θ · width⌉ ({fractions}; the rank is hard_mask_size in the "
+            "fit_diagnostics.json beside the bundle): author "
+            "demos/methods/protocols/random_subspace_control.json with k set to it"
+        )
     top_k = inputs.get("top_k")
     if top_k is None and any(m == "budget" for m in maps.values()):
         raise StepError(
@@ -316,7 +348,7 @@ def _entry_seed(seed: int, key: str) -> int:
     """The generator seed one entry's draw runs from: ``seed`` and the entry
     key, hashed together, so the draw is a function of the two alone — the
     same control for ``theta[l1=0.1]`` whether or not ``theta[l1=0.01]``
-    shares its bundle. SHA-256 rather than :func:`hash`, whose string hashing
+    shares its bundle. SHA-256 rather than `hash`, whose string hashing
     is salted per process."""
     digest = hashlib.sha256(f"{seed}\x00{key}".encode()).digest()
     return int.from_bytes(digest[:8], "big")
@@ -358,13 +390,13 @@ def _select(
 ) -> dict[str, Any]:
     """The entries matching every ``(name, value)`` pair of ``selection``.
 
-    Same matching rule as :func:`causalab.protocol.bundles.select_entry` —
+    Same matching rule as [`causalab.protocol.bundles.select_entry`][] —
     pairs, never the rendered label — minus its uniqueness demand: a control
     may cover several fitted points at once (every seed of one penalty, say),
     so several matches are a result here, not an ambiguity. No match at all is
     still a refusal, listing what was there to match."""
     from causalab.protocol.bundles import SLOT_KEY, parse_entry_key
-    from causalab.protocol.sweep import label_value
+    from causalab.protocol.lowering import label_value
 
     if not isinstance(selection, Mapping):
         raise StepError("random_mask: 'entry' maps coordinate names to values")

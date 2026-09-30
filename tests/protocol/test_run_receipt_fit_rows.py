@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from causalab.protocol.run import (
+from causalab.protocol.receipt import (
     FIT_ROWS_RESOLVED_KEY,
     FIT_ROWS_SHRINKS_KEY,
     RUN_RECORD_NAME,

@@ -1,0 +1,85 @@
+{
+  "first": {
+    "identity": "7bbae9aa6d301ce1fec5a7611fa10d735d2e6787c966d97dddb20d7f795f503c",
+    "files": [
+      "a.json",
+      "b.json"
+    ],
+    "digests": {
+      "a.json": "11733518aaf676435106a7a3d785f21c71e028cc42b1d0d8daa233ea4f5bb186",
+      "b.json": "e16c5319975c3ff228bed6e636183ee7867700ccd9a64ba4c4d3458188cb4378"
+    },
+    "record_keys": [
+      "axes",
+      "checks",
+      "digest",
+      "digests",
+      "disposition",
+      "files",
+      "identity",
+      "implementation",
+      "inputs",
+      "is_deterministic",
+      "script",
+      "script_sha256",
+      "status",
+      "type"
+    ]
+  },
+  "second": {
+    "identity": "76cbd27f0bb42d5af670f5e245b856671d5dd92bf65cd5b252fb62f94b771877",
+    "files": [
+      "c.json",
+      "d.png"
+    ],
+    "digests": {
+      "c.json": "f7d6bb8bc9f4860fa7c9b684a78931ff9483b8b40e4581a253ed712c608e5813",
+      "d.png": "f731c2528f4184b386555de339aeb78f1f0908532be04e6bfe1ec790f5f50da9"
+    },
+    "record_keys": [
+      "axes",
+      "checks",
+      "digest",
+      "digests",
+      "disposition",
+      "files",
+      "identity",
+      "implementation",
+      "input_digests",
+      "inputs",
+      "is_deterministic",
+      "script",
+      "script_sha256",
+      "status",
+      "type"
+    ]
+  },
+  "third": {
+    "identity": "e1731d53043a8776f5dc17bbd24728000a48c6b577497b85075f69e93d9fc5be",
+    "files": [
+      "e.json",
+      "f.html"
+    ],
+    "digests": {
+      "e.json": "7f3c36dd817d7278ea94d948fd3eb18d1f291601c9ea2bb07656e49750c774cb",
+      "f.html": "b633a587c652d02386c4f16f8c6f6aab7352d97f16367c3c40576214372dd628"
+    },
+    "record_keys": [
+      "axes",
+      "checks",
+      "digest",
+      "digests",
+      "disposition",
+      "files",
+      "identity",
+      "implementation",
+      "input_digests",
+      "inputs",
+      "is_deterministic",
+      "script",
+      "script_sha256",
+      "status",
+      "type"
+    ]
+  }
+}

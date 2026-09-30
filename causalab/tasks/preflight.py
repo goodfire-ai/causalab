@@ -11,8 +11,8 @@ declared answer tokens expect. Every checker comparison then fails, and the
 prompt also confuses the model's continuation entirely.
 
 The accepted answer forms come from the task's ``CausalModel.output_tokens``
-declaration — the single source of each value's surface forms since the
-scoring overhaul (see :func:`task_forms_resolver`).
+declaration — the single source of each value's surface forms (see
+[`task_forms_resolver`][]).
 
 The checks here are deliberately model-free: they need only a *tokenizer*
 (no weights, no GPU, sub-second on CPU), so both task setup and the
@@ -99,7 +99,7 @@ def check_prompt_tokenization(
     ``forms_for(raw_output)`` returns the accepted surface forms of an answer
     value (e.g. ``[" Kate", "Kate"]``) — the task's declared answer-token
     contract, sourced from ``CausalModel.output_tokens``; see
-    :func:`run_task_preflight`. Keeping the check over a plain forms-resolver
+    [`run_task_preflight`][]. Keeping the check over a plain forms-resolver
     keeps it decoupled from how the task declares those forms.
 
     Flags, per sample:

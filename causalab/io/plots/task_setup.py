@@ -8,8 +8,8 @@ It is a **pure renderer** — plain data in, an HTML string out. It imports only
 the standard library (no numpy / plotly, no model / analysis / runner imports),
 so it stays within the ``causalab.io`` layering rule (invariant 3,
 ``tests/test_architecture_layering.py``). The thin runner CLI
-:mod:`causalab.runner.task_setup_figure` loads the tasks, samples the examples,
-and calls :func:`write_task_setup_html`; the artifact viewer embeds the result as
+`causalab.runner.task_setup_figure` loads the tasks, samples the examples,
+and calls [`write_task_setup_html`][]; the artifact viewer embeds the result as
 an iframe figure (the ``Task setup`` section of the experiment viewer).
 
 A task is a mapping::

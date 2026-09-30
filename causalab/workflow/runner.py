@@ -1,34 +1,15 @@
-"""The workflow runner (docs/workflow_protocol.md §8).
+"""Execute a workflow in dependency order.
 
-Executes a loaded workflow: steps in topological order, each step's outputs
-under ``<out-root>/<output_dir>/<step>/``, protocol steps through the standard engine
-routing against the run-tree/external artifact overlay, and script steps by
-resolving their inputs, calling ``main(inputs, outputs)``, then verifying and
-stamping what they wrote.
+The runner resolves each step's inputs and gives it an attempt directory.
+Declared outputs are verified before publication. Control qualification and
+conditional decisions determine which dependent steps can run.
 
-There is no engine choice at the workflow level — engines are chosen per
-protocol step from the list the caller supplies (v2 ships one).
-
-**The run tree is the publication.** There is no `save` section and no copy
-step: a step's declared outputs land in its own directory and stay there
-(§0). What the runner adds beside them is a record — ``_step.json`` per step,
-``workflow.json`` for the run.
-
-**A step is attempted, verified, then published** (§8). Its writes go to an
-attempt directory (``.attempts/<step>/<id>/``, §1.1); every declared output is
-verified against its format and content-digested into the record; one rename
-publishes the attempt as ``<step>/``. A published step directory is therefore a
-complete unit or absent, ``--resume`` reuses a unit only when the digests it
-recorded still match the bytes on disk **and the package that wrote it is the
-package running** (§7: the record's ``implementation.tree_digest`` is
-``runtime_identity()``'s), and ``workflow.json`` is written in a ``finally`` so
-even an interrupted run classifies every step — unless the derived status and
-the runner's memory disagree or the stream cannot be read (§4.3); then no
-manifest is written rather than a wrong one.
-"""
+``--resume`` reuses a step when its identity, runtime, and verified products
+match the record. The event stream supplies the statuses written to the manifest."""
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import hashlib
 import json
@@ -39,18 +20,40 @@ import sys
 import time
 import warnings
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Collection, Iterator, Mapping, Sequence
 
-from causalab.protocol.compile import compile_protocol
-from causalab.protocol.engine import Engine, ExecutionRequest, choose_engine
-from causalab.protocol.run import execution_record, measured_bounds, route_engine
-from causalab.protocol.errors import ProtocolError, ProtocolWarning, ValidationError
-from causalab.protocol.resolve import ArtifactStore, ResolutionEnv
-from causalab.protocol.schema import tree_path
-from causalab.protocol.sweep import DEFAULT_POINT_CAP, short_coords
+from causalab.protocol.pipeline import (
+    AnswerCheck,
+    check_parallel,
+    compile_protocol,
+    resolve_answers,
+    resolve_positions,
+    route_engine,
+    tokenizer_service,
+)
+from causalab.protocol.compiled import CompiledProtocol
+from causalab.protocol.engine import Engine, RunContext, check_steps_signed
+from causalab.protocol.lockstep import SOLO as SOLO_LOCKSTEP
+from causalab.protocol.lockstep import Lockstep, decide
+from causalab.protocol.pipeline import check_engine
+from causalab.protocol.publish import SOLO, Publisher, is_joiner
+from causalab.protocol.receipt import (
+    MODELS_KEY,
+    execution_record,
+    measured_bounds,
+    model_records,
+)
+from causalab.protocol.rules.errors import (
+    ProtocolError,
+    ProtocolWarning,
+    ValidationError,
+)
+from causalab.io.env import ArtifactStore, ResolutionEnv
+from causalab.protocol.schema import inline_train_saves, tree_path
+from causalab.protocol.lowering import DEFAULT_POINT_CAP, point_count, short_coords
 from causalab.io.events import EVENTS_FILE, EventLog, EventSink, read_events
 from causalab.io.step_record import SIDECAR, write_sidecar
-from causalab.protocol.tables import TABLE_SUFFIX, read_table
+from causalab.io.tables import TABLE_SUFFIX, read_table
 from causalab.provenance import runtime_identity
 from causalab.workflow import behavioral, conditional, fan_out, nested
 from causalab.workflow.derived import derive_statuses
@@ -96,35 +99,28 @@ __all__ = [
     "INSTRUMENT_FAILURE",
     "OverlayArtifacts",
     "SIDECAR",
+    "ScriptCall",
     "WRITE_BOUNDARIES",
     "WorkflowRunResult",
+    "check_tokenization",
     "coords_token",
     "run_workflow",
+    "script_call",
+    "verify_output",
 ]
 
 #: What identity a script-written tensor is stamped as coming from.
 SCRIPT_ENGINE = "script"
 
 #: The fields of a step record's ``implementation`` block (§8): what
-#: :func:`causalab.provenance.runtime_identity` said about the ``causalab``
+#: [`causalab.provenance.runtime_identity`][] said about the ``causalab``
 #: package that ran the step. Closed — the spec's §8 ``stamping`` row lists
 #: exactly these and ``tests/workflow/test_resume_implementation.py`` holds
 #: the row, this tuple and the written record together.
 #:
-#: Only ``tree_digest`` is *compared* on ``--resume`` (§7): it is the digest
-#: of every byte that executed, so it is "the same code" and nothing else is.
-#: The other three are *recorded* so a reader can see which revision produced
-#: a unit that is no longer reusable: ``resolved_revision`` localizes a digest
-#: mismatch to a commit, ``dirty`` says whether that revision alone names the
-#: bytes, and ``version`` is the package version those bytes claimed. None of
-#: them refuses — a dirty tree is legitimate work, and it already has a
-#: different tree digest from the clean one when its bytes differ.
-IMPLEMENTATION_FIELDS: tuple[str, ...] = (
-    "tree_digest",
-    "version",
-    "resolved_revision",
-    "dirty",
-)
+#: ``tree_digest`` is compared on ``--resume`` (§7): it is the digest of
+#: every byte that executed, so it is "the same code" and nothing else is.
+IMPLEMENTATION_FIELDS: tuple[str, ...] = ("tree_digest",)
 
 #: The runner's write boundaries — the instants at which a crash leaves the
 #: run tree in a state ``--resume`` has to cope with (§8). Closed: each name
@@ -197,7 +193,7 @@ _MISSING = object()
 
 def coords_token(coords: Mapping[str, Any], *, entry: str | None = None) -> str:
     """One point's coordinates spelled the way a saved bundle's header spells
-    them (``causalab.neural.shared.outputs.TensorFile.add``): the short axis
+    them (``causalab.neural.shared.results.TensorFile.add``): the short axis
     names against ``entry`` — an axis on the saved read's own entity drops the
     entity prefix (``pos``, not ``recv_original.pos``) — and every non-scalar
     value as its sorted JSON text; the whole dict as sorted JSON, so two
@@ -257,7 +253,7 @@ class _ControlLedger:
         """Record a control step's points as it runs; returns the record block.
 
         ``identity`` is the qualification's identity every dependent inherits
-        (§8): :data:`QUALIFICATION_IDENTITY_FIELDS` — the control's resolved
+        (§8): [`QUALIFICATION_IDENTITY_FIELDS`][] — the control's resolved
         document digest, the ``tree_digest`` of the code that ran it and the
         engine. Nothing the run merely *observed* (``execution``: the row
         bound, the model source) is in it, so a dependent can never be keyed
@@ -279,7 +275,7 @@ class _ControlLedger:
         self.entries[name] = {
             **control,
             "points": points,
-            "raw": loaded.inner[name].raw,
+            "raw": loaded.inner[name].compiled.tree,
             "certifier": _certifier_of(loaded, name),
             "identity": {
                 field: identity[field] for field in QUALIFICATION_IDENTITY_FIELDS
@@ -313,17 +309,13 @@ class _ControlLedger:
             by_point = control.get("by_point")
             # a record written before every kind carried `by_point` names its
             # points by digest only: their coordinates are the loader's, when
-            # its compile expanded the same digests
-            compiled = loaded.inner[name].compiled
-            known = (
-                dict(
-                    zip(
-                        loaded.inner[name].point_digests,
-                        (dict(p.coords) for p in compiled.points.points),
-                    )
+            # its load-time enumeration signed the same digests
+            inner = loaded.inner[name]
+            known = dict(
+                zip(
+                    inner.point_digests,
+                    (dict(p.coords) for p in inner.expansion.points),
                 )
-                if compiled is not None
-                else {}
             )
             points = [
                 {
@@ -350,7 +342,7 @@ class _ControlLedger:
                     if k not in ("by_point", "n_points", "n_failed")
                 },
                 "points": points,
-                "raw": loaded.inner[name].raw,
+                "raw": loaded.inner[name].compiled.tree,
                 "certifier": _certifier_of(loaded, name),
                 # the reused record's own identity (§8): `--resume` already
                 # held its tree digest to the running package's
@@ -477,18 +469,32 @@ class _ControlLedger:
     @staticmethod
     def _spellings(entry: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
         """Every header spelling of every point of a control, to the point:
-        :func:`coords_token` against no entity and against each value the
+        [`coords_token`][] against no entity and against each value the
         control's document saves — a certifier copies its rows' ``coords``
         from one of those bundles' headers. Two points of one expansion
         differ in some axis value, and a spelling keeps every value, so no
         token names two points."""
         raw = entry.get("raw") or {}
+        # a `train` save is labelled as the aggregation it names (§2.12)
         saves = (
-            raw.get("method", {}).get("save", []) if isinstance(raw, Mapping) else []
+            inline_train_saves(raw.get("method", {}))
+            if isinstance(raw, Mapping)
+            else []
         )
         entities: list[str | None] = [None]
         for save in saves:
-            value = save.get("value") if isinstance(save, Mapping) else None
+            if not isinstance(save, Mapping):
+                continue
+            # the entity a saved value's header is labelled by (§2.12): the
+            # read of a tensor entry, the file stem of an aggregation, the
+            # featurizer of a bundle
+            if "aggregation" in save:
+                value: Any = str(save.get("file_path", "")).rsplit("/", 1)[-1]
+                value = value.rsplit(".", 1)[0] if "." in value else value
+            elif "read" in save:
+                value = save.get("read")
+            else:
+                value = save.get("value")
             if isinstance(value, str) and value not in entities:
                 entities.append(value)
         return {
@@ -595,7 +601,7 @@ def _agree(
     the other point has the same value — as its own coordinate, or as the
     value its document authored there (a control pinned to one layer by
     ``set`` agrees with the dependent's point at that layer). Values are
-    compared as canonical values (:func:`_same`): ``layers: 18`` and
+    compared as canonical values (`_same`): ``layers: 18`` and
     ``layers: [18]`` are one. An axis the other document does not have
     constrains nothing."""
     for axis, value in coords_a.items():
@@ -611,7 +617,7 @@ def _agree(
 
 def _same(a: Any, b: Any) -> bool:
     """Equal as canonical values. A bare index is the one-layer band ``[n]``
-    (IM spec §2.4) — the fold ``schema._band`` and ``canonical._canon_site``
+    (IM spec §2.4) — the fold ``schema._band`` and ``explicit._canon_site``
     make, so a sweep value or ``set`` override ``layers: 18`` and a document's
     ``layers: [18]`` are one value here as they are one digest there; a
     longer band stays a list (``18`` and ``[18, 19]`` differ). Mirrored, not
@@ -628,7 +634,7 @@ def _as_band(value: Any) -> Any:
 
 def _lookup(raw: Mapping[str, Any], axis: str) -> Any:
     """The value an explicit document authors at a section-rooted dotted
-    path, or :data:`_MISSING`; a sweep wrapper there is missing too (the
+    path, or `_MISSING`; a sweep wrapper there is missing too (the
     value would be a coordinate)."""
     node: Any = raw
     for part in tree_path(axis):
@@ -658,7 +664,7 @@ def _boundary(name: str, step: str | None) -> None:
 class OverlayArtifacts:
     """The §3 overlay: step outputs in the run tree shadow the external
     artifacts root. Every check is real here — this is the run-time store the
-    load-time :class:`~causalab.workflow.document.DeferredArtifacts` defers
+    load-time [`DeferredArtifacts`][causalab.workflow.document.DeferredArtifacts] defers
     to."""
 
     run_root: Path
@@ -666,7 +672,7 @@ class OverlayArtifacts:
     step_names: frozenset[str]
 
     def _local(self) -> Any:
-        from causalab.protocol.resolve import FileArtifacts
+        from causalab.io.env import FileArtifacts
 
         return FileArtifacts(root=self.run_root)
 
@@ -715,11 +721,13 @@ def run_workflow(
     loaded: LoadedWorkflow,
     env: ResolutionEnv,
     out_root: Path,
-    engines: Sequence[Engine],
+    engine: Engine | None,
     *,
     resume: bool = False,
     reuse_nondeterministic: bool = False,
     sink: EventSink | None = None,
+    publisher: Publisher = SOLO,
+    lockstep: Lockstep = SOLO_LOCKSTEP,
 ) -> WorkflowRunResult:
     """Execute one loaded workflow into ``<out_root>/<output_dir>/``.
 
@@ -730,22 +738,41 @@ def run_workflow(
     no manifest is written rather than a wrong one — and if writing it fails
     while a step failure is in flight, the step failure is what propagates.
 
+    **A launched world** (``docs/model_parallelism.md`` §3, §11). ``publisher``
+    is this process's place in it — [`SOLO`][],
+    world 1, unless a launcher set another — and rides on every protocol
+    and behavioral step's request, so the engine's collectives meet on every
+    rank and one rank writes each step's outputs. Every rank runs this loop
+    over the same steps; the **joiner** ([`is_joiner`][])
+    alone touches the run tree — the attempt directories, the records, the
+    stream, the manifest, the reuse decision ``--resume`` reads from it —
+    and every decision it makes there is **agreed** through ``lockstep``
+    ([`causalab.protocol.lockstep`][]) before the ranks move on: whether a
+    step's turn reuses its published unit or attempts it (after the receipt
+    checks), the record once the attempt is verified and published (a rank
+    that does not publish has by then run the engine's half of the step and
+    nothing else), and the manifest. A refusal on the joiner is agreed
+    before it propagates, so it is a refusal on every rank and no rank waits
+    on a collective the joiner never reaches. The ranks share the run tree
+    (a spawn is one node; a ``torchrun`` group mounts one), since a later
+    step's compile on any rank reads the joiner's published outputs.
+
     Beside the manifest the run appends its **event stream**, ``events.jsonl``
-    (§4.3; :mod:`causalab.io.events`): ``phase_started`` as each step's turn
+    (§4.3; [`causalab.io.events`][]): ``phase_started`` as each step's turn
     begins, ``result_committed`` at the publish moment, ``phase_completed``
     when a step is published or reused, ``warning`` for a retained failed
     attempt, and ``campaign_terminal`` once the manifest is written by a run
     that ran to its end (every step completed, or a step failed) — so a run
     that never got there, or one interrupted (``KeyboardInterrupt``,
     ``SystemExit``: the manifest is written, no terminal line), leaves a
-    stream without one (:func:`_terminal`). ``sink`` is the optional
+    stream without one (`_terminal`). ``sink`` is the optional
     adapter handed each line after its local write; its failure becomes a
     ``warning`` line and changes nothing else. The stream is a sidecar: it is
     an input to no reuse decision and no identity, and ``workflow.json`` is
     byte for byte what a run with no sink writes.
 
     **The stream is the authority for status** (§4.3, §8). Each step's
-    ``status`` in ``workflow.json`` is :func:`~causalab.workflow.derived.derive_statuses`
+    ``status`` in ``workflow.json`` is [`derive_statuses`][]
     over the lines this run appended, not the runner's memory of what it did;
     the memory supplies the other fields (files, digests, ``error``,
     ``blocked_by``) and must agree on the word — if it does not (an emitter
@@ -755,7 +782,7 @@ def run_workflow(
     itself beside a ``ProtocolWarning``. A stream this run cannot read back
     at write time likewise leaves no manifest and the failure in flight as
     it was — the manifest is derived from the stream, never from memory in
-    its place (:func:`_derived_statuses`). A stream this run cannot open
+    its place (`_derived_statuses`). A stream this run cannot open
     (a torn ``events.jsonl`` in the run tree, a ``seq`` gap) is a
     ``ProtocolError`` here, before any step, chaining the read error that
     names ``path:line``; nothing is written — move the sidecar aside to start
@@ -764,16 +791,43 @@ def run_workflow(
     # this run carries and every reuse decision compares (§7). A run that
     # cannot say what code it is (`ProvenanceError`) leaves no tree claiming
     # it can.
+    if loaded.document.measurement is not None:
+        raise ProtocolError(
+            "MEASUREMENT",
+            "a workflow with measurement settings requires 'causalab measure'",
+        )
     implementation = _implementation()
+    # one tokenizer load per model for the whole run: the checks before step
+    # 1 and every step's check at its turn share this service
+    env = dataclasses.replace(env, tokenizers=tokenizer_service(env))
+    # every static inner document's metric answers, with its model's
+    # tokenizer (IM spec §2.10), before step 1 and before anything is
+    # written: a table the tokenizer cannot score refuses the run here, not
+    # at the step that scores it after every earlier step and its weights.
+    # Deterministic, so every rank of a launched world refuses alike. Under
+    # --resume a step may be reused and never run, and its tokenizer may not
+    # load here (an offline node, a gated repository), so each attempted
+    # step resolves its answers at its turn instead (`covered`)
+    covered: set[str] = (
+        set() if resume else set(check_tokenization(loaded, env, engine=engine))
+    )
+    # the one rank that writes the run tree (docs/model_parallelism.md §3);
+    # every other rank computes each protocol step's engine half and follows
+    # the joiner's agreed decisions for the rest
+    joins = is_joiner(publisher)
     run_root = out_root / loaded.document.output_dir
-    run_root.mkdir(parents=True, exist_ok=True)
+    if joins:
+        run_root.mkdir(parents=True, exist_ok=True)
     overlay = OverlayArtifacts(
         run_root=run_root,
         outer=env.artifacts,
         step_names=frozenset(loaded.document.steps),
     )
     run_env = ResolutionEnv(
-        datasets=env.datasets, artifacts=overlay, model_info=env.model_info
+        datasets=env.datasets,
+        artifacts=overlay,
+        model_info=env.model_info,
+        tokenizers=env.tokenizers,
     )
     step_manifest: dict[str, Any] = {}
     failure: BaseException | None = None
@@ -786,15 +840,19 @@ def run_workflow(
     # existing stream back to continue its `seq`: one it cannot read (a torn
     # tail, a foreign line, a gap) refuses the run before anything is written
     stream = run_root / EVENTS_FILE
-    try:
-        log = EventLog(stream, identity={}, sink=sink)
-    except (ValueError, OSError) as err:
-        raise ProtocolError(
-            "P2",
-            f"{stream} cannot be read ({err}); the run was not started — move "
-            "the sidecar aside to start a fresh stream or restore it "
-            "byte-for-byte",
-        ) from err
+    log: EventLog | _FollowerLog
+    if joins:
+        try:
+            log = EventLog(stream, identity={}, sink=sink)
+        except (ValueError, OSError) as err:
+            raise ProtocolError(
+                "P2",
+                f"{stream} cannot be read ({err}); the run was not started — move "
+                "the sidecar aside to start a fresh stream or restore it "
+                "byte-for-byte",
+            ) from err
+    else:
+        log = _FollowerLog()
 
     # the conditional layer's memory for this run (§2.8): every step a verdict
     # took out of the run, directly or through a step it depends on, with the
@@ -826,9 +884,11 @@ def run_workflow(
                         step_names=frozenset(owner.document.steps),
                     ),
                     model_info=env.model_info,
+                    tokenizers=env.tokenizers,
                 )
             step_env = envs[rel]
-            restore_displaced(step_root, local, step_dir)
+            if joins:
+                restore_displaced(step_root, local, step_dir)
             log.emit("phase_started", {"step": name, "type": step.type})
             if name in skipped_by:
                 # the third outcome (§2.8, §8): no attempt, no directory, no
@@ -843,7 +903,7 @@ def run_workflow(
                         "skipped_by": skipped["skipped_by"],
                     },
                 )
-                if step_dir.exists():
+                if joins and step_dir.exists():
                     # a rerun's skip supersedes the step's earlier published
                     # unit (§8): retained and marked, never left where a
                     # reader beside its files would take it for accepted
@@ -858,67 +918,104 @@ def run_workflow(
                             "skipped_by": skipped["skipped_by"],
                         },
                     )
-                _attach_superseded(step_root, local, skipped)
-                continue
-            reused = _reusable(
-                owner,
-                local,
-                step,
-                step_dir,
-                resume,
-                reuse_nondeterministic,
-                implementation,
-                engines,
-            )
-            if reused is not None:
-                step_manifest[name] = reused
-                ledger.restore(local, reused, owner)
-                if isinstance(step, ConditionalStep):
-                    # a reused conditional re-seats its verdict from its record
-                    conditional.fold_skips(
-                        name, _flattened_skips(loaded, rel, reused), loaded, skipped_by
-                    )
-                log.emit("phase_completed", _completed_payload(name, reused))
-                # the retained prior units are the tree's, not the record's:
-                # a reused entry lists them as a fresh run's does (§8)
-                _attach_superseded(step_root, local, reused)
+                if joins:
+                    _attach_superseded(step_root, local, skipped)
                 continue
             try:
-                # §2.8: a required receipt is checked before the step is
-                # scheduled — before an attempt directory, before any engine
-                # is chosen (`route_engine` is inside `_attempt_step`), before
-                # any device. A refusal is a failed attempt like any other,
-                # and it changes no file under `step_dir`: an earlier published
+                # the step's turn (docs/model_parallelism.md §11): reused, or
+                # to be attempted — decided by the joiner, who reads the tree,
+                # and agreed before any rank's engine runs. §2.8: a required
+                # receipt is checked before the step is scheduled — before an
+                # attempt directory, before any engine is chosen
+                # (`route_engine` is inside `_attempt_step`), before any
+                # device. A refusal is a failed attempt like any other, and
+                # it changes no file under `step_dir`: an earlier published
                 # unit stays as published (`disposition: accepted`) while the
                 # manifest's `failed` is the authority (§2.8) — the skip path
                 # above retains and marks because a skip is a decision about
                 # the run; a refusal is an attempt that produced nothing
-                for _, container, at in nested.containers(loaded, name):
-                    # a receipt on the `workflow` step itself (§2.10): checked
-                    # before any of its steps is allocated. The rebased step
-                    # against the run root — a flattened producer name is the
-                    # path to its receipt, so both names in the refusal are
-                    # the ones the manifest and the stream carry (`a/b`
-                    # requires `a/gate_k`; never `b`, never `gate_k`)
-                    flat = nested.qualified(at, container)
-                    conditional.check_receipt(
-                        flat, loaded.document.steps[flat], run_root
-                    )
-                conditional.check_receipt(name, loaded.document.steps[name], run_root)
-                entry, displaced = _attempt_step(
-                    local,
-                    step,
-                    owner,
-                    step_env,
-                    step_root,
-                    engines,
-                    implementation,
-                    ledger=ledger,
-                    emit=log.emit
-                    if owner is loaded
-                    else _emit_as(log.emit, local, name),
-                    skipped=nested.local_skips(rel, skipped_by),
+                turn = decide(
+                    lockstep,
+                    joins,
+                    "turn",
+                    name,
+                    lambda: _turn(
+                        loaded,
+                        owner,
+                        name,
+                        local,
+                        step,
+                        step_dir,
+                        run_root,
+                        resume,
+                        reuse_nondeterministic,
+                        implementation,
+                        engine,
+                        run_env=step_env,
+                    ),
                 )
+                reused = turn["reused"]
+                if reused is None and name not in covered:
+                    # attempted, and not checked before step 1 (--resume):
+                    # a static document's answers resolve now, before its
+                    # engine; a step-dependent one resolves in `_protocol_run`
+                    covered.update(
+                        check_tokenization(loaded, env, engine=engine, steps=(name,))
+                    )
+                if reused is not None:
+                    step_manifest[name] = reused
+                    ledger.restore(local, reused, owner)
+                    if isinstance(step, ConditionalStep):
+                        # a reused conditional re-seats its verdict from its
+                        # record
+                        conditional.fold_skips(
+                            name,
+                            _flattened_skips(loaded, rel, reused),
+                            loaded,
+                            skipped_by,
+                        )
+                    log.emit("phase_completed", _completed_payload(name, reused))
+                    # the retained prior units are the tree's, not the
+                    # record's: a reused entry lists them as a fresh run's
+                    # does (§8)
+                    if joins:
+                        _attach_superseded(step_root, local, reused)
+                    continue
+                displaced_unit: list[Path | None] = [None]
+
+                def attempt() -> dict[str, Any]:
+                    # the joiner's attempt → verify → publish; the unit it
+                    # displaced is kept aside for the narration below
+                    record, displaced_unit[0] = _attempt_step(
+                        local,
+                        step,
+                        owner,
+                        step_env,
+                        step_root,
+                        engine,
+                        implementation,
+                        ledger=ledger,
+                        emit=log.emit
+                        if owner is loaded
+                        else _emit_as(log.emit, local, name),
+                        skipped=nested.local_skips(rel, skipped_by),
+                        publisher=publisher,
+                    )
+                    return record
+
+                entry = decide(
+                    lockstep,
+                    joins,
+                    "attempt",
+                    name,
+                    attempt,
+                    # a rank that does not publish: the engine's half of the
+                    # step, whose collectives the joiner's engine meets
+                    follow=lambda: _follow_step(
+                        local, step, owner, step_env, step_dir, engine, publisher
+                    ),
+                )
+                displaced = displaced_unit[0]
             except BaseException as err:
                 step_manifest[name] = {
                     "type": step.type,
@@ -952,6 +1049,9 @@ def run_workflow(
             log.emit("result_committed", {"step": name, "files": list(entry["files"])})
             log.emit("phase_completed", _completed_payload(name, entry))
             _boundary("published", name)
+            if not joins:
+                # the tree is the joiner's: nothing to retain or list here
+                continue
             if displaced is not None:
                 # supersession preserves (§8): the unit this publish displaced
                 # is marked and retained, never deleted — after the publish is
@@ -972,62 +1072,28 @@ def run_workflow(
         failure = err
         raise
     finally:
-        entries: dict[str, Any] = {
-            **step_manifest,
-            **classify_unreached(
-                loaded.order, loaded.dependencies, step_manifest, selective=selective
-            ),
-        }
-        # §4.3: the stream is the authority for status. `derived` is the word
-        # each step carries — or None when no manifest may be written and a
-        # failure is propagating out of this `finally` as itself (a
-        # `ProtocolWarning` has said why); on a clean run the same conditions
-        # are a `ProtocolError` instead
-        derived = _derived_statuses(log, loaded, entries, failure, selective)
-        if derived is not None:
-            manifest = {
-                "output_dir": loaded.document.output_dir,
-                "steps": {
-                    name: {**entry, "status": derived[name]}
-                    for name, entry in entries.items()
-                },
-            }
-            if loaded.nondeterministic:
-                manifest["nondeterministic"] = list(loaded.nondeterministic)
-            if loaded.nested:
-                # record-only (§2.10, §8), like `nondeterministic`: which steps
-                # each nested workflow contributed and the inner digest its
-                # entry carries — never canonical, never compared on --resume
-                manifest["nested"] = nested.manifest_block(loaded)
-            written = False
-            try:
-                write_manifest(
-                    run_root, manifest, between=lambda: _boundary("manifest", None)
-                )
-                written = True
-            except BaseException as manifest_err:
-                if failure is None:
-                    raise
-                # the step failure is the finding; a manifest that could not be
-                # written is reported beside it, never in its place
-                warnings.warn(
-                    f"workflow.json could not be written ({manifest_err!r}); "
-                    f"the step failure {failure!r} is re-raised",
-                    ProtocolWarning,
-                    stacklevel=2,
-                )
-            if written:
-                # the manifest is on disk, so the stream may say the run ran
-                # to its end — if it did: an interrupt writes no terminal line
-                # (`_terminal`). Only after the manifest (§4.3) — a stream
-                # with a terminal line and no manifest would be a lie.
-                _terminal(log, manifest, failure)
-    for sub_root in nested.sub_roots(loaded):
-        # a nested sub-root (§2.10) a clean run left nothing in: its
-        # `.attempts/`, then the directory itself when every step was skipped
-        remove_if_empty(run_root / sub_root / ATTEMPTS_DIR)
-        remove_if_empty(run_root / sub_root)
-    remove_if_empty(run_root / ATTEMPTS_DIR)
+        # the manifest: the joiner derives and writes it, then agrees it —
+        # or its failure to — with every rank, whatever brought the ranks
+        # here, so a follower never waits on a joiner that has left
+        # (docs/model_parallelism.md §11)
+        manifest = _agreed_manifest(
+            lockstep,
+            joins,
+            failure,
+            lambda: _write_run_manifest(
+                loaded, run_root, log, step_manifest, selective, failure
+            )
+            if joins
+            else None,
+        )
+    if joins:
+        for sub_root in nested.sub_roots(loaded):
+            # a nested sub-root (§2.10) a clean run left nothing in: its
+            # `.attempts/`, then the directory itself when every step was
+            # skipped
+            remove_if_empty(run_root / sub_root / ATTEMPTS_DIR)
+            remove_if_empty(run_root / sub_root)
+        remove_if_empty(run_root / ATTEMPTS_DIR)
     if manifest is None:
         # unreachable by construction — the manifest is withheld only while a
         # failure propagates out of the `finally` — but the returned
@@ -1039,6 +1105,181 @@ def run_workflow(
             "run has no manifest to return",
         )
     return WorkflowRunResult(manifest=manifest, run_root=run_root)
+
+
+class _FollowerLog:
+    """The event log of a rank that does not publish: nothing is written,
+    the stream is the joiner's (§4.3; ``docs/model_parallelism.md`` §3)."""
+
+    def emit(self, event: str, payload: Mapping[str, Any] | None = None) -> None:
+        del event, payload
+
+
+def _turn(
+    loaded: LoadedWorkflow,
+    owner: LoadedWorkflow,
+    name: str,
+    local: str,
+    step: Any,
+    step_dir: Path,
+    run_root: Path,
+    resume: bool,
+    reuse_nondeterministic: bool,
+    implementation: Mapping[str, Any],
+    engine: Engine | None,
+    *,
+    run_env: ResolutionEnv | None = None,
+) -> dict[str, Any]:
+    """The joiner's decision at a step's turn (``docs/model_parallelism.md``
+    §11): the published unit ``--resume`` reuses, or ``None`` once every
+    required receipt (§2.8) has been checked against the run tree — both
+    read from files only the joiner holds, so decided here and agreed.
+    ``run_env`` is the step's run-tree environment, against which a step that
+    loads an earlier step's output is recompiled (`_reusable`)."""
+    reused = _reusable(
+        owner,
+        local,
+        step,
+        step_dir,
+        resume,
+        reuse_nondeterministic,
+        implementation,
+        engine,
+        run_env=run_env,
+    )
+    if reused is not None:
+        return {"reused": reused}
+    for _, container, at in nested.containers(loaded, name):
+        # a receipt on the `workflow` step itself (§2.10): checked before any
+        # of its steps is allocated. The rebased step against the run root —
+        # a flattened producer name is the path to its receipt, so both names
+        # in the refusal are the ones the manifest and the stream carry
+        # (`a/b` requires `a/gate_k`; never `b`, never `gate_k`)
+        flat = nested.qualified(at, container)
+        conditional.check_receipt(flat, loaded.document.steps[flat], run_root)
+    conditional.check_receipt(name, loaded.document.steps[name], run_root)
+    return {"reused": None}
+
+
+def _write_run_manifest(
+    loaded: LoadedWorkflow,
+    run_root: Path,
+    log: Any,
+    step_manifest: Mapping[str, Any],
+    selective: Any,
+    failure: BaseException | None,
+) -> dict[str, Any] | None:
+    """The joiner's end of a run (§4.3, §8): every step classified, the
+    manifest derived from the stream, written, and the stream's terminal
+    line once it is on disk. ``None`` when no manifest may be written and a
+    failure is propagating as itself (a ``ProtocolWarning`` has said why);
+    on a clean run the same conditions are a ``ProtocolError`` instead."""
+    entries: dict[str, Any] = {
+        **step_manifest,
+        **classify_unreached(
+            loaded.order, loaded.dependencies, step_manifest, selective=selective
+        ),
+    }
+    # §4.3: the stream is the authority for status. `derived` is the word
+    # each step carries — or None when no manifest may be written
+    derived = _derived_statuses(log, loaded, entries, failure, selective)
+    if derived is None:
+        return None
+    manifest: dict[str, Any] = {
+        "output_dir": loaded.document.output_dir,
+        "steps": {
+            name: {**entry, "status": derived[name]} for name, entry in entries.items()
+        },
+    }
+    if loaded.nondeterministic:
+        manifest["nondeterministic"] = list(loaded.nondeterministic)
+    if loaded.nested:
+        # record-only (§2.10, §8), like `nondeterministic`: which steps each
+        # nested workflow contributed and the inner digest its entry carries
+        # — never canonical, never compared on --resume
+        manifest["nested"] = nested.manifest_block(loaded)
+    written = False
+    try:
+        write_manifest(run_root, manifest, between=lambda: _boundary("manifest", None))
+        written = True
+    except BaseException as manifest_err:
+        if failure is None:
+            raise
+        # the step failure is the finding; a manifest that could not be
+        # written is reported beside it, never in its place
+        warnings.warn(
+            f"workflow.json could not be written ({manifest_err!r}); "
+            f"the step failure {failure!r} is re-raised",
+            ProtocolWarning,
+            stacklevel=2,
+        )
+    if written:
+        # the manifest is on disk, so the stream may say the run ran to its
+        # end — if it did: an interrupt writes no terminal line
+        # (`_terminal`). Only after the manifest (§4.3) — a stream with a
+        # terminal line and no manifest would be a lie.
+        _terminal(log, manifest, failure)
+    return manifest
+
+
+def _agreed_manifest(
+    lockstep: Lockstep,
+    joins: bool,
+    failure: BaseException | None,
+    write: Any,
+) -> dict[str, Any] | None:
+    """The run's manifest on every rank (``docs/model_parallelism.md`` §11):
+    the joiner's ``write`` — its value, or its own failure — agreed as the
+    run's last decision. A rank whose step failure is already propagating
+    takes a refusal here as the joiner's twin of it and stays with its own;
+    the joiner's ``write`` raising propagates on the joiner after the
+    agreement, as [`decide`][] does."""
+    if failure is None:
+        return decide(lockstep, joins, "manifest", None, write)
+    # a failure is in flight on this rank: the agreement still runs, so no
+    # rank is left waiting, but a refusal it carries is not raised over the
+    # failure already propagating
+    try:
+        return decide(lockstep, joins, "manifest", None, write)
+    except ProtocolError:
+        if joins:
+            raise
+        return None
+
+
+def _follow_step(
+    name: str,
+    step: Any,
+    loaded: LoadedWorkflow,
+    run_env: ResolutionEnv,
+    step_dir: Path,
+    engine: Engine | None,
+    publisher: Publisher,
+) -> None:
+    """A rank that does not publish (``docs/model_parallelism.md`` §3, §11):
+    the engine's half of a step — a protocol or behavioral step's compile,
+    routing and request, run through the engine whose collectives the
+    joiner's engine meets, its outputs discarded by the engine through
+    ``publisher``. Every other kind of step runs on the joiner alone; the
+    record of any step is the joiner's, agreed through the lockstep."""
+    shard = getattr(step, "shard", None)
+    selection = None if shard is None else shard["points"]
+    if isinstance(step, ProtocolStep) and step.fan_out is None:
+        inner, chosen, run = _protocol_run(
+            name, step, loaded, run_env, step_dir, engine, publisher, selection
+        )
+        chosen.execute(inner, run)
+    elif isinstance(step, BehavioralStep) and step.fan_out is None:
+        behavioral.follow_behavioral_step(
+            name,
+            step,
+            loaded,
+            run_env,
+            step_dir,
+            engine,
+            publisher,
+            selection=selection,
+        )
 
 
 def _emit_as(emit: Any, local: str, name: str) -> Any:
@@ -1106,7 +1347,7 @@ def _derived_statuses(
 
     * **it cannot be read back** (a torn tail, a foreign line — a sidecar IO
       problem, not a status). The read of a sidecar is held to the rule its
-      writes follow (:func:`write_manifest`, :func:`_terminal`): it may not
+      writes follow ([`write_manifest`][], `_terminal`): it may not
       mask a step failure in flight. With one propagating this warns and
       withholds the manifest; on a clean run it is a ``ProtocolError`` chaining
       the read error. The manifest is derived from the stream and is not
@@ -1197,24 +1438,18 @@ def _terminal(
 
 def _implementation() -> dict[str, Any]:
     """The running package's identity as a step record carries it (§7, §8):
-    the :data:`IMPLEMENTATION_FIELDS` of ``runtime_identity()``.
+    the [`IMPLEMENTATION_FIELDS`][] of ``runtime_identity()``.
 
     Asked once per run, not per step. ``runtime_identity()`` hashes every file
-    of the installed package the first time it is called (a fraction of a
-    second for the few hundred files the package ships) and is cached for the
-    process,
+    of the installed package the first time it is called (a few hundred
+    files) and is cached for the process,
     so every step of one run carries the same answer by construction. Imported
     as a module attribute so a test can stand in a different identity.
     ``location`` — an absolute path — is deliberately not recorded: a record
     that carried it would change when the tree moved, and moving a run tree
     alone must not bust reuse."""
     identity = runtime_identity()
-    return {
-        "tree_digest": identity.tree_digest,
-        "version": identity.version,
-        "resolved_revision": identity.resolved_revision,
-        "dirty": identity.dirty,
-    }
+    return {"tree_digest": identity.tree_digest}
 
 
 def _attempt_step(
@@ -1223,16 +1458,20 @@ def _attempt_step(
     loaded: LoadedWorkflow,
     run_env: ResolutionEnv,
     run_root: Path,
-    engines: Sequence[Engine],
+    engine: Engine | None,
     implementation: Mapping[str, Any],
     *,
     ledger: _ControlLedger | None = None,
     emit: Any = None,
     skipped: Mapping[str, Mapping[str, Any]] | None = None,
+    publisher: Publisher = SOLO,
 ) -> tuple[dict[str, Any], Path | None]:
     """Attempt → verify → publish for one step (§8): the step's record, and
     the prior unit this publish displaced (or ``None``), which the caller
-    retains as superseded once the publish is narrated.
+    retains as superseded once the publish is narrated. ``publisher`` is
+    this process's place in a launched world (``docs/model_parallelism.md``
+    §3) — the joiner's, since only the joiner attempts — and rides on the
+    step's engine request.
 
     A declared fan-out (§2.9) runs through the same path: a child (``shard``
     set) is its parent's document over a point selection; the parent
@@ -1282,10 +1521,11 @@ def _attempt_step(
                 loaded,
                 run_env,
                 attempt_dir,
-                engines,
+                engine,
                 implementation,
                 ledger=ledger,
                 selection=None if shard is None else shard["points"],
+                publisher=publisher,
             )
         elif isinstance(step, BehavioralStep):
             # the declarative behavioral runner (§2.7): the same attempt →
@@ -1296,9 +1536,10 @@ def _attempt_step(
                 loaded,
                 run_env,
                 attempt_dir,
-                engines,
+                engine,
                 implementation,
                 selection=None if shard is None else shard["points"],
+                publisher=publisher,
             )
         elif isinstance(step, DecisionStep):
             # a typed decision over a values object (§2.8): decision.json
@@ -1402,7 +1643,9 @@ def _reusable(
     resume: bool,
     reuse_nondeterministic: bool,
     implementation: Mapping[str, Any],
-    engines: Sequence[Engine],
+    engine: Engine | None,
+    *,
+    run_env: ResolutionEnv | None = None,
 ) -> dict[str, Any] | None:
     """The prior run's record for ``name`` if ``--resume`` may reuse it (§8).
 
@@ -1411,36 +1654,52 @@ def _reusable(
     A step that declared itself non-deterministic is never reused silently —
     replaying it is exactly what it said it cannot guarantee.
 
+    A protocol step whose document loads a run-tree path (a fit's
+    ``init.file_path``, an apply's ``file_path``) records the digest of its
+    run-time compile, and the upstream bytes it read are in that digest. The
+    load-time digest keeps the declared path. Such a step is compared with a
+    compile against the current run tree, ``run_env`` (`_run_tree_digest`),
+    after the cheaper checks below have passed. An unfanned step's record
+    carries that digest as its ``identity``; a fanned-out child's identity is
+    its parent's entry digest plus its shard, so the child is held to it
+    through its ``document_digest``. The step is reused while the bytes it
+    loaded and its document are unchanged, and runs again otherwise.
+
     The **implementation** must be the same code too (§7): the record's
     ``implementation.tree_digest`` — the bytes of the ``causalab`` package
     that ran the step — must equal the running package's, and a record with
     no such block (one written before it was recorded) is not trusted, like a
     record without digests. Refusal here is silent re-execution, exactly as a
-    digest mismatch is. ``dirty`` is never consulted: a dirty tree whose bytes
-    differ already has a different tree digest, and equal digests are the
-    same code whatever the flag says — a dirty tree is legitimate work.
+    digest mismatch is.
 
     A protocol step's record carries its **engine** — the third member of the
-    qualification identity (:data:`QUALIFICATION_IDENTITY_FIELDS`) — and it
-    must be the engine the step would run under now (:func:`_engine_for`): a
+    qualification identity ([`QUALIFICATION_IDENTITY_FIELDS`][]) — and it
+    must be the engine the step would run under now (`_engine_for`): a
     same-tree run under another engine re-runs the step rather than
     inheriting the old engine's identity into its dependents, and a record
     without the key is not trusted, as one without an ``implementation``
     block is not. When no configured engine covers the step on this host
-    (:func:`_engine_for` is ``None``) there is no engine to compare against,
+    (`_engine_for` is ``None``) there is no engine to compare against,
     and a record that carries its own is reused: a content-digest-verified
     record of work done is not invalidated by a host that could not redo it
     (fail-closed on a valid ``--resume`` under ``auto``, where the install may
     have changed). A script step records no engine (its outputs' stamps carry
-    :data:`SCRIPT_ENGINE`), so nothing is compared for it — and neither is
+    [`SCRIPT_ENGINE`][]), so nothing is compared for it — and neither is
     for a fanned-out parent (§2.9): its record is the join, which names no
     engine because no engine ran it; its children's records carry theirs,
-    and :func:`fan_out.evidence_holds` below binds the join to them.
+    and [`fan_out.evidence_holds`][] below binds the join to them.
 
     And the record's **content digests** must match the published bytes.
     Existence is never enough: a truncated output, a file overwritten in
     place, or a record from before digests were recorded all mean the unit is
     not reusable, and the step runs again.
+
+    A script step's referenced inputs must still be the bytes it read.
+    Both external paths and upstream step files enter the canonical entry as
+    locators, so ``input_digests`` records their sha256 by slot. Every file
+    must match, including a selected value or tensor's containing file. This
+    also holds after an interrupted run publishes a changed upstream output.
+    Missing or incomplete input digests force execution again.
 
     And for a **conditional or a decision** the evidence must hold (§2.8): a
     conditional's record names the ``evidence_identity`` it read;
@@ -1467,11 +1726,16 @@ def _reusable(
         return None
     if not isinstance(record, dict):
         return None
-    want = _step_identity(loaded, name, step)
-    if record.get("identity") != want:
+    identity = record.get("identity")
+    # an unfanned step that loads a run-tree path records its run-time digest
+    # as its identity, which the load-time one never equals: it is compared
+    # with a compile against the run tree at the end, after the cheap checks
+    run_tree = _loads_run_tree(loaded, name, step)
+    resolved = run_tree and step.fan_out is None and step.shard is None
+    if identity != _step_identity(loaded, name, step) and not resolved:
         return None
     if isinstance(step, ProtocolStep) and step.fan_out is None:
-        want_engine = _engine_for(loaded, name, engines)
+        want_engine = _engine_for(loaded, name, engine)
         recorded_engine = record.get("engine")
         if recorded_engine is None:
             return None
@@ -1495,11 +1759,54 @@ def _reusable(
         target = step_dir / str(rel)
         if not target.is_file() or _sha256(target) != want_digest:
             return None
+    if isinstance(step, ScriptStep):
+        file_inputs = _file_inputs(step, step_dir.parent, loaded.workflow_dir)
+        if file_inputs:
+            input_digests = record.get("input_digests")
+            if not isinstance(input_digests, dict):
+                return None
+            if set(input_digests) != set(file_inputs):
+                return None
+            for slot, target in file_inputs.items():
+                if not target.is_file() or _sha256(target) != input_digests[slot]:
+                    return None
     if not conditional.evidence_holds(step, step_dir, record):
         return None
     if not fan_out.evidence_holds(step, step_dir, record):
         return None
+    if run_tree and isinstance(step, ProtocolStep) and step.fan_out is None:
+        compiled = identity if step.shard is None else record.get("document_digest")
+        if compiled is None or compiled != _run_tree_digest(loaded, step, run_env):
+            return None
     return {**record, "status": "reused"}
+
+
+def _loads_run_tree(loaded: LoadedWorkflow, name: str, step: Any) -> bool:
+    """Whether ``step`` is a protocol step whose document loads a run-tree
+    path or reads an upstream step's value: the steps the loader keeps in
+    their authored form, because their inputs exist only at run time
+    (``inner_digest_kind`` is ``"authored"``). A fanned-out child shares its
+    parent's kind."""
+    return (
+        isinstance(step, ProtocolStep)
+        and loaded.inner_digest_kind.get(name) == "authored"
+    )
+
+
+def _run_tree_digest(
+    loaded: LoadedWorkflow, step: ProtocolStep, run_env: ResolutionEnv | None
+) -> str | None:
+    """The document digest of the compile `_protocol_run` makes for
+    ``step``, against the run tree as it stands now (`_compile_step`).
+    ``None`` without a run tree, or when that compile refuses (an upstream
+    output is missing or no longer matches): nothing then matches a record,
+    the step runs again, and its own attempt reports the refusal."""
+    if run_env is None:
+        return None
+    try:
+        return _compile_step(loaded, step, run_env).digests.document
+    except ProtocolError:
+        return None
 
 
 def _step_identity(loaded: LoadedWorkflow, name: str, step: Any) -> str:
@@ -1520,24 +1827,24 @@ def _step_identity(loaded: LoadedWorkflow, name: str, step: Any) -> str:
     return loaded.inner_digests[name]
 
 
-def _engine_for(
-    loaded: LoadedWorkflow, name: str, engines: Sequence[Engine]
-) -> str | None:
+def _engine_for(loaded: LoadedWorkflow, name: str, engine: Engine | None) -> str | None:
     """The ``engine`` a protocol step's record carries when it runs now — what
-    a reused record must match (§8): the name of the engine
-    :func:`route_engine` chooses for it, which is :func:`choose_engine`'s
-    capability match over the point documents — computed here over the
-    load-time compile, whose verbs are the run-time compile's (a document's
-    needs are authored, never resolved from an artifact). ``None`` when no
-    configured engine covers the step: nothing is compared, a record carrying
-    its own ``engine`` is reused, and a step that does run has its own routing
-    refuse with the real message."""
+    a reused record must match (§8): the name of the run's engine when
+    [`route_engine`][] would accept it for the step (``check_engine``, the
+    same capability match) — computed here over the load-time compile, whose
+    verbs are the run-time compile's (a document's needs are authored, never
+    resolved from an artifact). ``None`` when no engine was supplied or the
+    supplied one does not cover the step: nothing is compared, a record
+    carrying its own ``engine`` is reused, and a step that does run has its
+    own check refuse with the real message."""
+    if engine is None:
+        return None
+    compiled = loaded.inner[name].compiled
     try:
-        return choose_engine(
-            list(loaded.inner[name].point_documents), list(engines)
-        ).name
+        check_engine(compiled, engine.effective_capabilities)
     except ValidationError:
         return None
+    return engine.name
 
 
 # --------------------------------------------------------------------------- #
@@ -1551,58 +1858,32 @@ def _run_protocol_step(
     loaded: LoadedWorkflow,
     run_env: ResolutionEnv,
     step_dir: Path,
-    engines: Sequence[Engine],
+    engine: Engine | None,
     implementation: Mapping[str, Any],
     *,
     ledger: _ControlLedger | None = None,
     selection: Sequence[int] | None = None,
+    publisher: Publisher = SOLO,
 ) -> dict[str, Any]:
     """One protocol step's attempt (§8). ``selection`` — a fanned-out child's
-    point indices (§2.9) — slices every per-point tuple of the request in
-    lockstep, as ``run_protocol``'s ``--points`` does; the document digest is
-    untouched, so a child's artifacts stamp as members of the whole campaign.
-    ``None`` runs every point."""
-    doc_path = (loaded.workflow_dir / step.document).resolve()
-    # The one compiler (IM spec §9), with the step's inputs: the document, its
-    # own directory for relative artifact paths, the step's `set` as the
-    # overrides (section-rooted, IM spec §1), and the run-tree overlay
-    # as the artifact store — real resolution now, since earlier steps' outputs
-    # exist. Validation compiled the same document through the same function
-    # against the deferring store, so the two cannot resolve it differently.
-    inner = compile_protocol(
-        doc_path,
-        doc_path.parent,
-        step.set,
-        run_env.datasets,
-        run_env.artifacts,
-        None,
-        point_cap=step.max_points if step.max_points is not None else DEFAULT_POINT_CAP,
-        model_info=run_env.model_info,
+    point indices (§2.9) — is the run context's ``points``, as
+    ``run_protocol``'s ``--points`` is; the engine enumerates the steps and
+    reads them by index and the document digest is untouched, so a child's
+    artifacts stamp as members of the whole campaign. ``None`` runs every
+    point. The digests and coordinates the record carries are the ones the
+    engine signed (``result.steps``). ``publisher`` is this process's place in
+    a launched world (``docs/model_parallelism.md`` §3, §9): it rides on the
+    run context, and its word is the record's ``execution.parallel.launcher``."""
+    inner, engine, run = _protocol_run(
+        name, step, loaded, run_env, step_dir, engine, publisher, selection
     )
-    # routing, and the rules that needed the engine (IM spec §5 rules 13, 30)
-    # against the one it chose — before it loads a model, as `run_protocol`
-    engine = route_engine(inner, engines)
-    indices = range(len(inner.points.points)) if selection is None else tuple(selection)
-    if any(i < 0 or i >= len(inner.points.points) for i in indices):
-        raise ProtocolError(
-            "P2",
-            f"step {name!r}: its shard selects point indices {list(indices)} of a "
-            f"document that compiled {len(inner.points.points)} point(s) — the "
-            "run-time compile and the load-time expansion disagree",
-        )
-    request = ExecutionRequest(
-        points=tuple(inner.points.points[i].raw for i in indices),
-        canonical=tuple(inner.points.points[i].canonical for i in indices),
-        digests=tuple(inner.digests.points[i] for i in indices),
-        coords=tuple(inner.points.points[i].coords for i in indices),
-        document_digest=inner.digests.document,
-        env=run_env,
-        output_dir=step_dir,
-        # the step's own row bounds (§2.2) — execution, so they ride on the
-        # request and never on the compiled document
-        execution=step.execution,
-    )
-    result = engine.execute(request)
+    result = engine.execute(inner, run)
+    # one signed step per index; under data parallelism the campaign's, on
+    # every rank
+    check_steps_signed(result, run.indices(point_count(inner.axes)), engine)
+    # the provenance units (§7), as the engine signed them, in run order
+    digests = [step_record.digest for step_record in result.steps]
+    coords = [dict(step_record.coords) for step_record in result.steps]
     record: dict[str, Any] = {
         "type": "intervention_protocol",
         "status": "completed",
@@ -1611,17 +1892,20 @@ def _run_protocol_step(
         "document": step.document,
         "engine": engine.name,
         "document_digest": inner.digests.document,  # fully resolved (§7)
-        "points": len(request.points),
-        "point_digests": list(request.digests),  # the provenance units (§7)
+        "points": len(digests),
+        "point_digests": list(digests),  # the provenance units (§7)
+        # each point's coordinates (axis id → value), aligned with
+        # `point_digests`: what a fan-out's join places a metric row by (§2.9)
+        "coords": coords,
         # the sweep axes a downstream script groups by (§6)
-        "axes": [axis.id for axis in inner.points.axes],
+        "axes": [axis.id for axis in inner.axes],
         "files": sorted(result.files),
         # the row bounds this step ran under — the engine's, overridden by the
         # step's own `execution` block; declared before execution, `null` when
         # unbounded (IM spec §8) — and the one recorder of them, the same block
         # `protocol.json` carries for a document run; execution, so it enters
         # no digest and no stamp
-        "execution": execution_record(engine, request),
+        "execution": execution_record(engine, run, launcher=publisher.launcher),
         # the forward groups the engine actually ran for this step (§4.3,
         # §8) — a record field, never an identity field: `--resume` compares
         # `identity`, `implementation` and the content digests, not this
@@ -1630,14 +1914,16 @@ def _run_protocol_step(
     # the bounds the step measured rather than authored (IM spec §8): the
     # numbers to pin in the step's `execution` block to reproduce the step
     record["execution"].update(measured_bounds(record["execution"], result.summaries))
+    # the commit each model's revision resolved to, the list a document
+    # run's receipt carries (IM spec §8): execution, never identity
+    if models := model_records(result.summaries):
+        record[MODELS_KEY] = models
     # the controls layer (§2.2, §8) — like `reduction`, recorded only when
     # authored: the step's own declaration and its waivers, and the statuses
     # it inherits from every control upstream of it, joined by coordinates
     if step.waive is not None:
         record["waive"] = {kind: dict(w) for kind, w in step.waive.items()}
     if ledger is not None:
-        digests = list(request.digests)
-        coords = [dict(point) for point in request.coords]
         if step.control is not None:
             record["control"] = ledger.declare(
                 name,
@@ -1651,10 +1937,169 @@ def _run_protocol_step(
                     "engine": engine.name,
                 },
             )
-        inherited = ledger.inherit(name, loaded, digests, coords, inner.points.explicit)
+        inherited = ledger.inherit(name, loaded, digests, coords, inner.tree)
         if inherited is not None:
             record["controls"] = inherited
     return record
+
+
+def _protocol_run(
+    name: str,
+    step: ProtocolStep,
+    loaded: LoadedWorkflow,
+    run_env: ResolutionEnv,
+    step_dir: Path,
+    engine: Engine | None,
+    publisher: Publisher,
+    selection: Sequence[int] | None,
+) -> tuple[CompiledProtocol, Engine, RunContext]:
+    """Compile, route and build a protocol step's run context — the half of
+    the step every rank of a launched world runs identically
+    (``docs/model_parallelism.md`` §3): the same document, the same ``set``,
+    the same points, so the engines' collectives meet; a refusal here is the
+    same on every rank."""
+    inner = _compile_step(loaded, step, run_env)
+    # the rules that needed the engine (IM spec §5 rules 13, 30) against the
+    # run's one engine — before it loads a model, as `run_protocol`
+    chosen = route_engine(inner, engine)
+    # the engine geometry's document rules, before any weights and on every
+    # rank alike, as `run_protocol` decides them (docs/model_parallelism.md
+    # §8.3, §8.4): a rank that refused alone would leave the others waiting
+    # in a collective
+    check_parallel(inner, chosen, env=run_env)
+    if loaded.inner_digest_kind.get(name) != "campaign":
+        # a step-dependent document compiled at load against a deferring
+        # store, so `check_tokenization` left it out: its answers resolve
+        # now, with the earlier steps' outputs in place, before the engine
+        # is handed it (a static one was resolved before step 1)
+        with _in_step(name, step.document):
+            resolve_answers(
+                inner, env=run_env, tokenizers=tokenizer_service(run_env, engine=chosen)
+            )
+    n_points = point_count(inner.axes)
+    indices = range(n_points) if selection is None else tuple(selection)
+    if any(i < 0 or i >= n_points for i in indices):
+        raise ProtocolError(
+            "P2",
+            f"step {name!r}: its shard selects point indices {list(indices)} of a "
+            f"document that compiled {n_points} point(s) — the "
+            "run-time compile and the load-time expansion disagree",
+        )
+    run = RunContext(
+        output_dir=step_dir,
+        env=run_env,
+        points=tuple(indices),
+        # the step's own row bounds (§2.2) — execution, so they ride on the
+        # run context and never on the compiled document
+        execution=step.execution,
+        # the step's record is its receipt and this runner's stream is its
+        # stream (§4.3): the engine records nothing beside the outputs
+        record=False,
+        # this process's place in a launched world (docs/model_parallelism.md
+        # §3): the engine publishes through it, so one rank writes the step
+        publisher=publisher,
+    )
+    return inner, chosen, run
+
+
+def _compile_step(
+    loaded: LoadedWorkflow, step: ProtocolStep, run_env: ResolutionEnv
+) -> CompiledProtocol:
+    """A protocol step's document compiled for execution. `_protocol_run`
+    runs it, and `--resume` compares its digest with a record
+    (`_run_tree_digest`), so the two cannot compile the step differently."""
+    # The one compiler (IM spec §9), with the step's inputs: the document, its
+    # own directory for relative artifact paths, the step's `set` as the
+    # overrides (section-rooted, IM spec §1), and the run-tree overlay
+    # as the artifact store — real resolution now, since earlier steps' outputs
+    # exist. Validation compiled the same document through the same function
+    # against the deferring store, so the two cannot resolve it differently.
+    return compile_protocol(
+        (loaded.workflow_dir / step.document).resolve(),
+        env=run_env,
+        overrides=step.set,
+        point_cap=step.max_points if step.max_points is not None else DEFAULT_POINT_CAP,
+    )
+
+
+def check_tokenization(
+    loaded: LoadedWorkflow,
+    env: ResolutionEnv,
+    *,
+    engine: Engine | None = None,
+    positions: bool = False,
+    steps: Collection[str] | None = None,
+) -> dict[str, AnswerCheck]:
+    """Resolve, with each model's tokenizer, the metric answers of every
+    inner document that compiles at load (IM spec §2.10;
+    [`resolve_answers`][causalab.protocol.pipeline.resolve_answers]), and
+    return the steps whose documents resolved, in schedule order, each with
+    its document's [`AnswerCheck`][causalab.protocol.pipeline.AnswerCheck]:
+    the metrics whose answers resolved and those left to the score.
+
+    A static document (``inner_digest_kind`` ``"campaign"``) names no earlier
+    step's output, so its tables and fields are the ones its step will run.
+    A step-dependent document compiled against a deferring store, whose
+    placeholders are not what its step runs; it is resolved at its own step,
+    before the engine is handed it, and is never in the result. A document
+    several steps share (the children of a fan-out) is resolved once, and
+    every step that shares it is in the result. A fan-out parent is its
+    children's join and scores nothing, so it is left out. ``steps`` limits the check to
+    those steps (every step when ``None``): [`run_workflow`][] checks every
+    step before step 1, or under ``--resume`` each attempted step at its
+    turn. ``validate --tokenizer`` calls this with ``positions``, which
+    resolves each static document's token positions first
+    ([`resolve_positions`][causalab.protocol.pipeline.resolve_positions]).
+    The tokenizer is ``engine``'s caller-owned bundle's when it holds one,
+    else ``env``'s service ([`tokenizer_service`][causalab.protocol.pipeline.tokenizer_service]),
+    one load per model for the call.
+
+    Raises:
+        ProtocolError: the pass's refusal, at ``steps.<name>`` and naming the
+            document.
+    """
+    tokenizers = tokenizer_service(env, engine=engine)
+    # a fan-out parent is its children's join (§2.9): it hands no engine the
+    # document, and its children resolve that document
+    static = [
+        name
+        for name in loaded.order
+        if name in loaded.inner
+        and loaded.inner_digest_kind.get(name) == "campaign"
+        and getattr(loaded.document.steps[name], "fan_out", None) is None
+    ]
+    resolved: dict[str, AnswerCheck] = {}
+    for name in static:
+        if steps is not None and name not in steps:
+            continue
+        inner = loaded.inner[name]
+        digest = inner.compiled.digests.document
+        if digest in resolved:
+            continue
+        step = loaded.document.steps[name]
+        with _in_step(name, getattr(step, "document", None)):
+            compiled = inner.compiled
+            if positions:
+                compiled = resolve_positions(compiled, env=env, tokenizers=tokenizers)
+            resolved[digest] = resolve_answers(compiled, env=env, tokenizers=tokenizers)
+    return {
+        name: resolved[digest]
+        for name in static
+        if (digest := loaded.inner[name].compiled.digests.document) in resolved
+    }
+
+
+@contextlib.contextmanager
+def _in_step(name: str, document: str | None) -> Iterator[None]:
+    """Re-raise a protocol refusal as the step's: at ``steps.<name>``,
+    naming the document, with the refusal's own code, path and text."""
+    try:
+        yield
+    except ProtocolError as err:
+        at = f"at {err.path}: " if err.path else ""
+        raise ProtocolError(
+            err.code, f"document {document!r}: {at}{err.message}", path=f"steps.{name}"
+        ) from err
 
 
 # --------------------------------------------------------------------------- #
@@ -1662,18 +2107,93 @@ def _run_protocol_step(
 # --------------------------------------------------------------------------- #
 
 
-def _run_script_step(
-    name: str,
-    step: ScriptStep,
-    loaded: LoadedWorkflow,
-    run_root: Path,
-    step_dir: Path,
-    implementation: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Resolve inputs, run the script, verify and stamp its outputs (§4)."""
-    from causalab.io import step_io
+@dataclasses.dataclass(frozen=True)
+class ScriptCall:
+    """One script step's call, resolved before the script runs (§3, §4).
 
-    resolved, tensor_identities = _resolve_inputs(
+    [`script_call`][] builds it. The runner calls the script's
+    ``main(inputs, outputs)``, in process or across the isolation boundary.
+    [`stamp`][causalab.workflow.runner.ScriptCall.stamp] then finishes the
+    outputs, and [`verify_output`][] checks each one before the step is
+    published.
+    """
+
+    #: The step's name in the workflow.
+    name: str
+    #: The step as the workflow loaded it.
+    step: ScriptStep
+    #: What ``main`` receives as ``inputs``: each literal, each resolved
+    #: reference, and the ``reduction`` and ``control`` inputs when the step
+    #: has them.
+    inputs: dict[str, Any]
+    #: What ``main`` receives as ``outputs``: the path of each declared slot
+    #: in the step's directory.
+    outputs: dict[str, Path]
+    #: The identity of every tensor input. A ``.safetensors`` output inherits
+    #: the fields they agree on.
+    identities: tuple[Mapping[str, Any], ...]
+    #: The sha256 of every referenced file by slot, taken before the script
+    #: reads it (§7, §8).
+    input_digests: dict[str, str]
+
+    def stamp(self) -> None:
+        """Refuse a declared output the script did not write, and stamp every
+        ``.safetensors`` output with the identity its tensor inputs agree on.
+
+        Stamping rewrites a bundle, so it comes before the outputs are
+        verified and digested. The digest is then of the bytes that get
+        published.
+
+        Raises:
+            ProtocolError: ``P2`` when a declared output does not exist.
+        """
+        from causalab.io import step_io
+
+        identity = step_io.inherited_identity(self.identities)
+        identity["engine"] = SCRIPT_ENGINE
+        for slot, decl in self.step.outputs.items():
+            target = self.outputs[slot]
+            what = f"step {self.name!r}: output {slot!r} ({decl.file})"
+            if not target.is_file():
+                raise ProtocolError(
+                    "P2",
+                    f"{what} was not written — a script step must create every "
+                    "output it declares",
+                )
+            if decl.suffix == ".safetensors":
+                step_io.stamp_tensor(target, identity, what=what)
+
+
+def script_call(
+    name: str, loaded: LoadedWorkflow, run_root: Path, step_dir: Path
+) -> ScriptCall:
+    """Resolve a script step's inputs and outputs as the runner hands them to
+    the script (§3, §4).
+
+    A reference becomes a path, and a ``key``, ``slot`` or ``entry`` selector
+    reads through it. An authored ``reduction`` travels as the ``reduction``
+    input (§2.6). A certifying step gets the declaration it certifies as the
+    ``control`` input (§2.2). The function is public so that a test can run
+    a script on sample inputs through the runner's own resolution;
+    ``tests/demos/test_papers.py`` does this for every paper package.
+
+    Args:
+        name: The script step's name in ``loaded``.
+        loaded: The loaded workflow.
+        run_root: The run tree. Each step's files sit under its name.
+        step_dir: Where the script writes its outputs.
+
+    Returns:
+        The resolved call.
+
+    Raises:
+        ProtocolError: ``P2`` when ``name`` is not a script step, a
+            referenced file does not exist, or a selector finds nothing in it.
+    """
+    step = loaded.document.steps.get(name)
+    if not isinstance(step, ScriptStep):
+        raise ProtocolError("P2", f"step {name!r} is not a script step")
+    resolved, tensor_identities, input_digests = _resolve_inputs(
         name, step, run_root, loaded.workflow_dir
     )
     if step.reduction is not None:
@@ -1695,31 +2215,32 @@ def _run_script_step(
         resolved[CONTROL_INPUT] = json.loads(
             json.dumps({"step": subject, **declaration})
         )
-    outputs = {slot: step_dir / decl.file for slot, decl in step.outputs.items()}
+    return ScriptCall(
+        name=name,
+        step=step,
+        inputs=resolved,
+        outputs={slot: step_dir / decl.file for slot, decl in step.outputs.items()},
+        identities=tuple(tensor_identities),
+        input_digests=input_digests,
+    )
 
+
+def _run_script_step(
+    name: str,
+    step: ScriptStep,
+    loaded: LoadedWorkflow,
+    run_root: Path,
+    step_dir: Path,
+    implementation: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Resolve inputs, run the script, verify and stamp its outputs (§4)."""
+    call = script_call(name, loaded, run_root, step_dir)
     if step.runtime and step.runtime.get("isolate"):
-        _run_isolated(name, step, loaded, resolved, outputs)
+        _run_isolated(name, step, loaded, call.inputs, call.outputs)
     else:
-        _run_in_process(name, step, loaded, resolved, outputs)
-
-    identity = step_io.inherited_identity(tensor_identities)
-    identity["produced_by"] = loaded.step_digests[name]
-    identity["engine"] = SCRIPT_ENGINE
-
-    # stamping rewrites a bundle, so it happens before the outputs are
-    # verified and digested (`_verify_outputs`) — the digest is of the bytes
-    # that get published
-    for slot, decl in step.outputs.items():
-        target = outputs[slot]
-        what = f"step {name!r}: output {slot!r} ({decl.file})"
-        if not target.is_file():
-            raise ProtocolError(
-                "P2",
-                f"{what} was not written — a script step must create every "
-                "output it declares",
-            )
-        if decl.suffix == ".safetensors":
-            step_io.stamp_tensor(target, identity, what=what)
+        _run_in_process(name, step, loaded, call.inputs, call.outputs)
+    call.stamp()
+    input_digests = call.input_digests
 
     return {
         "type": "script",
@@ -1741,6 +2262,10 @@ def _run_script_step(
             key: (value.target if isinstance(value, Reference) else value)
             for key, value in step.inputs.items()
         },
+        # Referenced file bytes, hashed before the script reads them. Step
+        # references need the same check as external paths: the producer can
+        # publish new bytes without changing this consumer's identity.
+        **({"input_digests": input_digests} if input_digests else {}),
         "axes": [],  # a script step carries no sweep coordinates of its own
         "files": sorted(decl.file for decl in step.outputs.values()),
         **({"runtime": dict(step.runtime)} if step.runtime else {}),
@@ -1750,33 +2275,55 @@ def _run_script_step(
     }
 
 
+def _file_inputs(
+    step: ScriptStep, run_root: Path, workflow_dir: Path
+) -> dict[str, Path]:
+    """Resolve each file reference by slot, before reading any selectors.
+
+    Literal inputs are already covered by the step identity. References name
+    either a published step file or an external path; both need byte checks.
+    """
+    out: dict[str, Path] = {}
+    for slot, value in step.inputs.items():
+        if not isinstance(value, Reference):
+            continue
+        if value.step is not None:
+            out[slot] = run_root / value.step / str(value.file)
+        else:
+            candidate = Path(str(value.path))
+            out[slot] = (
+                candidate
+                if candidate.is_absolute()
+                else (workflow_dir / candidate).resolve()
+            )
+    return out
+
+
 def _resolve_inputs(
     name: str, step: ScriptStep, run_root: Path, workflow_dir: Path
-) -> tuple[dict[str, Any], list[Mapping[str, Any]]]:
+) -> tuple[dict[str, Any], list[Mapping[str, Any]], dict[str, str]]:
     """The §3 grammar, resolved: a locator becomes a path, a selector reads
     through it. Also returns the identity of every tensor input, which is what
-    a safetensors output inherits (§4). A relative ``path`` resolves against
-    ``workflow_dir``, exactly as rule 4 checked it at load."""
+    a safetensors output inherits (§4), and the sha256 of every referenced
+    file by slot — digested here, before the script runs, so the record
+    names the bytes the step read and not whatever the file holds after (§7,
+    §8). A relative ``path`` resolves against ``workflow_dir``, exactly as
+    rule 4 checked it at load."""
     from causalab.io import step_io
 
     resolved: dict[str, Any] = {}
     identities: list[Mapping[str, Any]] = []
+    input_digests: dict[str, str] = {}
+    file_inputs = _file_inputs(step, run_root, workflow_dir)
     for slot, value in step.inputs.items():
         if not isinstance(value, Reference):
             resolved[slot] = value
             continue
         what = f"step {name!r}: input {slot!r} ({value.target})"
-        if value.step is not None:
-            target = run_root / value.step / str(value.file)
-        else:
-            candidate = Path(str(value.path))
-            target = (
-                candidate
-                if candidate.is_absolute()
-                else (workflow_dir / candidate).resolve()
-            )
+        target = file_inputs[slot]
         if not target.is_file():
             raise ProtocolError("P2", f"{what} does not exist at {str(target)!r}")
+        input_digests[slot] = _sha256(target)
         if value.key is not None:
             values = step_io.read_values(target)
             if value.key not in values:
@@ -1803,7 +2350,7 @@ def _resolve_inputs(
                 identities.append(identity)
             except ProtocolError:
                 pass  # multi-slot bundle: nothing unambiguous to inherit
-    return resolved, identities
+    return resolved, identities, input_digests
 
 
 def _verify_outputs(
@@ -1825,25 +2372,61 @@ def _verify_outputs(
     for rel in sorted(files):
         target = attempt_dir / rel
         what = f"step {name!r}: output {rel!r}"
-        checks[rel] = _verify_output(target, declared.get(rel), what)
+        checks[rel] = verify_output(target, declared.get(rel), what=what)
         digests[rel] = _sha256(target)
     return digests, checks
 
 
-def _verify_output(target: Path, decl: OutputDecl | None, what: str) -> str:
-    """One output, checked against its format before it may be published
-    (§2.5, §8); returns the name of the check that passed.
+def verify_output(
+    target: Path, decl: OutputDecl | None = None, *, what: str | None = None
+) -> str:
+    """Check one step output against its format and its declaration (§2.5, §8).
 
-    Existence is where v1's load-time column check moved to, and it is later
-    than a load error — but it is against the real file rather than a
-    declaration believed on faith, and the declaration is what a consuming
-    step was validated against. Every format at least exists and is non-empty;
-    the record formats parse; the two figure formats with a signature carry
-    it. What cannot be verified structurally (``.html``) is recorded as such,
-    so the check's weakness is visible in the step record rather than implied."""
+    The runner calls this on every file the step's record lists, before it
+    publishes the step: a script step's declared outputs, and the files a
+    protocol step's engine reports. A file a script writes without declaring
+    it is published with the step and is not checked. The function is public
+    so that a test can hold a script's outputs to the same check without a
+    run: ``tests/demos/test_papers.py`` runs every paper package's script
+    steps through it.
+
+    Every format must exist and be non-empty. A ``.json`` output must parse.
+    Every declared key must be in a values object, and every declared column
+    must be in the first row of a table. A ``.safetensors`` header must
+    promise the file's own length, and a ``.png`` or ``.pdf`` must start
+    with its signature. An ``.html`` output has no structure to check and is
+    recorded as ``non-empty``, so the weakness of that check is visible in
+    the step record.
+
+    The check reads the real file, so it runs after the script. A consuming
+    step was validated against the declaration at load, which is why a
+    missing declared column refuses here. The check has three limits. An
+    empty table satisfies any column declaration. Only the first row of a
+    table is read, so a later row may lack a declared column. Column dtypes
+    are not checked.
+
+    Args:
+        target: The written file.
+        decl: The step's declaration of the file. ``None`` checks the format
+            alone, as for a file a protocol step's engine reports.
+        what: How a refusal names the file; ``output '<file name>'`` by
+            default.
+
+    Returns:
+        The name of the check that passed: ``json``, ``json-values``,
+        ``json-table``, ``safetensors-header``, ``png-signature``,
+        ``pdf-signature`` or ``non-empty``.
+
+    Raises:
+        ProtocolError: ``P2`` when the file is missing or empty, does not
+            parse under its format, or misses a declared key or column.
+    """
+    what = what if what is not None else f"output {target.name!r}"
     if not target.is_file():
         raise ProtocolError(
-            "P2", f"{what} was not written — every declared output must exist"
+            "P2",
+            f"{what} was not written"
+            + (" — every declared output must exist" if decl is not None else ""),
         )
     if target.stat().st_size == 0:
         raise ProtocolError("P2", f"{what} is empty (0 bytes)")

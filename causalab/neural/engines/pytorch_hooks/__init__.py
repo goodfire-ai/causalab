@@ -1,9 +1,8 @@
-"""The reference protocol engine: native pytorch hooks (spec §8).
+"""Execute compiled interventions through native PyTorch hooks.
 
-Site resolution over raw module hooks, position resolution against the
-padded batch frame, the closed mechanism set, featurizers with the
-error-term contract, metric lowering, the train loop, and artifact
-stamping. Everything enters through :class:`PytorchHooksEngine`.
+``PytorchHooksEngine`` uses the shared site map, position resolution,
+featurizers, write math, and results layer. This engine supplies hooks,
+model loading, and training.
 """
 
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine

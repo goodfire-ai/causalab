@@ -136,6 +136,31 @@ class TestSignature:
     def test_detect_is_none_off_cuda(self) -> None:
         assert Toolchain.detect("cpu") is None
 
+    def test_detect_reads_a_device_list_at_its_first_device(self, monkeypatch) -> None:
+        # the loaders pass ``--device`` as given, and a comma list places the
+        # layers across devices (DeviceMap.parse); torch.device alone refuses
+        # the list, which failed the GPU golden tests
+        import torch
+
+        asked: list[int] = []
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+        monkeypatch.setattr(
+            torch.cuda,
+            "get_device_capability",
+            lambda index: asked.append(index) or (9, 0),
+        )
+        monkeypatch.setattr(torch.cuda, "get_device_name", lambda index: "GPU")
+        toolchain = Toolchain.detect("cuda:1,cuda:0")
+        assert toolchain is not None
+        assert toolchain.capability == "9.0"
+        assert asked == [1]
+
+    def test_detect_is_none_for_a_device_list_without_cuda(self, monkeypatch) -> None:
+        import torch
+
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+        assert Toolchain.detect("cuda:0,cuda:1") is None
+
 
 class TestLayout:
     def test_every_compiler_has_its_directory_under_the_signature(
@@ -616,7 +641,6 @@ class TestLoadersCallIt:
             bundle.tokenizer,
             key=TINY_LLAMA,
             revision="main",
-            device="cpu",
             dtype="fp32",
         )
         assert calls == ["cpu", "cpu"]

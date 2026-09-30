@@ -1,0 +1,42 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Unpatched baselines of the mcqa_symbol package on the test split: next-token accuracy on the base and the counterfactual prompt of each pair, and how often the unpatched base prompt already gives the interchange label, which workflows/scripts/mcqa_symbol/iia_figure.py draws as reference lines."
+  },
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "mcqa_symbol/data#test", "field": "input"},
+    "counterfactual": {"dataset": "mcqa_symbol/data#test", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_base": {"input": "base", "reads": ["base_logits"]},
+      "original_counterfactual": {"input": "counterfactual", "reads": ["cf_logits"]}
+    },
+    "sites": {"lm_head": {"component": "lm_head"}},
+    "reads": {
+      "base_logits": {"site": "lm_head", "pos": -1},
+      "cf_logits": {"site": "lm_head", "pos": -1}
+    },
+    "save": [
+      {
+        "read": "base_logits",
+        "model": "original_base",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms"},
+        "file_path": "clean_base.json"
+      },
+      {
+        "read": "cf_logits",
+        "model": "original_counterfactual",
+        "aggregation": {"kind": "match", "expected": "cf_answer_forms"},
+        "file_path": "clean_cf.json"
+      },
+      {
+        "read": "base_logits",
+        "model": "original_base",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "unpatched_label.json"
+      }
+    ]
+  }
+}

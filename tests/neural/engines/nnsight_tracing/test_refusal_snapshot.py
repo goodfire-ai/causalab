@@ -1,10 +1,6 @@
-"""Every snapshotted **run-time** refusal still refuses, with the same message.
+"""Check runtime refusals with the shared snapshot triggers and assertions.
 
-The run-time half of the refusal snapshot (see
-``tests/protocol/test_refusal_snapshot.py`` for the rule and the shared
-trigger table). Lives here because it loads the tiny fixtures on both engines;
-the nnsight conftest's session bundles share ``load_model``'s cache with the
-table's lazy fixtures, so nothing is loaded twice.
+Tiny model fixtures share the model loader cache.
 """
 
 from __future__ import annotations
@@ -27,7 +23,7 @@ def fixtures() -> table.Fixtures:
 
 
 @pytest.mark.parametrize("entry_id", RUN_IDS)
-def test_every_snapshotted_run_refusal_still_refuses(
+def test_every_run_refusal_matches_the_snapshot(
     entry_id: str, fixtures: table.Fixtures
 ) -> None:
     entry = ENTRIES[entry_id]

@@ -1,0 +1,53 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Figures 1f and 1g of Meng et al. 2022 (arXiv:2202.05262): as rome_fig1_trace_state.json, but the clean state put back is the MLP or attention output of the ten layers [c-5, c+4] around the swept centre c, which workflows/scripts/rome_fig1/fig1_figure.py draws as p(Seattle) over window centre x token."
+  },
+  "model": {"key": "gpt2-xl", "revision": "15ea56dee5df4983c59b2538573817e1667135e2", "dtype": "fp32"},
+  "data": {"base": {"dataset": "rome_fig1/data", "field": "input"}},
+  "axes": {
+    "component": {"values": ["mlp_output", "attention_output"]},
+    "center": {"range": [0, 48]},
+    "window": {
+      "dependent_on": "center",
+      "rule": {"clipped_band": {"width": 10, "clip_to": "layers"}}
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["v_clean"]},
+      "restored": {"input": "base", "reads": ["logits_restored"], "writes": ["corrupt", "put_back"]}
+    },
+    "positions": {
+      "subject": {"variable": "subject"},
+      "tap": {"index": {"sweep": {"range": [0, 7]}}}
+    },
+    "sites": {
+      "emb": {"component": "embeddings"},
+      "restore": {"component": {"axis": "component"}, "layers": {"axis": "window"}},
+      "lm_head": {"component": "lm_head"}
+    },
+    "params": {"noise": {"file_path": "noise_draw/noise.safetensors"}},
+    "reads": {
+      "v_clean": {"site": "restore", "pos": "tap"},
+      "logits_restored": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "corrupt": {
+        "site": "emb",
+        "pos": "subject",
+        "do": {"add_scaled": {"op": "noise", "alpha": 0.1}}
+      },
+      "put_back": {"site": "restore", "pos": "tap", "do": {"swap": "v_clean"}}
+    },
+    "save": [
+      {
+        "read": "logits_restored",
+        "model": "restored",
+        "aggregation": {"kind": "cross_entropy", "target": "base_answer"},
+        "file_path": "ce_restored.json"
+      },
+      {"kind": "location_ledger", "file_path": "location_ledger.json"}
+    ]
+  }
+}

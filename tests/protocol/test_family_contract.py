@@ -2,8 +2,9 @@
 
 What a family declares (``registry.FamilyAdapter``), the built-in two, the
 typed backend pairs and the alias rule they are held to, the ``grouped_mm``
-predicate decided at load, and the offline inventory of the A3B entry — the
-40 / 40 / 10 / 30 counts the A3B inventory asks for, from the registry alone.
+predicate decided at load, and the offline inventory of the
+``Qwen/Qwen3.6-35B-A3B`` entry — its 40 / 40 / 10 / 30 counts, from the
+registry alone.
 """
 
 from __future__ import annotations
@@ -11,11 +12,13 @@ from __future__ import annotations
 import dataclasses
 import re
 import types
+from typing import Any
 
 import pytest
 
-from causalab.protocol.canonical import canonicalize
-from causalab.protocol.errors import ProtocolError, ValidationError
+from causalab.protocol.schema.explicit import canonicalize
+from causalab.protocol.rules.document import validate_document
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
 from causalab.protocol.registry import (
     BACKEND_PAIRS,
     CAPABILITIES,
@@ -23,6 +26,7 @@ from causalab.protocol.registry import (
     DOCS_TABLE_MODEL,
     FAMILIES,
     GPT2_TREE,
+    GPTJ_TREE,
     HOOK_KINDS,
     INTERIOR_ROWS,
     LLAMA_TREE,
@@ -47,6 +51,7 @@ from causalab.protocol.registry import (
     predicate_holds,
     register_family,
     register_model,
+    site_group_map,
     unavailable_at_load,
 )
 from causalab.protocol.schema import (
@@ -61,10 +66,22 @@ from causalab.protocol.schema import (
 from tests.protocol._docs import base_doc, in_order
 from tests.protocol._env import FIXTURES, build_env
 
+
 pytestmark = pytest.mark.unit
 
 ENV = build_env(FIXTURES / "artifacts")
 A3B = get_model_info(DOCS_TABLE_MODEL)
+
+
+def _validate_sites(raw: dict[str, Any]) -> None:
+    """Rule 4's address half — a site's layer, stream, component and head
+    against the model's static metadata — is the checklist's since the rules
+    package: ``validate_document`` decides it
+    with the environment's ``model_info``, and ``canonicalize`` no longer
+    refuses an illegal site (the compiler's ``validate`` stage runs first)."""
+    validate_document(parse_document(in_order(raw)), model_info=ENV.model_info)
+
+
 MOE_ROWS = {c for c, r in CAPABILITIES.items() if "moe" in r.requires}
 DELTA_ROWS = {c for c, s in COMPONENT_STREAMS.items() if s == "linear_attention"}
 
@@ -74,15 +91,40 @@ DELTA_ROWS = {c for c, s in COMPONENT_STREAMS.items() if s == "linear_attention"
 # --------------------------------------------------------------------------- #
 
 
-def test_the_two_built_in_trees_are_registered_and_detect_by_structure():
-    assert {"llama_tree", "gpt2_tree"} <= set(FAMILIES)
+def _ns(**children: Any) -> types.SimpleNamespace:
+    return types.SimpleNamespace(**children)
+
+
+#: A GPT-2 block and a GPT-J block, by their children alone: the two trees
+#: share the root (``transformer.h``) and differ inside the block.
+GPT2_BLOCK = _ns(
+    ln_1=object(),
+    ln_2=object(),
+    attn=_ns(c_attn=object(), c_proj=object()),
+    mlp=_ns(c_fc=object(), c_proj=object()),
+)
+GPTJ_BLOCK = _ns(
+    ln_1=object(),
+    attn=_ns(q_proj=object(), k_proj=object(), v_proj=object(), out_proj=object()),
+    mlp=_ns(fc_in=object(), fc_out=object()),
+)
+
+
+def _transformer_root(*blocks: Any) -> types.SimpleNamespace:
+    return _ns(transformer=_ns(h=list(blocks)))
+
+
+def test_the_three_built_in_trees_are_registered_and_detect_by_structure():
+    assert {"llama_tree", "gpt2_tree", "gptj_tree"} <= set(FAMILIES)
     assert family("llama_tree") is LLAMA_TREE and family("gpt2_tree") is GPT2_TREE
+    assert family("gptj_tree") is GPTJ_TREE
     llama_like = types.SimpleNamespace(
         model=types.SimpleNamespace(layers=[], embed_tokens=object(), norm=object())
     )
-    gpt2_like = types.SimpleNamespace(transformer=types.SimpleNamespace(h=[]))
+    gpt2_like = _transformer_root(GPT2_BLOCK)
     assert family_for(llama_like) is LLAMA_TREE
     assert family_for(gpt2_like) is GPT2_TREE
+    assert family_for(_transformer_root(GPTJ_BLOCK)) is GPTJ_TREE
     both = types.SimpleNamespace(
         model=llama_like.model, transformer=gpt2_like.transformer
     )
@@ -129,16 +171,115 @@ def test_the_two_trees_differ_where_the_module_trees_differ():
     )
 
 
+def test_the_transformer_root_is_told_apart_by_its_blocks():
+    """🐞 GPT-2's predicate was ``transformer.h`` alone, which every tree on
+    that root satisfies. The block's children decide now: GPT-2's
+    ``ln_2`` + ``attn.c_proj``, GPT-J's split projections + ``fc_out`` with no
+    ``ln_2``. A root no predicate recognizes is refused, never guessed."""
+    assert not GPT2_TREE.detect(_transformer_root(GPTJ_BLOCK))
+    assert not GPTJ_TREE.detect(_transformer_root(GPT2_BLOCK))
+    # a stand-in first block (a pipeline stage's identity) does not hide the tree
+    assert family_for(_transformer_root(object(), GPTJ_BLOCK)) is GPTJ_TREE
+    assert family_for(_transformer_root(object(), GPT2_BLOCK)) is GPT2_TREE
+    # GPT-J's attention with a second norm is a sequential block: not GPT-J
+    sequential = _ns(**{**vars(GPTJ_BLOCK), "ln_2": object()})
+    # GPT-Neo's shape: ln_2, but the projections under attn.attention
+    neo = _ns(
+        ln_1=object(),
+        ln_2=object(),
+        attn=_ns(attention=_ns(out_proj=object())),
+        mlp=_ns(c_fc=object(), c_proj=object()),
+    )
+    for block in (sequential, neo):
+        with pytest.raises(ProtocolError, match="no registered model family detects"):
+            family_for(_transformer_root(block))
+    with pytest.raises(ProtocolError, match="no registered model family detects"):
+        family_for(_transformer_root())
+
+
+#: GPT-J's taps, spelled from ``modeling_gptj.py`` (``GPTJBlock``,
+#: ``GPTJAttention``, ``GPTJMLP``) rather than read off the adapter.
+GPTJ_EXPECTED_TAPS = {
+    "attention_input_norm": Tap("block", "ln_1"),
+    "attention_premix": Tap("mixer", "out_proj", "in"),
+    "mlp_activation": Tap("mlp", "fc_out", "in"),
+    "mlp_neuron_output": Tap("mlp", "fc_out", "in"),
+    "attention_output": Tap("mixer"),
+    "mlp_input": Tap("mlp", kind="in"),
+    "mlp_output": Tap("mlp"),
+    "block_input": Tap("block", kind="in"),
+    "block_output": Tap("block"),
+}
+
+
+def test_the_gptj_tree_serves_the_parallel_block():
+    """The parallel block has one norm and one residual add: no ``block_mid``,
+    no ``mlp_input_norm``. Its attention never calls the transformers
+    attention interface, so the function slots and the pattern are not
+    declared either. Everything else of the dense vocabulary is."""
+    taps = GPTJ_TREE.taps
+    for component, tap in GPTJ_EXPECTED_TAPS.items():
+        assert taps[component] == tap, component
+    not_declared = {
+        "block_mid",
+        "mlp_input_norm",
+        "attention_probs",
+        "attention_query",
+        "attention_key",
+        "attention_scores",
+        "attention_z",
+    }
+    assert not (set(taps) & not_declared)
+    assert not (set(taps) & (MOE_ROWS | DELTA_ROWS))
+    assert set(taps) == set(GPT2_TREE.taps) - not_declared
+    assert taps["attention_result"].derivation == "attention_result"
+    assert taps["attention_result"].shape_of == "attention_premix"
+    assert all(taps[c].from_row for c in INTERIOR_ROWS)
+    assert GPTJ_TREE.tree == GPT2_TREE.tree
+    assert GPTJ_TREE.mixers == {"attn": "full_attention"}
+
+
+def test_the_gptj_identity_is_the_parallel_residual_in_the_blocks_order():
+    (parallel,) = GPTJ_TREE.identities
+    assert parallel.name == "residual_parallel" and parallel.additive
+    assert parallel.component == "block_output"
+    # GPTJBlock.forward: attn_outputs + feed_forward_hidden_states + residual
+    assert parallel.inputs == ("attention_output", "mlp_output", "block_input")
+    assert parallel.tolerance_for("fp32") == (0.0, 0.0)
+    with pytest.raises(ValueError, match="no tolerance for dtype 'bf16'"):
+        parallel.tolerance_for("bf16")
+
+
+def test_the_gpt_j_6b_entry_has_sixteen_heads_of_256():
+    """The registry row (the ``float16`` revision's config.json) and what the
+    rows derive from it offline: the head-major premix, the head-grouped
+    gate's map, the MLP width."""
+    info = get_model_info("EleutherAI/gpt-j-6b")
+    assert (info.hidden_size, info.num_layers, info.vocab_size) == (4096, 28, 50400)
+    assert (info.num_heads, info.num_kv_heads, info.head_dim) == (16, 16, 256)
+    assert info.intermediate_size == 4 * 4096
+    assert info.native_dtype == "fp16" and info.family == "gptj"
+    assert info.parallel_plan is not None and info.parallel_plan.empty
+    premix = component_shape(info, "attention_premix")
+    assert premix.head_space == 16 and premix.width == 4096
+    assert site_group_map(info, "head", "attention_premix") == (16, 256)
+    assert component_shape(info, "mlp_activation").width == 16384
+
+
 def test_mixer_children_are_the_union_and_the_stream_table_reads_them():
-    from causalab.neural.shared import streams
+    from causalab.neural.shared import model_tree
 
     children = mixer_children()
     assert children["self_attn"] == "full_attention"
     assert children["attn"] == "full_attention"
     assert children["linear_attn"] == "linear_attention"
     assert set(children.values()) <= set(STREAMS)
-    assert set(streams.FULL_ATTENTION_CHILDREN) >= {"self_attn", "attn"}
-    assert streams.LINEAR_ATTENTION_CHILDREN == ("linear_attn",)
+    assert set(model_tree.FULL_ATTENTION_CHILDREN) >= {"self_attn", "attn"}
+    # GPT-2 and GPT-J share the child name; the table lists it once
+    assert len(set(model_tree.FULL_ATTENTION_CHILDREN)) == len(
+        model_tree.FULL_ATTENTION_CHILDREN
+    )
+    assert model_tree.LINEAR_ATTENTION_CHILDREN == ("linear_attn",)
 
 
 def test_a_tap_is_validated_at_construction():
@@ -241,7 +382,7 @@ _RESIDUAL_OUT = Identity(
     additive=True,
 )
 
-#: the reviewer's counterexample: identical scope/child/target shape to
+#: a counterexample: identical scope/child/target shape to
 #: ``block_mid``, but the target is a *function* of the tap, not a sum over it
 _O_PROJ = Identity(
     "o_proj_fn",
@@ -355,7 +496,7 @@ def test_every_declared_writeback_lands_downstream_of_its_site():
     at the target's rank, so the target has to come *after* the site in the
     forward. It cannot be checked in `registry` (``plan`` imports it, not the
     reverse), so it is pinned here."""
-    from causalab.protocol.plan import COMPONENT_RANK
+    from causalab.protocol.positions.alignment import COMPONENT_RANK
 
     declared = [
         (adapter.family, component, tap.writeback)
@@ -372,7 +513,8 @@ def test_every_declared_writeback_lands_downstream_of_its_site():
 
 
 def test_an_addend_of_an_additive_identity_declares_its_writeback():
-    """The missed-addend bug class, refused on the declaration rather than remembered.
+    """A known bug class (a pre-MLP write that missed the residual stream),
+    refused on the declaration rather than remembered.
 
     A write at a component tapped as the input of a *child* module cannot
     reach the value the enclosing forward already saved for the addition, so a
@@ -610,11 +752,12 @@ def test_a_document_on_the_routed_interior_is_refused_at_load_by_the_knob():
     raw["method"]["sites"]["tgt"] = {"component": "expert_activation", "layers": [0]}
     raw["model"]["key"] = eager.key
     with pytest.raises(ValidationError) as excinfo:
-        canonicalize(in_order(raw), ENV)
+        _validate_sites(raw)
     assert excinfo.value.rule == 4 and excinfo.value.reason == "component_unavailable"
     assert "experts_implementation='eager'" in str(excinfo.value)
     raw["model"]["key"] = grouped.key
-    canonicalize(in_order(raw), ENV)  # valid work still passes
+    _validate_sites(raw)  # valid work still passes
+    canonicalize(in_order(raw), ENV)
 
 
 def test_the_adapter_reads_the_knob_off_a_loaded_config_only():
@@ -640,7 +783,7 @@ def test_the_adapter_reads_the_knob_off_a_loaded_config_only():
 
 
 # --------------------------------------------------------------------------- #
-# the inventory, offline, on the A3B entry
+# the inventory, offline, on the A3B entry — 40 / 40 / 10 / 30
 # --------------------------------------------------------------------------- #
 
 
@@ -662,7 +805,7 @@ def test_the_a3b_inventory_is_forty_forty_ten_thirty():
 def test_the_inventory_never_lists_a_component_off_its_stream():
     """Invalid stream × site combinations are absent by construction — the
     inventory is a query over the rows' `stream` cell, the same cell the
-    canonicalizer and the resolver refuse from."""
+    checklist and the resolver refuse from."""
     inv = inventory(A3B)
     for li in inv.layers:
         for component in li.components:
@@ -677,7 +820,7 @@ def test_the_inventory_never_lists_a_component_off_its_stream():
                     "layers": [li.layer],
                 }
                 with pytest.raises(ValidationError, match="exists only on a"):
-                    canonicalize(in_order(raw), ENV)
+                    _validate_sites(raw)
                 break  # one refusal per layer is the point; the rest is the census
 
 

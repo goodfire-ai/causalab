@@ -1,0 +1,58 @@
+{
+  "output_dir": "10_cross_model_refused",
+  "steps": {
+    "source": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "a821a932b0080ea0c706317964ef0c71ca265f194f94aa6ef21153e7d1840517",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_source_harvest.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "a821a932b0080ea0c706317964ef0c71ca265f194f94aa6ef21153e7d1840517",
+      "points": 1,
+      "point_digests": [
+        "a821a932b0080ea0c706317964ef0c71ca265f194f94aa6ef21153e7d1840517"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "acts.safetensors"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 1,
+      "digests": {
+        "acts.safetensors": "6adf4cdaae4d8cad08da90c1f548b158b17f0976ec4cd5a44ac40fa97402412b"
+      },
+      "checks": {
+        "acts.safetensors": "safetensors-header"
+      },
+      "disposition": "accepted"
+    },
+    "graft": {
+      "type": "intervention_protocol",
+      "status": "failed",
+      "error": {
+        "type": "ValidationError",
+        "message": "[V15] params entry 'v_src' (source/acts.safetensors): ArtifactIdentity mismatch on 'model_key' \u2014 the document implies 'Qwen/Qwen2.5-1.5B-Instruct' but the bundle was stamped 'Qwen/Qwen2.5-1.5B' (\u00a72.5)"
+      }
+    }
+  }
+}

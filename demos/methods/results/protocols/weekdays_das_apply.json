@@ -1,0 +1,21 @@
+{
+  "document": "protocols/weekdays_das_apply.json",
+  "document_digest": "3a40ae7122a7d9c80112292672985500260cb9b2c2cb5f7f6a16cf08cc9a33a3",
+  "run_digest": "984aeea662a89331851a3352d058357db971b31f478663ca91c2d75ba774d860",
+  "ran_as": "workflows/weekdays.json#apply",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "pytorch_hooks",
+  "device": "cuda",
+  "dtype": "bf16",
+  "date": "2026-09-28",
+  "elapsed_s": null,
+  "metrics": {
+    "iia": {
+      "metric": "iia",
+      "unit": "logit",
+      "rows": 19,
+      "eligible_rows": 19,
+      "mean": 0.7336
+    }
+  }
+}

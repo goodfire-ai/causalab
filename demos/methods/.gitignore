@@ -1,0 +1,6 @@
+# `scripts/run_all.py` writes every document's run tree under runs/ and
+# `scripts/summarize.py` reduces each to results/<name>.json; only the
+# results, the scripts and the documents are kept.
+runs/
+__pycache__/
+scripts/jobs/

@@ -1,0 +1,55 @@
+{
+  "document": "protocols/hydra_effect.json",
+  "document_digest": "6e55faf71910ec230c75d27a9a25930183a463952c5d79340135ac7981a73f31",
+  "run_digest": "6e55faf71910ec230c75d27a9a25930183a463952c5d79340135ac7981a73f31",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 44.4,
+  "metrics": {
+    "de12_abl": {
+      "metric": "de12_abl",
+      "unit": "logit",
+      "rows": 3,
+      "eligible_rows": 3,
+      "mean": -0.1739
+    },
+    "de12_clean": {
+      "metric": "de12_clean",
+      "unit": "logit",
+      "rows": 3,
+      "eligible_rows": 3,
+      "mean": 0.4555
+    },
+    "de17_abl": {
+      "metric": "de17_abl",
+      "unit": "logit",
+      "rows": 3,
+      "eligible_rows": 3,
+      "mean": -1.2653
+    },
+    "de17_clean": {
+      "metric": "de17_clean",
+      "unit": "logit",
+      "rows": 3,
+      "eligible_rows": 3,
+      "mean": -0.7472
+    },
+    "te_abl": {
+      "metric": "te_abl",
+      "unit": "logit",
+      "rows": 3,
+      "eligible_rows": 3,
+      "mean": 16.157
+    },
+    "te_clean": {
+      "metric": "te_clean",
+      "unit": "logit",
+      "rows": 3,
+      "eligible_rows": 3,
+      "mean": 16.1044
+    }
+  }
+}

@@ -17,7 +17,7 @@ from safetensors.torch import save_file
 
 from causalab.analysis import subspace_angles
 from causalab.io.step_io import StepError
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 from tests.step_scripts import run_step
 
 pytestmark = pytest.mark.numerical_unit
@@ -27,7 +27,7 @@ XY, XZ, ZW = (E[:, :2].contiguous(), E[:, [0, 2]].contiguous(), E[:, 2:].contigu
 
 
 def _bundle(path: Path, tensors: dict, table: dict | None = None, **meta) -> Path:
-    metadata = {"produced_by": "a" * 64, **meta}
+    metadata = {**meta}
     if table is not None:
         metadata["entries"] = json.dumps(table, sort_keys=True)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,43 +1,19 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "The same layer band as the shipped attention_band_patch preset, declared with `at_once` (sec. 3.1) instead of one entry per layer. It is in the corpus for one reason: what this pins is the compiled form of a *family*, so a change to expansion that quietly changed what a document means moves a digest here rather than passing. Three authored entries carry ten sites, ten reads and ten writes; each band names the interval it means rather than five write names, and the two widths share their writes exactly as the hand-written form did - band10_L10 is band5_L10's and band5_L15's together. This entry's digest is its own and differs from the preset's, for the reason sec. 3.1 states: a v1 canonical form covers `description`, and the two carry different prose. The hand-written form itself is not in the corpus - it is pinned as a fixture, tests/protocol/fixtures/band_patch_handwritten.json, which test_families.py compares this shape against."
   },
-  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main", "dtype": "bf16"},
   "data": {
     "base": {"dataset": "weekdays/data#train", "field": "input"},
     "counterfactual": {"dataset": "weekdays/data#train", "field": "counterfactual_inputs[0]"}
   },
   "method": {
-    "positions": {"tap": {"index": -1}},
-    "sites": {
-      "a": {
-        "component": "attention_output",
-        "layers": {
-          "at_once": {"range": [10, 20]}
-        },
-        "names": "a{layers}"
-      },
-      "lm_head": {"component": "lm_head"}
-    },
-    "reads": {
-      "v": {
-        "site": "a",
-        "pos": "tap",
-        "model": "original",
-        "input": "counterfactual",
-        "names": "v_a{layers}"
-      },
-      "logits_band5_L10": {"site": "lm_head", "pos": -1, "model": "band5_L10", "input": "base"},
-      "logits_band5_L15": {"site": "lm_head", "pos": -1, "model": "band5_L15", "input": "base"},
-      "logits_band10_L10": {"site": "lm_head", "pos": -1, "model": "band10_L10", "input": "base"}
-    },
-    "writes": {
-      "w": {"site": "a", "pos": "tap", "do": {"swap": "v"}, "names": "w{layers}"}
-    },
     "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v"]},
       "band5_L10": {
         "input": "base",
+        "reads": ["logits_band5_L10"],
         "writes": [
           {
             "w": {
@@ -50,6 +26,7 @@
       },
       "band5_L15": {
         "input": "base",
+        "reads": ["logits_band5_L15"],
         "writes": [
           {
             "w": {
@@ -62,6 +39,7 @@
       },
       "band10_L10": {
         "input": "base",
+        "reads": ["logits_band10_L10"],
         "writes": [
           {
             "w": {
@@ -73,46 +51,43 @@
         ]
       }
     },
-    "metrics": {
-      "iia_band5_L10": {
-        "kind": "logit_diff",
-        "of": "logits_band5_L10",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
+    "positions": {"tap": {"index": -1}},
+    "sites": {
+      "a": {
+        "component": "attention_output",
+        "layers": {
+          "at_once": {"range": [10, 20]}
+        },
+        "names": "a{layers}"
       },
-      "iia_band5_L15": {
-        "kind": "logit_diff",
-        "of": "logits_band5_L15",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      },
-      "iia_band10_L10": {
-        "kind": "logit_diff",
-        "of": "logits_band10_L10",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      }
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v": {"site": "a", "pos": "tap", "names": "v_a{layers}"},
+      "logits_band5_L10": {"site": "lm_head", "pos": -1},
+      "logits_band5_L15": {"site": "lm_head", "pos": -1},
+      "logits_band10_L10": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "w": {"site": "a", "pos": "tap", "do": {"swap": "v"}, "names": "w{layers}"}
     },
     "save": [
       {
-        "value": "iia_band5_L10",
+        "read": "logits_band5_L10",
         "model": "band5_L10",
-        "input": "base",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
         "file_path": "iia_band5_L10.json"
       },
       {
-        "value": "iia_band5_L15",
+        "read": "logits_band5_L15",
         "model": "band5_L15",
-        "input": "base",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
         "file_path": "iia_band5_L15.json"
       },
       {
-        "value": "iia_band10_L10",
+        "read": "logits_band10_L10",
         "model": "band10_L10",
-        "input": "base",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
         "file_path": "iia_band10_L10.json"
       }
     ]

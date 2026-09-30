@@ -12,13 +12,16 @@ from typing import Any
 import pytest
 import torch
 
-from causalab.cli import load_engines
+from causalab.neural.shared.engine_router import load_engine
 from causalab.neural.engines.pytorch_hooks.cuda_graphs import (
     GraphExecutor,
     make_executor,
     unsupported_reason,
+    graph_device,
 )
+from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
+from causalab.neural.shared.devices import DeviceMap
 from causalab.neural.shared.featurizers import Gate
 from causalab.protocol.schema import PositionSpec, parse_document
 from tests.neural.engines.pytorch_hooks._drive import executor_for
@@ -29,6 +32,7 @@ from tests.neural.engines.pytorch_hooks.test_train import (
 )
 from tests.protocol._docs import in_order
 
+
 pytestmark = pytest.mark.unit
 
 
@@ -36,13 +40,16 @@ def metadata():
     # Only the placement/config boundary is synthetic; no GPU execution here.
     model: Any = torch.nn.Linear(2, 2).requires_grad_(False).eval()
     model.config = SimpleNamespace(model_type="qwen3", _attn_implementation="eager")
-    return SimpleNamespace(device="cuda", model=model, quantization=None)
+    return SimpleNamespace(
+        devices=DeviceMap.parse("cuda", 2), model=model, quantization=None
+    )
 
 
 @pytest.mark.parametrize(
     "change",
     [
         "cpu",
+        "two_devices",
         "hybrid",
         "eager_experts",
         "quantized",
@@ -64,7 +71,10 @@ def test_unsupported_workloads_are_not_captured(change):
     bundle = metadata()
     assert unsupported_reason(doc, bundle) is None
     if change == "cpu":
-        bundle.device = "cpu"
+        bundle.devices = DeviceMap.parse("cpu", 2)
+    elif change == "two_devices":
+        # a bundle spanning devices is refused by name; the run falls back eagerly
+        bundle.devices = DeviceMap.parse("cuda:0,cuda:1", 2)
     elif change == "hybrid":
         bundle.model.config.model_type = "qwen3_5_moe"
     elif change == "eager_experts":
@@ -205,8 +215,12 @@ def test_first_inference_use_is_eager_and_exact(qwen35moe_bundle):
 
 
 def test_engine_option_and_default():
-    assert not load_engines("pytorch_hooks", "cpu")[0].cuda_graphs
-    assert load_engines("pytorch_hooks", "cuda:1", cuda_graphs=True)[0].cuda_graphs
+    eager = load_engine("pytorch_hooks", device="cpu")
+    graphs = load_engine("pytorch_hooks", device="cuda:1", cuda_graphs=True)
+    assert isinstance(eager, PytorchHooksEngine) and isinstance(
+        graphs, PytorchHooksEngine
+    )
+    assert not eager.cuda_graphs and graphs.cuda_graphs
 
 
 def test_capture_temperature_does_not_change_checkpoint_or_public_anneal():
@@ -223,22 +237,29 @@ def test_capture_temperature_does_not_change_checkpoint_or_public_anneal():
 
 
 @pytest.mark.parametrize("method", ["das", "dbm"])
-@pytest.mark.parametrize("token_form", ["space_prefixed", "id"])
+@pytest.mark.parametrize("answers", ["text", "id"])
 @pytest.mark.parametrize("reduction", ["mean", "sum"])
 def test_capture_objective_matches_cohort_loss(
-    llama_bundle, method, token_form, reduction
+    llama_bundle, method, answers, reduction
 ):
     from causalab.neural.engines.pytorch_hooks import train
     from tests.neural.engines.pytorch_hooks.test_train import ANSWERS, dbm_doc
 
     raw = dbm_doc() if method == "dbm" else das_doc()
-    raw["method"]["metrics"]["ce"]["token_form"] = token_form
+    if answers == "id":
+        # the cross-entropy is spelled where it is consumed (§2.10): on the
+        # objective term the fit minimizes and on the save entry that tables it
+        for entry in [t[1] for t in raw["method"]["train"]["objective"]] + raw[
+            "method"
+        ]["save"]:
+            if entry.get("aggregation", {}).get("kind") == "cross_entropy":
+                entry["aggregation"]["token_form"] = "id"
     point = executor_for(
         raw,
         llama_bundle,
         base_texts=BASES,
         counterfactual_texts=COUNTERFACTUALS,
-        extra_columns={"label": [1, 2, 3, 4] if token_form == "id" else ANSWERS},
+        extra_columns={"label": [1, 2, 3, 4] if answers == "id" else ANSWERS},
     )
     assert point.doc.train is not None
     point.doc = dataclasses.replace(
@@ -308,11 +329,23 @@ def test_new_staging_training_features_fall_back(feature):
             ),
         )
     else:
+        # the aggregation lives on the objective term that consumes it (§2.11)
         doc = dataclasses.replace(
             doc,
-            metrics={
-                "ce": dataclasses.replace(doc.metrics["ce"], kind="soft_accuracy")
-            },
+            train=dataclasses.replace(
+                doc.train,
+                objective=tuple(
+                    dataclasses.replace(
+                        term,
+                        aggregation=dataclasses.replace(
+                            term.aggregation, kind="soft_accuracy"
+                        ),
+                    )
+                    if term.aggregation is not None
+                    else term
+                    for term in doc.train.objective
+                ),
+            ),
         )
     point = make_executor(
         doc,
@@ -614,7 +647,7 @@ def test_graph_labels_are_prepared_once_per_minibatch(llama_bundle, monkeypatch)
 
 
 # --------------------------------------------------------------------------- #
-# one allocator pool per fit
+# one allocator pool per engine
 
 
 def test_graph_pool_is_one_mempool_until_closed(monkeypatch, caplog):
@@ -724,7 +757,9 @@ def test_oom_fallback_releases_the_pool_unless_another_graph_holds_it(
 
     monkeypatch.setattr(bank, "_backward", out_of_memory)
     executor = SimpleNamespace(
-        bundle=SimpleNamespace(device=device), reset_reads=lambda: None
+        # the bundle's placement, one device (`graph_device` reads it)
+        bundle=SimpleNamespace(devices=DeviceMap.parse("cuda:0", 1)),
+        reset_reads=lambda: None,
     )
     assert bank.backward(executor, objective=None) is False
     assert bank.disabled
@@ -804,7 +839,7 @@ def test_training_buckets_share_the_fits_pool_without_a_cap(llama_bundle, monkey
     )
     parameters = list(stages["rot"].parameters())
     bank = TrainingGraphs(parameters, pool=GraphPool())  # the fit's, as in train.py
-    device = torch.device(llama_bundle.device)
+    device = graph_device(llama_bundle)
     for minibatch in minibatches:
         objective = TrainingObjective(minibatch, stages)
         expected = torch.autograd.grad(objective(), parameters)
@@ -894,3 +929,104 @@ def test_eval_executor_joins_the_fits_pool(llama_bundle, monkeypatch):
     # the pool travels to the eval executor explicitly; the point executor,
     # which never captures during a fit, carries none
     assert point.graph_pool is None
+
+
+@pytest.mark.parametrize("shared", [False, True])
+def test_the_warmup_allocates_into_the_pool(monkeypatch, shared):
+    """The warm-up pass grows the pool the capture allocates from: for
+    exactly that pass every allocation on the device is routed into the
+    pool (``GraphPool.allocating`` — autograd's thread included, which
+    ``torch.cuda.use_mem_pool`` would miss), the ordinary cache emptied
+    first, so the capture finds its working set cached on its stream. A
+    private capture (no pool) routes nothing and the capture pass itself
+    never runs routed."""
+    from causalab.neural.engines.pytorch_hooks.cuda_graphs import GraphPool, Replay
+    from tests.neural.engines.pytorch_hooks._fake_cuda import FakeCuda
+
+    cuda = FakeCuda().install(monkeypatch)
+    emptied: list[tuple[int, ...] | None] = []
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: emptied.append(cuda.routing))
+    pool = GraphPool() if shared else None
+    device = torch.device("cpu")
+    seen: list[tuple[int, int] | None] = []
+
+    def work():
+        seen.append(cuda.routing)  # the pool allocations go to, if any
+        return torch.ones(1)
+
+    Replay(work, {}, device=device, pool=pool)
+    handle = None if pool is None else pool.handle(device)
+    # one warm-up pass (routed to the pool when there is one), then the capture
+    assert seen == ([handle, None] if shared else [None, None])
+    if shared:
+        assert cuda.routed == [
+            ("begin", handle),
+            ("end", handle),
+            ("release", handle),
+        ]
+        # the ordinary cache is emptied exactly once here, before the routing
+        # begins (the allocator releases nothing on pressure while
+        # allocations are routed); the real torch.cuda.graph empties it again
+        # before the capture, the fake one does not
+        assert emptied == [None]
+        assert pool is not None
+        pool.close()
+    else:
+        assert cuda.routed == []
+        assert emptied == []  # the private path empties nothing
+
+
+def test_a_capture_without_a_warmup_records_the_pass_once(monkeypatch):
+    """``warmup=False`` — for a pass the caller has just run eagerly on the
+    storage the capture records — runs the work once, in the capture, and
+    routes nothing."""
+    from causalab.neural.engines.pytorch_hooks.cuda_graphs import GraphPool, Replay
+    from tests.neural.engines.pytorch_hooks._fake_cuda import FakeCuda
+
+    cuda = FakeCuda().install(monkeypatch)
+    pool = GraphPool()
+    calls = 0
+
+    def work():
+        nonlocal calls
+        calls += 1
+        return torch.ones(1)
+
+    replay = Replay(work, {}, device=torch.device("cpu"), pool=pool, warmup=False)
+    assert calls == 1
+    assert cuda.routed == []
+    assert cuda.pool_ids == [pool.handle(torch.device("cpu"))]
+    assert replay.pool is pool
+    pool.close()
+
+
+@pytest.mark.skipif(
+    torch.version.cuda is None,
+    reason="a CPU-only torch need not have the CUDA allocator bindings",
+)
+def test_the_pool_routing_bindings_exist():
+    """``GraphPool.allocating`` reaches for torch's private allocator surface
+    (``torch.cuda.use_mem_pool`` is built on the same three bindings). The
+    fakes install whether or not the build has them (the darwin wheel does
+    carry them; a ``+cpu`` wheel need not), so this is the CPU gate's notice,
+    on the CUDA build CI installs, when a torch release moves them."""
+    for name in (
+        "_cuda_beginAllocateToPool",
+        "_cuda_endAllocateToPool",
+        "_cuda_releasePool",
+    ):
+        assert hasattr(torch._C, name), name
+
+
+def test_a_closed_pool_routes_no_allocation(monkeypatch):
+    from causalab.neural.engines.pytorch_hooks.cuda_graphs import GraphPool
+    from tests.neural.engines.pytorch_hooks._fake_cuda import FakeCuda
+
+    cuda = FakeCuda().install(monkeypatch)
+    pool = GraphPool()
+    device = torch.device("cpu")
+    pool.handle(device)
+    pool.close()
+    with pool.allocating(device):
+        assert cuda.routing is None
+    assert cuda.routed == []

@@ -1,0 +1,717 @@
+{
+  "output_dir": "11_attention",
+  "steps": {
+    "pattern_scan": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "5e429b0be6c742f64b0cb057a04b630f7a57d6fdd38b22f2be936168361e1f58",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_head_scan.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "5e429b0be6c742f64b0cb057a04b630f7a57d6fdd38b22f2be936168361e1f58",
+      "points": 8,
+      "point_digests": [
+        "e76de193cc83f6ae4da1a3e26b529d5d0cf4ad3d92d0036ef35d6812302c67d4",
+        "da1c5ab92a402147d8b91eaa27189aa974f00c4ce4c9f9693bc55c535b24b1d3",
+        "1bacbc7b5cec4f496267873802513c1ab0590a58efc6d784ed53f30a3de3efb6",
+        "0738bcf2af0b839acd62b896807a63ed19946e61c3bbf88e15d948bc82d2fc41",
+        "5851318edb36c7234a51bea3547fcfc3584916b42f55bb105a0477b55c1fefee",
+        "57c4887c8f6599c554d3d063732f256093bd0fe3485195c6109fe50c192e9edc",
+        "c52e32d359bb1ed2e8c32afe5fed2e44d5018b91478989835644cb18c6f71d1d",
+        "b9110febd3999f1ce02e6dcd3230e68da8127a476b6c97cf24ac160cc8d4786c"
+      ],
+      "coords": [
+        {
+          "sites.pattern.layers": 20
+        },
+        {
+          "sites.pattern.layers": 21
+        },
+        {
+          "sites.pattern.layers": 22
+        },
+        {
+          "sites.pattern.layers": 23
+        },
+        {
+          "sites.pattern.layers": 24
+        },
+        {
+          "sites.pattern.layers": 25
+        },
+        {
+          "sites.pattern.layers": 26
+        },
+        {
+          "sites.pattern.layers": 27
+        }
+      ],
+      "axes": [
+        "sites.pattern.layers"
+      ],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 9,
+      "digests": {
+        "iia.json": "61092a86e848e0743c17d7205d3f859106e14ec7045042a029c2041cb905c9f3",
+        "logit_diff.json": "5e8eb555f8857e254fbd8624c9a8c32901baf2c272d7e92e088c12e7c94ba38c"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "pattern_curve": {
+      "type": "script",
+      "status": "completed",
+      "identity": "dfb4b74c71e440b373713d5501bd05e4c4ced863949ead6664680f1205d8c1bf",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.io.plots.workflow_figures",
+      "script_sha256": "0de1b7ca714ef474db3ab9f3c7a879e000d5d314d214bea4221e88a361cd81a4",
+      "digest": "dfb4b74c71e440b373713d5501bd05e4c4ced863949ead6664680f1205d8c1bf",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "pattern_scan/iia.json",
+        "plot": "lines",
+        "x": "sites.pattern.layers"
+      },
+      "input_digests": {
+        "table": "61092a86e848e0743c17d7205d3f859106e14ec7045042a029c2041cb905c9f3"
+      },
+      "axes": [],
+      "files": [
+        "11_attention_pattern_iia.json",
+        "11_attention_pattern_iia.png"
+      ],
+      "digests": {
+        "11_attention_pattern_iia.json": "01890929187ec7d44d6f3b5a802e6e538f96d8254ac02b23f3e60882734d4871",
+        "11_attention_pattern_iia.png": "4fcd37e2964cc11e2a85ee886fe144f4976bf025ffc7895e5b355b15831c6dd4"
+      },
+      "checks": {
+        "11_attention_pattern_iia.json": "json",
+        "11_attention_pattern_iia.png": "png-signature"
+      },
+      "disposition": "accepted"
+    },
+    "result_scan": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "6d858f3d3d0f32bba1661cc0878574a82e6337194035f42f2fc5d7c0b6bf4d38",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_head_premix_scan.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "6d858f3d3d0f32bba1661cc0878574a82e6337194035f42f2fc5d7c0b6bf4d38",
+      "points": 96,
+      "point_digests": [
+        "6948777040fddfabf6135e9a0d1074a4a2c41f21a9bf409d439858bafaac4a95",
+        "d97cd3857c3f23e790331dfbc65371890f67d566e98e4933c4d7126a6ba49f75",
+        "966572b37a6e17e82ca9fec86186c595a63078413359b01553e66a4f8dc39358",
+        "fb530e073f4ac48d5b82f924f5e60223dacda278839f7d1df18afc06d4130e29",
+        "1db887a2585237e48cc56633f6683dbfdb39a6e48e3870504718a11ffcaf55b6",
+        "76e1ed21d21ba03c65e95bc1988725e6968bc59a148301262e264b5b92a15ba9",
+        "80d9c3f6627f8128ccb37f385189ab65cf9b226e23798b13bb537bd75087b109",
+        "205589536db1c23fdf37c8c41e3fc67faf956f1a0cac2526faca50c2369af435",
+        "784181b466f94ac106eed95d9e6bfeed7ce0da1b23ceab7e7e3aee508837884a",
+        "165fbb5e18f5030f5c620f4d20fc55fde76df39700b3d8919ba011664de1bef1",
+        "aa79aa56900c6378977bd0fc8aa51381d97f0df4a9822aaa5b107e04ef7a1f03",
+        "470994d18bb46553185c0d929987244a0f6d3777800f02d8f28e11fd05d9c550",
+        "51c448b0aa2bc8d168796e3b65513d0ba08b78b5c83b36b9f50c411c4a6604a3",
+        "acdaa57a8b99568f561526dc65c52201ba6e32ed5c02e189bc23d80cc1906183",
+        "8aaebc97ee8c25d6c6fee9e66a218aa1bf1da990cc85108d8aef9787cd473ffc",
+        "6e3083f4b0df9ce7af914797ca2bf9342b2dfdf661a53e4dd4d8e06365d3179e",
+        "8bb57ac56f44f4b2c3c3cf52e35b2cf7303a834b00500d2c99c6f86ad00c33b2",
+        "98ef7c0662a2eabefe665c06ea161fc8b336cf859dd8d631cd9044c81c2982c3",
+        "2ee7739626b68758651113bc9dd7eb1dc361b60f82cd603c12c7d9a1f683c3cc",
+        "a57800a885cbe81140815152d96bc0718038bffcbd02577977c1e69267fa8d41",
+        "90f5bcb923c515fb457a3c41348e48d18bcfabf06fe17f1bd9a56a197a030d6a",
+        "114c429e2f08e337422016846498a263ee75dd682f4f1a1a3c34e0731bbf8ad8",
+        "19c3871902960aa26378a5fb553495eca2c278dad3eb26e4ab071dca847001f8",
+        "3b6dd06abeff8f6921b3b4be4517952f740788341b1c5b638cfb3d4bbcb98249",
+        "c6fea2a185e92369dc78dd88647c47d83efa608ec16f1f845a038185fbb4b9f8",
+        "359eb82a9500303f0c316074d3d502deb58d3e6e8fc24287a09f64d4d18f1b4b",
+        "9d555a421a4edf6b05eb11abc7caec5d9ff949240eb9c10d4654c004a3069ac0",
+        "b0d449389c016c5ce0521dbdad64ed1833a768b9137426a85407110a7d45767e",
+        "fde999800b3cc7c01b7ac8bf0c2bae5f094a7d9cceb44658a8c292976692ff63",
+        "4e12f322c4a572cce938836dff933692e43104f372826d53f0b2282f59b378cb",
+        "038a01433e035776bf1415a8f968af402527932e08f9573a70f120dd47da4fe2",
+        "0038c071e1bb8db9bb6a8eaf5456bf79ce7afb828eeb7f2b3e9121c4a897921d",
+        "20c03b962767189bc106c052f233e4af857ed4e23eb3616c0d40a009e470424d",
+        "a5384914711267069a6f1987c262f0dee33df9582cf786aa6e3ae16eb25e7ffc",
+        "acdd521a6abc598237f8e0548437ad6116b8c43887d038d5e7997e3c9832dfb9",
+        "e4208ad323304f8ae914c049f46e5970afc5feb06a514ded0657de3bf8406cf9",
+        "ce693a1819fbd4af6b581e194bbe38fb721a6347133851d8af33cab10db7e45a",
+        "59d5b9d220032510d4a98d622c4e587dc624279e316e6e7d3f76a290ddb0b701",
+        "34bc046e9eab8ae64a49357cdd97c8f96e8fd75f0cdc9240fc68bf620d877066",
+        "b9c628cff485a6cbca004a93d28e2582a5ae357bfe8908131b5d693f62bec411",
+        "a69b89ef5d0218eff81384fecfff9132c3e2ca468202a357afec3a8040e194a0",
+        "45c44d8ce2b289bb647c17ed3290af3b34e9d94cebc85fd942f7565c356e7349",
+        "ecc17f7b4c4598a950ee0bd90c259f5dfccf31a0ff278215753616758b1594ae",
+        "0f03e09c867ac9c31ccfcd0ea249fadd800a8cb2251802d56d17aea35f371c33",
+        "f66d1b91769d2839ea64027ae5a669268fdea6d245f1246fc3459950629d7cf6",
+        "9ca89164923712869cef1c8180a6aa50afe26057811cb286d6216ca378e6fb93",
+        "c11dbdf794d8b9c331e44707926ba8c9ce9981093d861a13c0677f55a919fa88",
+        "27e8947dbe798d871a195f39c368f4c7c8bf8ba8a8377bce5aaedbfe189f2284",
+        "a65901a20a516581ff32dacca3a61b7a82c2feef862819ab97c173e606857de3",
+        "1776e18ebaa225e5dde5f68d8d8840c77bca535dadb900f043ed518208785f43",
+        "cf8e90893ae5f533910d8179dc1ff5c0e381b42d90ce5f2f0dd29a8956574f7a",
+        "a145c0e0e213587b80bfc2242d98e9618c353f8229e934778d2af50db2e728c6",
+        "a1dbfa73ba01870e37bbb510aba7dc4a3e70916d654ddf22c6a2cdd21f1c328b",
+        "d4ce4b64a9c4d85daf1972ffbcd126bd9bcac09a1d040c821a756b271e390fc9",
+        "e803d4581c2b77bba68bf2eea6a66c5a05f22dd08f9f614441d259a2fe17a1b4",
+        "18a97b7cef7a54db1eac1e849c1837a5b0b06f8ff82124b6d3e4f1ff6054bbbe",
+        "97c52c61680620c8a620b7f38f34a53e48ef8de73e75f8191d59b1178d57b684",
+        "67c209655e919a2e3a5bc33a40e06d08658e15eb239a49d55ce22914775dfa05",
+        "51b740a68e83bd10d33b510419efa1b2730da0acc31d1c1445b9b8adb6a21e79",
+        "cac59062ce56122d1160f0083527843c3421f3911a08c8d9c950e15cfa6a5800",
+        "33973a71a96bd268d4a6ff2d15bc14310fba1cdb26a3f93fefdbcbe2739b6dfc",
+        "97753689341faeb1d901c1438a15875b62f907aa34dfa0bf7d8cc9b2e3b52ec2",
+        "bd4466928979fccb9d7e4c49cdd41240ef9da7e53223f9a715998af96d1a5483",
+        "f4b9c74e943688d3f4d458b4c16f1d673783941ef6360c4260d555a31f685fc5",
+        "3b7921c01ccc48e9d8521c9fc71d09e67d101383e885037350c34a9ce5033707",
+        "51502077b3fc339ef39a07f4a6b94628ccd7446f626b3c0a8c573a3704e09f6e",
+        "8eeadf71e2ef235f42ce928088ab48fdc7db1d0d406057baccf314a1febc93b5",
+        "30958ff9b510cac3f5a380a9296fa5af3abe708da50f4eb30c28e57d5ef5bc49",
+        "80dcabdf935aa8cd8cabb92c8e6552a583930c9fb375e26dd183a82a05b39070",
+        "bc1a619e6a52563284f9a5048e7e7ab94593b59cada19a7d0aebf6de1e315b4b",
+        "19bf9af5599cd70e599fdaf5a4ab4ef301cf8b12cd298162834e2093563e7f6b",
+        "b5634f3bf760c5741671251434f302ed109fcb4ec3269b618d32ee5dcd70d947",
+        "8b56efb1cb8b47f9d01987b217426ae2af262b1f2c4417d793b78c55e89ec032",
+        "16f42336743c5f4121e6ba65139735b5857497ebc16e2bd425bce016bac6bb36",
+        "34851d5adfdefdaa8b08b7f349810b64e247aa442dfefba7089d8f6a92fbda90",
+        "deb7e6bb1c2c879f2b96bf1e5b6a3e0f9df4086b5f70b8bb951369d728e0af01",
+        "4f6c3105f6c77680409769a66bb732ce04c0a1919dc75d7b4cdaec67321f3e8a",
+        "11cea6ee896cbd8654fd4a5335c858b1c7f7f13b981d0a084b253fc8a47d7c3e",
+        "169ed0419236ce8d397bed7e624cf5673f7cf9698d1dc8cbe79db1a6b978fcc2",
+        "13ff72f67142df40b0be84f70570fdf4e190f4b69d26a4ae33440831518c8b6f",
+        "e1bbf6a8f2169acf9047e6d5acdb461b66db220cff9907c7dcf16996ea5d8e50",
+        "48f0e166ca3b6a5dd016437c1aeedc8a412f71f4fde620e0a75c21590e41437f",
+        "3797a4365d431b5590d8fa55aee5385ea8caebd13693793247e48ad7fd4a6c74",
+        "2e7b1343e1b64882258137f1d3dcea115220715df8b7c0b72614119463f0e500",
+        "54b863e6eaeaf211bafccb8a0442108349aab6154724242504f7e0046ffe953a",
+        "a4cf68583ef750de171dd82b1e22118aac2aa3459d60e7d79c816d27e2486cce",
+        "f39113043f629a81de30137ebcdec74c45966875f60cc30c64d840f8ffb79793",
+        "54a9f86c31ad4aca60b778ba2124d0b053d47bb9d2dddc86663cce57cc0b0324",
+        "30c28844047a6b0043c996e722f05ebf6b61564467f3d371419b0aa08a8a0de3",
+        "a55f9c97a56625ba91113c41ca0b252d472c3ec32cd9ffa4864cca1145f8ba6c",
+        "fc46d6450f11274de81dc585cbf322f7cdbe84194e850d803550130db050fdec",
+        "9895e283bc000b290ceea52d24ac251de0fabc92238b1951cfe40544b4c5f71b",
+        "dcb0763847a1c45583bbf8a99423dc93aea1eba4b69ad993e7296dfbd66ac02b",
+        "da7f9eac9f3cb5c4030b7bd998db6fb20d89feb34e2d827eb6d4719a9522e4f9",
+        "e43e4b59d4264b6a55defd4607a42a74e30f4448e33c3bb194bc1b5a49a47d6d",
+        "4b2c1ccadc275f274fc6b65374ed3f77b919bc4933e15ace14bb3341aa02f432"
+      ],
+      "coords": [
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 0
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 1
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 2
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 3
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 4
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 5
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 6
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 7
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 8
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 9
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 10
+        },
+        {
+          "sites.contribution.layers": 20,
+          "sites.contribution.head": 11
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 0
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 1
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 2
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 3
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 4
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 5
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 6
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 7
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 8
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 9
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 10
+        },
+        {
+          "sites.contribution.layers": 21,
+          "sites.contribution.head": 11
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 0
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 1
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 2
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 3
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 4
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 5
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 6
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 7
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 8
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 9
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 10
+        },
+        {
+          "sites.contribution.layers": 22,
+          "sites.contribution.head": 11
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 0
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 1
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 2
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 3
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 4
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 5
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 6
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 7
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 8
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 9
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 10
+        },
+        {
+          "sites.contribution.layers": 23,
+          "sites.contribution.head": 11
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 0
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 1
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 2
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 3
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 4
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 5
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 6
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 7
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 8
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 9
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 10
+        },
+        {
+          "sites.contribution.layers": 24,
+          "sites.contribution.head": 11
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 0
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 1
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 2
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 3
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 4
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 5
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 6
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 7
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 8
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 9
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 10
+        },
+        {
+          "sites.contribution.layers": 25,
+          "sites.contribution.head": 11
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 0
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 1
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 2
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 3
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 4
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 5
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 6
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 7
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 8
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 9
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 10
+        },
+        {
+          "sites.contribution.layers": 26,
+          "sites.contribution.head": 11
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 0
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 1
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 2
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 3
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 4
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 5
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 6
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 7
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 8
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 9
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 10
+        },
+        {
+          "sites.contribution.layers": 27,
+          "sites.contribution.head": 11
+        }
+      ],
+      "axes": [
+        "sites.contribution.layers",
+        "sites.contribution.head"
+      ],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 97,
+      "digests": {
+        "iia.json": "af5fc88d9c351ab1810175eb7cc061c6374aa4881a8d1e449bb72365840502e2",
+        "logit_diff.json": "c3039d6d9372c4f7be93fd623577a80926518623ab44b5384bc9b09ef4039ea2"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "grid": {
+      "type": "script",
+      "status": "completed",
+      "identity": "74f5fa02f98998fc720ce556150b02ffb2d67c2fcdaaef161f54f86f246c4be6",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.io.plots.workflow_figures",
+      "script_sha256": "0de1b7ca714ef474db3ab9f3c7a879e000d5d314d214bea4221e88a361cd81a4",
+      "digest": "74f5fa02f98998fc720ce556150b02ffb2d67c2fcdaaef161f54f86f246c4be6",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "result_scan/iia.json",
+        "plot": "heatmap",
+        "x": "sites.contribution.layers",
+        "y": "sites.contribution.head"
+      },
+      "input_digests": {
+        "table": "af5fc88d9c351ab1810175eb7cc061c6374aa4881a8d1e449bb72365840502e2"
+      },
+      "axes": [],
+      "files": [
+        "11_attention_head_iia.json",
+        "11_attention_head_iia.png"
+      ],
+      "digests": {
+        "11_attention_head_iia.json": "bbb8bd88440456aea9c3d6a5ca34aefc9bdec2b51226a6a40986ae72504b8cfc",
+        "11_attention_head_iia.png": "6e60c553b5cc70643fd1a779dbf707135e7d81c15ea7648304548f5f24c682bd"
+      },
+      "checks": {
+        "11_attention_head_iia.json": "json",
+        "11_attention_head_iia.png": "png-signature"
+      },
+      "disposition": "accepted"
+    },
+    "best": {
+      "type": "script",
+      "status": "completed",
+      "identity": "b0eb00e74e0a7ca11d55d587aba545b2f6904bdefb1b0a414018e2767d106843",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.workflow.scripts.select",
+      "script_sha256": "a302fd5e3a331e1c6614eb9227a067d345b960a4a8dfe871580c7fa847f6b57e",
+      "digest": "b0eb00e74e0a7ca11d55d587aba545b2f6904bdefb1b0a414018e2767d106843",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "result_scan/iia.json",
+        "choose": "max",
+        "emit": {
+          "best_layer": "sites.contribution.layers",
+          "best_head": "sites.contribution.head"
+        }
+      },
+      "input_digests": {
+        "table": "af5fc88d9c351ab1810175eb7cc061c6374aa4881a8d1e449bb72365840502e2"
+      },
+      "axes": [],
+      "files": [
+        "values.json"
+      ],
+      "digests": {
+        "values.json": "afba85f199686fa2f19971b5ff7e8ee8e2b7ca1a83164b12dc796312b84bf24d"
+      },
+      "checks": {
+        "values.json": "json-values"
+      },
+      "disposition": "accepted"
+    }
+  }
+}

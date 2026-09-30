@@ -23,50 +23,38 @@ import pytest
 from safetensors.torch import load_file
 
 from causalab.cli import main
-from causalab.protocol.resolve import read_safetensors_metadata
+from causalab.io.env import read_safetensors_metadata
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import saved
 from tests.protocol._env import FIXTURES
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.smoke
 
 REPO = Path(__file__).resolve().parents[4]
-METHODS = str(REPO / "causalab/configs/protocols")  # absolute: the workflow is in tmp
+METHODS = str(PROTOCOLS_DIR)  # absolute: the workflow is in tmp
 
 #: A pure-read document that loads the fitted basis as a ``pca`` featurizer.
 #: Its ``file_path`` names the script step's run tree, which is what makes the
 #: edge a derived dependency (§3) — nothing about it is script-specific.
 PROJECT_DOC = {
     "header": {
-        "protocol_version": "3",
+        "protocol_version": "4",
         "description": "read L0 through the fitted PCA basis",
     },
     "model": {"key": TINY_LLAMA, "revision": "main"},
     "data": {"base": {"dataset": "weekdays/data#train", "field": "input"}},
     "method": {
+        "intervened_models": {"original": {"input": "base", "reads": ["coords"]}},
         "positions": {"answer_tok": {"index": -1}},
         "sites": {"L0": {"component": "block_output", "layers": [0]}},
         "featurizers": {
             "basis": {"kind": "pca", "k": 2, "file_path": "fit/weight.safetensors"}
         },
-        "reads": {
-            "coords": {
-                "site": "L0",
-                "pos": "answer_tok",
-                "model": "original",
-                "input": "base",
-                "featurizer": "basis",
-            }
-        },
-        "save": [
-            {
-                "value": "coords",
-                "model": "original",
-                "input": "base",
-                "file_path": "coords.safetensors",
-            }
-        ],
+        "reads": {"coords": {"site": "L0", "pos": "answer_tok", "featurizer": "basis"}},
+        "save": [saved("coords", "original", "coords.safetensors")],
     },
 }
 
@@ -81,7 +69,7 @@ def _workflow(project_doc: Path) -> dict:
             "harvest": {
                 "type": "intervention_protocol",
                 "document": f"{METHODS}/harvest.json",
-                "set": {**tiny, "sites.L8.layers": 0, "sites.L24.layers": 1},
+                "set": {**tiny, "sites.L7.layers": 0, "sites.L21.layers": 1},
             },
             "fit": {
                 "type": "script",
@@ -89,8 +77,8 @@ def _workflow(project_doc: Path) -> dict:
                 "inputs": {
                     "acts": {
                         "step": "harvest",
-                        "file": "acts_L8_ans.safetensors",
-                        "slot": "acts_L8_ans",
+                        "file": "acts_L7_ans.safetensors",
+                        "slot": "acts_L7_ans",
                     },
                     "k": 2,
                 },
@@ -150,6 +138,8 @@ def transform_run(tmp_path_factory: pytest.TempPathFactory) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(wf_path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -201,10 +191,9 @@ def test_fitted_basis_carries_a_checkable_identity(transform_run: Path) -> None:
     # declared by the script, because only it knows its own parameter — a
     # consuming `pca` featurizer's identity check requires the rank
     assert metadata["k"] == "2"
-    # stamped by the runner: dtype from the tensor, provenance from the step
+    # stamped by the runner: dtype from the tensor, the engine name
     assert metadata["dtype"] == "fp32"
     assert metadata["engine"] == "script"
-    assert len(metadata["produced_by"]) == 64
 
 
 def test_protocol_step_consumes_the_fitted_basis(transform_run: Path) -> None:

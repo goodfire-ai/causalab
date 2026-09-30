@@ -2,9 +2,12 @@
 
 Inputs: acts (examples, positions, features), train_rows, k. Outputs: weight
 (positions, features, k), mean (positions, features), coordinates (examples,
-positions, k), spectrum (table). Positions may be semantic aligned targets;
-never pad missing targets into a population. A grouped weight is an analysis
-artifact, not one featurizer; select a position before using it for a localizer.
+positions, k), spectrum (table). Each position is fit over the training rows
+alone, so ``k`` is at most ``min(len(train_rows) - 1, features)``: centering
+removes one degree of freedom (``causalab.analysis.fit_pca``). Positions may
+be semantic aligned targets; never pad missing targets into a population. A
+grouped weight is an analysis artifact, not one featurizer; select a position
+before using it for a localizer.
 """
 
 from __future__ import annotations

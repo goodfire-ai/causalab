@@ -1,0 +1,2762 @@
+{
+  "arms": {
+    "baseline_greedy_b64": {
+      "config": {
+        "group": "baseline",
+        "decoder": "hf",
+        "beams": 1,
+        "forced": false,
+        "batch": 64,
+        "hook": null,
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 19.97998331943286,
+      "rows_below_20_tokens": 2,
+      "rows_cleanup_differs": 2,
+      "apology_rows": {
+        "sorry": 37,
+        "apolog": 0,
+        "thank": 0
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.5613010842368641,
+          "ge": 0.5613010842368641,
+          "authors": 0.5613010842368641,
+          "calibrated": 0.6002722146861446
+        },
+        "severe_toxic": {
+          "gt": 0.02335279399499583,
+          "ge": 0.02335279399499583,
+          "authors": 0.02335279399499583,
+          "calibrated": 0.48624072811143165
+        },
+        "obscene": {
+          "gt": 0.4303586321934946,
+          "ge": 0.4303586321934946,
+          "authors": 0.4303586321934946,
+          "calibrated": 0.5363291486271689
+        },
+        "threat": {
+          "gt": 0.03669724770642202,
+          "ge": 0.03669724770642202,
+          "authors": 0.03669724770642202,
+          "calibrated": 0.17650289516929216
+        },
+        "insult": {
+          "gt": 0.26438698915763137,
+          "ge": 0.26438698915763137,
+          "authors": 0.26438698915763137,
+          "calibrated": 0.46161334337302884
+        },
+        "identity_hate": {
+          "gt": 0.030025020850708923,
+          "ge": 0.030025020850708923,
+          "authors": 0.030025020850708923,
+          "calibrated": 0.14690141691975825
+        }
+      }
+    },
+    "amplified_greedy_b64_post": {
+      "config": {
+        "group": "amplified",
+        "decoder": "hf",
+        "beams": 1,
+        "forced": false,
+        "batch": 64,
+        "hook": "post",
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 19.954128440366972,
+      "rows_below_20_tokens": 6,
+      "rows_cleanup_differs": 1,
+      "apology_rows": {
+        "sorry": 343,
+        "apolog": 17,
+        "thank": 31
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.23436196830692244,
+          "ge": 0.23436196830692244,
+          "authors": 0.23436196830692244,
+          "calibrated": 0.2656434559809026
+        },
+        "severe_toxic": {
+          "gt": 0.009174311926605505,
+          "ge": 0.009174311926605505,
+          "authors": 0.009174311926605505,
+          "calibrated": 0.2055982507270238
+        },
+        "obscene": {
+          "gt": 0.20016680567139283,
+          "ge": 0.20016680567139283,
+          "authors": 0.20016680567139283,
+          "calibrated": 0.2460431853885074
+        },
+        "threat": {
+          "gt": 0.010008340283569641,
+          "ge": 0.010008340283569641,
+          "authors": 0.010008340283569641,
+          "calibrated": 0.08993159465003114
+        },
+        "insult": {
+          "gt": 0.07673060884070058,
+          "ge": 0.07673060884070058,
+          "authors": 0.07673060884070058,
+          "calibrated": 0.185143052803911
+        },
+        "identity_hate": {
+          "gt": 0.010008340283569641,
+          "ge": 0.010008340283569641,
+          "authors": 0.010008340283569641,
+          "calibrated": 0.0564312618653913
+        }
+      }
+    },
+    "baseline_greedy_b1": {
+      "config": {
+        "group": "baseline",
+        "decoder": "hf",
+        "beams": 1,
+        "forced": false,
+        "batch": 1,
+        "hook": null,
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 19.97998331943286,
+      "rows_below_20_tokens": 2,
+      "rows_cleanup_differs": 2,
+      "apology_rows": {
+        "sorry": 37,
+        "apolog": 0,
+        "thank": 0
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.5613010842368641,
+          "ge": 0.5613010842368641,
+          "authors": 0.5613010842368641,
+          "calibrated": 0.6002722146861446
+        },
+        "severe_toxic": {
+          "gt": 0.02335279399499583,
+          "ge": 0.02335279399499583,
+          "authors": 0.02335279399499583,
+          "calibrated": 0.48624072811143165
+        },
+        "obscene": {
+          "gt": 0.4303586321934946,
+          "ge": 0.4303586321934946,
+          "authors": 0.4303586321934946,
+          "calibrated": 0.5363291486271689
+        },
+        "threat": {
+          "gt": 0.03669724770642202,
+          "ge": 0.03669724770642202,
+          "authors": 0.03669724770642202,
+          "calibrated": 0.17650289516929216
+        },
+        "insult": {
+          "gt": 0.26438698915763137,
+          "ge": 0.26438698915763137,
+          "authors": 0.26438698915763137,
+          "calibrated": 0.46161334337302884
+        },
+        "identity_hate": {
+          "gt": 0.030025020850708923,
+          "ge": 0.030025020850708923,
+          "authors": 0.030025020850708923,
+          "calibrated": 0.14690141691975825
+        }
+      }
+    },
+    "amplified_greedy_b1_post": {
+      "config": {
+        "group": "amplified",
+        "decoder": "hf",
+        "beams": 1,
+        "forced": false,
+        "batch": 1,
+        "hook": "post",
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 19.954128440366972,
+      "rows_below_20_tokens": 6,
+      "rows_cleanup_differs": 1,
+      "apology_rows": {
+        "sorry": 343,
+        "apolog": 17,
+        "thank": 31
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.23436196830692244,
+          "ge": 0.23436196830692244,
+          "authors": 0.23436196830692244,
+          "calibrated": 0.2656395403548136
+        },
+        "severe_toxic": {
+          "gt": 0.009174311926605505,
+          "ge": 0.009174311926605505,
+          "authors": 0.009174311926605505,
+          "calibrated": 0.2056169929372927
+        },
+        "obscene": {
+          "gt": 0.20016680567139283,
+          "ge": 0.20016680567139283,
+          "authors": 0.20016680567139283,
+          "calibrated": 0.2460431853885074
+        },
+        "threat": {
+          "gt": 0.010008340283569641,
+          "ge": 0.010008340283569641,
+          "authors": 0.010008340283569641,
+          "calibrated": 0.0899762747405828
+        },
+        "insult": {
+          "gt": 0.07673060884070058,
+          "ge": 0.07673060884070058,
+          "authors": 0.07673060884070058,
+          "calibrated": 0.185143052803911
+        },
+        "identity_hate": {
+          "gt": 0.010008340283569641,
+          "ge": 0.010008340283569641,
+          "authors": 0.010008340283569641,
+          "calibrated": 0.0564312618653913
+        }
+      }
+    },
+    "baseline_greedy_forced_b1": {
+      "config": {
+        "group": "baseline",
+        "decoder": "hf",
+        "beams": 1,
+        "forced": true,
+        "batch": 1,
+        "hook": null,
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 20.0,
+      "rows_below_20_tokens": 0,
+      "rows_cleanup_differs": 2,
+      "apology_rows": {
+        "sorry": 37,
+        "apolog": 0,
+        "thank": 0
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.5613010842368641,
+          "ge": 0.5613010842368641,
+          "authors": 0.5613010842368641,
+          "calibrated": 0.6002682990600555
+        },
+        "severe_toxic": {
+          "gt": 0.02335279399499583,
+          "ge": 0.02335279399499583,
+          "authors": 0.02335279399499583,
+          "calibrated": 0.48625947032170047
+        },
+        "obscene": {
+          "gt": 0.4303586321934946,
+          "ge": 0.4303586321934946,
+          "authors": 0.4303586321934946,
+          "calibrated": 0.5363291486271689
+        },
+        "threat": {
+          "gt": 0.03669724770642202,
+          "ge": 0.03669724770642202,
+          "authors": 0.03669724770642202,
+          "calibrated": 0.176519916156169
+        },
+        "insult": {
+          "gt": 0.26438698915763137,
+          "ge": 0.26438698915763137,
+          "authors": 0.26438698915763137,
+          "calibrated": 0.46161334337302884
+        },
+        "identity_hate": {
+          "gt": 0.030025020850708923,
+          "ge": 0.030025020850708923,
+          "authors": 0.030025020850708923,
+          "calibrated": 0.14690141691975825
+        }
+      }
+    },
+    "amplified_greedy_forced_b1_post": {
+      "config": {
+        "group": "amplified",
+        "decoder": "hf",
+        "beams": 1,
+        "forced": true,
+        "batch": 1,
+        "hook": "post",
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 20.0,
+      "rows_below_20_tokens": 0,
+      "rows_cleanup_differs": 1,
+      "apology_rows": {
+        "sorry": 343,
+        "apolog": 17,
+        "thank": 32
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.23519599666388658,
+          "ge": 0.23519599666388658,
+          "authors": 0.23519599666388658,
+          "calibrated": 0.2663920475769485
+        },
+        "severe_toxic": {
+          "gt": 0.009174311926605505,
+          "ge": 0.009174311926605505,
+          "authors": 0.009174311926605505,
+          "calibrated": 0.2059336387964196
+        },
+        "obscene": {
+          "gt": 0.20016680567139283,
+          "ge": 0.20016680567139283,
+          "authors": 0.20016680567139283,
+          "calibrated": 0.24675422338868416
+        },
+        "threat": {
+          "gt": 0.010008340283569641,
+          "ge": 0.010008340283569641,
+          "authors": 0.010008340283569641,
+          "calibrated": 0.09000851771012199
+        },
+        "insult": {
+          "gt": 0.07673060884070058,
+          "ge": 0.07673060884070058,
+          "authors": 0.07673060884070058,
+          "calibrated": 0.18546352666405516
+        },
+        "identity_hate": {
+          "gt": 0.010008340283569641,
+          "ge": 0.010008340283569641,
+          "authors": 0.010008340283569641,
+          "calibrated": 0.05650357394985645
+        }
+      }
+    },
+    "baseline_beam3_b1": {
+      "config": {
+        "group": "baseline",
+        "decoder": "hf",
+        "beams": 3,
+        "forced": false,
+        "batch": 1,
+        "hook": null,
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 19.949958298582153,
+      "rows_below_20_tokens": 5,
+      "rows_cleanup_differs": 1,
+      "apology_rows": {
+        "sorry": 53,
+        "apolog": 0,
+        "thank": 0
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.5471226021684737,
+          "ge": 0.5471226021684737,
+          "authors": 0.5471226021684737,
+          "calibrated": 0.5851389250556238
+        },
+        "severe_toxic": {
+          "gt": 0.019182652210175146,
+          "ge": 0.019182652210175146,
+          "authors": 0.019182652210175146,
+          "calibrated": 0.465884086422258
+        },
+        "obscene": {
+          "gt": 0.4036697247706422,
+          "ge": 0.4036697247706422,
+          "authors": 0.4036697247706422,
+          "calibrated": 0.51568998063335
+        },
+        "threat": {
+          "gt": 0.045037531276063386,
+          "ge": 0.045037531276063386,
+          "authors": 0.045037531276063386,
+          "calibrated": 0.17999797460340014
+        },
+        "insult": {
+          "gt": 0.2176814011676397,
+          "ge": 0.2176814011676397,
+          "authors": 0.2176814011676397,
+          "calibrated": 0.43717851155219684
+        },
+        "identity_hate": {
+          "gt": 0.02585487906588824,
+          "ge": 0.02585487906588824,
+          "authors": 0.02585487906588824,
+          "calibrated": 0.14203539943395393
+        }
+      }
+    },
+    "amplified_beam3_b1_post": {
+      "config": {
+        "group": "amplified",
+        "decoder": "hf",
+        "beams": 3,
+        "forced": false,
+        "batch": 1,
+        "hook": "post",
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 19.8673894912427,
+      "rows_below_20_tokens": 19,
+      "rows_cleanup_differs": 0,
+      "apology_rows": {
+        "sorry": 310,
+        "apolog": 11,
+        "thank": 91
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.2635529608006672,
+          "ge": 0.2635529608006672,
+          "authors": 0.2635529608006672,
+          "calibrated": 0.2976067785220401
+        },
+        "severe_toxic": {
+          "gt": 0.010842368640533779,
+          "ge": 0.010842368640533779,
+          "authors": 0.010842368640533779,
+          "calibrated": 0.23126637498864866
+        },
+        "obscene": {
+          "gt": 0.21934945788156798,
+          "ge": 0.21934945788156798,
+          "authors": 0.21934945788156798,
+          "calibrated": 0.2728413960213048
+        },
+        "threat": {
+          "gt": 0.011676396997497914,
+          "ge": 0.011676396997497914,
+          "authors": 0.011676396997497914,
+          "calibrated": 0.09497939012134998
+        },
+        "insult": {
+          "gt": 0.0950792326939116,
+          "ge": 0.0950792326939116,
+          "authors": 0.0950792326939116,
+          "calibrated": 0.21386303538876997
+        },
+        "identity_hate": {
+          "gt": 0.015012510425354461,
+          "ge": 0.015012510425354461,
+          "authors": 0.015012510425354461,
+          "calibrated": 0.06987860395909952
+        }
+      }
+    },
+    "amplified_greedy_b1_pre": {
+      "config": {
+        "group": "amplified",
+        "decoder": "hf",
+        "beams": 1,
+        "forced": false,
+        "batch": 1,
+        "hook": "pre",
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 19.954128440366972,
+      "rows_below_20_tokens": 6,
+      "rows_cleanup_differs": 1,
+      "apology_rows": {
+        "sorry": 343,
+        "apolog": 17,
+        "thank": 31
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.23436196830692244,
+          "ge": 0.23436196830692244,
+          "authors": 0.23436196830692244,
+          "calibrated": 0.26563159722760443
+        },
+        "severe_toxic": {
+          "gt": 0.009174311926605505,
+          "ge": 0.009174311926605505,
+          "authors": 0.009174311926605505,
+          "calibrated": 0.20561094925354656
+        },
+        "obscene": {
+          "gt": 0.20016680567139283,
+          "ge": 0.20016680567139283,
+          "authors": 0.20016680567139283,
+          "calibrated": 0.24604702883715698
+        },
+        "threat": {
+          "gt": 0.010008340283569641,
+          "ge": 0.010008340283569641,
+          "authors": 0.010008340283569641,
+          "calibrated": 0.08995925375370596
+        },
+        "insult": {
+          "gt": 0.07673060884070058,
+          "ge": 0.07673060884070058,
+          "authors": 0.07673060884070058,
+          "calibrated": 0.185143052803911
+        },
+        "identity_hate": {
+          "gt": 0.010008340283569641,
+          "ge": 0.010008340283569641,
+          "authors": 0.010008340283569641,
+          "calibrated": 0.05644063297052573
+        }
+      }
+    },
+    "baseline_beam3_forced_b1": {
+      "config": {
+        "group": "baseline",
+        "decoder": "hf",
+        "beams": 3,
+        "forced": true,
+        "batch": 1,
+        "hook": null,
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 20.0,
+      "rows_below_20_tokens": 0,
+      "rows_cleanup_differs": 1,
+      "apology_rows": {
+        "sorry": 53,
+        "apolog": 0,
+        "thank": 0
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.5471226021684737,
+          "ge": 0.5471226021684737,
+          "authors": 0.5471226021684737,
+          "calibrated": 0.5853771466944598
+        },
+        "severe_toxic": {
+          "gt": 0.020016680567139282,
+          "ge": 0.020016680567139282,
+          "authors": 0.020016680567139282,
+          "calibrated": 0.466032149883382
+        },
+        "obscene": {
+          "gt": 0.4036697247706422,
+          "ge": 0.4036697247706422,
+          "authors": 0.4036697247706422,
+          "calibrated": 0.5157152990153635
+        },
+        "threat": {
+          "gt": 0.045037531276063386,
+          "ge": 0.045037531276063386,
+          "authors": 0.045037531276063386,
+          "calibrated": 0.1800513058567032
+        },
+        "insult": {
+          "gt": 0.2176814011676397,
+          "ge": 0.2176814011676397,
+          "authors": 0.2176814011676397,
+          "calibrated": 0.43736806345150686
+        },
+        "identity_hate": {
+          "gt": 0.02585487906588824,
+          "ge": 0.02585487906588824,
+          "authors": 0.02585487906588824,
+          "calibrated": 0.14267148610307498
+        }
+      }
+    },
+    "amplified_beam3_forced_b1_post": {
+      "config": {
+        "group": "amplified",
+        "decoder": "hf",
+        "beams": 3,
+        "forced": true,
+        "batch": 1,
+        "hook": "post",
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 20.0,
+      "rows_below_20_tokens": 0,
+      "rows_cleanup_differs": 0,
+      "apology_rows": {
+        "sorry": 311,
+        "apolog": 13,
+        "thank": 94
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.2635529608006672,
+          "ge": 0.2635529608006672,
+          "authors": 0.2635529608006672,
+          "calibrated": 0.2973918019331014
+        },
+        "severe_toxic": {
+          "gt": 0.011676396997497914,
+          "ge": 0.011676396997497914,
+          "authors": 0.011676396997497914,
+          "calibrated": 0.23100146225897794
+        },
+        "obscene": {
+          "gt": 0.21934945788156798,
+          "ge": 0.21934945788156798,
+          "authors": 0.21934945788156798,
+          "calibrated": 0.27283917054271367
+        },
+        "threat": {
+          "gt": 0.011676396997497914,
+          "ge": 0.011676396997497914,
+          "authors": 0.011676396997497914,
+          "calibrated": 0.0950737109535313
+        },
+        "insult": {
+          "gt": 0.09591326105087573,
+          "ge": 0.09591326105087573,
+          "authors": 0.09591326105087573,
+          "calibrated": 0.21403512327510138
+        },
+        "identity_hate": {
+          "gt": 0.0158465387823186,
+          "ge": 0.0158465387823186,
+          "authors": 0.0158465387823186,
+          "calibrated": 0.07070996228808805
+        }
+      }
+    },
+    "amplified_beam3_forced_b1_pre": {
+      "config": {
+        "group": "amplified",
+        "decoder": "hf",
+        "beams": 3,
+        "forced": true,
+        "batch": 1,
+        "hook": "pre",
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 20.0,
+      "rows_below_20_tokens": 0,
+      "rows_cleanup_differs": 0,
+      "apology_rows": {
+        "sorry": 310,
+        "apolog": 13,
+        "thank": 93
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.26438698915763137,
+          "ge": 0.26438698915763137,
+          "authors": 0.26438698915763137,
+          "calibrated": 0.2986148264077452
+        },
+        "severe_toxic": {
+          "gt": 0.011676396997497914,
+          "ge": 0.011676396997497914,
+          "authors": 0.011676396997497914,
+          "calibrated": 0.23197552789559636
+        },
+        "obscene": {
+          "gt": 0.22018348623853212,
+          "ge": 0.22018348623853212,
+          "authors": 0.22018348623853212,
+          "calibrated": 0.27399866551392826
+        },
+        "threat": {
+          "gt": 0.011676396997497914,
+          "ge": 0.011676396997497914,
+          "authors": 0.011676396997497914,
+          "calibrated": 0.09497623957766207
+        },
+        "insult": {
+          "gt": 0.09591326105087573,
+          "ge": 0.09591326105087573,
+          "authors": 0.09591326105087573,
+          "calibrated": 0.21516212524670442
+        },
+        "identity_hate": {
+          "gt": 0.0158465387823186,
+          "ge": 0.0158465387823186,
+          "authors": 0.0158465387823186,
+          "calibrated": 0.07132128721644612
+        }
+      }
+    },
+    "baseline_authors": {
+      "config": {
+        "group": "baseline",
+        "decoder": "authors",
+        "beams": 3,
+        "forced": true,
+        "batch": 1,
+        "hook": null,
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 20.0,
+      "rows_below_20_tokens": 0,
+      "rows_cleanup_differs": 1,
+      "apology_rows": {
+        "sorry": 53,
+        "apolog": 0,
+        "thank": 0
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.5471226021684737,
+          "ge": 0.5471226021684737,
+          "authors": 0.5471226021684737,
+          "calibrated": 0.5853771466944598
+        },
+        "severe_toxic": {
+          "gt": 0.020016680567139282,
+          "ge": 0.020016680567139282,
+          "authors": 0.020016680567139282,
+          "calibrated": 0.466032149883382
+        },
+        "obscene": {
+          "gt": 0.4036697247706422,
+          "ge": 0.4036697247706422,
+          "authors": 0.4036697247706422,
+          "calibrated": 0.5157152990153635
+        },
+        "threat": {
+          "gt": 0.045037531276063386,
+          "ge": 0.045037531276063386,
+          "authors": 0.045037531276063386,
+          "calibrated": 0.1800513058567032
+        },
+        "insult": {
+          "gt": 0.2176814011676397,
+          "ge": 0.2176814011676397,
+          "authors": 0.2176814011676397,
+          "calibrated": 0.43736806345150686
+        },
+        "identity_hate": {
+          "gt": 0.02585487906588824,
+          "ge": 0.02585487906588824,
+          "authors": 0.02585487906588824,
+          "calibrated": 0.14267148610307498
+        }
+      }
+    },
+    "amplified_authors": {
+      "config": {
+        "group": "amplified",
+        "decoder": "authors",
+        "beams": 3,
+        "forced": true,
+        "batch": 1,
+        "hook": "pre",
+        "attn": "sdpa",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "sdpa",
+      "n": 1199,
+      "mean_new_tokens": 20.0,
+      "rows_below_20_tokens": 0,
+      "rows_cleanup_differs": 0,
+      "apology_rows": {
+        "sorry": 310,
+        "apolog": 13,
+        "thank": 93
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.26438698915763137,
+          "ge": 0.26438698915763137,
+          "authors": 0.26438698915763137,
+          "calibrated": 0.2986148264077452
+        },
+        "severe_toxic": {
+          "gt": 0.011676396997497914,
+          "ge": 0.011676396997497914,
+          "authors": 0.011676396997497914,
+          "calibrated": 0.23197552789559636
+        },
+        "obscene": {
+          "gt": 0.22018348623853212,
+          "ge": 0.22018348623853212,
+          "authors": 0.22018348623853212,
+          "calibrated": 0.27399866551392826
+        },
+        "threat": {
+          "gt": 0.011676396997497914,
+          "ge": 0.011676396997497914,
+          "authors": 0.011676396997497914,
+          "calibrated": 0.09497623957766207
+        },
+        "insult": {
+          "gt": 0.09591326105087573,
+          "ge": 0.09591326105087573,
+          "authors": 0.09591326105087573,
+          "calibrated": 0.21516212524670442
+        },
+        "identity_hate": {
+          "gt": 0.0158465387823186,
+          "ge": 0.0158465387823186,
+          "authors": 0.0158465387823186,
+          "calibrated": 0.07132128721644612
+        }
+      }
+    },
+    "baseline_authors_eager": {
+      "config": {
+        "group": "baseline",
+        "decoder": "authors",
+        "beams": 3,
+        "forced": true,
+        "batch": 1,
+        "hook": null,
+        "attn": "eager",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "eager",
+      "n": 1199,
+      "mean_new_tokens": 20.0,
+      "rows_below_20_tokens": 0,
+      "rows_cleanup_differs": 1,
+      "apology_rows": {
+        "sorry": 53,
+        "apolog": 0,
+        "thank": 0
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.5471226021684737,
+          "ge": 0.5471226021684737,
+          "authors": 0.5471226021684737,
+          "calibrated": 0.5853771466944598
+        },
+        "severe_toxic": {
+          "gt": 0.020016680567139282,
+          "ge": 0.020016680567139282,
+          "authors": 0.020016680567139282,
+          "calibrated": 0.466032149883382
+        },
+        "obscene": {
+          "gt": 0.4036697247706422,
+          "ge": 0.4036697247706422,
+          "authors": 0.4036697247706422,
+          "calibrated": 0.5157152990153635
+        },
+        "threat": {
+          "gt": 0.045037531276063386,
+          "ge": 0.045037531276063386,
+          "authors": 0.045037531276063386,
+          "calibrated": 0.1800513058567032
+        },
+        "insult": {
+          "gt": 0.2176814011676397,
+          "ge": 0.2176814011676397,
+          "authors": 0.2176814011676397,
+          "calibrated": 0.43736806345150686
+        },
+        "identity_hate": {
+          "gt": 0.02585487906588824,
+          "ge": 0.02585487906588824,
+          "authors": 0.02585487906588824,
+          "calibrated": 0.14267148610307498
+        }
+      }
+    },
+    "amplified_authors_eager": {
+      "config": {
+        "group": "amplified",
+        "decoder": "authors",
+        "beams": 3,
+        "forced": true,
+        "batch": 1,
+        "hook": "pre",
+        "attn": "eager",
+        "method": null
+      },
+      "provenance": {
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1",
+        "python": "3.10.12",
+        "device": "NVIDIA H100 80GB HBM3",
+        "model_revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+        "classifier_revision": "4d6c22e74ba2fdd26bc4f7238f50766b045a0d94"
+      },
+      "attn_implementation": "eager",
+      "n": 1199,
+      "mean_new_tokens": 20.0,
+      "rows_below_20_tokens": 0,
+      "rows_cleanup_differs": 0,
+      "apology_rows": {
+        "sorry": 310,
+        "apolog": 13,
+        "thank": 93
+      },
+      "rates": {
+        "toxic": {
+          "gt": 0.26438698915763137,
+          "ge": 0.26438698915763137,
+          "authors": 0.26438698915763137,
+          "calibrated": 0.2986148264077452
+        },
+        "severe_toxic": {
+          "gt": 0.011676396997497914,
+          "ge": 0.011676396997497914,
+          "authors": 0.011676396997497914,
+          "calibrated": 0.23197552789559636
+        },
+        "obscene": {
+          "gt": 0.22018348623853212,
+          "ge": 0.22018348623853212,
+          "authors": 0.22018348623853212,
+          "calibrated": 0.27399866551392826
+        },
+        "threat": {
+          "gt": 0.011676396997497914,
+          "ge": 0.011676396997497914,
+          "authors": 0.011676396997497914,
+          "calibrated": 0.09497623957766207
+        },
+        "insult": {
+          "gt": 0.09591326105087573,
+          "ge": 0.09591326105087573,
+          "authors": 0.09591326105087573,
+          "calibrated": 0.21516212524670442
+        },
+        "identity_hate": {
+          "gt": 0.0158465387823186,
+          "ge": 0.0158465387823186,
+          "authors": 0.0158465387823186,
+          "calibrated": 0.07132128721644612
+        }
+      }
+    }
+  },
+  "pairs": {
+    "protocol": {
+      "control": "baseline_greedy_b64",
+      "treated": "amplified_greedy_b64_post",
+      "labels": {
+        "toxic": {
+          "ge": {
+            "control": 0.5613010842368641,
+            "treated": 0.23436196830692244,
+            "drop": 0.5824665676077266,
+            "drop_lower": 0.5422222222222222,
+            "drop_upper": 0.6212137330754353,
+            "flipped_down": 421,
+            "flipped_up": 29
+          },
+          "authors": {
+            "control": 0.5613010842368641,
+            "treated": 0.23436196830692244,
+            "drop": 0.5824665676077266,
+            "drop_lower": 0.5422222222222222,
+            "drop_upper": 0.6212137330754353,
+            "flipped_down": 421,
+            "flipped_up": 29
+          },
+          "calibrated": {
+            "control": 0.600272214686143,
+            "treated": 0.2656434559809032,
+            "drop": 0.5574616824138745,
+            "drop_lower": 0.5215387414505833,
+            "drop_upper": 0.5922770518323138,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "severe_toxic": {
+          "ge": {
+            "control": 0.02335279399499583,
+            "treated": 0.009174311926605505,
+            "drop": 0.6071428571428571,
+            "drop_lower": 0.36,
+            "drop_upper": 0.8,
+            "flipped_down": 20,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.02335279399499583,
+            "treated": 0.009174311926605505,
+            "drop": 0.6071428571428571,
+            "drop_lower": 0.36,
+            "drop_upper": 0.8,
+            "flipped_down": 20,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.48624072811143154,
+            "treated": 0.20559825072702403,
+            "drop": 0.577167771351504,
+            "drop_lower": 0.5387189309626701,
+            "drop_upper": 0.6139137591724837,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "obscene": {
+          "ge": {
+            "control": 0.4303586321934946,
+            "treated": 0.20016680567139283,
+            "drop": 0.5348837209302326,
+            "drop_lower": 0.4864864864864865,
+            "drop_upper": 0.5801573615780892,
+            "flipped_down": 309,
+            "flipped_up": 33
+          },
+          "authors": {
+            "control": 0.4303586321934946,
+            "treated": 0.20016680567139283,
+            "drop": 0.5348837209302326,
+            "drop_lower": 0.4864864864864865,
+            "drop_upper": 0.5801573615780892,
+            "flipped_down": 309,
+            "flipped_up": 33
+          },
+          "calibrated": {
+            "control": 0.5363291486271663,
+            "treated": 0.24604318538850561,
+            "drop": 0.5412459195658139,
+            "drop_lower": 0.5006212955847477,
+            "drop_upper": 0.5787970886818734,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "threat": {
+          "ge": {
+            "control": 0.03669724770642202,
+            "treated": 0.010008340283569641,
+            "drop": 0.7272727272727273,
+            "drop_lower": 0.5666666666666667,
+            "drop_upper": 0.8636363636363636,
+            "flipped_down": 36,
+            "flipped_up": 4
+          },
+          "authors": {
+            "control": 0.03669724770642202,
+            "treated": 0.010008340283569641,
+            "drop": 0.7272727272727273,
+            "drop_lower": 0.5666666666666667,
+            "drop_upper": 0.8636363636363636,
+            "flipped_down": 36,
+            "flipped_up": 4
+          },
+          "calibrated": {
+            "control": 0.17650289516929146,
+            "treated": 0.08993159465003145,
+            "drop": 0.4904809093144097,
+            "drop_lower": 0.4424818073252972,
+            "drop_upper": 0.5351749834405469,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "insult": {
+          "ge": {
+            "control": 0.26438698915763137,
+            "treated": 0.07673060884070058,
+            "drop": 0.7097791798107256,
+            "drop_lower": 0.6559485530546624,
+            "drop_upper": 0.7604800108520823,
+            "flipped_down": 243,
+            "flipped_up": 18
+          },
+          "authors": {
+            "control": 0.26438698915763137,
+            "treated": 0.07673060884070058,
+            "drop": 0.7097791798107256,
+            "drop_lower": 0.6559485530546624,
+            "drop_upper": 0.7604800108520823,
+            "flipped_down": 243,
+            "flipped_up": 18
+          },
+          "calibrated": {
+            "control": 0.46161334337302884,
+            "treated": 0.18514305280391163,
+            "drop": 0.5989217914476577,
+            "drop_lower": 0.5613970423132796,
+            "drop_upper": 0.6345180508182011,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "identity_hate": {
+          "ge": {
+            "control": 0.030025020850708923,
+            "treated": 0.010008340283569641,
+            "drop": 0.6666666666666667,
+            "drop_lower": 0.4736842105263158,
+            "drop_upper": 0.8285714285714285,
+            "flipped_down": 27,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.030025020850708923,
+            "treated": 0.010008340283569641,
+            "drop": 0.6666666666666667,
+            "drop_lower": 0.4736842105263158,
+            "drop_upper": 0.8285714285714285,
+            "flipped_down": 27,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.14690141691975794,
+            "treated": 0.0564312618653914,
+            "drop": 0.6158562453062254,
+            "drop_lower": 0.5633133654515577,
+            "drop_upper": 0.6653059311890595,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        }
+      }
+    },
+    "batch_1": {
+      "control": "baseline_greedy_b1",
+      "treated": "amplified_greedy_b1_post",
+      "labels": {
+        "toxic": {
+          "ge": {
+            "control": 0.5613010842368641,
+            "treated": 0.23436196830692244,
+            "drop": 0.5824665676077266,
+            "drop_lower": 0.5422222222222222,
+            "drop_upper": 0.6212137330754353,
+            "flipped_down": 421,
+            "flipped_up": 29
+          },
+          "authors": {
+            "control": 0.5613010842368641,
+            "treated": 0.23436196830692244,
+            "drop": 0.5824665676077266,
+            "drop_lower": 0.5422222222222222,
+            "drop_upper": 0.6212137330754353,
+            "flipped_down": 421,
+            "flipped_up": 29
+          },
+          "calibrated": {
+            "control": 0.600272214686143,
+            "treated": 0.2656395403548142,
+            "drop": 0.5574682054978908,
+            "drop_lower": 0.5215517745034617,
+            "drop_upper": 0.5922772121118914,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "severe_toxic": {
+          "ge": {
+            "control": 0.02335279399499583,
+            "treated": 0.009174311926605505,
+            "drop": 0.6071428571428571,
+            "drop_lower": 0.36,
+            "drop_upper": 0.8,
+            "flipped_down": 20,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.02335279399499583,
+            "treated": 0.009174311926605505,
+            "drop": 0.6071428571428571,
+            "drop_lower": 0.36,
+            "drop_upper": 0.8,
+            "flipped_down": 20,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.48624072811143154,
+            "treated": 0.20561699293729288,
+            "drop": 0.5771292262252212,
+            "drop_lower": 0.5386807506206407,
+            "drop_upper": 0.6138754269627507,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "obscene": {
+          "ge": {
+            "control": 0.4303586321934946,
+            "treated": 0.20016680567139283,
+            "drop": 0.5348837209302326,
+            "drop_lower": 0.4864864864864865,
+            "drop_upper": 0.5801573615780892,
+            "flipped_down": 309,
+            "flipped_up": 33
+          },
+          "authors": {
+            "control": 0.4303586321934946,
+            "treated": 0.20016680567139283,
+            "drop": 0.5348837209302326,
+            "drop_lower": 0.4864864864864865,
+            "drop_upper": 0.5801573615780892,
+            "flipped_down": 309,
+            "flipped_up": 33
+          },
+          "calibrated": {
+            "control": 0.5363291486271663,
+            "treated": 0.24604318538850561,
+            "drop": 0.5412459195658139,
+            "drop_lower": 0.5006212955847477,
+            "drop_upper": 0.5787970886818734,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "threat": {
+          "ge": {
+            "control": 0.03669724770642202,
+            "treated": 0.010008340283569641,
+            "drop": 0.7272727272727273,
+            "drop_lower": 0.5666666666666667,
+            "drop_upper": 0.8636363636363636,
+            "flipped_down": 36,
+            "flipped_up": 4
+          },
+          "authors": {
+            "control": 0.03669724770642202,
+            "treated": 0.010008340283569641,
+            "drop": 0.7272727272727273,
+            "drop_lower": 0.5666666666666667,
+            "drop_upper": 0.8636363636363636,
+            "flipped_down": 36,
+            "flipped_up": 4
+          },
+          "calibrated": {
+            "control": 0.17650289516929146,
+            "treated": 0.0899762747405831,
+            "drop": 0.4902277684777747,
+            "drop_lower": 0.44187486707477547,
+            "drop_upper": 0.5350335146880386,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "insult": {
+          "ge": {
+            "control": 0.26438698915763137,
+            "treated": 0.07673060884070058,
+            "drop": 0.7097791798107256,
+            "drop_lower": 0.6559485530546624,
+            "drop_upper": 0.7604800108520823,
+            "flipped_down": 243,
+            "flipped_up": 18
+          },
+          "authors": {
+            "control": 0.26438698915763137,
+            "treated": 0.07673060884070058,
+            "drop": 0.7097791798107256,
+            "drop_lower": 0.6559485530546624,
+            "drop_upper": 0.7604800108520823,
+            "flipped_down": 243,
+            "flipped_up": 18
+          },
+          "calibrated": {
+            "control": 0.46161334337302884,
+            "treated": 0.18514305280391163,
+            "drop": 0.5989217914476577,
+            "drop_lower": 0.5613970423132796,
+            "drop_upper": 0.6345180508182011,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "identity_hate": {
+          "ge": {
+            "control": 0.030025020850708923,
+            "treated": 0.010008340283569641,
+            "drop": 0.6666666666666667,
+            "drop_lower": 0.4736842105263158,
+            "drop_upper": 0.8285714285714285,
+            "flipped_down": 27,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.030025020850708923,
+            "treated": 0.010008340283569641,
+            "drop": 0.6666666666666667,
+            "drop_lower": 0.4736842105263158,
+            "drop_upper": 0.8285714285714285,
+            "flipped_down": 27,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.14690141691975794,
+            "treated": 0.0564312618653914,
+            "drop": 0.6158562453062254,
+            "drop_lower": 0.5633133654515577,
+            "drop_upper": 0.6653059311890595,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        }
+      }
+    },
+    "forced_20": {
+      "control": "baseline_greedy_forced_b1",
+      "treated": "amplified_greedy_forced_b1_post",
+      "labels": {
+        "toxic": {
+          "ge": {
+            "control": 0.5613010842368641,
+            "treated": 0.23519599666388658,
+            "drop": 0.5809806835066865,
+            "drop_lower": 0.5409067717996291,
+            "drop_upper": 0.6198587781510514,
+            "flipped_down": 421,
+            "flipped_up": 30
+          },
+          "authors": {
+            "control": 0.5613010842368641,
+            "treated": 0.23519599666388658,
+            "drop": 0.5809806835066865,
+            "drop_lower": 0.5409067717996291,
+            "drop_upper": 0.6198587781510514,
+            "flipped_down": 421,
+            "flipped_up": 30
+          },
+          "calibrated": {
+            "control": 0.600268299060054,
+            "treated": 0.26639204757694906,
+            "drop": 0.5562117006777034,
+            "drop_lower": 0.5198829617735391,
+            "drop_upper": 0.5915364784875732,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "severe_toxic": {
+          "ge": {
+            "control": 0.02335279399499583,
+            "treated": 0.009174311926605505,
+            "drop": 0.6071428571428571,
+            "drop_lower": 0.36,
+            "drop_upper": 0.8,
+            "flipped_down": 20,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.02335279399499583,
+            "treated": 0.009174311926605505,
+            "drop": 0.6071428571428571,
+            "drop_lower": 0.36,
+            "drop_upper": 0.8,
+            "flipped_down": 20,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.4862594703217003,
+            "treated": 0.2059336387964198,
+            "drop": 0.5764943381767396,
+            "drop_lower": 0.5380217855089148,
+            "drop_upper": 0.6131731926333658,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "obscene": {
+          "ge": {
+            "control": 0.4303586321934946,
+            "treated": 0.20016680567139283,
+            "drop": 0.5348837209302326,
+            "drop_lower": 0.4864864864864865,
+            "drop_upper": 0.5801573615780892,
+            "flipped_down": 309,
+            "flipped_up": 33
+          },
+          "authors": {
+            "control": 0.4303586321934946,
+            "treated": 0.20016680567139283,
+            "drop": 0.5348837209302326,
+            "drop_lower": 0.4864864864864865,
+            "drop_upper": 0.5801573615780892,
+            "flipped_down": 309,
+            "flipped_up": 33
+          },
+          "calibrated": {
+            "control": 0.5363291486271663,
+            "treated": 0.24675422338868241,
+            "drop": 0.5399201702531076,
+            "drop_lower": 0.4994440624181128,
+            "drop_upper": 0.5779361813351748,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "threat": {
+          "ge": {
+            "control": 0.03669724770642202,
+            "treated": 0.010008340283569641,
+            "drop": 0.7272727272727273,
+            "drop_lower": 0.5666666666666667,
+            "drop_upper": 0.8636363636363636,
+            "flipped_down": 36,
+            "flipped_up": 4
+          },
+          "authors": {
+            "control": 0.03669724770642202,
+            "treated": 0.010008340283569641,
+            "drop": 0.7272727272727273,
+            "drop_lower": 0.5666666666666667,
+            "drop_upper": 0.8636363636363636,
+            "flipped_down": 36,
+            "flipped_up": 4
+          },
+          "calibrated": {
+            "control": 0.1765199161561683,
+            "treated": 0.0900085177101223,
+            "drop": 0.49009426431807734,
+            "drop_lower": 0.4420445436295407,
+            "drop_upper": 0.535135576026094,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "insult": {
+          "ge": {
+            "control": 0.26438698915763137,
+            "treated": 0.07673060884070058,
+            "drop": 0.7097791798107256,
+            "drop_lower": 0.6559485530546624,
+            "drop_upper": 0.7604800108520823,
+            "flipped_down": 243,
+            "flipped_up": 18
+          },
+          "authors": {
+            "control": 0.26438698915763137,
+            "treated": 0.07673060884070058,
+            "drop": 0.7097791798107256,
+            "drop_lower": 0.6559485530546624,
+            "drop_upper": 0.7604800108520823,
+            "flipped_down": 243,
+            "flipped_up": 18
+          },
+          "calibrated": {
+            "control": 0.46161334337302884,
+            "treated": 0.1854635266640558,
+            "drop": 0.5982275440548019,
+            "drop_lower": 0.561055937976462,
+            "drop_upper": 0.6339443086381645,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "identity_hate": {
+          "ge": {
+            "control": 0.030025020850708923,
+            "treated": 0.010008340283569641,
+            "drop": 0.6666666666666667,
+            "drop_lower": 0.4736842105263158,
+            "drop_upper": 0.8285714285714285,
+            "flipped_down": 27,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.030025020850708923,
+            "treated": 0.010008340283569641,
+            "drop": 0.6666666666666667,
+            "drop_lower": 0.4736842105263158,
+            "drop_upper": 0.8285714285714285,
+            "flipped_down": 27,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.14690141691975794,
+            "treated": 0.05650357394985655,
+            "drop": 0.6153639962457236,
+            "drop_lower": 0.5628657074589971,
+            "drop_upper": 0.6644334233891164,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        }
+      }
+    },
+    "beam_3": {
+      "control": "baseline_beam3_b1",
+      "treated": "amplified_beam3_b1_post",
+      "labels": {
+        "toxic": {
+          "ge": {
+            "control": 0.5471226021684737,
+            "treated": 0.2635529608006672,
+            "drop": 0.5182926829268293,
+            "drop_lower": 0.47772657450076816,
+            "drop_upper": 0.5585081550852397,
+            "flipped_down": 364,
+            "flipped_up": 24
+          },
+          "authors": {
+            "control": 0.5471226021684737,
+            "treated": 0.2635529608006672,
+            "drop": 0.5182926829268293,
+            "drop_lower": 0.47772657450076816,
+            "drop_upper": 0.5585081550852397,
+            "flipped_down": 364,
+            "flipped_up": 24
+          },
+          "calibrated": {
+            "control": 0.5851389250556216,
+            "treated": 0.2976067785220407,
+            "drop": 0.4913912478241794,
+            "drop_lower": 0.4562652738704652,
+            "drop_upper": 0.5275632334104525,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "severe_toxic": {
+          "ge": {
+            "control": 0.019182652210175146,
+            "treated": 0.010842368640533779,
+            "drop": 0.4347826086956521,
+            "drop_lower": 0.11111111111111116,
+            "drop_upper": 0.6923076923076923,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "authors": {
+            "control": 0.019182652210175146,
+            "treated": 0.010842368640533779,
+            "drop": 0.4347826086956521,
+            "drop_lower": 0.11111111111111116,
+            "drop_upper": 0.6923076923076923,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "calibrated": {
+            "control": 0.46588408642225776,
+            "treated": 0.23126637498864872,
+            "drop": 0.5035967492157725,
+            "drop_lower": 0.46524978205687406,
+            "drop_upper": 0.542654721408706,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "obscene": {
+          "ge": {
+            "control": 0.4036697247706422,
+            "treated": 0.21934945788156798,
+            "drop": 0.45661157024793386,
+            "drop_lower": 0.4078900661898154,
+            "drop_upper": 0.505353894683521,
+            "flipped_down": 251,
+            "flipped_up": 30
+          },
+          "authors": {
+            "control": 0.4036697247706422,
+            "treated": 0.21934945788156798,
+            "drop": 0.45661157024793386,
+            "drop_lower": 0.4078900661898154,
+            "drop_upper": 0.505353894683521,
+            "flipped_down": 251,
+            "flipped_up": 30
+          },
+          "calibrated": {
+            "control": 0.5156899806333469,
+            "treated": 0.27284139602130214,
+            "drop": 0.4709197264484162,
+            "drop_lower": 0.43248594119957734,
+            "drop_upper": 0.5101288538274998,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "threat": {
+          "ge": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.17999797460339934,
+            "treated": 0.09497939012135027,
+            "drop": 0.4723307841067421,
+            "drop_lower": 0.42526168868859016,
+            "drop_upper": 0.5162247599983523,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "insult": {
+          "ge": {
+            "control": 0.2176814011676397,
+            "treated": 0.0950792326939116,
+            "drop": 0.5632183908045977,
+            "drop_lower": 0.4942932491012117,
+            "drop_upper": 0.631578947368421,
+            "flipped_down": 169,
+            "flipped_up": 22
+          },
+          "authors": {
+            "control": 0.2176814011676397,
+            "treated": 0.0950792326939116,
+            "drop": 0.5632183908045977,
+            "drop_lower": 0.4942932491012117,
+            "drop_upper": 0.631578947368421,
+            "flipped_down": 169,
+            "flipped_up": 22
+          },
+          "calibrated": {
+            "control": 0.4371785115521971,
+            "treated": 0.21386303538877052,
+            "drop": 0.5108107335160359,
+            "drop_lower": 0.47238174589483944,
+            "drop_upper": 0.5496665478513552,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "identity_hate": {
+          "ge": {
+            "control": 0.02585487906588824,
+            "treated": 0.015012510425354461,
+            "drop": 0.4193548387096775,
+            "drop_lower": 0.125,
+            "drop_upper": 0.6451612903225806,
+            "flipped_down": 20,
+            "flipped_up": 7
+          },
+          "authors": {
+            "control": 0.02585487906588824,
+            "treated": 0.015012510425354461,
+            "drop": 0.4193548387096775,
+            "drop_lower": 0.125,
+            "drop_upper": 0.6451612903225806,
+            "flipped_down": 20,
+            "flipped_up": 7
+          },
+          "calibrated": {
+            "control": 0.1420353994339533,
+            "treated": 0.06987860395909938,
+            "drop": 0.5080198018410682,
+            "drop_lower": 0.44379658172337244,
+            "drop_upper": 0.5671402772614856,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        }
+      }
+    },
+    "pre_gelu": {
+      "control": "baseline_greedy_b1",
+      "treated": "amplified_greedy_b1_pre",
+      "labels": {
+        "toxic": {
+          "ge": {
+            "control": 0.5613010842368641,
+            "treated": 0.23436196830692244,
+            "drop": 0.5824665676077266,
+            "drop_lower": 0.5422222222222222,
+            "drop_upper": 0.6212137330754353,
+            "flipped_down": 421,
+            "flipped_up": 29
+          },
+          "authors": {
+            "control": 0.5613010842368641,
+            "treated": 0.23436196830692244,
+            "drop": 0.5824665676077266,
+            "drop_lower": 0.5422222222222222,
+            "drop_upper": 0.6212137330754353,
+            "flipped_down": 421,
+            "flipped_up": 29
+          },
+          "calibrated": {
+            "control": 0.600272214686143,
+            "treated": 0.265631597227605,
+            "drop": 0.5574814380397525,
+            "drop_lower": 0.5215521165245088,
+            "drop_upper": 0.5923024361616239,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "severe_toxic": {
+          "ge": {
+            "control": 0.02335279399499583,
+            "treated": 0.009174311926605505,
+            "drop": 0.6071428571428571,
+            "drop_lower": 0.36,
+            "drop_upper": 0.8,
+            "flipped_down": 20,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.02335279399499583,
+            "treated": 0.009174311926605505,
+            "drop": 0.6071428571428571,
+            "drop_lower": 0.36,
+            "drop_upper": 0.8,
+            "flipped_down": 20,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.48624072811143154,
+            "treated": 0.20561094925354678,
+            "drop": 0.5771416556318848,
+            "drop_lower": 0.5386810705314403,
+            "drop_upper": 0.613899540854252,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "obscene": {
+          "ge": {
+            "control": 0.4303586321934946,
+            "treated": 0.20016680567139283,
+            "drop": 0.5348837209302326,
+            "drop_lower": 0.4864864864864865,
+            "drop_upper": 0.5801573615780892,
+            "flipped_down": 309,
+            "flipped_up": 33
+          },
+          "authors": {
+            "control": 0.4303586321934946,
+            "treated": 0.20016680567139283,
+            "drop": 0.5348837209302326,
+            "drop_lower": 0.4864864864864865,
+            "drop_upper": 0.5801573615780892,
+            "flipped_down": 309,
+            "flipped_up": 33
+          },
+          "calibrated": {
+            "control": 0.5363291486271663,
+            "treated": 0.24604702883715518,
+            "drop": 0.5412387533533128,
+            "drop_lower": 0.5006209252616878,
+            "drop_upper": 0.5787898449534095,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "threat": {
+          "ge": {
+            "control": 0.03669724770642202,
+            "treated": 0.010008340283569641,
+            "drop": 0.7272727272727273,
+            "drop_lower": 0.5666666666666667,
+            "drop_upper": 0.8636363636363636,
+            "flipped_down": 36,
+            "flipped_up": 4
+          },
+          "authors": {
+            "control": 0.03669724770642202,
+            "treated": 0.010008340283569641,
+            "drop": 0.7272727272727273,
+            "drop_lower": 0.5666666666666667,
+            "drop_upper": 0.8636363636363636,
+            "flipped_down": 36,
+            "flipped_up": 4
+          },
+          "calibrated": {
+            "control": 0.17650289516929146,
+            "treated": 0.08995925375370628,
+            "drop": 0.49032420308220714,
+            "drop_lower": 0.4419785499668626,
+            "drop_upper": 0.5351909111665716,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "insult": {
+          "ge": {
+            "control": 0.26438698915763137,
+            "treated": 0.07673060884070058,
+            "drop": 0.7097791798107256,
+            "drop_lower": 0.6559485530546624,
+            "drop_upper": 0.7604800108520823,
+            "flipped_down": 243,
+            "flipped_up": 18
+          },
+          "authors": {
+            "control": 0.26438698915763137,
+            "treated": 0.07673060884070058,
+            "drop": 0.7097791798107256,
+            "drop_lower": 0.6559485530546624,
+            "drop_upper": 0.7604800108520823,
+            "flipped_down": 243,
+            "flipped_up": 18
+          },
+          "calibrated": {
+            "control": 0.46161334337302884,
+            "treated": 0.18514305280391163,
+            "drop": 0.5989217914476577,
+            "drop_lower": 0.5613970423132796,
+            "drop_upper": 0.6345180508182011,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "identity_hate": {
+          "ge": {
+            "control": 0.030025020850708923,
+            "treated": 0.010008340283569641,
+            "drop": 0.6666666666666667,
+            "drop_lower": 0.4736842105263158,
+            "drop_upper": 0.8285714285714285,
+            "flipped_down": 27,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.030025020850708923,
+            "treated": 0.010008340283569641,
+            "drop": 0.6666666666666667,
+            "drop_lower": 0.4736842105263158,
+            "drop_upper": 0.8285714285714285,
+            "flipped_down": 27,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.14690141691975794,
+            "treated": 0.05644063297052583,
+            "drop": 0.6157924535108097,
+            "drop_lower": 0.5632823415536803,
+            "drop_upper": 0.6653037614455567,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        }
+      }
+    },
+    "beam_3_forced_post": {
+      "control": "baseline_beam3_forced_b1",
+      "treated": "amplified_beam3_forced_b1_post",
+      "labels": {
+        "toxic": {
+          "ge": {
+            "control": 0.5471226021684737,
+            "treated": 0.2635529608006672,
+            "drop": 0.5182926829268293,
+            "drop_lower": 0.47772657450076816,
+            "drop_upper": 0.5585081550852397,
+            "flipped_down": 364,
+            "flipped_up": 24
+          },
+          "authors": {
+            "control": 0.5471226021684737,
+            "treated": 0.2635529608006672,
+            "drop": 0.5182926829268293,
+            "drop_lower": 0.47772657450076816,
+            "drop_upper": 0.5585081550852397,
+            "flipped_down": 364,
+            "flipped_up": 24
+          },
+          "calibrated": {
+            "control": 0.5853771466944576,
+            "treated": 0.2973918019331021,
+            "drop": 0.4919654728367314,
+            "drop_lower": 0.4568890955686053,
+            "drop_upper": 0.5280412960389843,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "severe_toxic": {
+          "ge": {
+            "control": 0.020016680567139282,
+            "treated": 0.011676396997497914,
+            "drop": 0.41666666666666663,
+            "drop_lower": 0.10526315789473684,
+            "drop_upper": 0.6666666666666667,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "authors": {
+            "control": 0.020016680567139282,
+            "treated": 0.011676396997497914,
+            "drop": 0.41666666666666663,
+            "drop_lower": 0.10526315789473684,
+            "drop_upper": 0.6666666666666667,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "calibrated": {
+            "control": 0.4660321498833817,
+            "treated": 0.23100146225897808,
+            "drop": 0.5043229049395346,
+            "drop_lower": 0.46621841344963,
+            "drop_upper": 0.5434164061769617,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "obscene": {
+          "ge": {
+            "control": 0.4036697247706422,
+            "treated": 0.21934945788156798,
+            "drop": 0.45661157024793386,
+            "drop_lower": 0.4078900661898154,
+            "drop_upper": 0.505353894683521,
+            "flipped_down": 251,
+            "flipped_up": 30
+          },
+          "authors": {
+            "control": 0.4036697247706422,
+            "treated": 0.21934945788156798,
+            "drop": 0.45661157024793386,
+            "drop_lower": 0.4078900661898154,
+            "drop_upper": 0.505353894683521,
+            "flipped_down": 251,
+            "flipped_up": 30
+          },
+          "calibrated": {
+            "control": 0.5157152990153604,
+            "treated": 0.272839170542711,
+            "drop": 0.4709500162907042,
+            "drop_lower": 0.4325232433553933,
+            "drop_upper": 0.5101526163638879,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "threat": {
+          "ge": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.1800513058567024,
+            "treated": 0.0950737109535316,
+            "drop": 0.47196322458667417,
+            "drop_lower": 0.4251470911840408,
+            "drop_upper": 0.5161308540875136,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "insult": {
+          "ge": {
+            "control": 0.2176814011676397,
+            "treated": 0.09591326105087573,
+            "drop": 0.5593869731800767,
+            "drop_lower": 0.49103281355394196,
+            "drop_upper": 0.6268822889600582,
+            "flipped_down": 168,
+            "flipped_up": 22
+          },
+          "authors": {
+            "control": 0.2176814011676397,
+            "treated": 0.09591326105087573,
+            "drop": 0.5593869731800767,
+            "drop_lower": 0.49103281355394196,
+            "drop_upper": 0.6268822889600582,
+            "flipped_down": 168,
+            "flipped_up": 22
+          },
+          "calibrated": {
+            "control": 0.43736806345150714,
+            "treated": 0.2140351232751019,
+            "drop": 0.5106292819232493,
+            "drop_lower": 0.472485207404348,
+            "drop_upper": 0.5493224553955679,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "identity_hate": {
+          "ge": {
+            "control": 0.02585487906588824,
+            "treated": 0.0158465387823186,
+            "drop": 0.3870967741935484,
+            "drop_lower": 0.08695652173913049,
+            "drop_upper": 0.6190886699507391,
+            "flipped_down": 20,
+            "flipped_up": 8
+          },
+          "authors": {
+            "control": 0.02585487906588824,
+            "treated": 0.0158465387823186,
+            "drop": 0.3870967741935484,
+            "drop_lower": 0.08695652173913049,
+            "drop_upper": 0.6190886699507391,
+            "flipped_down": 20,
+            "flipped_up": 8
+          },
+          "calibrated": {
+            "control": 0.14267148610307437,
+            "treated": 0.07070996228808793,
+            "drop": 0.5043861655930124,
+            "drop_lower": 0.43960474971212554,
+            "drop_upper": 0.5632519262756105,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        }
+      }
+    },
+    "beam_3_forced_pre": {
+      "control": "baseline_beam3_forced_b1",
+      "treated": "amplified_beam3_forced_b1_pre",
+      "labels": {
+        "toxic": {
+          "ge": {
+            "control": 0.5471226021684737,
+            "treated": 0.26438698915763137,
+            "drop": 0.5167682926829269,
+            "drop_lower": 0.47668766510871774,
+            "drop_upper": 0.5565931302610928,
+            "flipped_down": 363,
+            "flipped_up": 24
+          },
+          "authors": {
+            "control": 0.5471226021684737,
+            "treated": 0.26438698915763137,
+            "drop": 0.5167682926829269,
+            "drop_lower": 0.47668766510871774,
+            "drop_upper": 0.5565931302610928,
+            "flipped_down": 363,
+            "flipped_up": 24
+          },
+          "calibrated": {
+            "control": 0.5853771466944576,
+            "treated": 0.29861482640774584,
+            "drop": 0.4898761796664224,
+            "drop_lower": 0.45405723750153776,
+            "drop_upper": 0.5263660071967113,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "severe_toxic": {
+          "ge": {
+            "control": 0.020016680567139282,
+            "treated": 0.011676396997497914,
+            "drop": 0.41666666666666663,
+            "drop_lower": 0.10526315789473684,
+            "drop_upper": 0.6666666666666667,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "authors": {
+            "control": 0.020016680567139282,
+            "treated": 0.011676396997497914,
+            "drop": 0.41666666666666663,
+            "drop_lower": 0.10526315789473684,
+            "drop_upper": 0.6666666666666667,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "calibrated": {
+            "control": 0.4660321498833817,
+            "treated": 0.23197552789559642,
+            "drop": 0.5022327795332464,
+            "drop_lower": 0.46377630391078123,
+            "drop_upper": 0.5410373728353143,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "obscene": {
+          "ge": {
+            "control": 0.4036697247706422,
+            "treated": 0.22018348623853212,
+            "drop": 0.4545454545454546,
+            "drop_lower": 0.4064339159959757,
+            "drop_upper": 0.5032290539077722,
+            "flipped_down": 250,
+            "flipped_up": 30
+          },
+          "authors": {
+            "control": 0.4036697247706422,
+            "treated": 0.22018348623853212,
+            "drop": 0.4545454545454546,
+            "drop_lower": 0.4064339159959757,
+            "drop_upper": 0.5032290539077722,
+            "flipped_down": 250,
+            "flipped_up": 30
+          },
+          "calibrated": {
+            "control": 0.5157152990153604,
+            "treated": 0.27399866551392554,
+            "drop": 0.4687016925092916,
+            "drop_lower": 0.43049430821171364,
+            "drop_upper": 0.5083526939008741,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "threat": {
+          "ge": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.1800513058567024,
+            "treated": 0.09497623957766235,
+            "drop": 0.4725045779270761,
+            "drop_lower": 0.42555847316659523,
+            "drop_upper": 0.516600436123054,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "insult": {
+          "ge": {
+            "control": 0.2176814011676397,
+            "treated": 0.09591326105087573,
+            "drop": 0.5593869731800767,
+            "drop_lower": 0.49103281355394196,
+            "drop_upper": 0.6268822889600582,
+            "flipped_down": 168,
+            "flipped_up": 22
+          },
+          "authors": {
+            "control": 0.2176814011676397,
+            "treated": 0.09591326105087573,
+            "drop": 0.5593869731800767,
+            "drop_lower": 0.49103281355394196,
+            "drop_upper": 0.6268822889600582,
+            "flipped_down": 168,
+            "flipped_up": 22
+          },
+          "calibrated": {
+            "control": 0.43736806345150714,
+            "treated": 0.2151621252467049,
+            "drop": 0.5080525003386288,
+            "drop_lower": 0.4693074581697918,
+            "drop_upper": 0.5472599190526605,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "identity_hate": {
+          "ge": {
+            "control": 0.02585487906588824,
+            "treated": 0.0158465387823186,
+            "drop": 0.3870967741935484,
+            "drop_lower": 0.08695652173913049,
+            "drop_upper": 0.6190886699507391,
+            "flipped_down": 20,
+            "flipped_up": 8
+          },
+          "authors": {
+            "control": 0.02585487906588824,
+            "treated": 0.0158465387823186,
+            "drop": 0.3870967741935484,
+            "drop_lower": 0.08695652173913049,
+            "drop_upper": 0.6190886699507391,
+            "flipped_down": 20,
+            "flipped_up": 8
+          },
+          "calibrated": {
+            "control": 0.14267148610307437,
+            "treated": 0.07132128721644598,
+            "drop": 0.500101322524115,
+            "drop_lower": 0.4346330697336668,
+            "drop_upper": 0.5598001795087666,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        }
+      }
+    },
+    "authors": {
+      "control": "baseline_authors",
+      "treated": "amplified_authors",
+      "labels": {
+        "toxic": {
+          "ge": {
+            "control": 0.5471226021684737,
+            "treated": 0.26438698915763137,
+            "drop": 0.5167682926829269,
+            "drop_lower": 0.47668766510871774,
+            "drop_upper": 0.5565931302610928,
+            "flipped_down": 363,
+            "flipped_up": 24
+          },
+          "authors": {
+            "control": 0.5471226021684737,
+            "treated": 0.26438698915763137,
+            "drop": 0.5167682926829269,
+            "drop_lower": 0.47668766510871774,
+            "drop_upper": 0.5565931302610928,
+            "flipped_down": 363,
+            "flipped_up": 24
+          },
+          "calibrated": {
+            "control": 0.5853771466944576,
+            "treated": 0.29861482640774584,
+            "drop": 0.4898761796664224,
+            "drop_lower": 0.45405723750153776,
+            "drop_upper": 0.5263660071967113,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "severe_toxic": {
+          "ge": {
+            "control": 0.020016680567139282,
+            "treated": 0.011676396997497914,
+            "drop": 0.41666666666666663,
+            "drop_lower": 0.10526315789473684,
+            "drop_upper": 0.6666666666666667,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "authors": {
+            "control": 0.020016680567139282,
+            "treated": 0.011676396997497914,
+            "drop": 0.41666666666666663,
+            "drop_lower": 0.10526315789473684,
+            "drop_upper": 0.6666666666666667,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "calibrated": {
+            "control": 0.4660321498833817,
+            "treated": 0.23197552789559642,
+            "drop": 0.5022327795332464,
+            "drop_lower": 0.46377630391078123,
+            "drop_upper": 0.5410373728353143,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "obscene": {
+          "ge": {
+            "control": 0.4036697247706422,
+            "treated": 0.22018348623853212,
+            "drop": 0.4545454545454546,
+            "drop_lower": 0.4064339159959757,
+            "drop_upper": 0.5032290539077722,
+            "flipped_down": 250,
+            "flipped_up": 30
+          },
+          "authors": {
+            "control": 0.4036697247706422,
+            "treated": 0.22018348623853212,
+            "drop": 0.4545454545454546,
+            "drop_lower": 0.4064339159959757,
+            "drop_upper": 0.5032290539077722,
+            "flipped_down": 250,
+            "flipped_up": 30
+          },
+          "calibrated": {
+            "control": 0.5157152990153604,
+            "treated": 0.27399866551392554,
+            "drop": 0.4687016925092916,
+            "drop_lower": 0.43049430821171364,
+            "drop_upper": 0.5083526939008741,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "threat": {
+          "ge": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.1800513058567024,
+            "treated": 0.09497623957766235,
+            "drop": 0.4725045779270761,
+            "drop_lower": 0.42555847316659523,
+            "drop_upper": 0.516600436123054,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "insult": {
+          "ge": {
+            "control": 0.2176814011676397,
+            "treated": 0.09591326105087573,
+            "drop": 0.5593869731800767,
+            "drop_lower": 0.49103281355394196,
+            "drop_upper": 0.6268822889600582,
+            "flipped_down": 168,
+            "flipped_up": 22
+          },
+          "authors": {
+            "control": 0.2176814011676397,
+            "treated": 0.09591326105087573,
+            "drop": 0.5593869731800767,
+            "drop_lower": 0.49103281355394196,
+            "drop_upper": 0.6268822889600582,
+            "flipped_down": 168,
+            "flipped_up": 22
+          },
+          "calibrated": {
+            "control": 0.43736806345150714,
+            "treated": 0.2151621252467049,
+            "drop": 0.5080525003386288,
+            "drop_lower": 0.4693074581697918,
+            "drop_upper": 0.5472599190526605,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "identity_hate": {
+          "ge": {
+            "control": 0.02585487906588824,
+            "treated": 0.0158465387823186,
+            "drop": 0.3870967741935484,
+            "drop_lower": 0.08695652173913049,
+            "drop_upper": 0.6190886699507391,
+            "flipped_down": 20,
+            "flipped_up": 8
+          },
+          "authors": {
+            "control": 0.02585487906588824,
+            "treated": 0.0158465387823186,
+            "drop": 0.3870967741935484,
+            "drop_lower": 0.08695652173913049,
+            "drop_upper": 0.6190886699507391,
+            "flipped_down": 20,
+            "flipped_up": 8
+          },
+          "calibrated": {
+            "control": 0.14267148610307437,
+            "treated": 0.07132128721644598,
+            "drop": 0.500101322524115,
+            "drop_lower": 0.4346330697336668,
+            "drop_upper": 0.5598001795087666,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        }
+      }
+    },
+    "authors_eager": {
+      "control": "baseline_authors_eager",
+      "treated": "amplified_authors_eager",
+      "labels": {
+        "toxic": {
+          "ge": {
+            "control": 0.5471226021684737,
+            "treated": 0.26438698915763137,
+            "drop": 0.5167682926829269,
+            "drop_lower": 0.47668766510871774,
+            "drop_upper": 0.5565931302610928,
+            "flipped_down": 363,
+            "flipped_up": 24
+          },
+          "authors": {
+            "control": 0.5471226021684737,
+            "treated": 0.26438698915763137,
+            "drop": 0.5167682926829269,
+            "drop_lower": 0.47668766510871774,
+            "drop_upper": 0.5565931302610928,
+            "flipped_down": 363,
+            "flipped_up": 24
+          },
+          "calibrated": {
+            "control": 0.5853771466944576,
+            "treated": 0.29861482640774584,
+            "drop": 0.4898761796664224,
+            "drop_lower": 0.45405723750153776,
+            "drop_upper": 0.5263660071967113,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "severe_toxic": {
+          "ge": {
+            "control": 0.020016680567139282,
+            "treated": 0.011676396997497914,
+            "drop": 0.41666666666666663,
+            "drop_lower": 0.10526315789473684,
+            "drop_upper": 0.6666666666666667,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "authors": {
+            "control": 0.020016680567139282,
+            "treated": 0.011676396997497914,
+            "drop": 0.41666666666666663,
+            "drop_lower": 0.10526315789473684,
+            "drop_upper": 0.6666666666666667,
+            "flipped_down": 14,
+            "flipped_up": 4
+          },
+          "calibrated": {
+            "control": 0.4660321498833817,
+            "treated": 0.23197552789559642,
+            "drop": 0.5022327795332464,
+            "drop_lower": 0.46377630391078123,
+            "drop_upper": 0.5410373728353143,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "obscene": {
+          "ge": {
+            "control": 0.4036697247706422,
+            "treated": 0.22018348623853212,
+            "drop": 0.4545454545454546,
+            "drop_lower": 0.4064339159959757,
+            "drop_upper": 0.5032290539077722,
+            "flipped_down": 250,
+            "flipped_up": 30
+          },
+          "authors": {
+            "control": 0.4036697247706422,
+            "treated": 0.22018348623853212,
+            "drop": 0.4545454545454546,
+            "drop_lower": 0.4064339159959757,
+            "drop_upper": 0.5032290539077722,
+            "flipped_down": 250,
+            "flipped_up": 30
+          },
+          "calibrated": {
+            "control": 0.5157152990153604,
+            "treated": 0.27399866551392554,
+            "drop": 0.4687016925092916,
+            "drop_lower": 0.43049430821171364,
+            "drop_upper": 0.5083526939008741,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "threat": {
+          "ge": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "authors": {
+            "control": 0.045037531276063386,
+            "treated": 0.011676396997497914,
+            "drop": 0.7407407407407407,
+            "drop_lower": 0.6065097216927183,
+            "drop_upper": 0.8604812661498709,
+            "flipped_down": 43,
+            "flipped_up": 3
+          },
+          "calibrated": {
+            "control": 0.1800513058567024,
+            "treated": 0.09497623957766235,
+            "drop": 0.4725045779270761,
+            "drop_lower": 0.42555847316659523,
+            "drop_upper": 0.516600436123054,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "insult": {
+          "ge": {
+            "control": 0.2176814011676397,
+            "treated": 0.09591326105087573,
+            "drop": 0.5593869731800767,
+            "drop_lower": 0.49103281355394196,
+            "drop_upper": 0.6268822889600582,
+            "flipped_down": 168,
+            "flipped_up": 22
+          },
+          "authors": {
+            "control": 0.2176814011676397,
+            "treated": 0.09591326105087573,
+            "drop": 0.5593869731800767,
+            "drop_lower": 0.49103281355394196,
+            "drop_upper": 0.6268822889600582,
+            "flipped_down": 168,
+            "flipped_up": 22
+          },
+          "calibrated": {
+            "control": 0.43736806345150714,
+            "treated": 0.2151621252467049,
+            "drop": 0.5080525003386288,
+            "drop_lower": 0.4693074581697918,
+            "drop_upper": 0.5472599190526605,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        },
+        "identity_hate": {
+          "ge": {
+            "control": 0.02585487906588824,
+            "treated": 0.0158465387823186,
+            "drop": 0.3870967741935484,
+            "drop_lower": 0.08695652173913049,
+            "drop_upper": 0.6190886699507391,
+            "flipped_down": 20,
+            "flipped_up": 8
+          },
+          "authors": {
+            "control": 0.02585487906588824,
+            "treated": 0.0158465387823186,
+            "drop": 0.3870967741935484,
+            "drop_lower": 0.08695652173913049,
+            "drop_upper": 0.6190886699507391,
+            "flipped_down": 20,
+            "flipped_up": 8
+          },
+          "calibrated": {
+            "control": 0.14267148610307437,
+            "treated": 0.07132128721644598,
+            "drop": 0.500101322524115,
+            "drop_lower": 0.4346330697336668,
+            "drop_upper": 0.5598001795087666,
+            "flipped_down": null,
+            "flipped_up": null
+          }
+        }
+      }
+    }
+  },
+  "texts": {
+    "batch_invariance_baseline": {
+      "equal": 1199,
+      "n": 1199,
+      "differ": 0
+    },
+    "batch_invariance_amplified": {
+      "equal": 1198,
+      "n": 1199,
+      "differ": 1
+    },
+    "port_baseline": {
+      "equal": 1199,
+      "n": 1199,
+      "differ": 0
+    },
+    "port_amplified": {
+      "equal": 1199,
+      "n": 1199,
+      "differ": 0
+    },
+    "kernel_baseline": {
+      "equal": 1199,
+      "n": 1199,
+      "differ": 0
+    },
+    "kernel_amplified": {
+      "equal": 1199,
+      "n": 1199,
+      "differ": 0
+    },
+    "run_baseline": {
+      "equal": 1199,
+      "n": 1199,
+      "differ": 0
+    },
+    "run_amplified": {
+      "equal": 1199,
+      "n": 1199,
+      "differ": 0
+    }
+  },
+  "decoding_closes_gap": {
+    "amplified_rate": 0.26438698915763137,
+    "drop": 0.5167682926829269,
+    "rule": "amplified rate >= 0.271 and drop <= 0.528 (half of the gap from 0.234 and 0.582 to the paper's 0.308 and 0.474)",
+    "closes": false
+  }
+}

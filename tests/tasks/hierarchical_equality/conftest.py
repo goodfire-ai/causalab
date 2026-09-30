@@ -1,8 +1,8 @@
 """Session-scoped tiny pipeline fixture for hierarchical_equality token-position tests.
 
 The shipped HE token-position regexes (``causalab/tasks/hierarchical_equality/
-token_positions.py``) require a real :class:`~causalab.neural.pipeline.LMPipeline`
-because :func:`_get_var_token_indices` calls
+token_positions.py``) require a real [`LMPipeline`][causalab.tasks.token_positions.LMPipeline]
+because `_get_var_token_indices` calls
 ``pipeline.load([trace], return_offsets_mapping=True)`` to map character
 spans to token indices. The ``tests/_helpers/tiny.py::tiny_random_tokenizer`` /
 ``tiny_random_model`` factories give a real Llama stub but not an

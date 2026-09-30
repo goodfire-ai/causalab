@@ -1,52 +1,11 @@
-"""Declared fan-out and joins (docs/workflow_protocol.md §2.9, §5 rule 19).
+"""Expand declared workflow fan-out and join its results.
 
-A document step — ``intervention_protocol`` or ``behavioral`` — may declare
-``fan_out``: ``{"over": {"axis": A} | {"shards": N}, "join": {"require": "all"
-| "selected"}}``. The width is a **pure function of the document at load**:
-``over.axis`` names an
-axis the step's compiled document expands and gives one child per value of
-it, in compiled coordinate order; ``over.shards`` is a literal integer and
-gives ``N`` contiguous index ranges of the compiled point list, sizes differing
-by at most one, the first ranges longer. Nothing here reads a forward, a
-table or the run tree — a fan-out whose width is known only at run time stays
-refused on both sides (``protocol/axes.py`` ``P4``; rule 19 here), which is
-what keeps rule 5's acyclicity check a load-time promise.
+A document step can run over an axis or a fixed number of shards. Children
+have distinct names and point assignments. The join checks point coverage and
+combines results in the parent's order. Conditional selection determines which
+children are required for a selected join.
 
-The children are real steps named ``<step>@<i>`` — ``@`` is outside rule 3's
-authored alphabet, so a child can never collide with an authored step and
-needs no refusal — each carrying the parent's compiled document and a point
-selection (``shard``), scheduled after the parent's dependencies and before
-the parent. **The parent's own name is the join**: it consumes every child
-under the declared policy, refuses a **missing** point and a **duplicate**
-point by point digest (``point_digests`` on each child's record; on each
-table row ``produced_by``, ``point_digest`` or a digest-valued ``point`` —
-never by coordinate spelling), refuses a row it cannot place instead of
-appending it out of order, re-assembles each save file in point order, and
-publishes one normalized receipt: the
-parent's ``_step.json`` with the full ``axes`` and ``point_digests`` and a
-``fan_out`` / ``join`` block, so ``select`` and every downstream reference read
-a fanned-out step exactly as they read an unsharded one. The
-shape copied is the controls ledger's certify join (``runner.py``), keyed by
-digest instead of coordinates.
-
-A ``conditional`` with scope ``per_target`` or ``per_variable`` is the
-fan-out's verdict shape: its producer is a fanned-out ``behavioral`` step, the
-steps it gates are fanned out over the same ``over``, and it expands to one
-verdict per child (``gate@i`` over ``P@i``, gating ``S@i``). A join declaring
-``require: selected`` under such a conditional publishes the children a
-verdict left unskipped and names the skipped ones by ``evidence_identity``.
-
-**Digest-neutral by construction.** ``fan_out`` enters a canonical entry only
-when authored; the children are derived and never canonical (§6); no
-``protocol/`` byte, no hashed script, no member of the shared closure moves.
-Refusals are workflow checklist rule :data:`FAN_OUT_RULE`. Torch-free at
-module level; :mod:`causalab.workflow.document` imports this module
-function-locally, as it does :mod:`causalab.workflow.conditional`.
-
-"GPUs" on this tree is the width: the runner runs the children sequentially
-in one process and ``explain`` reports them; a dispatcher outside the repo
-maps children to devices. No ``gpus`` key exists — nothing here consumes one.
-"""
+The parent records the complete point set and join status for downstream steps."""
 
 from __future__ import annotations
 
@@ -56,16 +15,16 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from causalab.io.step_record import SIDECAR
-from causalab.protocol.errors import ProtocolError, suggest
-from causalab.protocol.loader import LoadedProtocol
-from causalab.protocol.sweep import short_coords
-from causalab.protocol.tables import TABLE_SUFFIX, write_table
+from causalab.protocol.rules.errors import ProtocolError, suggest
+from causalab.protocol.lowering import short_coords
+from causalab.io.tables import TABLE_SUFFIX, write_table
 from causalab.workflow.behavioral import (
     DECISION_FILE,
     OUTCOMES,
     OUTCOMES_FILE,
     write_decision,
 )
+from causalab.workflow.steps import InnerProtocol
 from causalab.workflow.document import (
     BehavioralStep,
     ConditionalStep,
@@ -140,9 +99,9 @@ def parent_of(name: str) -> str | None:
 
 def parse_fan_out(raw: Any, path: str) -> dict[str, Any]:
     """The ``fan_out`` block in its parsed form (§2.9): ``over`` exactly one
-    of :data:`OVER_KEYS` — ``axis`` a non-empty string, ``shards`` an integer
+    of [`OVER_KEYS`][] — ``axis`` a non-empty string, ``shards`` an integer
     of at least 2 (a ``bool`` refused) — and ``join.require`` from
-    :data:`JOIN_POLICIES`. ``join`` is required when ``fan_out`` is authored:
+    [`JOIN_POLICIES`][]. ``join`` is required when ``fan_out`` is authored:
     no default is materialized, so nothing is written a reader did not see."""
     grammar = (
         '{"over": {"axis": A} | {"shards": N}, "join": {"require": "all" | "selected"}}'
@@ -237,7 +196,7 @@ def parse_fan_out(raw: Any, path: str) -> dict[str, Any]:
 
 
 def expand(
-    name: str, step: ProtocolStep | BehavioralStep, compiled: LoadedProtocol
+    name: str, step: ProtocolStep | BehavioralStep, compiled: InnerProtocol
 ) -> tuple[tuple[str, Step], ...]:
     """The children of one fanned-out step, ``((name, step), …)`` in child
     order (§2.9): ``over.axis`` gives one child per value of that axis in
@@ -345,7 +304,7 @@ def expand_conditional(
 
 
 def check_fan_out(
-    steps: Mapping[str, Step], inner: Mapping[str, LoadedProtocol]
+    steps: Mapping[str, Step], inner: Mapping[str, InnerProtocol]
 ) -> None:
     """Rule 19 over the authored steps, before the expansion (§2.9, §5): a
     step that declares ``control``, is named by a ``control.of`` or is a
@@ -358,18 +317,18 @@ def check_fan_out(
     outside the shared closure); a step whose document saves a non-value
     entry — ``kind: location_ledger`` (IM spec §2.12; ``SAVE_KINDS``) —
     declares no ``fan_out`` (a ledger row names its point in a ``point``
-    column holding the digest string and carries no ``produced_by``, and the
-    ledger is the run's per-point audit table of resolved positions: the
-    join re-assembles measurement tables, not audit tables); a step whose
+    column holding the digest string, and the ledger is the run's per-point
+    audit table of resolved positions: the join re-assembles measurement
+    tables, not audit tables); a step whose
     document saves a file whose name
-    (the path's final component) is one of :data:`_SPARSE_FILES` declares no
+    (the path's final component) is one of `_SPARSE_FILES` declares no
     ``fan_out`` (those names are the engine's sparse side tables, which the
     join declares sparse and never holds to the missing-file check — a
     fanned-out step's save files are the join's, so a document cannot claim
     one of those names for a dense metric table); ``join.require: selected``
     is declared only
     on a step a per-child conditional gates; and every per-child conditional
-    satisfies :func:`check_scope`."""
+    satisfies [`check_scope`][]."""
     controls_of: dict[str, str] = {}
     for other, candidate in steps.items():
         if isinstance(candidate, ProtocolStep) and candidate.control is not None:
@@ -412,7 +371,7 @@ def check_fan_out(
             )
         bundles = sorted(
             str(entry.file_path)
-            for entry in inner[name].document.save
+            for entry in inner[name].compiled.document.save
             if str(entry.file_path).endswith(".safetensors")
         )
         if bundles:
@@ -426,15 +385,15 @@ def check_fan_out(
             )
         ledgers = sorted(
             f"{entry.kind} ({entry.file_path})"
-            for entry in inner[name].document.save
+            for entry in inner[name].compiled.document.save
             if entry.kind is not None
         )
         if ledgers:
             raise _refuse(
                 f"'fan_out' on {name!r}, whose document saves the non-value "
                 f"entry(ies) {ledgers} — a location_ledger row names its point in "
-                "a 'point' column holding the digest string and carries no "
-                "'produced_by' (IM spec §2.12), and the ledger is the run's "
+                "a 'point' column holding the digest string (IM spec §2.12), and "
+                "the ledger is the run's "
                 "per-point audit table of resolved positions; the join "
                 "re-assembles measurement and behavioral tables by point, not "
                 "audit tables, so a step whose document saves an entry "
@@ -450,7 +409,7 @@ def check_fan_out(
         # directory prefix does not slip the name past the check
         claimed = sorted(
             str(entry.file_path)
-            for entry in inner[name].document.save
+            for entry in inner[name].compiled.document.save
             if Path(str(entry.file_path)).name in _SPARSE_FILES
         )
         if claimed:
@@ -486,7 +445,7 @@ def check_fan_out(
 def check_scope(name: str, step: ConditionalStep, steps: Mapping[str, Step]) -> None:
     """A per-child scope's conditions (§2.8, §2.9; rule 19): the predicate's
     producer is a fanned-out ``behavioral`` step, its fan-out is over an axis
-    under the scope's root (:data:`SCOPE_ROOTS` — never over ``shards``), and
+    under the scope's root ([`SCOPE_ROOTS`][] — never over ``shards``), and
     every gated step is fanned out over the same ``over``, so verdict ``i``
     gates child ``i``."""
     scope = step.scope
@@ -578,20 +537,22 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
-#: the row keys whose writers promise **one row per point** — a metric row's
-#: ``produced_by`` (``neural/shared/outputs.py``) and a continuation row's
-#: ``point_digest`` (the engine's ``continuations.json``); a file placed by
-#: either enters the join's per-file completeness check
-_DENSE_KEYS: tuple[str, ...] = ("produced_by", "point_digest")
+#: the row keys whose writers promise **one row per point**: a continuation
+#: row's ``point_digest`` (the engine's ``continuations.json``). A metric row
+#: carries no digest key — it is placed by its coordinate columns — and is
+#: dense by construction (``MetricTable`` writes one row per point per
+#: example, ``neural/shared/results.py``); a file placed by either rule
+#: enters the join's per-file completeness check
+_DENSE_KEYS: tuple[str, ...] = ("point_digest",)
 
 #: the save files whose writers are **sparse** — written per occurrence and,
-#: per child, only when there is something to write (``write_outputs``,
-#: ``neural/shared/outputs.py:355-359``): the engine's three side tables, each
+#: per child, only when there is something to write (``write_outputs`` in
+#: ``causalab/io/results_io.py``): the engine's three side tables, each
 #: naming its point in a digest-valued ``point`` column. A file some child did
 #: not publish is missing unless it is named here — density is the writer's
 #: property, so it is declared, never inferred from the rows the join found.
-#: Restated rather than imported: ``outputs.py`` imports torch at module level
-#: (``outputs.py:24``) and loading a fanned-out workflow must not
+#: Restated rather than imported: ``results.py`` imports torch at module level
+#: and loading a fanned-out workflow must not
 #: (``test_loading_a_fanned_out_workflow_imports_no_torch``); the census in
 #: ``tests/workflow/test_fan_out.py`` holds this tuple to ``TRAIN_EVAL_FILE``,
 #: ``FIT_DIAGNOSTICS_FILE`` and ``ROUTING_MISMATCH_FILE``
@@ -602,22 +563,34 @@ _SPARSE_FILES: tuple[str, ...] = (
 )
 
 
+def _plain(value: Any) -> Any:
+    """The writer's serialization of a coordinate value as a table column
+    (``neural/shared/results.py`` ``_plain``): scalars verbatim, anything
+    else as sorted JSON. Restated rather than imported — ``results.py``
+    imports torch at module level and loading a fanned-out workflow must not
+    (``test_loading_a_fanned_out_workflow_imports_no_torch``)."""
+    if isinstance(value, (int, float, str, bool)):
+        return value
+    return json.dumps(value, sort_keys=True)
+
+
 def _row_digest(row: Mapping[str, Any]) -> tuple[str, str] | None:
     """The point digest a table row names, and the key it named it by:
-    ``(digest, key)`` for a metric row's ``produced_by``, a continuation
-    row's ``point_digest``, or a digest-valued ``point`` — the engine's side
-    tables (``train_eval.json``, ``fit_diagnostics.json``,
-    ``routing_mismatch.json``) name their point that way; ``None`` when the
-    row names no digest.
+    ``(digest, key)`` for a continuation row's ``point_digest``, or a
+    digest-valued ``point`` — the engine's side tables (``train_eval.json``,
+    ``fit_diagnostics.json``, ``routing_mismatch.json``) name their point
+    that way; ``None`` when the row names no digest. A metric row names no
+    digest at all: the caller places it by its coordinate columns first.
 
-    The key matters to the caller: ``produced_by`` / ``point_digest``
-    **promise a row per point** (``outputs.py:309``, ``engine.py:247``), so a
-    file placed by either is held to the per-file completeness check; a
-    digest-valued ``point`` **only places the row** — the side tables are
-    written per occurrence, not per point ("written only when there is
-    something to write", ``outputs.py:355-359``), so a point with no row in
+    The key matters to the caller: ``point_digest`` **promises a row per
+    point** (the ``continuations.json`` row contract: the
+    ``CONTINUATIONS_FILE`` docstring in ``protocol/engine.py``), so a file placed by it
+    is held to the per-file completeness check; a digest-valued ``point``
+    **only places the row** — the side tables are written per occurrence, not
+    per point (``write_outputs`` in ``causalab/io/results_io.py`` writes a side
+    table only when there is something to write), so a point with no row in
     such a file is not missing; whether a file some child did not publish is
-    missing is the writer's to say, and :data:`_SPARSE_FILES` says it. A
+    missing is the writer's to say, and `_SPARSE_FILES` says it. A
     behavioral ``outcomes.json`` row's ``point`` is an *index* into the
     child's own list and is re-based by the caller; a row with none of these
     cannot be placed and the caller refuses it."""
@@ -645,19 +618,32 @@ def run_join_step(
     ``blocked``, never ``skipped``), re-assemble every save file in the
     parent's point order, and — for a behavioral parent — write one
     ``decision.json`` over the summed counts through
-    :func:`~causalab.workflow.behavioral.write_decision`. ``skipped`` is the
+    [`write_decision`][]. ``skipped`` is the
     run's ``skipped_by`` map: under ``require: selected`` a skipped child's
     points are not missing and are named under ``join.skipped``.
 
-    The parent's point list is **reconstructed from the children's own
-    ``point_digests``**, never read from the load-time compile: a deferred
-    document's run-time compile legitimately moves the digests, which is why
-    the join consults the children at all. So every check here is against
-    what the children published — a **foreign** point is a digest a table row
-    names that no child of the join declared as its own compiled point, and a
-    child declaring one digest twice is a **duplicate** — and a row naming no
-    point (no ``produced_by``, no ``point_digest``, no ``point``) is refused
-    rather than appended out of order."""
+    The parent's point list — digests **and coordinates** — is
+    **reconstructed from the children's own records** (``point_digests`` and
+    ``coords``, aligned, in shard order), never read from the load-time
+    compile: a deferred document's run-time compile legitimately moves the
+    digests *and the coordinate values* (a sweep fed by a step reference
+    resolves to the declared representative at load and to the emitted value
+    at run time), which is why the join consults the children at all. The
+    load-time expansion contributes only the parent's point count (the runner
+    has already held the run-time compile to it) and, for a point no child
+    published (a skipped child's, under ``selected``), the coordinates a
+    message names. So every check here is against what the children
+    published — a **foreign** point is a digest a table row names that no
+    child of the join declared as its own compiled point, or coordinates that
+    no child published a point at, and a child declaring one digest twice is
+    a **duplicate** — and a row naming no point (no coordinate columns, no
+    ``point_digest``, no ``point``) is refused rather than appended out of
+    order. A metric row names its point by its coordinate columns: every axis
+    id of the document (the children's ``axes``) is a column (``results.py``
+    splats them unconditionally), and the tuple of their values maps to the
+    point some child published at those coordinates and thence to the digest
+    that child declared there — row provenance is the child's record, not a
+    per-row stamp."""
     assert step.fan_out is not None
     fan = step.fan_out
     require = str(fan["join"]["require"])
@@ -668,9 +654,17 @@ def run_join_step(
     child_steps = {child: loaded.document.steps[child] for child in children}
     expansion = loaded.inner[name].expansion
     n_points = len(expansion.points)
+    # each point's coordinates as the child that ran it published them; the
+    # load-time expansion's only for a point no child published (a skipped
+    # child's, under `selected`) — a message names those, nothing is placed
+    # by them
+    published_coords: list[Mapping[str, Any] | None] = [None] * n_points
 
     def coords_of(index: int) -> dict[str, Any]:
-        return short_coords(expansion.points[index].coords)
+        coords = published_coords[index]
+        return short_coords(
+            coords if coords is not None else expansion.points[index].coords
+        )
 
     owner: dict[int, str] = {}
     for child in children:
@@ -711,6 +705,13 @@ def run_join_step(
     # union placed at each child's indices
     full: list[str | None] = [None] * n_points
     published_by: dict[str, set[str]] = {}
+    # a metric row's coordinate columns → the parent's index: the document's
+    # axis ids (the children's `axes`, one document, so one list), in the
+    # children's order, serialized as the writer serializes them — built from
+    # the coordinates the children published, so a run-time value the
+    # load-time compile never saw places its rows
+    axis_ids: list[str] = []
+    index_by_coords: dict[tuple[Any, ...], int] = {}
     for child in children:
         if child in skipped:
             continue
@@ -729,8 +730,38 @@ def run_join_step(
                 child,
                 f"published {n_published} of its {len(indices)} points",
             )
+        coords_list = record.get("coords")
+        if (
+            not isinstance(coords_list, list)
+            or len(coords_list) != len(indices)
+            or not all(isinstance(coords, Mapping) for coords in coords_list)
+        ):
+            n_published = (
+                sum(isinstance(coords, Mapping) for coords in coords_list)
+                if isinstance(coords_list, list)
+                else 0
+            )
+            raise missing(
+                indices[0],
+                child,
+                f"published the coordinates of {n_published} of its "
+                f"{len(indices)} points",
+            )
+        axes = record.get("axes")
+        if not isinstance(axes, list) or not axes:
+            # two points need an axis, and a fan-out needs two points
+            raise missing(indices[0], child, "published no axes for its points")
+        if not axis_ids:
+            axis_ids = [str(axis) for axis in axes]
+        elif [str(axis) for axis in axes] != axis_ids:
+            raise _refuse(
+                f"{what}: the children disagree on the document's axes "
+                f"({axis_ids} against {child!r}'s {axes}) — every child runs the "
+                "parent's compiled document",
+                where,
+            )
         own_digests: set[str] = set()
-        for index, digest in zip(indices, digests):
+        for index, digest, coords in zip(indices, digests, coords_list):
             if str(digest) in own_digests:
                 raise _refuse(
                     f"join {name!r}: point {digest} is declared twice in the "
@@ -738,6 +769,23 @@ def run_join_step(
                     where,
                 )
             own_digests.add(str(digest))
+            absent_axes = [axis for axis in axis_ids if axis not in coords]
+            if absent_axes:
+                raise missing(
+                    index,
+                    child,
+                    f"published the point's coordinates without {absent_axes}",
+                )
+            key = tuple(_plain(coords[axis]) for axis in axis_ids)
+            if key in index_by_coords:
+                raise _refuse(
+                    f"{what}: points {index_by_coords[key]} and {index} share the "
+                    f"coordinates {short_coords(coords)} — a metric row is placed "
+                    "by its coordinates, which must name one point",
+                    where,
+                )
+            index_by_coords[key] = index
+            published_coords[index] = coords
             full[index] = str(digest)
             published_by.setdefault(str(digest), set()).add(child)
 
@@ -774,7 +822,7 @@ def run_join_step(
         # a file some child did not publish is missing unless its writer is
         # declared sparse: `_SPARSE_FILES` names the engine's side tables,
         # written per occurrence and per child only when there is something
-        # to write (`outputs.py:355-359`), and those are joined from the
+        # to write (`write_outputs`, `io/results_io.py`), and those are joined from the
         # children that have them. Every other file is dense, and an absent
         # one is missing whatever rows the children that have it published —
         # a dense table published empty beside a child that omitted it is
@@ -807,24 +855,27 @@ def run_join_step(
                 )
             shard = getattr(child_steps[child], "shard", None) or {}
             own = [int(i) for i in shard.get("points", ())]
-            # four row shapes, two placement rules — by digest, by
-            # `own[point]` — with a re-base attached to the two shapes that
-            # carry an int `point`: a metric table row carries
-            # `produced_by` and is placed by that digest; a behavioral
+            # four row shapes, three placement rules — by coordinates, by
+            # digest, by `own[point]` — with a re-base attached to the two
+            # shapes that carry an int `point`: a metric table row carries
+            # every axis id as a column and is placed by that coordinate
+            # tuple, through the coordinates the children published, onto
+            # the digest the owning child declared at that point; a behavioral
             # `outcomes.json` row carries an int `point` only — the child's
             # own index — and is placed by `own[point]`, then re-based; a
-            # `continuations.json` row carries BOTH (`engine.py:246-248`:
-            # `point` the index into the child's request, `point_digest` the
-            # point itself) — the digest places it and, beside that pairing
+            # `continuations.json` row carries BOTH (the row contract on
+            # `CONTINUATIONS_FILE`, `protocol/engine.py`: `point` the index
+            # into the child's request, `point_digest` the point itself) — the
+            # digest places it and, beside that pairing
             # only, its index is re-based to the parent's, so the joined
             # `continuations.json` and the `outcomes.json` derived from it
             # (`behavioral.py:619`) name the same points, and a row whose two
             # keys disagree about which point it describes is refused; a side
             # table row carries a digest-valued `point` and is placed by it.
-            # A `produced_by` row's columns are open — the point's coordinates
-            # splat in as columns (`outputs.py:299`) and nothing reserves a
-            # name — so an int `point` on such a row is a coordinate named
-            # `point`, and the join never touches it
+            # A metric row's columns are open — the point's coordinates splat
+            # in as columns (`results.py`) and nothing reserves a name — so
+            # the coordinate rule dispatches FIRST, and an int `point` on such
+            # a row is a coordinate named `point` the join never touches
             for position, row in enumerate(payload):
                 row = dict(row)
                 placed = _row_digest(row)
@@ -834,7 +885,32 @@ def run_join_step(
                     if isinstance(raw_point, int) and not isinstance(raw_point, bool)
                     else None
                 )
-                if placed is not None:
+                # a metric row carries every axis id as a column (`axis_ids`
+                # is non-empty: a fan-out needs two points, two points an axis)
+                if all(axis in row for axis in axis_ids):
+                    key = tuple(_plain(row[axis]) for axis in axis_ids)
+                    index = index_by_coords.get(key)
+                    if index is None:
+                        # coordinates no child published a point at: a value
+                        # outside the sweep, or a skipped child's point under
+                        # 'selected' — either way foreign to the join, like a
+                        # digest no child owns
+                        named = {axis: row[axis] for axis in axis_ids}
+                        raise _refuse(
+                            f"join {name!r}: row {position} of {rel!r} in {child!r} "
+                            f"names coordinates {named}, which no child of {name!r} "
+                            "published — the join's point list is the children's "
+                            "point_digests and coordinates, and a metric row is "
+                            "placed by its coordinates onto a point of the child "
+                            "that wrote it, never appended out of order",
+                            where,
+                        )
+                    digest = full[index]
+                    assert digest is not None  # index_by_coords holds published points
+                    published_by.setdefault(digest, set()).add(child)
+                    digests_by_file[rel].add(digest)
+                    parent_index = index
+                elif placed is not None:
                     digest, key = placed
                     published_by.setdefault(digest, set()).add(child)
                     if key in _DENSE_KEYS:
@@ -877,8 +953,8 @@ def run_join_step(
                 else:
                     raise _refuse(
                         f"{what}: row {position} of {rel!r} in {child!r} names no "
-                        "point — no 'produced_by', no 'point_digest', no 'point' "
-                        f"(its keys: {sorted(row)}); a row the join cannot place "
+                        "point — no coordinate columns, no 'point_digest', no "
+                        f"'point' (its keys: {sorted(row)}); a row the join cannot place "
                         "is refused, never appended out of order",
                         where,
                     )
@@ -938,6 +1014,13 @@ def run_join_step(
         digest if digest is not None else loaded.inner[name].point_digests[index]
         for index, digest in enumerate(full)
     ]
+    # the parent's full coordinate list, as `point_digests`: a published
+    # point's as its child published it, a skipped slot's from the load-time
+    # expansion (the same policy as its digest)
+    joined_coords: list[dict[str, Any]] = [
+        dict(coords) if coords is not None else dict(expansion.points[index].coords)
+        for index, coords in enumerate(published_coords)
+    ]
     consumed = {
         child: {
             "identity": record.get("identity"),
@@ -965,6 +1048,7 @@ def run_join_step(
         "document_digest": next(iter(document_digests), loaded.inner_digests[name]),
         "points": n_points,
         "point_digests": point_digests,
+        "coords": joined_coords,
         "axes": list(first_record.get("axes") or [axis.id for axis in expansion.axes]),
         "files": sorted(written),
         "fan_out": {

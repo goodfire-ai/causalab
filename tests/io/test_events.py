@@ -1,6 +1,6 @@
 """The local append-only event stream (workflow spec §4.3; `causalab/io/events.py`).
 
-Four things are pinned here, none needing a model. **The sequence**: `seq` is strictly
+Four things are pinned here, none needing a model. **The stream**: `seq` is strictly
 increasing and gap-free, a second `EventLog` over the same file continues the
 sequence rather than restarting it, `terminal()` reads the absence of
 `campaign_terminal` as "did not finish", and a stream cut mid-line — or one
@@ -85,7 +85,7 @@ def test_an_identity_key_may_not_shadow_the_lines_own(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# the sequence — seq, append-only, terminal, torn tail
+# seq, append-only, terminal, torn tail
 # --------------------------------------------------------------------------- #
 
 
@@ -366,7 +366,7 @@ def test_the_spec_table_lists_exactly_the_seven_events() -> None:
     assert documented == list(EVENTS)
     assert len(EVENTS) == 7
     assert len(set(EVENTS)) == 7
-    # `campaign_terminal` keeps its name: campaign = document (intervention protocol spec §7)
+    # `campaign_terminal` keeps its name: campaign = document
     assert EVENTS[-1] == "campaign_terminal"
 
 

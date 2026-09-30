@@ -1,0 +1,47 @@
+[
+ {
+  "answer": "Z",
+  "answer_position": "1",
+  "base_answer": " Z",
+  "base_answer_forms": [
+   " Z",
+   "Z"
+  ],
+  "cf_answer": " Q",
+  "cf_answer_forms": [
+   " Q",
+   "Q"
+  ],
+  "choices[0]": "orange",
+  "choices[1]": "red",
+  "color": "red",
+  "counterfactual_inputs": [
+   "The cup is red. What color is the cup?\nJ. orange\nQ. red\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "Q",
+    "answer_position": "1",
+    "choices[0]": "orange",
+    "choices[1]": "red",
+    "color": "red",
+    "object": "cup",
+    "symbols[0]": "J",
+    "symbols[1]": "Q",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The cup is red. What color is the cup?\nM. orange\nZ. red\nAnswer:",
+  "label": " Q",
+  "label_forms": [
+   " Q",
+   "Q"
+  ],
+  "object": "cup",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "M",
+  "symbols[1]": "Z",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ }
+]

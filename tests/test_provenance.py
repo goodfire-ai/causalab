@@ -3,8 +3,9 @@
 `code_commit()` — the stub this replaces — was a `git rev-parse --short HEAD`
 that returned the string `"unknown"` on failure and was stamped into every
 output identity. So a run whose provenance could not be resolved recorded a
-value that reads like a value, and a run could report a branch it did not
-execute with nothing to notice it.
+value that reads like a value, and a run could produce numerically excellent
+results on a package that was not the requested branch with nothing to notice
+it.
 
 Two tiers here, and the split is deliberate.
 
@@ -37,16 +38,13 @@ from causalab.provenance import (
     runtime_identity,
 )
 from causalab.provenance import (
-    _archive_digest,
     _digest_of,
     _direct_url,
     _file_digests,
     _files,
     _fold,
-    _git,
     _modules,
     _package_root,
-    _revision_and_dirt,
     _source,
 )
 
@@ -73,19 +71,6 @@ def _run_git(tree: Path, *args: str) -> str:
         text=True,
         check=True,
     ).stdout.strip()
-
-
-def _checkout(tmp_path: Path) -> Path:
-    """A one-commit checkout shaped like a source tree: a package beside a
-    README, so a test can dirty one without the other."""
-    tree = tmp_path / "tree"
-    (tree / "pkg").mkdir(parents=True)
-    (tree / "pkg" / "a.py").write_text("x = 1\n")
-    (tree / "README.md").write_text("# readme\n")
-    _run_git(tree, "init", "-q")
-    _run_git(tree, "add", "-A")
-    _run_git(tree, "commit", "-q", "-m", "init")
-    return tree
 
 
 # --------------------------------------------------------------------------- #
@@ -118,8 +103,8 @@ class TestSourceKind:
 
     def test_a_local_directory_build_is_an_sdist(self, tmp_path: Path) -> None:
         """A build over sources, not a published artifact — which is what
-        `sdist` names. The tree still comes back, because that is where the
-        revision and the dirty state live."""
+        `sdist` names. The tree still comes back, so the identity can say
+        where the install came from."""
         kind, tree = _source(_Dist(), {"url": tmp_path.as_uri(), "dir_info": {}})
         assert kind == "sdist"
         assert tree == tmp_path
@@ -149,10 +134,9 @@ class TestSourceKind:
         assert kind == expected
 
     def test_a_local_archive_has_no_source_tree(self, tmp_path: Path) -> None:
-        """An archive is a file, not a tree: there is no directory whose git
-        state could describe the install, so none is offered — otherwise a
-        `file:///x.tar.gz` install would ask git about a tarball and report
-        its dirty state as unknown."""
+        """An archive is a file, not a tree: there is no source directory the
+        install reads, so none is offered — a `file:///x.tar.gz` install must
+        not be described by the directory the tarball sits in."""
         archive = tmp_path / "causalab-1.tar.gz"
         kind, tree = _source(_Dist(), {"url": archive.as_uri(), "archive_info": {}})
         assert kind == "sdist"
@@ -423,144 +407,6 @@ class TestDirectUrl:
         assert _direct_url(_LocatedDist(tmp_path)) is None
 
 
-class TestArchiveDigest:
-    pytestmark = pytest.mark.unit
-
-    def test_the_strongest_hash_is_recorded(self) -> None:
-        """`"md5" < "sha256"`, so an alphabetical pick would identify the
-        artifact by the weakest digest on offer."""
-        direct = {"archive_info": {"hashes": {"md5": "m" * 32, "sha256": "s" * 64}}}
-        assert _archive_digest(direct) == "sha256:" + "s" * 64
-        direct = {"archive_info": {"hashes": {"md5": "m" * 32, "sha512": "t" * 128}}}
-        assert _archive_digest(direct) == "sha512:" + "t" * 128
-
-    def test_an_unknown_hash_is_still_recorded(self) -> None:
-        assert _archive_digest({"archive_info": {"hashes": {"xxh3": "z"}}}) == "xxh3:z"
-
-    def test_the_legacy_spelling_is_read(self) -> None:
-        assert _archive_digest({"archive_info": {"hash": "sha256=abc"}}) == "sha256=abc"
-
-
-# --------------------------------------------------------------------------- #
-# git, and what it can and cannot say
-# --------------------------------------------------------------------------- #
-
-
-class TestGit:
-    pytestmark = pytest.mark.unit
-
-    def test_a_stalled_git_is_a_non_answer(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """This runs on every request's startup path; git stalling on a lock or
-        a slow filesystem must become `None`, not a hung run."""
-
-        def stall(*args: object, **kwargs: object) -> None:
-            assert kwargs.get("timeout"), "the subprocess must carry a timeout"
-            raise subprocess.TimeoutExpired(cmd="git", timeout=1)
-
-        monkeypatch.setattr(subprocess, "run", stall)
-        assert _git(tmp_path, "status") is None
-
-    def test_a_tree_that_is_not_a_checkout_is_a_non_answer(
-        self, tmp_path: Path
-    ) -> None:
-        assert _git(tmp_path, "rev-parse", "HEAD") is None
-
-
-class TestRevisionAndDirt:
-    """`dirty` and `tree_digest` must answer the same question, and a failed
-    question must not be reported as a clean answer."""
-
-    pytestmark = pytest.mark.unit
-
-    def test_an_edit_outside_the_package_is_not_dirt(self, tmp_path: Path) -> None:
-        """An uncommitted README changes no byte that will run; calling the
-        install dirty for it would make the reuse check refuse on a false
-        positive."""
-        tree = _checkout(tmp_path)
-        (tree / "README.md").write_text("# edited\n")
-        revision, dirty = _revision_and_dirt("editable", tree, None, "pkg")
-        assert revision == _run_git(tree, "rev-parse", "HEAD")
-        assert dirty is False
-
-    def test_an_edit_inside_the_package_is_dirt(self, tmp_path: Path) -> None:
-        tree = _checkout(tmp_path)
-        (tree / "pkg" / "a.py").write_text("x = 2\n")
-        _revision, dirty = _revision_and_dirt("editable", tree, None, "pkg")
-        assert dirty is True
-
-    def test_an_untracked_file_inside_the_package_is_dirt(self, tmp_path: Path) -> None:
-        """A new module that will execute is a change git has not recorded, so
-        the tree digest moves and `dirty` must agree with it."""
-        tree = _checkout(tmp_path)
-        (tree / "pkg" / "new.py").write_text("y = 1\n")
-        _revision, dirty = _revision_and_dirt("editable", tree, None, "pkg")
-        assert dirty is True
-
-    def test_a_tree_git_cannot_answer_for_is_unknown_not_clean(
-        self, tmp_path: Path
-    ) -> None:
-        """An editable install of an unpacked sdist has a tree and no checkout.
-        `False` there would claim cleaner than anyone knows; `None` is the
-        module's own shape for an absent fact, and `attested` treats it as
-        not attested."""
-        tree = tmp_path / "unpacked"
-        (tree / "pkg").mkdir(parents=True)
-        revision, dirty = _revision_and_dirt("editable", tree, None, "pkg")
-        assert revision is None
-        assert dirty is None
-
-    def test_a_vcs_install_reports_only_what_the_installer_recorded(
-        self, tmp_path: Path
-    ) -> None:
-        """The clone is where the bytes were copied *from*; it is not read. So
-        dirtying it changes nothing about the install, and a record with no
-        `commit_id` yields `None` rather than the clone's current `HEAD`, which
-        names a tree that is not running."""
-        tree = _checkout(tmp_path)
-        (tree / "pkg" / "a.py").write_text("x = 2\n")
-        recorded = {
-            "url": tree.as_uri(),
-            "vcs_info": {"vcs": "git", "commit_id": "a" * 40},
-        }
-        assert _revision_and_dirt("git", tree, recorded, "pkg") == ("a" * 40, False)
-        unrecorded = {"url": tree.as_uri(), "vcs_info": {"vcs": "git"}}
-        assert _revision_and_dirt("git", tree, unrecorded, "pkg") == (None, False)
-
-    def test_no_tree_is_a_clean_statement(self) -> None:
-        assert _revision_and_dirt("wheel", None, None, "pkg") == (None, False)
-
-
-class TestAttested:
-    pytestmark = pytest.mark.unit
-
-    @staticmethod
-    def _identity(
-        dirty: bool | None, revision: str | None = "a" * 40
-    ) -> RuntimeIdentity:
-        return RuntimeIdentity(
-            distribution="causalab",
-            version="0",
-            source_kind="editable",
-            location="/x",
-            origin=None,
-            requested_revision=None,
-            resolved_revision=revision,
-            archive_digest=None,
-            tree_digest="0" * 64,
-            dirty=dirty,
-            modules=(),
-            dependencies=(),
-        )
-
-    def test_only_a_known_clean_revision_is_attested(self) -> None:
-        assert self._identity(False).attested is True
-        assert self._identity(True).attested is False
-        assert self._identity(None).attested is False
-        assert self._identity(False, revision=None).attested is False
-
-
 # --------------------------------------------------------------------------- #
 # the live environment
 # --------------------------------------------------------------------------- #
@@ -598,8 +444,7 @@ class TestThisInstall:
         short = identity.short_revision
         assert len(short) == 12
         assert all(c in "0123456789abcdef" for c in short)
-        expected = identity.resolved_revision or identity.tree_digest
-        assert expected.startswith(short)
+        assert identity.tree_digest.startswith(short)
 
     def test_the_receipt_form_round_trips_through_json(self) -> None:
         """The run receipt carries this, so it has to serialize."""
@@ -696,9 +541,9 @@ class TestRealInstalls:
     """`runtime_identity()` on installs it did not choose.
 
     The editable case is the live environment and is covered above. These two
-    are the ones an editable checkout never exercises: a wheel (which records
-    no revision unless the build stamped one) and a git URL (which records both the
-    requested ref and the resolved commit, and needs no checkout to say so).
+    are the ones a report actually hit: a wheel (which records no request) and
+    a git URL (which records the requested ref, and needs no checkout to say
+    so).
     """
 
     def test_the_live_environment_is_an_editable_or_wheel_install(self) -> None:
@@ -714,20 +559,19 @@ class TestRealInstalls:
         assert installed.returncode == 0, installed.stderr
         identity = _describe(python)
         assert identity["source_kind"] == "wheel"
-        # a wheel from a local path records its origin but no revision — and
+        # a wheel from a local path records its origin but no request — and
         # that absence is a fact, so the tree digest is what identifies it
-        assert identity["resolved_revision"] is None
-        assert identity["dirty"] is False
+        assert identity["requested_revision"] is None
         assert len(identity["tree_digest"]) == 64
         assert "unknown" not in json.dumps(identity).lower()
 
-    def test_a_git_install_names_both_revisions(self, tmp_path: Path) -> None:
-        """The requested/resolved split, on the install kind that has both.
+    def test_a_git_install_names_the_requested_revision(self, tmp_path: Path) -> None:
+        """The requested ref, on the install kind that records one.
 
         A local source repository is used as the VCS URL so the test needs no
         history objects from the developer's potentially partial clone. The
-        revision comes from the installer's own record, which is why it is
-        readable without importing the package or having a checkout.
+        ref comes from the installer's own record, which is why it is readable
+        without importing the package or having a checkout.
         """
         source = tmp_path / "source"
         source.mkdir()
@@ -771,24 +615,20 @@ class TestRealInstalls:
             raise AssertionError(install.stderr)
         identity = _describe(python)
         assert identity["source_kind"] == "git"
-        assert identity["resolved_revision"] == head
         assert identity["requested_revision"] == head
         # the installer copied the bytes into the venv: that copy is what runs,
-        # so the identity describes it and not this working tree — which is why
-        # `dirty` is False however this checkout looks
+        # so the identity describes it and not this working tree
         location = Path(identity["location"]).resolve()
         assert python.parent.parent.resolve() in location.parents
         assert REPO not in location.parents
-        assert identity["dirty"] is False
+        assert len(identity["tree_digest"]) == 64
         assert identity["origin"] and identity["origin"].startswith("file://")
         assert "unknown" not in json.dumps(identity).lower()
 
-    def test_an_uncommitted_edit_shows_up_as_dirty_and_moves_the_tree_digest(
-        self, tmp_path: Path
-    ) -> None:
-        """Both halves, because either alone is insufficient: `dirty` says a
-        tree has changes, and the tree digest says *the bytes that will run*
-        are different. A report needs the second to compare two runs.
+    def test_an_uncommitted_edit_moves_the_tree_digest(self, tmp_path: Path) -> None:
+        """The tree digest says *the bytes that will run* are different — no
+        revision does, which is what this module is about: a report needs the
+        digest to compare two runs of the same checkout.
         """
         clone = tmp_path / "clone"
         subprocess.run(
@@ -802,17 +642,12 @@ class TestRealInstalls:
         assert installed.returncode == 0, installed.stderr
         clean = _describe(python)
         assert clean["source_kind"] == "editable"
-        assert clean["dirty"] is False, "a fresh clone is not dirty"
-        assert clean["resolved_revision"]
+        assert len(clean["tree_digest"]) == 64
 
         # any tracked module of the clone; picked at runtime rather than named,
         # so the test does not depend on this branch's own files existing at the
         # cloned revision
         target = sorted((clone / "causalab").rglob("*.py"))[0]
         target.write_text(target.read_text() + "\n# an edit\n")
-        dirtied = _describe(python)
-        assert dirtied["dirty"] is True
-        assert dirtied["tree_digest"] != clean["tree_digest"]
-        # the revision is unchanged — which is the point: a revision alone
-        # cannot tell these two runs apart, and that is the whole point
-        assert dirtied["resolved_revision"] == clean["resolved_revision"]
+        edited = _describe(python)
+        assert edited["tree_digest"] != clean["tree_digest"]

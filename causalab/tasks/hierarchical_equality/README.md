@@ -69,7 +69,7 @@ Two patterns produce `1`, two produce `0` — the ICL block is balanced by const
 
 `counterfactuals.py::generate_dataset(model, n, seed)` returns `n` examples; both base and counterfactual are independent calls to `sample_balanced_input`, which samples a pattern uniformly from `PATTERNS` and instantiates letters accordingly. So every `(left_equality, right_equality)` pair appears with equal frequency in expectation.
 
-The single registered generator is `random_counterfactual` (in `COUNTERFACTUAL_GENERATORS`); single-variable counterfactuals are configured at the runner level via `task.resample_variable: <var>` per `docs/CODEBASE.md` §5.
+The single registered generator is `random_counterfactual` (in `COUNTERFACTUAL_GENERATORS`).
 
 ## Token Positions
 
@@ -88,15 +88,15 @@ The regex differs per prompt mode:
 
 ## How to Run
 
-The task runs from an intervention document that names its table
-(`hierarchical_equality/data/default`) — see `docs/running_experiments.md` and the shipped
-documents under `causalab/configs/protocols/`:
+No document in this repository runs this task yet. A document names the shipped table as `hierarchical_equality/data/default#all` in its `data` block, and runs with:
 
 ```bash
-uv run causalab run <document.json>
+uv run causalab run <document> \
+    --engine auto \
+    --out runs/hierarchical_equality
 ```
 
-Outputs land under `artifacts/hierarchical_equality/<model>/<analysis>/...` per `docs/CODEBASE.md` invariant 7.
+[Running experiments](../../../docs/running_experiments.md) shows how to write, validate and run a document.
 
 ## Files
 
@@ -107,6 +107,10 @@ Outputs land under `artifacts/hierarchical_equality/<model>/<analysis>/...` per 
 | `templates.py` | `TEMPLATES`, `fill_template`, `_sample_pattern_values`, `generate_icl_examples` |
 | `counterfactuals.py` | `sample_balanced_input`, `generate_dataset`, `COUNTERFACTUAL_GENERATORS` |
 | `token_positions.py` | `create_token_positions` (custom Python — not declarative due to ICL repeats) |
-| `data/default.json` | the shipped table: `hierarchical_equality/data/default` (256 pairs, `split all`; no `*_forms` — the task declares no `output_tokens`); built with `uv run python scripts/build_task_dataset.py --task hierarchical_equality --n 256 --seed 0 --split all --target-variable result_equality --out causalab/tasks/hierarchical_equality/data/default.json` |
+| `data/default.json` | the shipped table: `hierarchical_equality/data/default` (256 pairs, `split all`; scoring forms and explicit `icl_seed` values); built with `uv run python scripts/build_task_dataset.py --task hierarchical_equality --n 256 --seed 0 --split all --target-variable result_equality --out causalab/tasks/hierarchical_equality/data/default.json` |
 | `metrics.py`, `icl_scaling.py` | Task-specific scoring helpers |
 | `demo.ipynb` | Runnable walkthrough of the causal model, tokenization, and counterfactuals |
+
+ICL randomness is an explicit `icl_seed` input. The dataset generator supplies
+independent seeds for base and donor traces; re-evaluating a trace keeps its
+prompt examples fixed. For manual traces, supply the seed with the letter inputs.

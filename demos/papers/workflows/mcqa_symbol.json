@@ -1,0 +1,71 @@
+{
+  "version": "1",
+  "description": "The mcqa_symbol package: localize the MCQA answer letter (the causal model's `answer`, different_symbol pairs) at the answer slot of Qwen2.5-1.5B-Instruct with DAS. Measure the unpatched baselines, fit one k = 32 rotation per layer on all 28 layers, score every rotation on the held-out and the train split, patch the whole residual-stream vector at the answer slot of every layer on the held-out split for comparison, select the layer with the highest held-out IIA, fit DBM-DAS (a boundary gate over a 128-column rotation) there and score it held out, then score random subspaces at the same layer at k = 32 and at the learned rank. scripts/mcqa_symbol/iia_figure.py draws the run tree.",
+  "output_dir": "mcqa_symbol",
+  "steps": {
+    "clean": {"type": "intervention_protocol", "document": "../protocols/mcqa_symbol_clean.json"},
+    "fit": {"type": "intervention_protocol", "document": "../protocols/mcqa_symbol_das_fit.json"},
+    "apply": {"type": "intervention_protocol", "document": "../protocols/mcqa_symbol_das_apply.json"},
+    "apply_train": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_symbol_das_apply.json",
+      "set": {
+        "data.base.dataset": "mcqa_symbol/data#train",
+        "data.counterfactual.dataset": "mcqa_symbol/data#train"
+      }
+    },
+    "full_patch": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_symbol_das_apply.json",
+      "set": {
+        "featurizers": {},
+        "reads.v_cf": {"site": "target", "pos": "answer_slot"},
+        "writes.patch": {"site": "target", "pos": "answer_slot", "do": {"swap": "v_cf"}}
+      }
+    },
+    "best": {
+      "type": "script",
+      "script": {"module": "causalab.workflow.scripts.select"},
+      "inputs": {
+        "table": {"step": "apply", "file": "iia.json"},
+        "choose": "max",
+        "emit": {"best_layer": "sites.target.layers"}
+      },
+      "outputs": {"values": {"file": "values.json", "keys": {"best_layer": 0}}}
+    },
+    "dbm_fit": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_symbol_dbm_fit.json",
+      "set": {"sites.target.layers": {"artifact": "best", "key": "best_layer"}}
+    },
+    "dbm_apply": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_symbol_dbm_apply.json",
+      "set": {"sites.target.layers": {"artifact": "best", "key": "best_layer"}}
+    },
+    "rank": {
+      "type": "script",
+      "script": {"path": "scripts/mcqa_symbol/learned_rank.py"},
+      "inputs": {
+        "gate": {"step": "dbm_fit", "file": "bnd.safetensors"},
+        "rotation": {"step": "dbm_fit", "file": "rot.safetensors"}
+      },
+      "outputs": {
+        "values": {"file": "values.json", "keys": {"learned_rank": 1, "theta": 0.5, "width": 1}}
+      }
+    },
+    "control": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_symbol_control.json",
+      "set": {"sites.target.layers": {"artifact": "best", "key": "best_layer"}}
+    },
+    "control_dbm": {
+      "type": "intervention_protocol",
+      "document": "../protocols/mcqa_symbol_control.json",
+      "set": {
+        "sites.target.layers": {"artifact": "best", "key": "best_layer"},
+        "featurizers.rot.k": {"artifact": "rank", "key": "learned_rank"}
+      }
+    }
+  }
+}

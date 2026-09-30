@@ -1,20 +1,8 @@
-"""The run manifest and the attempt bookkeeping beside it (workflow spec §8).
+"""Write workflow manifests and manage step attempts.
 
-A step is **attempted, verified, then published**. Everything a step writes
-lands in an attempt directory under ``<run_root>/.attempts/<step>/<id>/``;
-only after every declared output has been verified and the step record written
-does one rename publish the attempt as ``<run_root>/<step>/``. So a published
-step directory is either a complete unit or absent — never half of one — and
-``--resume`` can trust what it finds there once the content digests agree.
-
-``workflow.json`` is written **always**, in a ``finally``: a run that dies in
-step 2 of 3 still leaves a manifest classifying every step. The status words
-are a closed vocabulary (:data:`STEP_STATUSES`) documented in the spec's §8
-table, and ``tests/workflow/test_attempt_publish.py`` keeps the two in step.
-
-This module holds the vocabulary, the layout constants, and the file writers.
-The runner (:mod:`causalab.workflow.runner`) decides *when* each is written.
-"""
+Each attempt has a record under ``.attempts``. Publication verifies its products
+and renames the complete attempt into the step directory. Superseded attempts
+retain their records. The manifest reports the status of every scheduled step."""
 
 from __future__ import annotations
 
@@ -83,7 +71,7 @@ SUPERSEDED_SUFFIX = ".superseded"
 #: an attempt's record before its publish; ``accepted`` — the published unit,
 #: the one a reader beside its files finds and analysis accepts by default;
 #: ``inadmissible`` — a failed attempt's ``attempt.json``; ``superseded`` — a
-#: unit a rerun displaced, retained under :data:`SUPERSEDED_SUFFIX`.
+#: unit a rerun displaced, retained under [`SUPERSEDED_SUFFIX`][].
 DISPOSITIONS: tuple[str, ...] = ("candidate", "accepted", "inadmissible", "superseded")
 #: How many failed attempts a step keeps; older ones are deleted, partial
 #: outputs included.
@@ -109,9 +97,9 @@ StepStatus = Literal["completed", "reused", "failed", "blocked", "pending", "ski
 #: the conditional, the producer whose ``decision.json`` it read, what that
 #: record said, the evidence identity binding it to the numbers, and — for a
 #: step skipped because a step it depends on was — the steps it followed.
-#: Manifest vocabulary, like :data:`STEP_STATUSES`: the two emitters — the
+#: Manifest vocabulary, like [`STEP_STATUSES`][]: the two emitters — the
 #: runner's reached skip (``conditional.skipped_entry``) and this module's
-#: unreached skip (:func:`classify_unreached`) — write the same six keys, absent
+#: unreached skip ([`classify_unreached`][]) — write the same six keys, absent
 #: ones ``None``, so a reader never meets two shapes in one manifest.
 SKIPPED_BY_FIELDS: tuple[str, ...] = (
     "conditional",
@@ -240,15 +228,15 @@ def publish_attempt(
     """Make a verified attempt the published step directory by rename.
 
     ``attempt_dir`` and ``step_dir`` sit in the same run tree, so
-    :func:`os.replace` is one atomic ``rename(2)``. A stale ``step_dir`` from
+    `os.replace` is one atomic ``rename(2)``. A stale ``step_dir`` from
     a previous complete unit is moved aside *inside the attempts directory*
     first — until the new unit is in place it is still a complete unit, and
-    :func:`restore_displaced` puts it back if the process dies between the two
+    [`restore_displaced`][] puts it back if the process dies between the two
     renames. It is **never deleted** (§8, supersession preserves): the
     displaced path is returned for the runner to retain through
-    :func:`retain_superseded` once the publish is narrated, and a displaced
+    [`retain_superseded`][] once the publish is narrated, and a displaced
     unit the runner never got to is retained by the next run's
-    :func:`restore_displaced`.
+    [`restore_displaced`][].
 
     ``between`` is the runner's fault-injection seam for the instant between
     the two renames.
@@ -339,9 +327,9 @@ def restore_displaced(run_root: Path, step: str, step_dir: Path) -> None:
     """Finish a publish that died after its first rename: if the new unit
     never landed, the previous complete unit is back where §3 references find
     it; if it did land, the displaced unit is retained as superseded
-    (:func:`retain_superseded`) — either way nothing is lost.
+    ([`retain_superseded`][]) — either way nothing is lost.
 
-    Only a displaced directory left by :func:`publish_attempt` qualifies."""
+    Only a displaced directory left by [`publish_attempt`][] qualifies."""
     attempts_root = run_root / ATTEMPTS_DIR / step
     if not attempts_root.is_dir():
         return
@@ -376,7 +364,7 @@ def propagates(upstream: str, name: str, selective: frozenset[str]) -> bool:
     from any other upstream (an ``after`` step, an input's producer) skips a
     selective join like any step; and a selective join every child of which
     is skipped has nothing to publish and is skipped with them
-    (:func:`skipped_via`)."""
+    ([`skipped_via`][])."""
     return not (name in selective and upstream.startswith(f"{name}{CHILD_SEPARATOR}"))
 
 
@@ -387,7 +375,7 @@ def skipped_via(
     selective: frozenset[str],
 ) -> list[str]:
     """The skipped upstream steps whose skip reaches ``name`` (§2.8, §2.9),
-    sorted: every skipped upstream that :func:`propagates` — and, for a
+    sorted: every skipped upstream that [`propagates`][] — and, for a
     selective join, its children when **all** of them are skipped."""
     via = sorted(
         u for u in upstream if is_skipped(u) and propagates(u, name, selective)
@@ -415,8 +403,8 @@ def classify_unreached(
     run; else ``pending`` — the run stopped before reaching it. Walked in
     schedule order so a skip or a block propagates down a chain. ``selective``
     names the joins declaring ``require: selected`` (§2.9): a skipped child
-    does not skip such a join (:func:`propagates`). An unreached skip carries
-    every :data:`SKIPPED_BY_FIELDS` key, as a reached one does: the decision
+    does not skip such a join ([`propagates`][]). An unreached skip carries
+    every [`SKIPPED_BY_FIELDS`][] key, as a reached one does: the decision
     fields inherited from the first skipped upstream's ``skipped_by``,
     ``transitive_from`` the skipped upstreams."""
     entries: dict[str, dict[str, Any]] = {}

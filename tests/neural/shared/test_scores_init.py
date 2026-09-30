@@ -1,5 +1,5 @@
 """A gate built from a score table (spec §2.5 ``init.from_scores``; rule 32's
-build-time half) — the pure layer, through :func:`build_stack` with a fake
+build-time half) — the pure layer, through [`build_stack`][causalab.neural.shared.featurizers.build.build_stack] with a fake
 table loader, no model anywhere.
 
 What is pinned: under ``keep`` the top-``keep`` units by score sit on the kept
@@ -16,7 +16,6 @@ field. The table's bytes are the start's identity.
 
 from __future__ import annotations
 
-import hashlib
 import json
 from typing import Any
 
@@ -24,9 +23,9 @@ import pytest
 import torch
 
 from causalab.neural.shared.featurizers import Gate, build_stack, gate_poles
-from causalab.protocol.errors import ProtocolError, ValidationError
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
 from causalab.protocol.schema import FeaturizerSpec, hard_concrete_threshold
-from causalab.protocol.shapes import bs_flat_heads
+from causalab.protocol.registry.shapes import bs_flat_heads
 
 pytestmark = pytest.mark.unit
 
@@ -236,10 +235,13 @@ def test_a_position_gate_reads_one_row_per_position() -> None:
     assert gate.hard_mask().tolist() == [0.0, 1.0, 1.0]
 
 
-def test_the_tables_bytes_are_the_starts_identity() -> None:
-    load_table, raw = _table(_rows())
+def test_a_table_start_stamps_no_init_identity() -> None:
+    """A score table is a JSON table, not a tensor bundle: it has no
+    ArtifactIdentity to record, and its bytes are the canonical form's
+    (``init.from_scores.content_digest``), so the gate stamps nothing."""
+    load_table, _raw = _table(_rows())
     gate = _gate({"keep": 1}, load_table=load_table)
-    assert gate.init_identity == {"init_digest": hashlib.sha256(raw).hexdigest()}
+    assert gate.init_identity == {}
 
 
 # -- rule 32: every way a table fails to cover the gate ---------------------- #

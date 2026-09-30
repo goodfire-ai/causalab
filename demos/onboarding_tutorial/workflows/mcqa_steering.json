@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "description": "The 10_steering demo end to end: ablate every layer to find which ones the answer needs, harvest the contrast at the located cell, subtract the means into a direction, and add it back at eleven strengths. The ablation arm and the steering arm share no data edge, so the runner may run them together -- necessity and sufficiency are two independent questions about the same cell.",
-  "output_dir": "mcqa_steering",
+  "description": "Zero the answer slot layer by layer and plot accuracy. Build a mean-difference direction at block 26, add it at eleven strengths, and plot how often the counterfactual answer appears.",
+  "output_dir": "12_steering",
   "steps": {
     "ablate": {"type": "intervention_protocol", "document": "../protocols/mcqa_ablate.json"},
     "ablation_curve": {
@@ -12,7 +12,7 @@
         "plot": "lines",
         "x": "sites.target.layers"
       },
-      "outputs": {"figure": "ablation.png", "plotted": {"file": "ablation.json"}}
+      "outputs": {"figure": "12_steering_ablation.png", "plotted": {"file": "12_steering_ablation.json"}}
     },
     "harvest": {
       "type": "intervention_protocol",
@@ -40,7 +40,7 @@
         "plot": "lines",
         "x": "writes.push.do.add_scaled.alpha"
       },
-      "outputs": {"figure": "steering.png", "plotted": {"file": "steering.json"}}
+      "outputs": {"figure": "12_steering_steer.png", "plotted": {"file": "12_steering_steer.json"}}
     }
   }
 }

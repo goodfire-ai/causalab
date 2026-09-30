@@ -1,8 +1,7 @@
-"""Neural-network execution for compiled interventions.
+"""Neural execution for compiled interventions.
 
-After the protocol refactor this package holds exactly two things: the
-reference engine over native pytorch hooks (:mod:`.pytorch_hooks`, the
-only subpackage — spec §8 of ``docs/intervention_protocol.md``) and the
-backbone-agnostic token-position utilities (:mod:`.token_positions`) the
-task packages' position vocabularies are written against.
+``engines`` supplies PyTorch hooks and nnsight tracing. Both use ``shared``
+for protocol execution; ``shared.engine_router`` resolves the engine choice.
+Authoring helpers live in ``causalab.analysis.sequences``; task position
+helpers live in ``causalab.tasks.token_positions``.
 """

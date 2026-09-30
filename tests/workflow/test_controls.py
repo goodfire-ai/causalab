@@ -1,5 +1,6 @@
 """Controls as native conditions — the waiver + status-inheritance layer
-(workflow spec §2.2, §5 rule 14, §8).
+(workflow spec §2.2, §5 rule 14, §8). "Corpus NN" is the intervention specification
+``tests/protocols/NN_*_im.json``.
 
 What is pinned, and how each test fails without the change:
 
@@ -10,7 +11,7 @@ What is pinned, and how each test fails without the change:
   fit which neither declares nor waives ``matched_random`` is refused under
   rule 14 naming the step and the kind; an empty or unknown waiver reason, and
   an ``external`` waiver with no reference, are refused too — the mutation
-  "accept a waiver with no reason" is caught. Without the change the
+  "accept a waiver with no reason". Without the change the
   workflow loads: ``control`` and ``waive`` are unknown keys (rule 1), and
   nothing says ``WorkflowError(14)``.
 * **Fail-closed.** Every shipped and demo workflow loads and carries none of
@@ -55,9 +56,9 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.code import import_closure
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.loader import load
+from causalab.protocol.identity import import_closure
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.pipeline import compile_protocol
 from causalab.workflow.derived import derive_statuses
 from causalab.workflow.document import (
     CONTROL_KINDS,
@@ -77,6 +78,7 @@ from causalab.workflow.document import (
 from causalab.workflow.runner import INSTRUMENT_FAILURE, ControlFailure, coords_token
 from causalab.analysis.certify_control import REQUIRED_INPUTS
 
+from tests.protocol._env import steps_of
 from tests.protocol.test_vocabulary_census import CODE, _rows  # the table parser
 from tests.workflow.test_closure_census import (
     DEMO_WORKFLOWS,
@@ -84,30 +86,36 @@ from tests.workflow.test_closure_census import (
     SHIPPED,
     _demo_env,  # pyright: ignore[reportPrivateUsage]
 )
+from tests._helpers.paths import PROTOCOLS_DIR, WORKFLOWS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
 SPEC = REPO / "docs" / "workflow_protocol.md"
+#: §4.2, §6 and the runner contract of §8.
+INTERNALS = REPO / "docs" / "workflow_protocol_internals.md"
 FIXTURES = Path(__file__).parent / "fixtures" / "controls"
 CORPUS = REPO / "tests" / "protocols"
-PROTOCOLS = REPO / "causalab" / "configs" / "protocols"
+PROTOCOLS = PROTOCOLS_DIR
 CORPUS_PINS = json.loads((REPO / "tests/protocol/corpus_digests.json").read_text())
 TINY_LLAMA = "hf-internal-testing/tiny-random-LlamaForCausalLM"
 
 EXTERNAL = {"reason": "external", "reference": "runs/2026-09-01/self_swap"}
 
 
-def _section(heading: str) -> str:
-    """The text under ``heading`` of the *workflow* spec, up to the next heading
-    of equal or lesser depth. The protocol census's ``_section`` is bound to
-    the intervention spec, so its table parser is imported and this is not."""
+def _section(heading: str, spec: Path = SPEC) -> str:
+    """Read a numbered workflow section of ``spec`` through its next peer or parent heading."""
     depth = len(heading) - len(heading.lstrip("#"))
-    body = SPEC.read_text().split(heading, 1)
-    assert len(body) == 2, f"{heading!r} is not in {SPEC.name}"
+    number = re.match(r"^#+ (\d+(?:\.\d+)*)(?:\.)?(?=\s|$)", heading)
+    assert number is not None, f"expected a numbered heading: {heading!r}"
+    pattern = rf"^#{{{depth}}} {re.escape(number.group(1))}(?:\.)?(?=\s|$)[^\n]*\n"
+    text = spec.read_text()
+    matches = list(re.finditer(pattern, text, re.M))
+    assert len(matches) == 1, f"expected one section {number.group(1)} in {spec.name}"
+    body = text[matches[0].end() :]
     stop = re.compile(rf"^#{{1,{depth}}} ", re.M)
-    end = stop.search(body[1])
-    return body[1][: end.start()] if end else body[1]
+    end = stop.search(body)
+    return body[: end.start()] if end else body
 
 
 def _table(header: str) -> list[list[str]]:
@@ -194,11 +202,12 @@ def test_every_vocabulary_row_says_what_it_means() -> None:
 
 
 def test_the_required_kinds_are_the_two_certifiable_ones() -> None:
-    # Both are declarable (`CONTROL_KINDS`) but neither is *required* by
-    # rule 14: `shuffled_source` is the label control — its document is the
-    # target's own, held by rule 14's whole canonical form, and `single_role`
-    # may waive it (§2.2); `full_component` is never required (full-component
-    # controls stay authored documents)
+    # Both are declarable (`CONTROL_KINDS`)
+    # but neither is *required* by rule 14: `shuffled_source` is the label
+    # control — its document is the target's own, held by rule 14's whole
+    # canonical form, and `single_role` may waive it (§2.2); `full_component`
+    # is never required (full-component controls stay hand-authored
+    # documents)
     assert set(REQUIRED_CONTROL_KINDS) == set(CONTROL_KINDS) - {
         "shuffled_source",
         "full_component",
@@ -371,16 +380,19 @@ def test_a_shuffled_source_control_loads_when_its_document_is_the_targets_plus_s
     """The valid-work twin: the fixture is corpus 02 with
     ``data.counterfactual.shuffle: {seed: 0}`` and nothing else changed, so the
     declaration loads, the control's canonical entry is the declaration, and the
-    two inner documents differ in digest. Fails without the change: the kind
-    was refused at parse ("not yet declarable")."""
+    two inner documents differ in digest. Fails without the change: the loader
+    refused the kind at parse ("not yet declarable")."""
     loaded = load_workflow(_shuffled_workflow(), env)
     assert loaded.canonical["steps"]["shuffled"]["control"] == {
         "of": "target",
         "kind": "shuffled_source",
     }
     inner = loaded.inner
-    assert inner["shuffled"].document_digest != inner["target"].document_digest
-    assert inner["shuffled"].canonical_document["data"]["counterfactual"][
+    assert (
+        inner["shuffled"].compiled.digests.document
+        != inner["target"].compiled.digests.document
+    )
+    assert inner["shuffled"].compiled.canonical["data"]["counterfactual"][
         "shuffle"
     ] == {"seed": 0}
     assert "not yet declarable" not in json.dumps(loaded.canonical)
@@ -437,7 +449,7 @@ def test_a_shuffled_source_control_of_a_shuffled_target_is_refused(env) -> None:
 
 
 def test_the_single_role_waiver_of_shuffled_source_still_loads(env) -> None:
-    """Slice 1's waiver is unchanged: a document with no counterfactual role
+    """The ``single_role`` waiver is unchanged: a document with no counterfactual role
     waives ``shuffled_source`` as ``single_role`` and loads; the same waiver on
     a document with a counterfactual role is still refused."""
     load_workflow(
@@ -471,7 +483,7 @@ def test_a_shuffled_source_controls_points_are_passed_when_they_ran(env) -> None
         [{}],
         # rule 15: the ledger records the qualification's identity (§8)
         identity={
-            "document_digest": loaded.inner["shuffled"].document_digest,
+            "document_digest": loaded.inner["shuffled"].compiled.digests.document,
             "tree_digest": "0" * 64,
             "engine": "pytorch_hooks",
         },
@@ -582,7 +594,7 @@ def test_a_self_swap_control_loads_and_is_certified(env) -> None:
     "override, match",
     [
         (
-            {"reads.v_self.input": "counterfactual", "save[1].input": "counterfactual"},
+            {"intervened_models.original_base.input": "counterfactual"},
             r"intervened_models.self_swap: operand read 'v_self' has input "
             r"'counterfactual', not the model's input 'base'",
         ),
@@ -591,8 +603,12 @@ def test_a_self_swap_control_loads_and_is_certified(env) -> None:
             r"operand read 'v_self' and write 'self_patch' differ at pos",
         ),
         (
-            {"reads.v_self.model": "patched", "save[1].model": "patched"},
-            r"operand read 'v_self' is taken from model 'patched', not 'original'",
+            {
+                "intervened_models.patched.reads": ["recv_target", "v_self"],
+                "intervened_models.original_base.reads": ["recv_original"],
+                "save[1].model": "patched",
+            },
+            r"operand read 'v_self' is taken from model 'patched', which lands writes",
         ),
     ],
     ids=["input", "pos", "model"],
@@ -677,10 +693,10 @@ def _hand_built(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def test_t8_corpus_13_still_loads_to_its_pin(env) -> None:
-    loaded = load(CONTROL_13, env)
+    loaded = compile_protocol(CONTROL_13, env=env)
     pin = CORPUS_PINS["13_random_subspace_control_im.json"]
-    assert loaded.document_digest == pin["document"]
-    assert list(loaded.point_digests) == pin["points"]
+    assert loaded.digests.document == pin["document"]
+    assert list(steps_of(loaded, env).digests) == pin["points"]
 
 
 def test_t8_the_declared_and_hand_built_forms_expand_identically(env) -> None:
@@ -772,7 +788,7 @@ def test_t8_mutation_a_matched_random_of_a_step_without_a_fit_is_refused(env) ->
 
 def test_t8_the_random_mask_chain_declares_its_control(env) -> None:
     """``fit → random_mask → apply``, the seed on the script step's inputs
-    (Q8: the application protocol), declared as the fit's matched_random
+    (the application protocol), declared as the fit's matched_random
     control; the pairing is by kind (gate ↔ gate) and site, the seed
     provenance is the drawing step's. ``random_mask`` is imported, never
     edited. Load-only, on the shipped documents."""
@@ -812,7 +828,7 @@ def test_t8_the_random_mask_chain_declares_its_control(env) -> None:
 def test_every_shipped_workflow_loads_and_authors_no_control(path: Path, env) -> None:
     """A workflow that declares nothing is not held to rule 14, and carries
     none of the three keys in any canonical entry — the digest it had."""
-    shipped_root = REPO / "causalab" / "configs" / "workflows"
+    shipped_root = WORKFLOWS_DIR
     loaded = load_workflow(
         path, env if path.parent == shipped_root else _demo_env(path)
     )
@@ -892,7 +908,7 @@ def _header_coords(
     by the writer itself, so the test pins the mirror against the real thing."""
     import torch
 
-    from causalab.neural.shared.outputs import TensorFile
+    from causalab.neural.shared.results import TensorFile
 
     bundle = TensorFile()
     for coords in coords_list:
@@ -929,7 +945,7 @@ def _declared(
         coords_list,
         # rule 15: the ledger records the qualification's identity (§8)
         identity={
-            "document_digest": loaded.inner["ctl"].document_digest,
+            "document_digest": loaded.inner["ctl"].compiled.digests.document,
             "tree_digest": "0" * 64,
             "engine": "pytorch_hooks",
         },
@@ -1031,7 +1047,7 @@ def test_a_controls_record_carries_its_coordinates_and_restore_re_seats_them(
         _self_swap_workflow(**{"sites.target.layers": {"sweep": [0, 1]}}), env
     )
     inner = swept.inner["ctl"]
-    assert inner.compiled is not None and len(inner.point_digests) == 2
+    assert len(inner.point_digests) == 2
     legacy = _ControlLedger()
     legacy.restore(
         "ctl",

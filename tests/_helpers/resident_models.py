@@ -9,10 +9,10 @@ per-test ``gc.collect()`` + ``torch.cuda.empty_cache()`` in
 ``tests/conftest.py`` reclaims only *dead* models; nothing it does can
 free a cached one. The golden tier runs every module in one process on one
 accelerator, so whatever the previous module left cached is subtracted from
-the next module's budget — enough for the paper goldens' cached GPT-2 XL and
-Llama-3.1-8B to cost ``tests/golden/test_readout_a3b.py`` its ~70 GB
-``Qwen/Qwen3.6-35B-A3B`` load. ``tests/golden/conftest.py`` calls this at
-every golden module boundary.
+the next module's budget — a full golden run can lose the ~70 GB
+``Qwen/Qwen3.6-35B-A3B`` load of ``tests/golden/test_readout_a3b.py`` to the
+paper goldens' cached GPT-2 XL and Llama-3.1-8B. ``tests/golden/conftest.py``
+calls this at every golden module boundary.
 """
 
 from __future__ import annotations

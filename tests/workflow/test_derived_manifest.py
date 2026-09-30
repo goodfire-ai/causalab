@@ -19,9 +19,10 @@ propagates is a `ProtocolWarning` beside it (the failure keeps its type); torn
 on a clean run it is a `ProtocolError` chaining the read error; and an
 interrupt (`KeyboardInterrupt`, `SystemExit`) landing between a memory
 assignment and its emit propagates as itself — never downgraded to a
-`ProtocolError` — with `--resume` reusing the unit it left published. **T14**:
-appending tracker lines to the stream after scientific completion moves no
-checksum of any other file — while `terminal()` flips to `False` and `workflow.json` still says what it said,
+`ProtocolError` — with `--resume` reusing the unit it left published. **T14**
+: appending tracker lines to the stream
+after scientific completion moves no checksum of any other file — while
+`terminal()` flips to `False` and `workflow.json` still says what it said,
 which is the two lifecycles — and a second `--resume` run onto that tree
 appends to the stream, reuses every step and leaves every step directory's
 checksums unchanged. `_step.json` is **not** derived (its `status: completed`
@@ -40,7 +41,7 @@ import pytest
 
 from causalab.io.events import EVENTS_FILE, EventLog, read_events, terminal
 from causalab.io.step_record import SIDECAR
-from causalab.protocol.errors import ProtocolError, ProtocolWarning
+from causalab.protocol.rules.errors import ProtocolError, ProtocolWarning
 from causalab.workflow import manifest as mf
 from causalab.workflow import runner
 from causalab.workflow.derived import derive_statuses
@@ -112,7 +113,7 @@ def test_t13_a_clean_run_derives_completed_for_every_step(
     chain_dir: Path, env: Any, tmp_path: Path
 ) -> None:
     loaded = _load(chain_dir, env)
-    result = run_workflow(loaded, env, tmp_path / "runs", [])
+    result = run_workflow(loaded, env, tmp_path / "runs", None)
     records = read_events(result.run_root / EVENTS_FILE)
     derived = _derived(loaded, records)
 
@@ -131,10 +132,10 @@ def test_t13_a_resume_run_derives_reused_from_its_own_lines(
     run's `completed` lines before them are the first run's history."""
     loaded = _load(chain_dir, env)
     out = tmp_path / "runs"
-    first = run_workflow(loaded, env, out, [])
+    first = run_workflow(loaded, env, out, None)
     first_records = read_events(first.run_root / EVENTS_FILE)
 
-    second = run_workflow(loaded, env, out, [], resume=True)
+    second = run_workflow(loaded, env, out, None, resume=True)
     records = read_events(second.run_root / EVENTS_FILE)
     own = _own(records, opened_at=len(first_records))
     assert own and own[0]["seq"] == first_records[-1]["seq"] + 1
@@ -160,7 +161,7 @@ def test_t13_a_failed_run_derives_failed_blocked_and_pending(
     loaded = _load(chain_dir, env, aside=True, scripts={"second": "raising.py"})
     assert loaded.order == ("first", "second", "third", "aside")
     with pytest.raises(RuntimeError, match="the step died"):
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     run_root = tmp_path / "runs" / "chain"
     records = read_events(run_root / EVENTS_FILE)
     derived = _derived(loaded, records)
@@ -385,7 +386,7 @@ def test_t13_mutation_an_in_memory_status_the_log_never_recorded_is_refused(
     monkeypatch.setattr(runner, "classify_unreached", _memory_says_completed)
     loaded = _load(chain_dir, env, scripts={"second": "raising.py"})
     with pytest.raises(ProtocolError, match=r"'third'.*'completed'.*'blocked'") as info:
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     assert isinstance(info.value.__cause__, RuntimeError)
     assert str(info.value.__cause__) == "the step died"
     run_root = tmp_path / "runs" / "chain"
@@ -404,7 +405,7 @@ def test_t13_mutation_a_runner_that_reads_no_log_is_refused(
     monkeypatch.setattr(runner, "read_events", lambda path: [])
     loaded = _load(chain_dir, env)
     with pytest.raises(ProtocolError, match=r"'first'.*'completed'.*'pending'") as info:
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     assert info.value.__cause__ is None  # no step failure was in flight
     run_root = tmp_path / "runs" / "chain"
     assert not (run_root / mf.MANIFEST).exists()
@@ -435,7 +436,7 @@ def test_t13_mutation_with_the_derivation_stubbed_the_regenerated_status_differs
     monkeypatch.setattr(runner, "derive_statuses", mirroring)
     loaded = _load(chain_dir, env, scripts={"second": "raising.py"})
     with pytest.raises(RuntimeError, match="the step died"):
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     run_root = tmp_path / "runs" / "chain"
     written = _statuses(_manifest(run_root))
     assert written["third"] == "completed"  # the lie the base could write
@@ -574,7 +575,7 @@ def test_a_torn_stream_on_a_clean_run_is_refused_and_no_manifest_is_written(
 
     monkeypatch.setattr(runner, "_boundary", tear_after_the_last_publish)
     with pytest.raises(ProtocolError, match="events.jsonl could not be read") as info:
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     assert isinstance(info.value.__cause__, ValueError)
     assert "no line terminator" in str(info.value.__cause__)
     assert not (run_root / mf.MANIFEST).exists()
@@ -601,7 +602,7 @@ def test_a_torn_stream_does_not_mask_the_step_failure_in_flight(
     monkeypatch.setattr(runner, "_boundary", tear_and_die)
     with pytest.warns(ProtocolWarning, match="events.jsonl could not be read"):
         with pytest.raises(InjectedFailure, match="published in first"):
-            run_workflow(loaded, env, tmp_path / "runs", [])
+            run_workflow(loaded, env, tmp_path / "runs", None)
     assert not (run_root / mf.MANIFEST).exists()
     assert not (run_root / f"{mf.MANIFEST}.tmp").exists()
 
@@ -640,7 +641,7 @@ def test_an_interrupt_between_memory_and_emit_stays_an_interrupt(
         match=r"'first' is 'completed' in memory and 'pending' on the stream",
     ):
         with pytest.raises(type(interrupt)) as info:
-            run_workflow(loaded, env, out, [])
+            run_workflow(loaded, env, out, None)
     assert info.value is interrupt
     if isinstance(interrupt, SystemExit):
         assert interrupt.code == 3
@@ -653,7 +654,7 @@ def test_an_interrupt_between_memory_and_emit_stays_an_interrupt(
     ]
     unit_before = _checksums(run_root / "first")
 
-    second = run_workflow(loaded, env, out, [], resume=True)
+    second = run_workflow(loaded, env, out, None, resume=True)
     assert _statuses(dict(second.manifest)) == {
         "first": "reused",
         "second": "completed",
@@ -672,12 +673,12 @@ def test_an_interrupt_between_memory_and_emit_stays_an_interrupt(
 def test_t14_tracker_lines_after_completion_move_no_scientific_checksum(
     chain_dir: Path, env: Any, tmp_path: Path
 ) -> None:
-    """Append tracker logs after scientific completion; the
+    """The requirement: append tracker logs after scientific completion; the
     scientific manifest and its checksums remain unchanged while the telemetry
     sidecar records the mutation. The asymmetry — `terminal()` flips to False
     while `workflow.json` says what it said — *is* the two lifecycles."""
     loaded = _load(chain_dir, env)
-    result = run_workflow(loaded, env, tmp_path / "runs", [])
+    result = run_workflow(loaded, env, tmp_path / "runs", None)
     run_root = result.run_root
     stream = run_root / EVENTS_FILE
     before = _checksums(run_root)
@@ -715,7 +716,7 @@ def test_t14_a_resume_onto_the_appended_tree_reuses_every_step_and_appends(
     over), and that the stream was appended to, never rewritten."""
     loaded = _load(chain_dir, env)
     out = tmp_path / "runs"
-    first = run_workflow(loaded, env, out, [])
+    first = run_workflow(loaded, env, out, None)
     run_root = first.run_root
     stream = run_root / EVENTS_FILE
     tracker = EventLog(stream, identity={})
@@ -725,7 +726,7 @@ def test_t14_a_resume_onto_the_appended_tree_reuses_every_step_and_appends(
     steps_before = {name: _checksums(run_root / name) for name in loaded.order}
     manifest_before = _manifest(run_root)
 
-    second = run_workflow(loaded, env, out, [], resume=True)
+    second = run_workflow(loaded, env, out, None, resume=True)
     assert second.run_root == run_root
     manifest_after = _manifest(run_root)
     assert _statuses(manifest_after) == {name: "reused" for name in loaded.order}
@@ -757,13 +758,13 @@ def test_step_json_is_not_derived_it_is_the_attempts_verified_record(
     still says `completed`: the record is the earlier run's, byte for byte."""
     loaded = _load(chain_dir, env)
     out = tmp_path / "runs"
-    first = run_workflow(loaded, env, out, [])
+    first = run_workflow(loaded, env, out, None)
     sidecars = {
         name: (first.run_root / name / SIDECAR).read_bytes() for name in loaded.order
     }
     for name in loaded.order:
         assert json.loads(sidecars[name])["status"] == "completed"
-    second = run_workflow(loaded, env, out, [], resume=True)
+    second = run_workflow(loaded, env, out, None, resume=True)
     assert _statuses(dict(second.manifest)) == {name: "reused" for name in loaded.order}
     for name in loaded.order:
         assert (second.run_root / name / SIDECAR).read_bytes() == sidecars[name]

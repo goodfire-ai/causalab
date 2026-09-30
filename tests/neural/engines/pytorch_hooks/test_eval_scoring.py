@@ -17,10 +17,10 @@ import torch
 
 from causalab.neural.engines.pytorch_hooks import train as train_module
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
-from causalab.neural.shared import metrics as metrics_module
+from causalab.protocol import answers as answers_module
 from causalab.neural.shared.metrics import compute_metric
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.resolve import ResolutionEnv
+from causalab.protocol.engine import RunContext
+from causalab.io.env import ResolutionEnv
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
@@ -31,6 +31,7 @@ from tests.neural.engines.pytorch_hooks.test_train import (
     COUNTERFACTUALS,
     das_doc,
 )
+from tests.protocol._docs import aggregation, by_label, term
 
 pytestmark = pytest.mark.unit
 
@@ -64,32 +65,26 @@ def bundle() -> ModelBundle:
 
 def _doc() -> dict[str, Any]:
     raw = das_doc(epochs=1)
-    raw["method"]["metrics"]["iia"] = {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "label",
-        "b": "other",
-        "token_form": "space_prefixed",
-    }
+    # the eval restates the objective's cross-entropy under the label its
+    # saved table carries, beside a margin nothing saves (§2.11)
+    (ce,) = [e for e in raw["method"]["save"] if e.get("file_path") == "ce.json"]
     raw["method"]["train"]["eval"] = {
         "every": {"epochs": 1},
         "split": SPLIT,
-        "metrics": ["iia", "ce"],
+        "aggregations": {
+            "iia": term(
+                "logits",
+                "patched",
+                aggregation("logit_diff", a="label", b="other"),
+            ),
+            "ce": term("logits", "patched", ce["aggregation"]),
+        },
     }
-    # every metric must be saved (rule V10)
-    raw["method"]["save"].append(
-        {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"}
-    )
     return raw
 
 
-def _request() -> ExecutionRequest:
-    return ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+def _request() -> RunContext:
+    return RunContext(
         env=ResolutionEnv(
             datasets=_InlineDatasets({SPLIT: EVAL_ROWS}),
             artifacts=None,  # type: ignore[arg-type]
@@ -112,13 +107,13 @@ def test_the_scorer_reads_from_the_device_and_matches_the_cpu_path(
     evaluator = train_module._eval_executor(point.doc, point, _request(), SPLIT)
     assert evaluator.device_reads
     resolved: list[str] = []
-    column_token_ids = metrics_module.column_token_ids
+    column_token_ids = answers_module.column_token_ids
 
     def counted(tokenizer: Any, values: Any, **kwargs: Any) -> list[int]:
         resolved.append(str(kwargs.get("where")))
         return column_token_ids(tokenizer, values, **kwargs)
 
-    monkeypatch.setattr(metrics_module, "column_token_ids", counted)
+    monkeypatch.setattr(answers_module, "column_token_ids", counted)
     train_module._fresh_for_eval(evaluator)
     scores = train_module._score(point.doc, evaluator)
     # the selecting kind's ids were resolved once, over the two rows that
@@ -138,7 +133,7 @@ def test_the_scorer_reads_from_the_device_and_matches_the_cpu_path(
     logits = evaluator.dense_value("logits")
     for name in ("iia", "ce"):
         values = compute_metric(
-            point.doc.metrics[name], logits.detach().cpu(), rows, bundle.tokenizer
+            by_label(point.doc)[name], logits.detach().cpu(), rows, bundle.tokenizer
         )
         numeric = [v for v in values if isinstance(v, float)]
         assert scores[name] == sum(numeric) / len(numeric)
@@ -162,7 +157,7 @@ def test_a_softmax_only_eval_keeps_its_reads_on_the_host(bundle: ModelBundle) ->
     vocabulary there: the executor's reads move to the CPU as they are
     finalized, once, and the scorer reduces them as it always did."""
     raw = _doc()
-    raw["method"]["train"]["eval"]["metrics"] = ["ce"]
+    del raw["method"]["train"]["eval"]["aggregations"]["iia"]
     point = executor_for(
         raw,
         bundle,
@@ -178,7 +173,10 @@ def test_a_softmax_only_eval_keeps_its_reads_on_the_host(bundle: ModelBundle) ->
     logits = evaluator.dense_value("logits")
     assert isinstance(logits, torch.Tensor)
     values = compute_metric(
-        point.doc.metrics["ce"], logits, evaluator.rows_for_metrics(), bundle.tokenizer
+        by_label(point.doc)["ce"],
+        logits,
+        evaluator.rows_for_metrics(),
+        bundle.tokenizer,
     )
     numeric = [v for v in values if isinstance(v, float)]
     assert scores == {"ce": sum(numeric) / len(numeric)}

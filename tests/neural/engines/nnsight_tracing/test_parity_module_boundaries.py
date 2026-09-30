@@ -1,8 +1,9 @@
-"""The parity suite: the same documents through both engines, asserting the
-answers agree.
+"""The parity suite: the same documents through both
+engines, asserting the answers agree.
 
 This is simultaneously the nnsight engine's correctness proof for the
-module-boundary vocabulary and its numerical oracle — one artifact, two uses. Reads must agree to fp32-eager-CPU
+module-boundary vocabulary and a numerical oracle between the two engines —
+one artifact, two uses. Reads must agree to fp32-eager-CPU
 tolerance, write effects on the logits must agree, and refusals must be the
 *same* refusal (code and component named), because the policy tables are
 single-homed.
@@ -15,14 +16,15 @@ import torch
 
 from causalab.neural.engines.nnsight_tracing.engine import NnsightEngine
 from causalab.neural.engines.nnsight_tracing.executor import TracePointExecutor
-from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
-from causalab.protocol.engine import choose_engine, component_capability
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.schema import parse_document
-from causalab.protocol.validate import validate_document
+from causalab.protocol.engine import component_capability, requires
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.rules.capability import refuse_shortfall
+from causalab.protocol.schema import PROTOCOL_VERSION, parse_document
+from causalab.protocol.rules.document import validate_document
 
-from tests.protocol._docs import in_order
+from tests.protocol._docs import in_order, saved
+
 
 pytestmark = pytest.mark.smoke
 
@@ -78,22 +80,14 @@ def _read_doc(component: str, layer: int | None, head: int | None = None) -> dic
     if head is not None:
         site["head"] = head
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": site},
-            "reads": {
-                "r": {"site": "tap", "pos": -1, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": -1}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 
@@ -105,35 +99,24 @@ def _interchange_doc(component: str, layer: int | None) -> dict:
     if layer is not None:
         site["layers"] = layer
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "sites": {"tap": site, "head": {"component": "lm_head"}},
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "logits": {
-                    "site": "head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": -1},
+                "logits": {"site": "head", "pos": -1},
             },
             "writes": {"patch": {"site": "tap", "pos": -1, "do": {"swap": "v_cf"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "save": [
-                {
-                    "value": "logits",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "l.safetensors",
-                }
-            ],
+            "save": [saved("logits", "patched", "l.safetensors")],
         },
     }
 
@@ -141,39 +124,31 @@ def _interchange_doc(component: str, layer: int | None) -> dict:
 def _block_mid_with_later_read_doc(later_component: str) -> dict:
     """A mid write followed by a same-layer interior read and output read."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=True),
+        "intervened_models": {
+            "original_base": {"input": "base", "reads": ["v_mid_base"]},
+            "original_counterfactual": {
+                "input": "counterfactual",
+                "reads": ["v_mid_cf"],
+            },
+            "patched": {
+                "input": "base",
+                "reads": ["r_later", "r_out"],
+                "writes": ["mid_swap"],
+            },
+        },
         "sites": {
             "mid": {"component": "block_mid", "layers": 1},
             "later": {"component": later_component, "layers": 1},
             "out": {"component": "block_output", "layers": 1},
         },
         "reads": {
-            "v_mid_base": {
-                "site": "mid",
-                "pos": -1,
-                "model": "original",
-                "input": "base",
-            },
-            "v_mid_cf": {
-                "site": "mid",
-                "pos": -1,
-                "model": "original",
-                "input": "counterfactual",
-            },
-            "r_later": {
-                "site": "later",
-                "pos": -1,
-                "model": "patched",
-                "input": "base",
-            },
-            "r_out": {
-                "site": "out",
-                "pos": -1,
-                "model": "patched",
-                "input": "base",
-            },
+            "v_mid_base": {"site": "mid", "pos": -1},
+            "v_mid_cf": {"site": "mid", "pos": -1},
+            "r_later": {"site": "later", "pos": -1},
+            "r_out": {"site": "out", "pos": -1},
         },
         "writes": {
             "mid_swap": {
@@ -182,19 +157,13 @@ def _block_mid_with_later_read_doc(later_component: str) -> dict:
                 "do": {"swap": "v_mid_cf"},
             }
         },
-        "intervened_models": {"patched": {"input": "base", "writes": ["mid_swap"]}},
         "save": [
-            {
-                "value": name,
-                "model": model,
-                "input": input_role,
-                "file_path": f"{name}.safetensors",
-            }
-            for name, model, input_role in (
-                ("v_mid_base", "original", "base"),
-                ("v_mid_cf", "original", "counterfactual"),
-                ("r_later", "patched", "base"),
-                ("r_out", "patched", "base"),
+            saved(name, model, f"{name}.safetensors")
+            for name, model in (
+                ("v_mid_base", "original_base"),
+                ("v_mid_cf", "original_counterfactual"),
+                ("r_later", "patched"),
+                ("r_out", "patched"),
             )
         ],
     }
@@ -203,50 +172,42 @@ def _block_mid_with_later_read_doc(later_component: str) -> dict:
 def _mixed_block_writes_doc() -> dict:
     """Absolute precedence and additive composition after mid writeback."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=True),
+        "intervened_models": {
+            "original_base": {"input": "base", "reads": ["v_mid_base"]},
+            "original_counterfactual": {
+                "input": "counterfactual",
+                "reads": ["v_mid_cf", "v_out_cf"],
+            },
+            "mid_then_out": {
+                "input": "base",
+                "reads": ["r_mid_then_out"],
+                "writes": ["mid_swap", "out_swap"],
+            },
+            "out_then_mid": {
+                "input": "base",
+                "reads": ["r_out_then_mid"],
+                "writes": ["out_swap", "mid_swap"],
+            },
+            "mid_plus_out": {
+                "input": "base",
+                "reads": ["r_mid_plus_out"],
+                "writes": ["mid_swap", "out_add"],
+            },
+        },
         "sites": {
             "mid": {"component": "block_mid", "layers": 1},
             "out": {"component": "block_output", "layers": 1},
         },
         "reads": {
-            "v_mid_base": {
-                "site": "mid",
-                "pos": -1,
-                "model": "original",
-                "input": "base",
-            },
-            "v_mid_cf": {
-                "site": "mid",
-                "pos": -1,
-                "model": "original",
-                "input": "counterfactual",
-            },
-            "v_out_cf": {
-                "site": "out",
-                "pos": -1,
-                "model": "original",
-                "input": "counterfactual",
-            },
-            "r_mid_then_out": {
-                "site": "out",
-                "pos": -1,
-                "model": "mid_then_out",
-                "input": "base",
-            },
-            "r_out_then_mid": {
-                "site": "out",
-                "pos": -1,
-                "model": "out_then_mid",
-                "input": "base",
-            },
-            "r_mid_plus_out": {
-                "site": "out",
-                "pos": -1,
-                "model": "mid_plus_out",
-                "input": "base",
-            },
+            "v_mid_base": {"site": "mid", "pos": -1},
+            "v_mid_cf": {"site": "mid", "pos": -1},
+            "v_out_cf": {"site": "out", "pos": -1},
+            "r_mid_then_out": {"site": "out", "pos": -1},
+            "r_out_then_mid": {"site": "out", "pos": -1},
+            "r_mid_plus_out": {"site": "out", "pos": -1},
         },
         "writes": {
             "mid_swap": {
@@ -265,34 +226,15 @@ def _mixed_block_writes_doc() -> dict:
                 "do": {"add_scaled": {"op": "v_out_cf", "alpha": 0.25}},
             },
         },
-        "intervened_models": {
-            "mid_then_out": {
-                "input": "base",
-                "writes": ["mid_swap", "out_swap"],
-            },
-            "out_then_mid": {
-                "input": "base",
-                "writes": ["out_swap", "mid_swap"],
-            },
-            "mid_plus_out": {
-                "input": "base",
-                "writes": ["mid_swap", "out_add"],
-            },
-        },
         "save": [
-            {
-                "value": name,
-                "model": model,
-                "input": input_role,
-                "file_path": f"{name}.safetensors",
-            }
-            for name, model, input_role in (
-                ("v_mid_base", "original", "base"),
-                ("v_mid_cf", "original", "counterfactual"),
-                ("v_out_cf", "original", "counterfactual"),
-                ("r_mid_then_out", "mid_then_out", "base"),
-                ("r_out_then_mid", "out_then_mid", "base"),
-                ("r_mid_plus_out", "mid_plus_out", "base"),
+            saved(name, model, f"{name}.safetensors")
+            for name, model in (
+                ("v_mid_base", "original_base"),
+                ("v_mid_cf", "original_counterfactual"),
+                ("v_out_cf", "original_counterfactual"),
+                ("r_mid_then_out", "mid_then_out"),
+                ("r_out_then_mid", "out_then_mid"),
+                ("r_mid_plus_out", "mid_plus_out"),
             )
         ],
     }
@@ -379,6 +321,7 @@ LLAMA_WRITES = [
     ("attention_output", 1),
     ("attention_value", 1),
     ("block_mid", 1),
+    ("mlp_activation", 1),  # P4: the dense act_fn output, absent from the MoE fixture
     ("mlp_output", 1),
     ("block_output", 1),
 ]
@@ -393,28 +336,60 @@ QWEN_WRITES = [
 ]
 
 
-@pytest.mark.parametrize("component,layer", LLAMA_WRITES)
-def test_llama_write_parity(hooks_llama, trace_llama, component, layer):
+def _unpatched_logits(hooks_bundle, trace_bundle) -> dict:
+    """The clean last-position logits from each engine, which every write
+    case below must move away from. Without this check "both engines agree"
+    also holds when neither write landed."""
+    doc = _read_doc("lm_head", None)
+    return {
+        "hooks": _executor(PointExecutor, doc, hooks_bundle, with_cf=False).read_value(
+            "r"
+        ),
+        "trace": _executor(
+            TracePointExecutor, doc, trace_bundle, with_cf=False
+        ).read_value("r"),
+    }
+
+
+@pytest.fixture(scope="module")
+def llama_unpatched_logits(hooks_llama, trace_llama) -> dict:
+    return _unpatched_logits(hooks_llama, trace_llama)
+
+
+@pytest.fixture(scope="module")
+def qwen_unpatched_logits(hooks_qwen, trace_qwen) -> dict:
+    return _unpatched_logits(hooks_qwen, trace_qwen)
+
+
+def _write_parity(component, layer, hooks_bundle, trace_bundle, unpatched) -> None:
     doc = _interchange_doc(component, layer)
-    hooked = _executor(PointExecutor, doc, hooks_llama, with_cf=True)
-    traced = _executor(TracePointExecutor, doc, trace_llama, with_cf=True)
-    _assert_same(
-        hooked.dense_value("logits"),
-        traced.dense_value("logits"),
-        f"patched logits after a swap at {component!r}",
+    hooked = _executor(PointExecutor, doc, hooks_bundle, with_cf=True).dense_value(
+        "logits"
     )
+    traced = _executor(TracePointExecutor, doc, trace_bundle, with_cf=True).dense_value(
+        "logits"
+    )
+    _assert_same(hooked, traced, f"patched logits after a swap at {component!r}")
+    assert not torch.allclose(hooked, unpatched["hooks"], atol=ATOL), (
+        f"pytorch_hooks: the interchange at {component!r} left the logits unchanged"
+    )
+    assert not torch.allclose(traced, unpatched["trace"], atol=ATOL), (
+        f"nnsight: the interchange at {component!r} left the logits unchanged"
+    )
+
+
+@pytest.mark.parametrize("component,layer", LLAMA_WRITES)
+def test_llama_write_parity(
+    hooks_llama, trace_llama, llama_unpatched_logits, component, layer
+):
+    _write_parity(component, layer, hooks_llama, trace_llama, llama_unpatched_logits)
 
 
 @pytest.mark.parametrize("component,layer", QWEN_WRITES)
-def test_qwen_write_parity(hooks_qwen, trace_qwen, component, layer):
-    doc = _interchange_doc(component, layer)
-    hooked = _executor(PointExecutor, doc, hooks_qwen, with_cf=True)
-    traced = _executor(TracePointExecutor, doc, trace_qwen, with_cf=True)
-    _assert_same(
-        hooked.dense_value("logits"),
-        traced.dense_value("logits"),
-        f"patched logits after a swap at {component!r}",
-    )
+def test_qwen_write_parity(
+    hooks_qwen, trace_qwen, qwen_unpatched_logits, component, layer
+):
+    _write_parity(component, layer, hooks_qwen, trace_qwen, qwen_unpatched_logits)
 
 
 @pytest.mark.parametrize(
@@ -476,19 +451,6 @@ def test_mixed_block_write_precedence_agrees_across_engines(hooks_llama, trace_l
     )
 
 
-def test_a_write_moves_the_logits_at_all(hooks_qwen, trace_qwen):
-    """Anti-vacuity for the write-parity tests: 'both engines agree' must not
-    be satisfiable by 'neither write landed'."""
-    doc = _interchange_doc("block_output", 0)
-    clean = _read_doc("lm_head", None)
-    for cls, bundle in ((PointExecutor, hooks_qwen), (TracePointExecutor, trace_qwen)):
-        patched = _executor(cls, doc, bundle, with_cf=True).dense_value("logits")
-        unpatched = _executor(cls, clean, bundle, with_cf=False).read_value("r")
-        assert not torch.allclose(patched, unpatched, atol=ATOL), (
-            f"{cls.__name__}: the interchange left the logits unchanged"
-        )
-
-
 # --------------------------------------------------------------------------- #
 # refusals: the same policy, the same words
 # --------------------------------------------------------------------------- #
@@ -529,18 +491,17 @@ def test_wrong_stream_refusal_is_identical(hooks_qwen, trace_qwen):
 
 
 # --------------------------------------------------------------------------- #
-# routing: what this engine does not declare routes to the one that does
+# capabilities: what this engine declares, the check accepts
 # --------------------------------------------------------------------------- #
 
 
-def test_attention_probs_no_longer_routes_away():
-    """Serving the attention interior flipped this pin: the pattern (and the whole interior) is
+def test_attention_probs_is_served_here():
+    """The pattern (and the whole attention interior) is
     served here through the `.source` address table, so a document naming it
-    stays on this engine when it is first in the list."""
+    passes the capability check against this engine (routing between engines
+    is retired; the check is what remains)."""
     doc = parse_document(in_order(_read_doc("attention_probs", 3)))
-    engines = [NnsightEngine(), PytorchHooksEngine()]
-    chosen = choose_engine(doc, engines)
-    assert isinstance(chosen, NnsightEngine)
+    refuse_shortfall(requires(doc), NnsightEngine().effective_capabilities)
     assert component_capability("attention_probs") in (
         NnsightEngine().effective_capabilities
     )
@@ -550,8 +511,7 @@ def test_attention_probs_no_longer_routes_away():
 def test_a_generated_read_is_served_and_agrees_with_the_reference_engine(
     hooks_llama, trace_llama
 ):
-    """Serving the generated frame flipped this pin from a refusal to the behavior itself: a
-    continuation read decodes through one generate trace here, and the value
+    """A continuation read decodes through one generate trace here, and the value
     matches the reference engine's hand-rolled greedy decode."""
     doc = _read_doc("block_output", 1)
     doc["method"]["positions"] = {

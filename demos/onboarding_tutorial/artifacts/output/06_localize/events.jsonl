@@ -1,0 +1,10 @@
+{"schema_version": 1, "event": "phase_started", "seq": 0, "ts": "2026-09-28T12:45:29.085244+00:00", "payload": {"step": "clean", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 1, "ts": "2026-09-28T12:45:34.119489+00:00", "payload": {"step": "clean", "files": ["clean_base.json", "clean_cf.json", "unpatched_cf.json", "unpatched_logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 2, "ts": "2026-09-28T12:45:34.119549+00:00", "payload": {"step": "clean", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 3, "ts": "2026-09-28T12:45:34.119647+00:00", "payload": {"step": "scan", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 4, "ts": "2026-09-28T12:45:59.272788+00:00", "payload": {"step": "scan", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 5, "ts": "2026-09-28T12:45:59.273047+00:00", "payload": {"step": "scan", "status": "completed", "forwards": 225}}
+{"schema_version": 1, "event": "phase_started", "seq": 6, "ts": "2026-09-28T12:45:59.273125+00:00", "payload": {"step": "heatmap", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 7, "ts": "2026-09-28T12:46:00.244017+00:00", "payload": {"step": "heatmap", "files": ["06_localize_iia_heatmap.png", "06_localize_plotted.json", "06_localize_summary.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 8, "ts": "2026-09-28T12:46:00.244081+00:00", "payload": {"step": "heatmap", "status": "completed"}}
+{"schema_version": 1, "event": "campaign_terminal", "seq": 9, "ts": "2026-09-28T12:46:00.244959+00:00", "payload": {"outcome": "completed", "steps": {"clean": "completed", "scan": "completed", "heatmap": "completed"}}}

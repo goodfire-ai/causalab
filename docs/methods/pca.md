@@ -1,14 +1,21 @@
-# PCA baseline — the `pca` featurizer
+# PCA basis
 
-*How-to. Prose by hand; every block between `generated` markers is rendered from `causalab/protocol/` — edit the source, not the block.*
+A `pca` featurizer uses a fixed basis fitted to saved activations by
+`causalab.analysis.fit_pca`. Load its bundle through `file_path` and choose `k`.
+A fit over `n` rows of `d` dimensions has at most `min(n - 1, d)` components
+with variance, because centering removes one degree of freedom, so the fit
+refuses a larger `k`.
+Interchange interventions act in the first `k` principal components. Comparing
+this basis with DAS tests whether directions that explain variance also support
+the causal hypothesis.
 
-A `pca` is a fixed basis fitted over a harvest (`causalab.analysis.fit_pca`) and loaded from its bundle; its first `k` components are the subspace an interchange acts in — the untrained, variance-maximizing control a DAS fit is compared with. `featurize(x) → (f, err)` is `(Pᵀx, 0)`. Its one parameter slot is `<name>.weight`. It is not a trainable kind: naming it in `train.params` is refused (rule 12), and it is always authored with a `file_path`.
-
-Normative text: [§2.5 `featurizers`](../intervention_protocol.md#25-featurizers), [§5 validation](../intervention_protocol.md#5-validation--load-error-checklist).
+The map is `featurize(x) = (Pᵀx, 0)`, with parameter slot `<name>.weight`.
+Fit PCA on training data. The protocol loads the resulting basis; `train.params`
+cannot train a `pca` featurizer.
 
 ## 1. Where it sits
 
-A basis attaches to any site whose component has a feature width; [the index](README.md) lists them. The bundle's own site must match the document's (rule 15).
+The site must have a feature width and match the bundle's identity.
 
 ## 2. Fields
 
@@ -20,31 +27,29 @@ A basis attaches to any site whose component has a feature width; [the index](RE
 
 <!-- generated: end call causalab.protocol.schema.render_field_legality_table pca -->
 
-What it means, and the fields every kind has:
-
 <!-- generated: begin attrs causalab.protocol.schema.FeaturizerSpec k file_path entry dtype -->
 
-- **`k`** — `subspace` and `pca`: the width of the feature space — the first `k` columns of the rotation or basis are the subspace an interchange acts in, and the site's other `d − k` directions pass through untouched. Sweepable: the rank curve every localization reports.
-- **`file_path`** — Load a fitted artifact instead of fitting one. Legal on every kind, and what makes a featurizer *loaded*: it trains nothing (rule 12), authors no start (`init`, `seed`) and no training rule (`dead`, `k_schedule`), and a gate whose map has no threshold is read out through `top_k` (`FEATURIZER_FIELD_CONDITIONS`). The bundle's `ArtifactIdentity` is checked against the document at load and again at build (rule 15). Artifact-valued: a sweep over bundles is a sweep over fits.
-- **`entry`** — With `file_path` only: which entry of a swept bundle to load — the coordinate values that pick one fit out of a bundle holding several (`_entry_selector`). Absent, the bundle must hold one.
-- **`dtype`** — The precision the featurizer's parameters are held and saved in (`PRECISION_DTYPES`); absent, the model's. Legal on every kind and stamped into a fitted bundle's identity, so an apply document re-authors the fit's.
+- **`k`**: Width of a `subspace` or `pca` feature space. Interchanges act in the first `k` basis columns and preserve the complementary `d − k` directions. Sweepable.
+- **`file_path`**: Path to a fitted artifact. The loaded featurizer uses its saved parameters and accepts no training, initialization, or training-rule fields. A loaded budget gate requires `top_k`. `ArtifactIdentity` is checked at load and build (rule 15). Sweep bundle paths to compare fits.
+- **`entry`**: Coordinate selector for a bundle loaded through `file_path`. Required when the bundle contains several entries; otherwise the sole entry is used.
+- **`dtype`**: Precision used to hold and save featurizer parameters (`PRECISION_DTYPES`). Defaults to the model precision. A loaded document must match the bundle's dtype.
 
 <!-- generated: end attrs causalab.protocol.schema.FeaturizerSpec k file_path entry dtype -->
 
 ## 3. What is refused
 
-Beyond the checklist every document meets (spec §5) and an unknown key (rule 1):
-
 <!-- generated: begin call causalab.protocol.schema.render_field_refusals pca -->
 
-- nothing beyond the checklist every document meets (§5): a `pca` has no field that is legal in one state and refused in another
+- A `pca` follows the shared validation rules (§5).
 
 <!-- generated: end call causalab.protocol.schema.render_field_refusals pca -->
 
 ## 4. Shipped templates
 
-No template in `causalab/configs/protocols/` authors a `pca` (a test holds this to the templates). A DAS fit started from a PCA basis is [`das_pca_init`](../../causalab/configs/protocols/das_pca_init.json), which reads the basis through the subspace's `init` rather than as a featurizer of its own.
+The shipped templates use PCA to initialize DAS through `subspace.init`:
+[`das_pca_init`](../../demos/methods/protocols/das_pca_init.json).
+To use PCA as the intervention basis itself, load the basis with `kind: pca`.
 
 ## 5. Demos
 
-- [`onboarding_tutorial/05_variance_vs_cause.md`](../../demos/onboarding_tutorial/05_variance_vs_cause.md)
+- [Variance and causal effects](../../demos/onboarding_tutorial/08_variance_vs_cause.md)

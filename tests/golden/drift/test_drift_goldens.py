@@ -2,7 +2,7 @@
 
 The counterpart of tests/golden/test_paper_goldens.py with the opposite
 provenance: these values ARE pinned from a reviewed run of this stack
-(tests/golden/drift/update_drift_goldens.py on a cuda device) —
+(tests/golden/drift/update_drift_goldens.py on the canonical cuda box) —
 their job is run-to-run drift detection on a real model, the role the
 retired tests/end_to_end golden tier held. Until the first capture lands,
 the replay skips ("pins not yet captured").

@@ -22,9 +22,8 @@ from causalab.neural.shared.encoding import encode
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor, RaggedValue
 from causalab.protocol.schema import parse_document
 
-from tests.protocol._docs import in_order
-
 from tests.neural.engines.pytorch_hooks.conftest import TINY_GPT2, TINY_LLAMA
+from tests.protocol._docs import in_order, saved
 
 pytestmark = pytest.mark.smoke
 
@@ -42,10 +41,12 @@ def _doc(
     anchor: dict[str, Any] | None = None,
     site: str = "lm_head",
     steer: float | None = None,
+    during_generation: bool = False,
 ) -> dict[str, Any]:
-    """A document reading the continuation, optionally under a steer."""
+    """A document reading the continuation, optionally under a steer — kept
+    in force through the decode steps when ``during_generation`` (§2.9)."""
     raw: dict[str, Any] = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": key, "revision": "main"},
         "data": {"base": {"dataset": "probe", "field": "input"}},
         "method": {
@@ -72,21 +73,17 @@ def _doc(
                 "do": {"add_scaled": {"op": steer, "alpha": 1.0}},
             }
         }
-        raw["method"]["intervened_models"] = {
-            "steered": {"input": "base", "writes": ["steer"]}
-        }
         model = "steered"
-    raw["method"]["reads"] = {
-        "cont": {"site": site, "pos": "cont", "model": model, "input": "base"}
-    }
-    raw["method"]["save"] = [
-        {
-            "value": "cont",
-            "model": model,
+    raw["method"]["intervened_models"] = {
+        model: {
             "input": "base",
-            "file_path": "cont.safetensors",
+            "reads": ["cont"],
+            **({"writes": ["steer"]} if steer is not None else {}),
+            **({"writes_during_generation": True} if during_generation else {}),
         }
-    ]
+    }
+    raw["method"]["reads"] = {"cont": {"site": site, "pos": "cont"}}
+    raw["method"]["save"] = [saved("cont", model, "cont.safetensors")]
     return in_order(raw)
 
 
@@ -114,6 +111,29 @@ def _hf_greedy(bundle, budget: int = BUDGET) -> torch.Tensor:
             use_cache=True,
         )
     return out[:, batch.input_ids.shape[1] :]
+
+
+def _hf_greedy_with_every_step_steer(
+    bundle, steer: float, layer: int = 1, budget: int = BUDGET
+) -> torch.Tensor:
+    """HF's generate with a plain forward hook that adds ``steer`` to the last
+    position of block ``layer``'s output on **every** forward — the prefill's
+    last prompt token, then each decode step's one token. This is the paper
+    semantics of a steer held through generation, spelled without the
+    protocol, and the oracle ``writes_during_generation`` is held to."""
+    block = bundle.model.model.layers[layer]
+
+    def hook(module, args, output):
+        hidden = output[0] if isinstance(output, tuple) else output
+        edited = hidden.clone()
+        edited[:, -1, :] += steer
+        return (edited, *output[1:]) if isinstance(output, tuple) else edited
+
+    handle = block.register_forward_hook(hook)
+    try:
+        return _hf_greedy(bundle, budget)
+    finally:
+        handle.remove()
 
 
 def _decoded_ids(executor: PointExecutor) -> torch.Tensor:
@@ -171,6 +191,22 @@ def test_a_steer_in_the_prefill_moves_the_continuation(llama_bundle):
     assert not torch.equal(plain, steered)
 
 
+def test_writes_during_generation_follow_the_every_step_hook_oracle(llama_bundle):
+    """With ``writes_during_generation`` the steer fires at every decode step
+    too, at the token being decoded — token for token what a forward hook
+    held through HF's own generate produces. The prefill-only decode of the
+    same document is a different continuation, which is what the flag buys;
+    and every step counted the write once (§4 "Fires")."""
+    executor = _executor(
+        llama_bundle, _doc(TINY_LLAMA, steer=5.0, during_generation=True)
+    )
+    every_step = _decoded_ids(executor)
+    assert torch.equal(every_step, _hf_greedy_with_every_step_steer(llama_bundle, 5.0))
+    assert executor.fires[("steered", "base")] == {"steer": 1}
+    prefill_only = _decoded_ids(_executor(llama_bundle, _doc(TINY_LLAMA, steer=5.0)))
+    assert not torch.equal(every_step, prefill_only)
+
+
 def test_a_decode_moves_prompt_frame_reads_only_by_float_noise(
     llama_bundle, monkeypatch
 ):
@@ -192,50 +228,35 @@ def test_a_decode_moves_prompt_frame_reads_only_by_float_noise(
 
     monkeypatch.setattr(llama_bundle.model, "forward", observed_forward)
     without: dict[str, Any] = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": {"base": {"dataset": "probe", "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["tail"]}},
             "sites": {"mid": {"component": "block_output", "layers": [1]}},
-            "reads": {
-                "tail": {"site": "mid", "pos": -1, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "tail",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "tail.safetensors",
-                }
-            ],
+            "reads": {"tail": {"site": "mid", "pos": -1}},
+            "save": [saved("tail", "original", "tail.safetensors")],
         },
     }
     plain = _executor(llama_bundle, without).read_value("tail")
     assert cache_flags == [False]
     cache_flags.clear()
 
+    # the sections spread at the top level are hoisted into `method` by
+    # `in_order`, overriding the base document's of the same name
     withgen = {
         **without,
+        "intervened_models": {"original": {"input": "base", "reads": ["tail", "cont"]}},
         "positions": {"cont": {"generated": {"max_new_tokens": BUDGET}, "all": True}},
         "reads": {
             **without["method"]["reads"],
-            "cont": {
-                "site": "mid",
-                "pos": "cont",
-                "model": "original",
-                "input": "base",
-            },
+            "cont": {"site": "mid", "pos": "cont"},
         },
+        "save": [
+            *without["method"]["save"],
+            saved("cont", "original", "cont.safetensors"),
+        ],
     }
-    withgen["method"]["save"] = [
-        *without["method"]["save"],
-        {
-            "value": "cont",
-            "model": "original",
-            "input": "base",
-            "file_path": "cont.safetensors",
-        },
-    ]
     ordered = in_order(withgen)
     also = _executor(llama_bundle, ordered).read_value("tail")
     assert isinstance(plain, torch.Tensor) and isinstance(also, torch.Tensor)

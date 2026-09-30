@@ -6,8 +6,7 @@ the pair-disjoint DAS bundle at
 maps a **subject** to an **object** (its answer) — e.g. `France → Paris`
 (`country_capital_city`), `Lisa → woman` (`name_gender`), `STUDY → S`
 (`word_first_letter`). Select a relation with `task.relation=<name>` (default
-`word_first_letter`, a relation the curation table below marks green); see
-`sources/manifest.json` for the
+`word_first_letter`, a curation-green relation); see `sources/manifest.json` for the
 35 valid names.
 
 The DAG mirrors [`identity_naming/`](../identity_naming/) with a subject→object
@@ -95,8 +94,8 @@ looks like is pinned on CPU by
 per relation from `scripts/build_task_dataset.py`, one baseline document
 sweeping `data.base.dataset` over them, `match` with `"mode": "first_token"`
 (this task's spec declares `string_mode="prefix"`, which the builder writes
-into every row of the table as `string_mode` beside the spec's
-`scoring_digest`, so a document declaring `"exact"` over it is refused). What
+into every row of the table as `string_mode`, so a document declaring
+`"exact"` over it is refused). What
 is *not* here is the
 run: the numbers above came from a coherent model on a GPU, so re-measuring
 them belongs with that tier — and a re-measurement on a different pipeline

@@ -1,0 +1,19 @@
+{"schema_version": 1, "event": "phase_started", "seq": 0, "ts": "2026-09-28T12:46:02.313540+00:00", "payload": {"step": "clean_train", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 1, "ts": "2026-09-28T12:46:06.605499+00:00", "payload": {"step": "clean_train", "files": ["clean_base.json", "clean_cf.json", "unpatched_cf.json", "unpatched_logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 2, "ts": "2026-09-28T12:46:06.605568+00:00", "payload": {"step": "clean_train", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 3, "ts": "2026-09-28T12:46:06.605644+00:00", "payload": {"step": "clean_test", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 4, "ts": "2026-09-28T12:46:07.209611+00:00", "payload": {"step": "clean_test", "files": ["clean_base.json", "clean_cf.json", "unpatched_cf.json", "unpatched_logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 5, "ts": "2026-09-28T12:46:07.209673+00:00", "payload": {"step": "clean_test", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 6, "ts": "2026-09-28T12:46:07.209745+00:00", "payload": {"step": "full", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 7, "ts": "2026-09-28T12:46:07.797053+00:00", "payload": {"step": "full", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 8, "ts": "2026-09-28T12:46:07.797120+00:00", "payload": {"step": "full", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 9, "ts": "2026-09-28T12:46:07.797181+00:00", "payload": {"step": "fit", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 10, "ts": "2026-09-28T12:47:34.071833+00:00", "payload": {"step": "fit", "files": ["ce.json", "fit_diagnostics.json", "iia.json", "rot.safetensors", "train_eval.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 11, "ts": "2026-09-28T12:47:34.072258+00:00", "payload": {"step": "fit", "status": "completed", "forwards": 9}}
+{"schema_version": 1, "event": "phase_started", "seq": 12, "ts": "2026-09-28T12:47:34.072429+00:00", "payload": {"step": "apply", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 13, "ts": "2026-09-28T12:47:34.902430+00:00", "payload": {"step": "apply", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 14, "ts": "2026-09-28T12:47:34.902492+00:00", "payload": {"step": "apply", "status": "completed", "forwards": 9}}
+{"schema_version": 1, "event": "phase_started", "seq": 15, "ts": "2026-09-28T12:47:34.902552+00:00", "payload": {"step": "test_curve", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 16, "ts": "2026-09-28T12:47:35.136093+00:00", "payload": {"step": "test_curve", "files": ["07_subspace_iia_by_k.json", "07_subspace_iia_by_k.png"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 17, "ts": "2026-09-28T12:47:35.136165+00:00", "payload": {"step": "test_curve", "status": "completed"}}
+{"schema_version": 1, "event": "campaign_terminal", "seq": 18, "ts": "2026-09-28T12:47:35.136644+00:00", "payload": {"outcome": "completed", "steps": {"clean_train": "completed", "clean_test": "completed", "full": "completed", "fit": "completed", "apply": "completed", "test_curve": "completed"}}}

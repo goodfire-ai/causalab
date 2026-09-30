@@ -9,7 +9,7 @@ Pete loves jam, and Ann loves pie. What does Ann love?
 Answer:
 ```
 
-and is expected to produce `pie`. The interesting causal claim is *positional binding*: the model has to (a) figure out which group `Ann` is in, then (b) look up the *food* slot inside that same group. Both steps are made explicit as causal variables (`positional_query_e{e}` and `positional_answer`), so analyses can ask which residual-stream layers compute each one.
+and is expected to produce `pie`. The interesting causal claim is *positional binding*: the model has to (a) figure out which group `Ann` is in, then (b) look up the *food* slot inside that same group. Both steps are made explicit as causal variables (`positional_queries[{e}]` and `positional_answer`), so analyses can ask which residual-stream layers compute each one.
 
 The default configuration is the "love" config — 2 groups of 2 entities (a person and a food) — but the task is parametrized so you can scale to more groups, more entities per group, or different role schemes.
 
@@ -40,7 +40,7 @@ For a config with `G` groups and `E` slots per group:
 
 | Variable | Range | Meaning |
 |---|---|---|
-| `entity_g{g}_e{e}` | `entity_pools[e]` | Entity at slot `e` of group `g` |
+| `entities[{g},{e}]` | `entity_pools[e]` | Entity at slot `e` of group `g` |
 | `query_group` | `0..G-1` | Which group is being asked about |
 | `query_indices` | tuples like `(0,)` | Which slot the model is given |
 | `answer_index` | `0..E-1` | Which slot the model must retrieve |
@@ -50,13 +50,13 @@ For a config with `G` groups and `E` slots per group:
 
 | Variable | Computed from | Meaning |
 |---|---|---|
-| `query_e{e}` | `entity_g*_e{e}` + `query_group` | The entity at slot `e` *of the query group* — i.e. the entity the question references. |
-| `positional_entity_g{g}_e{e}` | `entity_g{g}_e{e}` | Trivially `g` (or `None` if entity missing). Exists so analyses can intervene on "where is this entity" without conflating with identity. |
+| `queries[{e}]` | `entity_g*_e{e}` + `query_group` | The entity at slot `e` *of the query group* — i.e. the entity the question references. |
+| `positional_entities[{g},{e}]` | `entities[{g},{e}]` | Trivially `g` (or `None` if entity missing). Exists so analyses can intervene on "where is this entity" without conflating with identity. |
 | `question_template` | `query_indices`, `answer_index` | Picks the right question template from the config map. |
-| `positional_query_e{e}` | all `entity_g*_e*`, `positional_entity_g*_e*`, `query_e*`, `query_indices` | The set of group indices where the query entity appears at slot `e`. With `ensure_positional_uniqueness` (the sampler default), this is a singleton — the group that contains the query entity. |
-| `positional_answer` | `positional_query_e*`, `query_indices` | Intersection of the per-slot positional-query sets — the *single* group from which to retrieve. **This is the `TARGET_VARIABLE`** for analyses. |
-| `raw_input` | inputs + `query_e*` + `question_template` | The full prompt. |
-| `raw_output` | `positional_answer`, `answer_index`, `entity_g*_e*` | The expected answer entity. |
+| `positional_queries[{e}]` | the same role of `entities`, `positional_entities`, and `queries`, plus `query_indices` and `active_groups` | The set of group indices where the query entity appears at slot `e`. With `ensure_positional_uniqueness` (the sampler default), this is a singleton — the group that contains the query entity. |
+| `positional_answer` | `positional_queries`, `query_indices` | Intersection of the per-slot positional-query sets — the *single* group from which to retrieve. **This is the `TARGET_VARIABLE`** for analyses. |
+| `raw_input` | entity and query families plus query/control inputs | The full prompt. |
+| `raw_output` | `positional_answer`, `answer_index`, `entities` | The expected answer entity. |
 
 `positional_answer` is what makes the task analytically tractable: it's a single integer (the group index) that, by hypothesis, is what the model has to compute internally and route through the residual stream. Localizing where it lives in the network is the typical research question.
 
@@ -68,7 +68,7 @@ For a config with `G` groups and `E` slots per group:
 2. `query_group` is within active groups.
 3. `query_indices ∩ {answer_index}` is empty (you can't ask about and answer with the same slot).
 4. A `question_template` exists for `(query_indices, answer_index)`.
-5. With `ensure_positional_uniqueness=True`: entities at the same slot index are distinct across groups (so `positional_query_e*` is unambiguous).
+5. With `ensure_positional_uniqueness=True`: entities at the same slot index are distinct across groups (so `positional_queries` is unambiguous).
 
 Don't construct inputs by hand for the positional model — the constraint logic above is non-trivial and silent constraint violations corrupt analyses.
 
@@ -84,7 +84,7 @@ Three generators in `counterfactuals.py`:
 
 The `COUNTERFACTUAL_GENERATORS` dict exposes zero-arg wrappers that use the default love config, for systems that take generators as `() -> CounterfactualExample`.
 
-`generate_dataset(causal_model, n, seed)` (the loader-convention entry point) uses a fourth strategy: keep all entity slots fixed and only **resample `query_group`**. This is the cleanest CF for `analysis/locate` in `pairwise` mode (per `docs/CODEBASE.md` §5) — exactly one input variable changes, and both `positional_answer` and `raw_output` flip cleanly.
+`generate_dataset(causal_model, n, seed)` (the loader-convention entry point) uses a fourth strategy: keep all entity slots fixed and only **resample `query_group`**. This is the cleanest CF for a pairwise interchange: exactly one input variable changes, and both `positional_answer` and `raw_output` flip cleanly.
 
 ## Token Positions
 
@@ -101,15 +101,22 @@ Statement-only resolution matters because the same entity (`Ann`) can appear bot
 
 ## How to Run
 
-The task runs from an intervention document that names its table
-(`entity_binding/data/<variant>`) — see `docs/running_experiments.md` and the shipped
-documents under `causalab/configs/protocols/`:
+No document in this repository runs this task yet, and the task ships no table. Build a table with `scripts/build_task_dataset.py`, name it in the `data` block of a document, and run the document with `causalab run`:
 
 ```bash
-uv run causalab run <document.json>
+uv run python scripts/build_task_dataset.py \
+    --task entity_binding \
+    --n 64 \
+    --seed 0 \
+    --split all \
+    --out data/entity_binding.json
+uv run causalab run <document> \
+    --engine auto \
+    --data-root data \
+    --out runs/entity_binding
 ```
 
-Outputs land under `artifacts/entity_binding/<model>/<analysis>/...` per `docs/CODEBASE.md` invariant 7.
+The builder notes that this task scores `raw_output` by prefix, so a `match` metric over the table uses `"mode": "first_token"`. [Running experiments](../../../docs/running_experiments.md) shows how to write, validate and run a document.
 
 ## Files
 
@@ -123,3 +130,9 @@ Outputs land under `artifacts/entity_binding/<model>/<analysis>/...` per `docs/C
 | `data/` | none yet — `output_tokens` is declared on `positional_answer` (an index) with entity-name forms, so the serializer refuses; declare it on `raw_output` first |
 | `metrics.py` | Task-specific scoring and evaluation utilities |
 | `demo.ipynb` | Runnable walkthrough of the causal model, tokenization, and counterfactuals |
+
+The [equations](causal_models.py) infer read dependencies. `statement_template` and
+`question_template` remain variables, but do not have edges to `raw_input`, which
+uses the configured template builder. Invalid rendered configurations raise an
+error; the observation filter samples full supported grids, while interventions
+can use inactive slots and explicitly handled `None` values.

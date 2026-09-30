@@ -1,0 +1,138 @@
+{
+  "header": {
+    "protocol_version": "3",
+    "description": "migrate_v3 fixture: at_once_band (trimmed from tests/protocols/16_at_once_band_im.json); plus a model whose write list is swept"
+  },
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "weekdays/data#train", "field": "input"},
+    "counterfactual": {"dataset": "weekdays/data#train", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "positions": {"tap": {"index": -1}},
+    "sites": {
+      "a": {
+        "component": "attention_output",
+        "layers": {
+          "at_once": {"range": [10, 20]}
+        },
+        "names": "a{layers}"
+      },
+      "lm_head": {"component": "lm_head"},
+      "res19": {"component": "block_output", "layers": [19]}
+    },
+    "reads": {
+      "v": {
+        "site": "a",
+        "pos": "tap",
+        "model": "original",
+        "input": "counterfactual",
+        "names": "v_a{layers}"
+      },
+      "logits_band5_L10": {"site": "lm_head", "pos": -1, "model": "band5_L10", "input": "base"},
+      "logits_band5_L15": {"site": "lm_head", "pos": -1, "model": "band5_L15", "input": "base"},
+      "logits_band10_L10": {"site": "lm_head", "pos": -1, "model": "band10_L10", "input": "base"},
+      "logits_swept": {"site": "lm_head", "pos": -1, "model": "swept", "input": "base"}
+    },
+    "writes": {
+      "w": {"site": "a", "pos": "tap", "do": {"swap": "v"}, "names": "w{layers}"},
+      "zero19": {"site": "res19", "pos": "tap", "do": {"swap": 0}}
+    },
+    "intervened_models": {
+      "band5_L10": {
+        "input": "base",
+        "writes": [
+          {
+            "w": {
+              "layers": {
+                "at_once": {"range": [10, 15]}
+              }
+            }
+          }
+        ]
+      },
+      "band5_L15": {
+        "input": "base",
+        "writes": [
+          {
+            "w": {
+              "layers": {
+                "at_once": {"range": [15, 20]}
+              }
+            }
+          }
+        ]
+      },
+      "band10_L10": {
+        "input": "base",
+        "writes": [
+          {
+            "w": {
+              "layers": {
+                "at_once": {"range": [10, 20]}
+              }
+            }
+          }
+        ]
+      },
+      "swept": {
+        "input": "base",
+        "writes": {
+          "sweep": [["zero19"], []]
+        }
+      }
+    },
+    "metrics": {
+      "iia_band5_L10": {
+        "kind": "logit_diff",
+        "of": "logits_band5_L10",
+        "a": "cf_answer",
+        "b": "base_answer"
+      },
+      "iia_band5_L15": {
+        "kind": "logit_diff",
+        "of": "logits_band5_L15",
+        "a": "cf_answer",
+        "b": "base_answer"
+      },
+      "iia_band10_L10": {
+        "kind": "logit_diff",
+        "of": "logits_band10_L10",
+        "a": "cf_answer",
+        "b": "base_answer"
+      },
+      "iia_swept": {
+        "kind": "logit_diff",
+        "of": "logits_swept",
+        "a": "cf_answer",
+        "b": "base_answer"
+      }
+    },
+    "save": [
+      {
+        "value": "iia_band5_L10",
+        "model": "band5_L10",
+        "input": "base",
+        "file_path": "iia_band5_L10.json"
+      },
+      {
+        "value": "iia_band5_L15",
+        "model": "band5_L15",
+        "input": "base",
+        "file_path": "iia_band5_L15.json"
+      },
+      {
+        "value": "iia_band10_L10",
+        "model": "band10_L10",
+        "input": "base",
+        "file_path": "iia_band10_L10.json"
+      },
+      {
+        "value": "iia_swept",
+        "model": "swept",
+        "input": "base",
+        "file_path": "iia_swept.json"
+      }
+    ]
+  }
+}

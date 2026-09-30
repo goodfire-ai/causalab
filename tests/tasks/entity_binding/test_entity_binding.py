@@ -1,8 +1,8 @@
 """Property-tier invariants for the entity_binding task.
 
 The entity_binding task models positional entity binding as a causal DAG
-over per-position entity inputs ``entity_g{g}_e{e}``, the symbolic
-intermediates ``query_e{e}`` / ``positional_query_e{e}`` /
+over per-position entity inputs ``entities[{g},{e}]``, the symbolic
+intermediates ``queries[{e}]`` / ``positional_queries[{e}]`` /
 ``positional_answer``, and the text-level ``raw_input`` / ``raw_output``.
 The runner smoke config at ``tests/end_to_end/configs/smoke/entity_binding.yaml``
 targets ``positional_answer``; this file pins the **invariants** of every
@@ -109,10 +109,10 @@ class TestEntityBindingCausalModelStructureProperty:
             "positional_answer",
             "raw_input",
             "raw_output",
-            *(f"entity_g{g}_e{e}" for g in gs for e in es),
-            *(f"positional_entity_g{g}_e{e}" for g in gs for e in es),
-            *(f"query_e{e}" for e in es),
-            *(f"positional_query_e{e}" for e in es),
+            *(f"entities[{g},{e}]" for g in gs for e in es),
+            *(f"positional_entities[{g},{e}]" for g in gs for e in es),
+            *(f"queries[{e}]" for e in es),
+            *(f"positional_queries[{e}]" for e in es),
         }
         assert expected <= set(_DEFAULT_MODEL.variables)
 
@@ -120,9 +120,9 @@ class TestEntityBindingCausalModelStructureProperty:
         """``positional_answer`` depends on the per-position query sets + indices."""
         cfg = create_sample_love_config()
         expected = [
-            f"positional_query_e{e}" for e in range(cfg.max_entities_per_group)
+            f"positional_queries[{e}]" for e in range(cfg.max_entities_per_group)
         ] + ["query_indices"]
-        assert _DEFAULT_MODEL.parents["positional_answer"] == expected
+        assert set(_DEFAULT_MODEL.parents["positional_answer"]) == set(expected)
 
     def test_raw_output_parents_include_positional_answer_and_entities(self) -> None:
         """``raw_output`` retrieves an entity selected by ``positional_answer``."""
@@ -132,16 +132,16 @@ class TestEntityBindingCausalModelStructureProperty:
         cfg = create_sample_love_config()
         for g in range(cfg.max_groups):
             for e in range(cfg.max_entities_per_group):
-                assert f"entity_g{g}_e{e}" in parents
+                assert f"entities[{g},{e}]" in parents
 
     def test_query_e_parents_cover_all_groups_and_query_group(self) -> None:
-        """``query_e{e}`` reads from every group at position ``e`` (plus controls)."""
+        """``queries[{e}]`` reads from every group at position ``e`` (plus controls)."""
         cfg = create_sample_love_config()
         for e in range(cfg.max_entities_per_group):
             expected_entity_parents = {
-                f"entity_g{g}_e{e}" for g in range(cfg.max_groups)
+                f"entities[{g},{e}]" for g in range(cfg.max_groups)
             }
-            parents = set(_DEFAULT_MODEL.parents[f"query_e{e}"])
+            parents = set(_DEFAULT_MODEL.parents[f"queries[{e}]"])
             assert expected_entity_parents <= parents
             assert "query_group" in parents
 
@@ -198,7 +198,7 @@ class TestEntityBindingSampleInputProperty:
         cfg = create_sample_love_config()
         trace = sample_valid_entity_binding_input(cfg, model=_DEFAULT_MODEL)
         for e in range(cfg.max_entities_per_group):
-            per_position = [trace[f"entity_g{g}_e{e}"] for g in range(cfg.max_groups)]
+            per_position = [trace[f"entities[{g},{e}]"] for g in range(cfg.max_groups)]
             assert len(set(per_position)) == len(per_position)
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
@@ -210,7 +210,7 @@ class TestEntityBindingSampleInputProperty:
         trace = sample_valid_entity_binding_input(cfg, model=_DEFAULT_MODEL)
         for g in range(cfg.max_groups):
             per_group = [
-                trace[f"entity_g{g}_e{e}"] for e in range(cfg.max_entities_per_group)
+                trace[f"entities[{g},{e}]"] for e in range(cfg.max_entities_per_group)
             ]
             assert len(set(per_group)) == len(per_group)
 
@@ -226,11 +226,11 @@ class TestEntityBindingSampleInputProperty:
     @given(seed=st.integers(min_value=0, max_value=10_000))
     @_HYPOTHESIS_SETTINGS
     def test_raw_output_equals_answer_entity(self, seed: int) -> None:
-        """``raw_output == entity_g{query_group}_e{answer_index}`` on the default config."""
+        """``raw_output == entities[{query_group},{answer_index}]`` on the default config."""
         random.seed(seed)
         cfg = create_sample_love_config()
         trace = sample_valid_entity_binding_input(cfg, model=_DEFAULT_MODEL)
-        expected = trace[f"entity_g{trace['query_group']}_e{trace['answer_index']}"]
+        expected = trace[f"entities[{trace['query_group']},{trace['answer_index']}]"]
         assert trace["raw_output"] == expected
 
     def test_sampler_deterministic_under_fixed_seed(self) -> None:
@@ -268,7 +268,7 @@ class TestEntityBindingCounterfactualGeneratorProperty:
         cf = swap_query_group(cfg, change_answer=False)
         base, ctf = cf["input"], cf["counterfactual_inputs"][0]
         keys = [
-            f"entity_g{g}_e{e}"
+            f"entities[{g},{e}]"
             for g in range(cfg.max_groups)
             for e in range(cfg.max_entities_per_group)
         ]
@@ -277,14 +277,14 @@ class TestEntityBindingCounterfactualGeneratorProperty:
     @given(seed=st.integers(min_value=0, max_value=10_000))
     @_HYPOTHESIS_SETTINGS
     def test_swap_query_group_query_e_tracks_swap(self, seed: int) -> None:
-        """``query_e{e} == entity_g{query_group}_e{e}`` in the counterfactual."""
+        """``queries[{e}] == entities[{query_group},{e}]`` in the counterfactual."""
         random.seed(seed)
         cfg = create_sample_love_config()
         cf = swap_query_group(cfg, change_answer=False)
         ctf = cf["counterfactual_inputs"][0]
         qg = ctf["query_group"]
         for e in range(cfg.max_entities_per_group):
-            assert ctf[f"query_e{e}"] == ctf[f"entity_g{qg}_e{e}"]
+            assert ctf[f"queries[{e}]"] == ctf[f"entities[{qg},{e}]"]
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
     @_HYPOTHESIS_SETTINGS
@@ -295,8 +295,8 @@ class TestEntityBindingCounterfactualGeneratorProperty:
         cf = swap_query_group(cfg, change_answer=False)
         base, ctf = cf["input"], cf["counterfactual_inputs"][0]
         ai = base["answer_index"]
-        base_answer = base[f"entity_g{base['query_group']}_e{ai}"]
-        ctf_answer = ctf[f"entity_g{ctf['query_group']}_e{ai}"]
+        base_answer = base[f"entities[{base['query_group']},{ai}]"]
+        ctf_answer = ctf[f"entities[{ctf['query_group']},{ai}]"]
         assert base_answer == ctf_answer
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
@@ -310,8 +310,8 @@ class TestEntityBindingCounterfactualGeneratorProperty:
         cf = swap_query_group(cfg, change_answer=True)
         base, ctf = cf["input"], cf["counterfactual_inputs"][0]
         ai = base["answer_index"]
-        base_answer = base[f"entity_g{base['query_group']}_e{ai}"]
-        ctf_answer = ctf[f"entity_g{ctf['query_group']}_e{ai}"]
+        base_answer = base[f"entities[{base['query_group']},{ai}]"]
+        ctf_answer = ctf[f"entities[{ctf['query_group']},{ai}]"]
         assert base_answer != ctf_answer
         assert ctf_answer in cfg.entity_pools[ai]
 

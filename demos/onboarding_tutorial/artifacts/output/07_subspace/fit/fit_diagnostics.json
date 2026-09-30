@@ -1,0 +1,106 @@
+[
+  {
+    "point": "f6d6ed53244bd8b0688da1784428c4c5c584e801cb49b44512fcc4c896a30a7d",
+    "coords": {
+      "featurizers.rot.k": 1
+    },
+    "featurizers": {
+      "rot": {
+        "k": 1.0,
+        "orthonormality_deviation": 0.0,
+        "within_tolerance": 1.0
+      }
+    }
+  },
+  {
+    "point": "75f5e7759a3a9371cdaf23c94b99e7afa7ac4e5cfe4d479860dfccf46437c46b",
+    "coords": {
+      "featurizers.rot.k": 2
+    },
+    "featurizers": {
+      "rot": {
+        "k": 2.0,
+        "orthonormality_deviation": 2.384185791015625e-07,
+        "within_tolerance": 1.0
+      }
+    }
+  },
+  {
+    "point": "3698027a327a3bb9dfc4d02a2209d467a520d4f2bde729e793478c2524976270",
+    "coords": {
+      "featurizers.rot.k": 4
+    },
+    "featurizers": {
+      "rot": {
+        "k": 4.0,
+        "orthonormality_deviation": 1.3113021850585938e-06,
+        "within_tolerance": 1.0
+      }
+    }
+  },
+  {
+    "point": "b2d4587da26101168bece6082f0f135f5f8a651d97c471aa200ecacd89bb954a",
+    "coords": {
+      "featurizers.rot.k": 8
+    },
+    "featurizers": {
+      "rot": {
+        "k": 8.0,
+        "orthonormality_deviation": 1.1324882507324219e-06,
+        "within_tolerance": 1.0
+      }
+    }
+  },
+  {
+    "point": "3450e773cc3c1b2b9bedc88754a05ba411d068ee09011075502a0f226a204f21",
+    "coords": {
+      "featurizers.rot.k": 16
+    },
+    "featurizers": {
+      "rot": {
+        "k": 16.0,
+        "orthonormality_deviation": 1.430511474609375e-06,
+        "within_tolerance": 1.0
+      }
+    }
+  },
+  {
+    "point": "006b869dbe55059dd1ded547cdaf7e10df8bc6287f825545429c4f0fd938d94c",
+    "coords": {
+      "featurizers.rot.k": 32
+    },
+    "featurizers": {
+      "rot": {
+        "k": 32.0,
+        "orthonormality_deviation": 1.3113021850585938e-06,
+        "within_tolerance": 1.0
+      }
+    }
+  },
+  {
+    "point": "699c6dee7b4461f0f784cae1cb7386803f3f324bfc4c2de1424dea60dad64cb4",
+    "coords": {
+      "featurizers.rot.k": 64
+    },
+    "featurizers": {
+      "rot": {
+        "k": 64.0,
+        "orthonormality_deviation": 1.7881393432617188e-06,
+        "within_tolerance": 1.0
+      }
+    }
+  },
+  {
+    "point": "8f1aa056b118b2faee53449c291befdc0c5e6fac1ebc09dd11db196cc6181808",
+    "coords": {
+      "featurizers.rot.k": 128
+    },
+    "featurizers": {
+      "rot": {
+        "k": 128.0,
+        "orthonormality_deviation": 2.1457672119140625e-06,
+        "within_tolerance": 1.0
+      }
+    }
+  }
+]

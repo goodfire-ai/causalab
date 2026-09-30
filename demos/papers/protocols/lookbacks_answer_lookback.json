@@ -1,0 +1,48 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Figure 4b of Prakash et al. 2025 (arXiv:2505.14685): at one layer, swap the counterfactual's residual stream at the last token into the original story, and score the one patched forward against the moved answer pointer (label_pointer_forms) and the moved answer payload (label_forms); workflows/scripts/lookbacks/lookbacks_figure.py draws both curves, over every pair and over the pairs lookbacks_clean_accuracy.json marks correct."
+  },
+  "model": {
+    "key": "meta-llama/Meta-Llama-3-70B-Instruct",
+    "revision": "50fd307e57011801c7833c87efa1984ddf2db42f",
+    "dtype": "fp16"
+  },
+  "data": {
+    "base": {"dataset": "lookbacks/data_restate#first", "field": "input"},
+    "counterfactual": {"dataset": "lookbacks/data_restate#first", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["swap"]}
+    },
+    "sites": {
+      "target": {
+        "component": "block_output",
+        "layers": {
+          "sweep": {"range": [0, 80]}
+        }
+      },
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {"v_cf": {"site": "target", "pos": -1}, "logits": {"site": "lm_head", "pos": -1}},
+    "writes": {
+      "swap": {"site": "target", "pos": -1, "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "label_pointer_forms"},
+        "file_path": "iia_pointer.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia_payload.json"
+      }
+    ]
+  }
+}

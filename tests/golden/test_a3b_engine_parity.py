@@ -11,7 +11,7 @@ heads and 2 KV heads, and bf16 instead of fp32. This tier is that check.
 The A3B is ~70 GB in bf16, so the smoke tier's shape — both engines loaded, one
 document driven through both inside each test — would need two copies resident
 at once. Instead each engine captures the whole sweep in turn and is then freed
-(:func:`_capture`), and the comparisons run over the captured tensors on CPU.
+(`_capture`), and the comparisons run over the captured tensors on CPU.
 One model resident at a time, which is what makes this fit on a single
 accelerator.
 
@@ -19,7 +19,7 @@ accelerator.
 is stronger than any band: on the real checkpoint in bf16, all 111 compared
 cases agree at max abs diff **exactly 0.0** — the two engines differ in how they
 capture a tensor, not in what the model computes, and the same eager kernels
-over the same weights produce the same bits. :data:`ATOL` is kept as a band
+over the same weights produce the same bits. `ATOL` is kept as a band
 rather than zero only to absorb a future release that dispatches a different
 kernel; at 1e-2 it is well under one bf16 ulp at the logit magnitude this model
 produces (|max| ~18, ulp ~0.06), so it cannot admit a real disagreement. The run
@@ -39,6 +39,7 @@ from causalab.neural.engines.nnsight_tracing.executor import TracePointExecutor
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
 
 from tests._helpers import a3b_sweep as sweep
+from tests._helpers.kernel_paths import library_kernel_paths
 
 pytestmark = pytest.mark.golden
 
@@ -58,7 +59,7 @@ ATOL = 1e-2
 #: pair ending in the same token makes those three interchanges swap a tensor
 #: for itself. Both engines then agree on a result that means nothing, which is
 #: exactly what the anti-vacuity assertion exists to catch (it did:
-#: :func:`test_the_counterfactual_differs_at_the_patched_position` is the guard
+#: `test_the_counterfactual_differs_at_the_patched_position` is the guard
 #: that keeps it from coming back as a data artifact rather than a code bug).
 ROWS = [
     {
@@ -151,8 +152,7 @@ def _capture(executor_cls, bundle, cases, *, want_writes: bool) -> dict:
         "dataset": "inline",
         "field": "counterfactual_inputs[0]",
     }
-    cf_ids["method"]["reads"]["r"]["input"] = "counterfactual"
-    cf_ids["method"]["save"][0]["input"] = "counterfactual"
+    cf_ids["method"]["intervened_models"]["original"]["input"] = "counterfactual"
     out["cf_input_ids"] = (
         sweep.make_executor(executor_cls, cf_ids, bundle, rows=ROWS, with_cf=True)
         .read_value("r")
@@ -183,7 +183,7 @@ def _capture(executor_cls, bundle, cases, *, want_writes: bool) -> dict:
 def _capture_delta_family(executor_cls, bundle, layer: int, which: int) -> dict:
     """The DeltaNet interior, in whichever vocabulary this engine serves.
 
-    ``which`` selects the element of each :data:`sweep.DELTA_FAMILY_PAIRS`
+    ``which`` selects the element of each `sweep.DELTA_FAMILY_PAIRS`
     entry — 0 for the reference engine's spelling, 1 for the nnsight
     engine's — of the three typed pairs.
     """
@@ -213,8 +213,12 @@ def captures():
     )
     info = hooks_bundle.info
     cases = _cases(delta_layer, full_layer)
-    hooks = _capture(PointExecutor, hooks_bundle, cases, want_writes=True)
-    hooks_delta = _capture_delta_family(PointExecutor, hooks_bundle, delta_layer, 0)
+    # like against like: the nnsight engine runs the library's forward, so the
+    # reference engine's optional kernel paths (each with its own goldens and
+    # band) are off for its capture — tests/_helpers/kernel_paths.py
+    with library_kernel_paths():
+        hooks = _capture(PointExecutor, hooks_bundle, cases, want_writes=True)
+        hooks_delta = _capture_delta_family(PointExecutor, hooks_bundle, delta_layer, 0)
 
     # free the reference engine before the second copy is asked for
     load_hooks.cache_clear()

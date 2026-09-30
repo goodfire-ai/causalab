@@ -1,0 +1,55 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Locate stage as ONE document: interchange scored over a 28-layer x 2-position grid. Axes are explicit {sweep: ...} wrappers on named table entries (sites.target.layers, positions.tap), so every read/write referencing the name moves together. The parser expands 56 points, dedups shared sub-values by content, and plans 56 patched forwards plus one shared counterfactual-harvest forward per row - where CLI multirun ran 56 separate processes, 112 forward groups, 56 model loads. The second position is the LAST TOKEN OF the entity span, not the span itself: a bare {variable: ...} window is ragged across rows whenever the entity tokenizes to different lengths (weekday names do); before writes declared a ragged policy (writes.<w>.ragged, [V19]) that spelling made half of these points unrunnable, and this document keeps the last-token spelling because the last token is the position the scan asks about. 'entity' is also the name the shipped weekdays task emits; 'subject' - what this document swept before - exists in no task-generated table."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#train",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "positions": {
+      "tap": {
+        "sweep": [
+          {"index": -1},
+          {"index": -1, "scope": {"variable": "entity"}}
+        ]
+      }
+    },
+    "sites": {
+      "target": {
+        "component": "block_output",
+        "layers": {
+          "sweep": {"range": [0, 28]}
+        }
+      },
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {"v_cf": {"site": "target", "pos": "tap"}, "logits": {"site": "lm_head", "pos": -1}},
+    "writes": {
+      "patch": {"site": "target", "pos": "tap", "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "logit_diff.json"
+      }
+    ]
+  }
+}

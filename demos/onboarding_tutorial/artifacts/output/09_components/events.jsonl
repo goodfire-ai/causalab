@@ -1,0 +1,28 @@
+{"schema_version": 1, "event": "phase_started", "seq": 0, "ts": "2026-09-28T12:47:46.957090+00:00", "payload": {"step": "scan", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 1, "ts": "2026-09-28T12:48:03.715505+00:00", "payload": {"step": "scan", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 2, "ts": "2026-09-28T12:48:03.715583+00:00", "payload": {"step": "scan", "status": "completed", "forwards": 85}}
+{"schema_version": 1, "event": "phase_started", "seq": 3, "ts": "2026-09-28T12:48:03.715646+00:00", "payload": {"step": "grid", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 4, "ts": "2026-09-28T12:48:04.021083+00:00", "payload": {"step": "grid", "files": ["09_components_component_iia.json", "09_components_component_iia.png"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 5, "ts": "2026-09-28T12:48:04.021156+00:00", "payload": {"step": "grid", "status": "completed"}}
+{"schema_version": 1, "event": "phase_started", "seq": 6, "ts": "2026-09-28T12:48:04.021219+00:00", "payload": {"step": "best", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 7, "ts": "2026-09-28T12:48:04.029285+00:00", "payload": {"step": "best", "files": ["values.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 8, "ts": "2026-09-28T12:48:04.029350+00:00", "payload": {"step": "best", "status": "completed"}}
+{"schema_version": 1, "event": "phase_started", "seq": 9, "ts": "2026-09-28T12:48:04.029404+00:00", "payload": {"step": "gate_fit_lo", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 10, "ts": "2026-09-28T12:48:12.686965+00:00", "payload": {"step": "gate_fit_lo", "files": ["ce.json", "fit_diagnostics.json", "gate.safetensors", "iia.json", "train_eval.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 11, "ts": "2026-09-28T12:48:12.687045+00:00", "payload": {"step": "gate_fit_lo", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 12, "ts": "2026-09-28T12:48:12.687107+00:00", "payload": {"step": "gate_apply_lo", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 13, "ts": "2026-09-28T12:48:13.244381+00:00", "payload": {"step": "gate_apply_lo", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 14, "ts": "2026-09-28T12:48:13.244455+00:00", "payload": {"step": "gate_apply_lo", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 15, "ts": "2026-09-28T12:48:13.244519+00:00", "payload": {"step": "gate_fit_mid", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 16, "ts": "2026-09-28T12:48:21.828441+00:00", "payload": {"step": "gate_fit_mid", "files": ["ce.json", "fit_diagnostics.json", "gate.safetensors", "iia.json", "train_eval.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 17, "ts": "2026-09-28T12:48:21.828502+00:00", "payload": {"step": "gate_fit_mid", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 18, "ts": "2026-09-28T12:48:21.828563+00:00", "payload": {"step": "gate_apply_mid", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 19, "ts": "2026-09-28T12:48:22.367751+00:00", "payload": {"step": "gate_apply_mid", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 20, "ts": "2026-09-28T12:48:22.367818+00:00", "payload": {"step": "gate_apply_mid", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 21, "ts": "2026-09-28T12:48:22.367877+00:00", "payload": {"step": "gate_fit_hi", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 22, "ts": "2026-09-28T12:48:30.774484+00:00", "payload": {"step": "gate_fit_hi", "files": ["ce.json", "fit_diagnostics.json", "gate.safetensors", "iia.json", "train_eval.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 23, "ts": "2026-09-28T12:48:30.774554+00:00", "payload": {"step": "gate_fit_hi", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 24, "ts": "2026-09-28T12:48:30.774612+00:00", "payload": {"step": "gate_apply_hi", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 25, "ts": "2026-09-28T12:48:31.324366+00:00", "payload": {"step": "gate_apply_hi", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 26, "ts": "2026-09-28T12:48:31.324440+00:00", "payload": {"step": "gate_apply_hi", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "campaign_terminal", "seq": 27, "ts": "2026-09-28T12:48:31.325045+00:00", "payload": {"outcome": "completed", "steps": {"scan": "completed", "grid": "completed", "best": "completed", "gate_fit_lo": "completed", "gate_apply_lo": "completed", "gate_fit_mid": "completed", "gate_apply_mid": "completed", "gate_fit_hi": "completed", "gate_apply_hi": "completed"}}}

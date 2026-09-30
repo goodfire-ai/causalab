@@ -19,16 +19,16 @@ from pathlib import Path
 import pytest
 
 from causalab.protocol.engine import component_capability, requires
-from causalab.protocol.errors import ProtocolWarning
-from causalab.protocol.loader import load
-from causalab.protocol.plan import (
-    COMPONENT_RANK,
+from causalab.protocol.rules.errors import ProtocolWarning
+from causalab.protocol.pipeline import compile_protocol
+from causalab.neural.shared.plan import (
     closure_digest,
     interned_groups,
     plan_point,
 )
+from causalab.protocol.positions.alignment import COMPONENT_RANK
 
-from tests.protocol._env import CORPUS_DIR
+from tests.protocol._env import CORPUS_DIR, steps_of
 
 PINS_PATH = Path(__file__).parent / "corpus_digests.json"
 PINS = json.loads(PINS_PATH.read_text())
@@ -156,9 +156,9 @@ class TestCorpusUnit:
 
     @pytest.mark.parametrize("name,n_points,n_forwards,needed", CORPUS_SHAPE)
     def test_loads_and_derives_shape(self, env, name, n_points, n_forwards, needed):
-        loaded = load(CORPUS_DIR / name, env)
-        assert len(loaded.expansion.points) == n_points
-        doc = loaded.point_documents[0]
+        loaded = compile_protocol(CORPUS_DIR / name, env=env)
+        assert len(steps_of(loaded, env).points) == n_points
+        doc = steps_of(loaded, env).documents[0]
         assert plan_point(doc).num_forwards == n_forwards
         assert set(requires(doc)) == needed
 
@@ -173,7 +173,7 @@ class TestCorpusUnit:
         merely *a* valid document but the same one, down to the digest pinned
         in ``corpus_digests.json`` and every point digest under it.
         """
-        original = load(CORPUS_DIR / name, env)
+        original = compile_protocol(CORPUS_DIR / name, env=env)
         authored = json.loads((CORPUS_DIR / name).read_text())
         sorted_order = json.loads(json.dumps(authored, sort_keys=True))
         assert list(sorted_order) != list(authored), (
@@ -182,38 +182,40 @@ class TestCorpusUnit:
         )
 
         with pytest.warns(ProtocolWarning, match="recommended"):
-            shuffled = load(sorted_order, env, base_dir=CORPUS_DIR)
+            shuffled = compile_protocol(sorted_order, env=env, base_dir=CORPUS_DIR)
 
-        assert shuffled.document_digest == PINS[name]["document"]
-        assert shuffled.point_digests == original.point_digests
+        assert shuffled.digests.document == PINS[name]["document"]
+        assert steps_of(shuffled, env).digests == steps_of(original, env).digests
 
     @pytest.mark.parametrize("name", [row[0] for row in CORPUS_SHAPE])
     def test_document_digest_pin(self, env, name):
-        loaded = load(CORPUS_DIR / name, env)
-        assert loaded.document_digest == PINS[name]["document"], (
+        loaded = compile_protocol(CORPUS_DIR / name, env=env)
+        assert loaded.digests.document == PINS[name]["document"], (
             f"{name}: canonical form drifted — if intended, regenerate the pins "
             "(update_corpus_digests.py) and treat it as a loader migration (§7)"
         )
 
     @pytest.mark.parametrize("name", [row[0] for row in CORPUS_SHAPE])
     def test_point_digest_pins(self, env, name):
-        loaded = load(CORPUS_DIR / name, env)
-        assert list(loaded.point_digests) == PINS[name]["points"]
+        loaded = compile_protocol(CORPUS_DIR / name, env=env)
+        assert list(steps_of(loaded, env).digests) == PINS[name]["points"]
 
     def test_sweep_points_are_distinct(self, env):
-        loaded = load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env)
-        assert len(set(loaded.point_digests)) == 64
+        loaded = compile_protocol(
+            CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env
+        )
+        assert len(set(steps_of(loaded, env).digests)) == 64
 
     def test_das_sweep_interns_one_harvest(self, env):
         """§3's forcing example: 9 fits (k × seed) share ONE counterfactual harvest —
-        the original/counterfactual forward group has one content digest across all
-        points, while the patched groups are 9 distinct fits."""
-        loaded = load(CORPUS_DIR / "08_weekdays_das_sweep_im.json", env)
+        the original/counterfactual forward group has one key across all points,
+        while the patched groups are 9 distinct fits."""
+        loaded = compile_protocol(CORPUS_DIR / "08_weekdays_das_sweep_im.json", env=env)
         harvest, patched, v_cf = set(), set(), set()
         identity = {"base": "d", "counterfactual": "d"}
-        for pdoc in loaded.point_documents:
+        for pdoc in steps_of(loaded, env).documents:
             for group in plan_point(pdoc, data_identity=identity).groups:
-                (harvest if group.model == "original" else patched).add(group.digest)
+                (harvest if group.unwritten else patched).add(group.key)
             v_cf.add(closure_digest(pdoc, "v_cf"))
         assert len(harvest) == 1
         assert len(patched) == 9
@@ -223,13 +225,15 @@ class TestCorpusUnit:
         """07: the 64 points span 32 layers × 2 positions; the counterfactual-side
         harvest group of a point depends on nothing swept (taps differ, the
         forward doesn't), so all 64 original/counterfactual groups intern to one."""
-        loaded = load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env)
+        loaded = compile_protocol(
+            CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env
+        )
         identity = {"base": "d", "counterfactual": "d"}
         harvest = {
-            group.digest
-            for pdoc in loaded.point_documents
+            group.key
+            for pdoc in steps_of(loaded, env).documents
             for group in plan_point(pdoc, data_identity=identity).groups
-            if group.model == "original"
+            if group.unwritten
         }
         assert len(harvest) == 1
 
@@ -243,16 +247,19 @@ class TestCorpusUnit:
         harvest depends on nothing swept. The merged harvest carries one tap
         per layer, so an eliding backend may stop it at the deepest of those —
         never at one point's."""
-        loaded = load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env)
+        loaded = compile_protocol(
+            CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env
+        )
         identity = {"base": "d", "counterfactual": "d"}
         plans = [
-            plan_point(pdoc, data_identity=identity) for pdoc in loaded.point_documents
+            plan_point(pdoc, data_identity=identity)
+            for pdoc in steps_of(loaded, env).documents
         ]
         assert sum(plan.num_forwards for plan in plans) == 128
         groups = interned_groups(plans)
         assert len(groups) == 65
-        (harvest,) = [group for group in groups if group.model == "original"]
-        patched = [group for group in groups if group.model != "original"]
+        (harvest,) = [group for group in groups if group.unwritten]
+        patched = [group for group in groups if not group.unwritten]
         assert len(patched) == 64
         # 32 layers x 2 positions, and the position axis moves the gather
         # rather than the forward — so 32 taps, not 64
@@ -262,8 +269,8 @@ class TestCorpusUnit:
     def test_interning_a_single_point_is_the_point_plan(self, env):
         """With one point there is nothing to share, so interning must be the
         identity — the guard against a merge that quietly drops a group."""
-        loaded = load(CORPUS_DIR / "06_hydra_effect_im.json", env)
-        plan = plan_point(loaded.point_documents[0])
+        loaded = compile_protocol(CORPUS_DIR / "06_hydra_effect_im.json", env=env)
+        plan = plan_point(steps_of(loaded, env).documents[0])
         assert len(interned_groups([plan])) == plan.num_forwards == 7
 
 
@@ -283,8 +290,8 @@ class TestCorpusProperty:
 
     @pytest.mark.parametrize("name", [row[0] for row in CORPUS_SHAPE])
     def test_load_is_deterministic(self, env, name):
-        first = load(CORPUS_DIR / name, env)
-        second = load(CORPUS_DIR / name, env)
-        assert first.document_digest == second.document_digest
-        assert first.point_digests == second.point_digests
-        assert first.canonical_document == second.canonical_document
+        first = compile_protocol(CORPUS_DIR / name, env=env)
+        second = compile_protocol(CORPUS_DIR / name, env=env)
+        assert first.digests.document == second.digests.document
+        assert steps_of(first, env).digests == steps_of(second, env).digests
+        assert first.canonical == second.canonical

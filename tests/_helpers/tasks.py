@@ -1,9 +1,9 @@
 """Task enumeration helper for property + numerical tier tests in ``tests/tasks/``.
 
 Wraps the singleton / factory dispatch from
-:mod:`causalab.tasks.loader.load_task` (see
+[`causalab.tasks.loader.load_task`][] (see
 ``causalab/tasks/loader.py:128-145``) so test harnesses can iterate over
-each task's :class:`~causalab.causal.causal_model.CausalModel` and
+each task's [`CausalModel`][causalab.causal.model.CausalModel] and
 counterfactuals module without re-implementing the discovery logic.
 
 The shipped tasks split into two patterns:
@@ -14,7 +14,7 @@ The shipped tasks split into two patterns:
 * **Factory** (``CREATE_CAUSAL_MODEL`` callable) — ``graph_walk``,
   ``natural_domains_arithmetic``, ``identity_naming``. Callers must
   supply a config object (typed per the task — e.g.
-  :class:`~causalab.tasks.graph_walk.config.GraphWalkConfig`).
+  [`GraphWalkConfig`][causalab.tasks.graph_walk.config.GraphWalkConfig]).
 
 Typical usage in a property test::
 
@@ -35,7 +35,7 @@ Property tests live one per task at ``tests/tasks/<task>/test_causal_models.py``
 under ``pytest.mark.property``. Numerical-tier pins of symbolic outputs
 live alongside them at ``tests/tasks/<task>/test_<task>_numerical.py``
 with a sibling ``pinned_samples.json`` sidecar (see
-:mod:`tests._helpers.task_pins`). Those are *task numerical pins*, not
+`tests._helpers.task_pins`). Those are *task numerical pins*, not
 "goldens" — goldens are runner-scope, full-pipeline, real-model.
 """
 
@@ -46,7 +46,7 @@ from dataclasses import dataclass
 from types import ModuleType
 from typing import Any
 
-from causalab.causal.causal_model import CausalModel
+from causalab.causal.model import CausalModel
 
 # Task directory names under ``causalab/tasks/``. Order matters only for
 # parametrisation reproducibility; alphabetised within each pattern.
@@ -70,7 +70,7 @@ ALL_TASKS: tuple[str, ...] = SINGLETON_TASKS + FACTORY_TASKS
 class TaskHandle:
     """A loaded task: ``CausalModel`` + counterfactuals module.
 
-    The handle deliberately omits the loader's full :class:`Task` wrapper
+    The handle deliberately omits the loader's full [`Task`][causalab.tasks.loader.Task] wrapper
     (intervention_variable / template / class-id glue) because
     causal-model property and numerical tests only need the symbolic
     layer.
@@ -84,21 +84,16 @@ class TaskHandle:
 def get_task(name: str, task_cfg: Any = None) -> TaskHandle:
     """Load one task by directory name.
 
-    Parameters
-    ----------
-    name:
-        Task directory name under ``causalab/tasks/`` (e.g. ``"MCQA"``,
-        ``"graph_walk"``).
-    task_cfg:
-        Required for factory tasks; ignored for singletons. Pass the
-        task's typed config object (e.g. ``GraphWalkConfig(...)``).
+    Args:
+        name: Task directory name under ``causalab/tasks/`` (e.g. ``"MCQA"``,
+            ``"graph_walk"``).
+        task_cfg: Required for factory tasks; ignored for singletons. Pass the
+            task's typed config object (e.g. ``GraphWalkConfig(...)``).
 
-    Raises
-    ------
-    ValueError
-        If the task's ``causal_models`` module exposes neither
-        ``CAUSAL_MODEL`` nor ``CREATE_CAUSAL_MODEL``, or if a factory
-        task is requested without ``task_cfg``.
+    Raises:
+        ValueError: If the task's ``causal_models`` module exposes neither
+            ``CAUSAL_MODEL`` nor ``CREATE_CAUSAL_MODEL``, or if a factory
+            task is requested without ``task_cfg``.
     """
     cm_module = importlib.import_module(f"causalab.tasks.{name}.causal_models")
     is_factory = hasattr(cm_module, "CREATE_CAUSAL_MODEL")

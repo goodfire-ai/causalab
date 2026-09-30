@@ -1,0 +1,86 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "MLP-neuron DBM on a sparse-MoE layer: two gates at one layer, both trained, both in the swap. routed_gate sits on expert_activation - the routed interior's activated gate half, token-major (top_k slots of d_expert, slot k the k-th ranked expert) - with group expert_neuron, so it holds ONE theta per (expert, neuron): num_experts x d_expert in total, whatever top_k experts a token activates. A slot's coordinates use the parameters of the expert filling it, looked up through expert_idx at the same token; an expert a token did not activate has no slot there and its parameters leave that token alone. shared_gate is the ordinary per-coordinate gate on shared_expert_activation - one parameter per shared-expert neuron, separate keys. Swap under routing mismatch: a base slot holding expert e takes the counterfactual activation of e at the same token when e is active there, and otherwise keeps its base value; the executor records, per layer and example, how many base slots had no counterfactual source, in routing_mismatch.json beside fit_diagnostics.json. The one l1 term names both gates: the mean soft mask over the concatenation of their parameter tables, so one weight counts selected neurons across both and sweeping train.objective.sparsity.weight is the sparsity curve's single axis; fit_diagnostics.json's hard_mask_size counts (expert, neuron) units for routed_gate and neurons for shared_gate. Layer 19 of Qwen3.6-35B-A3B; every layer is a MoE layer, so any layer works. Flat rather than an application of methods/dbm.json because the gate unit, the components and the penalty's meaning all differ from the per-coordinate residual-stream fit. train.eval.split is the held-out validation split; iia.json is the TRAIN score - read train_eval.json for the validation one and dbm_expert_neuron_apply.json for a confirmation replay. As with dbm.json, gate on decisive_fraction before believing a number: the l1 weight below is a starting point, not a tuned one."
+  },
+  "model": {"key": "Qwen/Qwen3.6-35B-A3B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#train",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["routed_cf", "shared_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask_routed", "mask_shared"]}
+    },
+    "sites": {
+      "routed": {"component": "expert_activation", "layers": [19]},
+      "shared": {"component": "shared_expert_activation", "layers": [19]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "routed_gate": {"kind": "gate", "group": "expert_neuron"},
+      "shared_gate": {"kind": "gate"}
+    },
+    "reads": {
+      "routed_cf": {"site": "routed", "pos": -1, "featurizer": "routed_gate"},
+      "shared_cf": {"site": "shared", "pos": -1, "featurizer": "shared_gate"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask_routed": {
+        "site": "routed",
+        "pos": -1,
+        "featurizer": "routed_gate",
+        "do": {"swap": "routed_cf"}
+      },
+      "mask_shared": {
+        "site": "shared",
+        "pos": -1,
+        "featurizer": "shared_gate",
+        "do": {"swap": "shared_cf"}
+      }
+    },
+    "train": {
+      "objective": {
+        "fit": {
+          "weight": 1.0,
+          "read": "logits",
+          "model": "masked",
+          "aggregation": {"kind": "cross_entropy", "target": "label"}
+        },
+        "sparsity": {"weight": 0.01, "l1": ["routed_gate", "shared_gate"]}
+      },
+      "params": ["routed_gate", "shared_gate"],
+      "optimizer": {"name": "adamw", "lr": 0.01, "weight_decay": 0.0},
+      "steps": {"epochs": 20},
+      "batch": {"pairs": 16},
+      "anneal": {
+        "routed_gate.theta.temperature": [1.0, 0.01, 0.5],
+        "shared_gate.theta.temperature": [1.0, 0.01, 0.5]
+      },
+      "precision": {"feature": "fp32", "loss": "fp32"},
+      "eval": {
+        "every": {"epochs": 1},
+        "split": "natural_domains_arithmetic/data/weekdays#test",
+        "aggregations": {
+          "iia": {
+            "read": "logits",
+            "model": "masked",
+            "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"}
+          }
+        }
+      },
+      "seed": 0
+    },
+    "save": [
+      {"train": "iia", "file_path": "iia.json"},
+      {"train": "fit", "file_path": "ce.json"},
+      {"value": "routed_gate", "site": "routed", "file_path": "routed_gate.safetensors"},
+      {"value": "shared_gate", "site": "shared", "file_path": "shared_gate.safetensors"}
+    ]
+  }
+}

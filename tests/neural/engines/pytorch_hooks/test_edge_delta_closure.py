@@ -50,6 +50,7 @@ from tests.neural.engines.pytorch_hooks.conftest import (
     COUNTERFACTUAL_TEXT,
     TINY_GPT2,
 )
+from tests.protocol._docs import UNWRITTEN, saved
 
 pytestmark = pytest.mark.unit
 
@@ -70,24 +71,15 @@ def _logits(doc: dict[str, Any], bundle: ModelBundle) -> torch.Tensor:
     return executor.read_value("logits")
 
 
-def _logits_read(model: str) -> dict[str, Any]:
-    return {
-        "site": "lm_head",
-        "pos": {"index": -1},
-        "model": model,
-        "input": "base",
-    }
+#: The un-intervened network read on base, beside `UNWRITTEN` on the
+#: counterfactual (§2.9's names for a network read un-intervened on both).
+ORIGINAL_BASE = "original_base"
+
+LOGITS_READ: dict[str, Any] = {"site": "lm_head", "pos": {"index": -1}}
 
 
 def _save_logits(model: str) -> list[dict[str, Any]]:
-    return [
-        {
-            "value": "logits",
-            "model": model,
-            "input": "base",
-            "file_path": "logits.safetensors",
-        }
-    ]
+    return [saved("logits", model, "logits.safetensors")]
 
 
 def _edge_delta_doc(
@@ -111,13 +103,8 @@ def _edge_delta_doc(
             "layers": [layer],
             "head": head,
         }
-        for role, tag in (("base", "b"), ("counterfactual", "c")):
-            reads[f"{tag}{head}"] = {
-                "site": f"h{head}",
-                "pos": {"index": -1},
-                "model": "original",
-                "input": role,
-            }
+        for tag in ("b", "c"):
+            reads[f"{tag}{head}"] = {"site": f"h{head}", "pos": {"index": -1}}
         on_operand = f"b{head}" if self_cancel else f"c{head}"
         writes[f"on{head}"] = {
             "site": "recv",
@@ -129,22 +116,26 @@ def _edge_delta_doc(
             "pos": {"index": -1},
             "do": {"add_scaled": {"op": f"b{head}", "alpha": -1.0}},
         }
+    models: dict[str, Any] = {
+        ORIGINAL_BASE: {"input": "base", "reads": [f"b{h}" for h in heads]},
+        UNWRITTEN: {"input": "counterfactual", "reads": [f"c{h}" for h in heads]},
+        "routed": {"input": "base", "reads": ["logits"], "writes": sorted(writes)},
+    }
     if self_cancel:
         # the counterfactual reads would be dead declarations (rule 11)
         for head in heads:
             reads.pop(f"c{head}")
-    reads["logits"] = _logits_read("routed")
+        del models[UNWRITTEN]
+    reads["logits"] = dict(LOGITS_READ)
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=not self_cancel),
         "method": {
+            "intervened_models": models,
             "sites": sites,
             "reads": reads,
             "writes": writes,
-            "intervened_models": {
-                "routed": {"input": "base", "writes": sorted(writes)},
-            },
             "save": _save_logits("routed"),
         },
     }
@@ -154,27 +145,25 @@ def _mixer_swap_doc(*, layer: int = LAYER) -> dict[str, Any]:
     """The write the all-heads edge set must reduce to: the whole mixer output
     at ``layer`` swapped to its counterfactual value."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "routed": {"input": "base", "reads": ["logits"], "writes": ["swap"]},
+            },
             "sites": {
                 "mix": {"component": "attention_output", "layers": [layer]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "mix",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "logits": _logits_read("routed"),
+                "v_cf": {"site": "mix", "pos": {"index": -1}},
+                "logits": dict(LOGITS_READ),
             },
             "writes": {
                 "swap": {"site": "mix", "pos": {"index": -1}, "do": {"swap": "v_cf"}}
             },
-            "intervened_models": {"routed": {"input": "base", "writes": ["swap"]}},
             "save": _save_logits("routed"),
         },
     }
@@ -182,12 +171,13 @@ def _mixer_swap_doc(*, layer: int = LAYER) -> dict[str, Any]:
 
 def _clean_doc() -> dict[str, Any]:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["logits"]}},
             "sites": {"lm_head": {"component": "lm_head"}},
-            "reads": {"logits": _logits_read("original")},
+            "reads": {"logits": dict(LOGITS_READ)},
             "save": _save_logits("original"),
         },
     }
@@ -248,35 +238,32 @@ def test_a_block_mid_write_reaches_the_residual_skip(
     bundle = request.getfixturevalue(bundle_name)
     pos = {"index": -1}
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "m": {
+                    "input": "base",
+                    "reads": ["r_mid", "r_mlp", "r_out"],
+                    "writes": ["swap"],
+                },
+            },
             "sites": {
                 "mid": {"component": "block_mid", "layers": [LAYER]},
                 "mlp": {"component": "mlp_output", "layers": [LAYER]},
                 "out": {"component": "block_output", "layers": [LAYER]},
             },
             "reads": {
-                "v_cf": {
-                    "site": "mid",
-                    "pos": pos,
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "r_mid": {"site": "mid", "pos": pos, "model": "m", "input": "base"},
-                "r_mlp": {"site": "mlp", "pos": pos, "model": "m", "input": "base"},
-                "r_out": {"site": "out", "pos": pos, "model": "m", "input": "base"},
+                "v_cf": {"site": "mid", "pos": pos},
+                "r_mid": {"site": "mid", "pos": pos},
+                "r_mlp": {"site": "mlp", "pos": pos},
+                "r_out": {"site": "out", "pos": pos},
             },
             "writes": {"swap": {"site": "mid", "pos": pos, "do": {"swap": "v_cf"}}},
-            "intervened_models": {"m": {"input": "base", "writes": ["swap"]}},
             "save": [
-                {
-                    "value": name,
-                    "model": "m",
-                    "input": "base",
-                    "file_path": f"{name}.safetensors",
-                }
+                saved(name, "m", f"{name}.safetensors")
                 for name in ("r_mid", "r_mlp", "r_out")
             ],
         },
@@ -305,7 +292,7 @@ def test_block_mid_and_output_deltas_both_land_independent_of_document_order(
     alpha = 0.25
     model_names = ("mid_then_out", "out_then_mid")
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "sites": {
@@ -314,25 +301,10 @@ def test_block_mid_and_output_deltas_both_land_independent_of_document_order(
             "out": {"component": "block_output", "layers": LAYER},
         },
         "reads": {
-            "v_mid_cf": {
-                "site": "mid",
-                "pos": pos,
-                "model": "original",
-                "input": "counterfactual",
-            },
-            "v_out_cf": {
-                "site": "out",
-                "pos": pos,
-                "model": "original",
-                "input": "counterfactual",
-            },
+            "v_mid_cf": {"site": "mid", "pos": pos},
+            "v_out_cf": {"site": "out", "pos": pos},
             **{
-                f"r_{model}_{component}": {
-                    "site": component,
-                    "pos": pos,
-                    "model": model,
-                    "input": "base",
-                }
+                f"r_{model}_{component}": {"site": component, "pos": pos}
                 for model in model_names
                 for component in ("mid", "mlp", "out")
             },
@@ -350,26 +322,24 @@ def test_block_mid_and_output_deltas_both_land_independent_of_document_order(
             },
         },
         "intervened_models": {
+            UNWRITTEN: {"input": "counterfactual", "reads": ["v_mid_cf", "v_out_cf"]},
             "mid_then_out": {
                 "input": "base",
+                "reads": [f"r_mid_then_out_{c}" for c in ("mid", "mlp", "out")],
                 "writes": ["mid_swap", "out_add"],
             },
             "out_then_mid": {
                 "input": "base",
+                "reads": [f"r_out_then_mid_{c}" for c in ("mid", "mlp", "out")],
                 "writes": ["out_add", "mid_swap"],
             },
         },
         "save": [
-            {
-                "value": name,
-                "model": model,
-                "input": input_role,
-                "file_path": f"{name}.safetensors",
-            }
-            for name, model, input_role in (
-                ("v_out_cf", "original", "counterfactual"),
+            saved(name, model, f"{name}.safetensors")
+            for name, model in (
+                ("v_out_cf", UNWRITTEN),
                 *(
-                    (f"r_{model}_{component}", model, "base")
+                    (f"r_{model}_{component}", model)
                     for model in model_names
                     for component in ("mid", "mlp", "out")
                 ),
@@ -404,7 +374,7 @@ def test_a_noop_block_mid_write_preserves_both_paths(
     bundle = request.getfixturevalue(bundle_name)
     pos = {"index": -1}
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "sites": {
@@ -413,37 +383,27 @@ def test_a_noop_block_mid_write_preserves_both_paths(
             "out": {"component": "block_output", "layers": LAYER},
         },
         "reads": {
-            "v_base": {
-                "site": "mid",
-                "pos": pos,
-                "model": "original",
-                "input": "base",
-            },
-            "clean_mlp": {
-                "site": "mlp",
-                "pos": pos,
-                "model": "original",
-                "input": "base",
-            },
-            "clean_out": {
-                "site": "out",
-                "pos": pos,
-                "model": "original",
-                "input": "base",
-            },
-            "r_mid": {"site": "mid", "pos": pos, "model": "m", "input": "base"},
-            "r_mlp": {"site": "mlp", "pos": pos, "model": "m", "input": "base"},
-            "r_out": {"site": "out", "pos": pos, "model": "m", "input": "base"},
+            "v_base": {"site": "mid", "pos": pos},
+            "clean_mlp": {"site": "mlp", "pos": pos},
+            "clean_out": {"site": "out", "pos": pos},
+            "r_mid": {"site": "mid", "pos": pos},
+            "r_mlp": {"site": "mlp", "pos": pos},
+            "r_out": {"site": "out", "pos": pos},
         },
         "writes": {"noop": {"site": "mid", "pos": pos, "do": {"swap": "v_base"}}},
-        "intervened_models": {"m": {"input": "base", "writes": ["noop"]}},
-        "save": [
-            {
-                "value": name,
-                "model": model,
+        "intervened_models": {
+            "original": {
                 "input": "base",
-                "file_path": f"{name}.safetensors",
-            }
+                "reads": ["v_base", "clean_mlp", "clean_out"],
+            },
+            "m": {
+                "input": "base",
+                "reads": ["r_mid", "r_mlp", "r_out"],
+                "writes": ["noop"],
+            },
+        },
+        "save": [
+            saved(name, model, f"{name}.safetensors")
             for name, model in (
                 ("v_base", "original"),
                 ("clean_mlp", "original"),

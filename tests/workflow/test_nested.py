@@ -1,8 +1,8 @@
-"""Nested reusable workflows (workflow spec §2.10, §5 rule 20) — on CPU, with
-the conditional fixtures' two scripts and the fan-out fixtures' stub engine.
+"""Nested reusable workflows (``docs/workflow_protocol.md`` §2.10, §5 rule 20;
+T19–T22 and the censuses) — on CPU, with the conditional fixtures' two
+scripts and the fan-out fixtures' stub engine.
 
-* **The censuses.** Six step kinds; `MAX_RULE` is at least 20 (21 since the
-  pins section, `tests/workflow/test_pins.py`) and §5 numbers it; the
+* **The censuses.** Six step kinds; `MAX_RULE` is 20 and §5 numbers it; the
   §2.10 field table is `WorkflowStep`'s fields; `causalab/workflow/nested.py`
   is in no hashed closure, reaches no engine module, and loading a nested
   workflow imports no torch; `/` is outside rule 3's alphabet.
@@ -29,7 +29,8 @@ the conditional fixtures' two scripts and the fan-out fixtures' stub engine.
   one terminal line; `--resume` reuses every inner step and re-runs exactly
   what an inner edit moved; the existing chains are unchanged; an inner
   fan-out joins under its sub-root.
-* **Refusals, each beside its valid twin**, every one naming the field.
+* **Refusals, each beside its valid twin**, every one
+  naming the field.
 """
 
 from __future__ import annotations
@@ -48,8 +49,8 @@ import pytest
 from causalab.cli import main as cli_main
 from causalab.io.events import EVENTS_FILE, read_events, terminal
 from causalab.io.step_record import SIDECAR
-from causalab.protocol.code import import_closure
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.identity import import_closure
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.tasks import TASKS_ROOT
 from causalab.workflow import conditional as cond
 from causalab.workflow import manifest as mf
@@ -202,10 +203,10 @@ def _run(
     loaded: LoadedWorkflow,
     root: Path,
     out: Path,
-    engines: list[Any] | None = None,
+    engine: Any = None,
     **kw: Any,
 ) -> Any:
-    return run_workflow(loaded, _env(root), out, engines or [], **kw)
+    return run_workflow(loaded, _env(root), out, engine, **kw)
 
 
 def _refused(
@@ -405,16 +406,21 @@ def test_nested_is_in_no_hashed_closure() -> None:
 
 
 def test_nested_reaches_no_engine_module() -> None:
+    """Engine-free: the one member under ``neural/`` is the torch-free
+    enumerator the workflow layer reads the steps through
+    (``neural/shared/sweep.py``), never an engine."""
     members = import_closure(REPO / MODULE, root=REPO)
     assert members, "the closure walk found nothing"
-    assert not [m for m in members if m.startswith("causalab/neural/")]
+    assert [m for m in members if m.startswith("causalab/neural/")] == [
+        "causalab/neural/shared/sweep.py"
+    ]
 
 
 _PROBE = """
 import json, sys
 from pathlib import Path
 import causalab.workflow.nested
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.workflow.document import load_workflow
 root = Path(sys.argv[1])
 env = ResolutionEnv(datasets=FileDatasets(root=root), artifacts=FileArtifacts(root=root))
@@ -570,7 +576,7 @@ def test_t19_two_workflow_steps_over_one_document(tmp_path: Path) -> None:
     assert (
         loaded.step_digests["tail2"] == loaded.step_digests["tail3"]
     )  # the names differ
-    result = _run(loaded, root, tmp_path / "runs", [_Rows()])
+    result = _run(loaded, root, tmp_path / "runs", _Rows())
     assert set(_statuses(result).values()) == {"completed"}
     assert _record(result.run_root, "tail/scan")["points"] == 8
     assert _record(result.run_root, "tail2/scan")["points"] == 4
@@ -604,7 +610,7 @@ def test_t19_every_existing_workflow_loads_with_no_nested_key(
 
 def _loading(root: Path, name: str) -> WorkflowError:
     """Load `name`, expecting a refusal — and turning a load that never
-    returns (m20: the chain check dropped) into a visible red, not a hang."""
+    returns (the mutation: the chain check dropped) into a visible red, not a hang."""
     sys.setrecursionlimit(600)
     try:
         with pytest.raises(WorkflowError) as err:
@@ -710,6 +716,8 @@ def test_t20_three_levels_load_run_and_explain(
         cli_main(
             [
                 "explain",
+                "--engine",
+                "auto",
                 str(root / "deep" / "a.json"),
                 "--data-root",
                 str(root),
@@ -748,7 +756,7 @@ def test_t20_an_intervention_specification_is_not_a_workflow_document(
 def test_t21_an_outer_and_an_inner_step_share_a_local_name(tmp_path: Path) -> None:
     """`measure` outside, `tail/measure` inside: both run, each publishes to
     its own directory, and the inner reference to `measure` reads the inner's
-    own values (m21: the sub-root removed would read the outer's 0.3)."""
+    own values (the mutation: the sub-root removed would read the outer's 0.3)."""
     root = _tree(tmp_path)
     loaded = _load(root)
     result = _run(loaded, root, tmp_path / "runs")
@@ -799,8 +807,8 @@ def test_t21_an_inner_documents_artifact_reference_derives_the_edge_to_the_inner
     """An outer intervention specification reads the inner values object by
     the IM grammar (`artifact: "tail/measure"`, the step whose `values.json`
     it is): the edge is to `tail/measure` (the longest step name), never to
-    `tail`, and the representative is the inner script's declared key (m21:
-    the head alone finds no `(tail, k)` representative)."""
+    `tail`, and the representative is the inner script's declared key (the
+    mutation: the head alone finds no `(tail, k)` representative)."""
     root = _tree(tmp_path)
     raw = _raw(root)
     raw["steps"]["probe_doc"] = {
@@ -811,7 +819,7 @@ def test_t21_an_inner_documents_artifact_reference_derives_the_edge_to_the_inner
     loaded = _load(root, raw)
     assert loaded.dependencies["probe_doc"] == ("tail/measure",)
     assert loaded.inner_digest_kind["probe_doc"] == "authored"
-    result = _run(loaded, root, tmp_path / "runs", [_Rows()])
+    result = _run(loaded, root, tmp_path / "runs", _Rows())
     assert _statuses(result)["probe_doc"] == "completed"
     # `k` is 8: one layer, two positions — the unoverridden scan has eight points
     assert _record(result.run_root, "probe_doc")["points"] == 2
@@ -866,7 +874,7 @@ def test_t22_a_failed_inner_receipt_prevents_allocation(
     assert loaded.dependencies["apply"] == ("tail/gate_k",)
     _sentinels(monkeypatch)
     with pytest.raises(WorkflowError) as err:
-        _run(loaded, root, tmp_path / "runs", [_Stub()])
+        _run(loaded, root, tmp_path / "runs", _Stub())
     assert err.value.rule == CONDITIONAL_RULE
     message = str(err.value)
     assert "steps.apply.requires_receipt" in message and "'tail/gate_k'" in message
@@ -914,7 +922,7 @@ def test_t22_a_skipped_inner_producer_skips_the_receipt_bearing_step(
     loaded = _load(root, _receipt_raw(root))
     assert "tail/pregate" in loaded.dependencies["tail/gate_k"]
     _sentinels(monkeypatch)
-    result = _run(loaded, root, tmp_path / "runs", [_Stub()])
+    result = _run(loaded, root, tmp_path / "runs", _Stub())
     run_root = result.run_root
     statuses = _statuses(result)
     assert (
@@ -952,7 +960,7 @@ def test_t22_a_missing_inner_receipt_is_a_distinct_refusal(
     monkeypatch.setattr(runner, "_boundary", vanish)
     _sentinels(monkeypatch)
     with pytest.raises(WorkflowError) as err:
-        _run(loaded, root, tmp_path / "runs", [_Stub()])
+        _run(loaded, root, tmp_path / "runs", _Stub())
     assert err.value.rule == CONDITIONAL_RULE
     message = str(err.value)
     assert "steps.apply.requires_receipt" in message and "'tail/gate_k'" in message
@@ -969,7 +977,7 @@ def test_t22_the_pass_twin_reaches_the_engine(tmp_path: Path) -> None:
     root = _tree(tmp_path, score=0.9)
     loaded = _load(root, _receipt_raw(root))
     with pytest.raises(AssertionError, match="executed"):
-        _run(loaded, root, tmp_path / "runs", [_Stub()])
+        _run(loaded, root, tmp_path / "runs", _Stub())
     assert (tmp_path / "runs" / "nested" / mf.ATTEMPTS_DIR / "apply").is_dir()
 
 
@@ -1157,7 +1165,7 @@ def test_t22_the_existing_chains_are_unchanged(env: Any, tmp_path: Path) -> None
     conditional chain or the fan-out fixture, a clean run then `--resume`
     byte-identical, `nested` empty."""
     kinds: set[str] = set()
-    for name in ("mean_ablation.json", "weekdays_8b.json"):
+    for name in ("mean_ablation.json", "weekdays.json", "pca_basis.json"):
         kinds |= _identity_kinds(load_workflow(WORKFLOWS / name, env))
     chain_root = _chain_tree(tmp_path)
     chain = _chain_load(chain_root)
@@ -1201,7 +1209,7 @@ def test_t22_an_inner_fan_out_joins_under_its_sub_root(tmp_path: Path) -> None:
         "tail/best",
         "report",
     )
-    result = _run(loaded, root, tmp_path / "runs", [_Rows()])
+    result = _run(loaded, root, tmp_path / "runs", _Rows())
     assert set(_statuses(result).values()) == {"completed"}
     join = _record(result.run_root, "tail/scan")
     assert join["fan_out"]["children"] == [
@@ -1519,7 +1527,7 @@ def test_a_per_child_conditional_inside_the_inner_document_expands_under_its_sub
     assert isinstance(gate0, ConditionalStep)
     assert gate0.predicate["decision"]["step"] == "tail/qualify@0"
     assert gate0.on_true == ("tail/apply@0",) and gate0.on_false == ("tail/narrow@0",)
-    result = _run(loaded, root, tmp_path / "runs", [_Rows()])
+    result = _run(loaded, root, tmp_path / "runs", _Rows())
     statuses = _statuses(result)
     assert statuses == {
         "tail/qualify@0": "completed",
@@ -1766,7 +1774,7 @@ def test_a_nested_fit_loads_under_an_outer_that_engages_nothing(
     assert not any(s.control is not None or s.waive is not None for s in own.values())
     inner_fit = loaded.document.steps["tail/fit"]
     assert isinstance(inner_fit, ProtocolStep)
-    assert loaded.inner["tail/fit"].document.train is not None  # a fit
+    assert loaded.inner["tail/fit"].compiled.document.train is not None  # a fit
     assert inner_fit.control is None and inner_fit.waive is None
 
 
@@ -1784,7 +1792,8 @@ def test_an_engaged_outer_nests_a_document_with_no_fit(
     }
     assert set(nested_steps) == {"tail/source", "tail/draw"}
     assert not any(
-        isinstance(step, ProtocolStep) and loaded.inner[name].document.train is not None
+        isinstance(step, ProtocolStep)
+        and loaded.inner[name].compiled.document.train is not None
         for name, step in nested_steps.items()
     )
 
@@ -2105,42 +2114,42 @@ def test_a_malformed_nesting_is_refused_naming_the_field(
 
 def _twin_two_levels(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
-    return _raw(root / "deep", "a.json"), [], None
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
+    return _raw(root / "deep", "a.json"), None, None
 
 
 def _twin_set_on_inner_document_step(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
     raw = _scan_outer(root)
     raw["steps"]["tail"]["set"] = {"scan": {"sites.target.layers": {"sweep": [0, 1]}}}
-    return raw, [_Rows()], None
+    return raw, _Rows(), None
 
 
 def _twin_receipt_on_inner_decision(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
     raw = _raw(root)
     raw["steps"]["report"]["requires_receipt"] = {
         "step": "tail/gate_k",
         "outcome": "pass",
     }
-    return raw, [], None
+    return raw, None, None
 
 
 def _twin_conditional_gating_the_workflow_step(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
     _outer_measure(root, 0.9)  # gate_k0: pass -> on_false skipped
     raw = _gated(_raw(root), on_true=["tail"], on_false=["probe"])
     raw["steps"]["probe"] = _writer("probe.json")
     expected = {n: "completed" for n in (*OUTER, "gate_k0", "gate")}
-    return raw, [], {**expected, "probe": "skipped"}
+    return raw, None, {**expected, "probe": "skipped"}
 
 
 def _twin_conditional_sides_disjoint_across_the_boundary(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
     """The refusal's twin: `on_true: [tail]` against a `report` that reads the
     *outer* `measure` — no step of one side depends on the other, so the
     conditional loads and runs (gate_k0: fail -> `tail` skipped, `report` runs)."""
@@ -2152,55 +2161,55 @@ def _twin_conditional_sides_disjoint_across_the_boundary(
     }
     skipped = {n: "skipped" for n in ("tail/measure", "tail/gate_k", "tail/best")}
     completed = {n: "completed" for n in ("measure", "gate_k0", "gate", "report")}
-    return raw, [], {**skipped, **completed}
+    return raw, None, {**skipped, **completed}
 
 
 def _twin_after_the_workflow_step(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
     raw = _raw(root)
     raw["steps"]["report"] = _writer("report.json", after=["tail"])
-    return raw, [], None
+    return raw, None, None
 
 
 def _twin_reference_to_an_inner_step(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
-    return _raw(root), [], None
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
+    return _raw(root), None, None
 
 
 def _twin_inner_fan_out(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
     return (
         _scan_outer(
             root, {"over": {"axis": "sites.target.layers"}, "join": {"require": "all"}}
         ),
-        [_Rows()],
+        _Rows(),
         None,
     )
 
 
 def _twin_receipt_on_the_workflow_step(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
     _outer_measure(root, 0.9)
     raw = _outer_decision(_raw(root))
     raw["steps"]["tail"]["requires_receipt"] = {"step": "gate_k0", "outcome": "pass"}
-    return raw, [], None
+    return raw, None, None
 
 
 def _twin_same_document_twice(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
     raw = _raw(root)
     raw["steps"]["tail2"] = {"type": "workflow", "document": "tail.json"}
-    return raw, [], None
+    return raw, None, None
 
 
 def _twin_control_beside_a_nested_workflow(
     root: Path,
-) -> tuple[dict[str, Any], list[Any], dict[str, str] | None]:
+) -> tuple[dict[str, Any], Any, dict[str, str] | None]:
     """The outer engages the controls layer on its own steps; the nested
     workflow's steps are not held to it (rule 14 runs over the outer's own)."""
     raw = _scan_outer(root)
@@ -2209,11 +2218,11 @@ def _twin_control_beside_a_nested_workflow(
         "document": SCAN,
         "waive": {"matched_random": "no_fit"},
     }
-    return raw, [_Rows()], None
+    return raw, _Rows(), None
 
 
 TWINS: dict[
-    str, Callable[[Path], tuple[dict[str, Any], list[Any], dict[str, str] | None]]
+    str, Callable[[Path], tuple[dict[str, Any], Any, dict[str, str] | None]]
 ] = {
     "two_levels": _twin_two_levels,
     "set_on_inner_document_step": _twin_set_on_inner_document_step,
@@ -2240,11 +2249,11 @@ def test_the_valid_twin_loads_and_runs_to_completed(tmp_path: Path, twin: str) -
     one document nested twice, a control beside a nested workflow — each
     loading and running to `completed` on CPU."""
     root = _tree(tmp_path)
-    raw, engines, expected = TWINS[twin](root)
+    raw, engine, expected = TWINS[twin](root)
     workflow_dir = root / "deep" if twin == "two_levels" else root
     loaded = load_workflow(raw, _env(root), workflow_dir=workflow_dir)
     assert loaded.nested, "a twin nests"
-    result = _run(loaded, root, tmp_path / "runs", engines)
+    result = _run(loaded, root, tmp_path / "runs", engine)
     statuses = _statuses(result)
     if expected is None:
         assert set(statuses.values()) == {"completed"}, statuses

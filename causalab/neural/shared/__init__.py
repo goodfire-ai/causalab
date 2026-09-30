@@ -1,11 +1,8 @@
-"""What every execution engine uses — and none may fork.
+"""Services shared by the execution engines.
 
-The §8 services that are protocol work, not hook work: tokenization and the
-batch frame (:mod:`.encoding`), contract layouts (:mod:`.layout`), payload
-math (:mod:`.mechanisms`), metric lowering (:mod:`.metrics`), artifact
-writing and stamping (:mod:`.outputs`), bundle loading, role resolution and
-identity records (:mod:`.services`), and the per-layer hybrid stream table
-(:mod:`.streams`), and the component vocabulary's module taps
-(:mod:`.sites`). An engine owns *loading and execution*; everything here is
-the shared remainder, single-homed so two engines can never disagree about it.
+These modules handle frames, tensor layouts, write math, metrics, results,
+and the loaded model's component addresses. ``engine_router`` resolves the
+``--engine`` choice and constructs the engine lazily, so it imports without
+torch. Engines supply model loading and the operations that capture tensors
+and apply writes.
 """

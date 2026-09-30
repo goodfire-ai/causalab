@@ -1,36 +1,20 @@
-"""Closed-loop schedules on a training hyperparameter (spec §2.11
-``train.control``).
+"""Adjust training hyperparameters from measured gate size.
 
-``train.anneal`` is the **open-loop** schedule: a hyperparameter follows a
-declared ramp whatever the fit does. ``train.control`` is the **closed-loop**
-one: a hyperparameter is moved every update so that a *signal the fit itself
-produces* follows a declared setpoint. The one signal so far is a gate's
-``hard_mask_size`` — the kept-unit count through its hard mask — and the one
-controller a PID, which is what makes "sweep the sparsity from everything
-patched to nothing patched, at a steady pace" a declaration: the sparsity
-weight is the controlled value, the kept-head count the signal, and a linear
-ramp from all units to none the setpoint.
+``train.control`` uses a PID controller to make ``hard_mask_size`` follow a
+setpoint. With ``e_t = signal_t - setpoint_t``, the update is::
 
-**The control law.** With ``e_t = signal_t − setpoint_t`` (positive when too
-many units are kept)::
+    u_t = kp*(e_t-e_prev) + ki*e_t + kd*((e_t-e_prev)-(e_prev-e_prev2))
 
-    u_t   = kp · (e_t − e_{t−1}) + ki · e_t + kd · ((e_t − e_{t−1}) − (e_{t−1} − e_{t−2}))
-    log w ← clip(log w + u_t, log bounds)          (``space: log``)
-    w     ← clip(w + u_t, bounds)                  (``space: linear``)
+Linear control clips ``w + u_t`` to bounds. Log control clips
+``log(w) + u_t`` to log bounds, giving relative weight changes. The count
+error bounds the integral term; ``d_clip`` limits the derivative.
+At the first update, the previous signal equals the current signal and
+the previous setpoint is the ramp's start.
 
-This is a PID controller on the kept count, with the roles of the terms
-shifted one derivative up: the proportional term acts on the *rate* of the
-error (``e_t − e_{t−1}``), the integral term is the count error itself —
-bounded by the unit count, so it cannot wind up — and the derivative term
-is the change in that rate, clipped at ``d_clip`` so a plateau breaking does
-not throw the weight. Updates in log space make the same gains produce the
-same *relative* change in the weight whatever its magnitude. On the first
-update the previous signal is taken to be the current one (no rate observed
-yet), and the previous setpoint is the ramp's start — so the first rate
-error is the ramp's own slope.
-
-Pure Python on purpose: the law is unit-testable without torch, and the
-train loop hands it two floats per update.
+This is the incremental (velocity) form of a discrete PID law; see
+Åström & Murray, *Feedback Systems* (2008), ch. 10. The error is
+expressed as kept units. The controller uses plain Python and receives
+floats from the train loop.
 """
 
 from __future__ import annotations
@@ -67,7 +51,7 @@ def ramp_setpoint(
 class PidController:
     """One controlled value, moved by a PID on the signal-minus-setpoint
     error (module docstring). ``value`` is the controlled hyperparameter's
-    current value; :meth:`step` takes one observation and returns the new
+    current value; [`step`][] takes one observation and returns the new
     value."""
 
     kp: float
@@ -119,8 +103,8 @@ class PidController:
         derivative = max(-self.d_clip, min(self.d_clip, derivative))
         u = self.kp * rate_error + self.ki * error + self.kd * derivative
         if self.space == "log":
-            # clip in log space *before* exponentiating, as run.py clips
-            # log_mult: a large gain must saturate at the bound, not overflow
+            # clip in log space *before* exponentiating: a large gain must
+            # saturate at the bound, not overflow
             low, high = (math.log(b) for b in self.bounds)
             self.value = math.exp(min(high, max(low, math.log(self.value) + u)))
         else:
@@ -133,7 +117,7 @@ class PidController:
 
 def build_controller(spec: Mapping[str, Any], *, initial: float) -> PidController:
     """A controller from its parsed (or canonical) ``train.control`` entry,
-    defaults filled from :data:`CONTROL_DEFAULTS_ENGINE`."""
+    defaults filled from [`CONTROL_DEFAULTS_ENGINE`][]."""
     gains = spec["gains"]
     bounds = spec.get("bounds", CONTROL_DEFAULTS_ENGINE["bounds"])
     start, _end, _frac = spec["setpoint"]["ramp"]

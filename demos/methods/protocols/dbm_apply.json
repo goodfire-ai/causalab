@@ -1,0 +1,40 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Apply a previously fitted DBM mask on the test split instead of re-fitting it: the gate featurizer's file_path loads the fitted theta and the stage comes back in eval mode, so the swap runs through the same hard theta>0 mask the fit was scored on. No train section, hence no train.eval - the number this document saves is a held-out one by construction, which is what dbm.json's own iia.json is NOT (a fit's iia.json is its TRAIN score). No 'entry' selector: dbm.json fits one cell, so its bundle holds a single 'theta' and resolves by slot alone; a swept DBM fit needs one, exactly as weekdays_das_apply.json shows for a rotation. Note the dtype: it is part of the fit's ArtifactIdentity, so an apply document that omits it implies fp32 and is refused [V15] against a bf16 fit - the --dtype flag does not participate."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#test", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#test",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]}
+    },
+    "sites": {
+      "target": {"component": "block_output", "layers": [23]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {"gate": {"kind": "gate", "file_path": "fit/gate.safetensors"}},
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "featurizer": "gate"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask": {"site": "target", "pos": -1, "featurizer": "gate", "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia.json"
+      }
+    ]
+  }
+}

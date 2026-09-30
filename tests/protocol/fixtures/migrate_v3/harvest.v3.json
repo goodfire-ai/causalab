@@ -1,0 +1,49 @@
+{
+  "header": {
+    "protocol_version": "3",
+    "description": "migrate_v3 fixture: harvest (trimmed from causalab/configs/protocols/harvest.json)"
+  },
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"}
+  },
+  "method": {
+    "positions": {"answer_tok": {"index": -1}, "entity": {"variable": "entity"}},
+    "sites": {
+      "L8": {"component": "block_output", "layers": [8]},
+      "L24": {"component": "block_output", "layers": [24]}
+    },
+    "reads": {
+      "acts_L8_ans": {"site": "L8", "pos": "answer_tok", "model": "original", "input": "base"},
+      "acts_L8_ent": {"site": "L8", "pos": "entity", "model": "original", "input": "base"},
+      "acts_L24_ans": {"site": "L24", "pos": "answer_tok", "model": "original", "input": "base"},
+      "acts_L24_ent": {"site": "L24", "pos": "entity", "model": "original", "input": "base"}
+    },
+    "save": [
+      {
+        "value": "acts_L8_ans",
+        "model": "original",
+        "input": "base",
+        "file_path": "acts_L8_ans.safetensors"
+      },
+      {
+        "value": "acts_L8_ent",
+        "model": "original",
+        "input": "base",
+        "file_path": "acts_L8_ent.safetensors"
+      },
+      {
+        "value": "acts_L24_ans",
+        "model": "original",
+        "input": "base",
+        "file_path": "acts_L24_ans.safetensors"
+      },
+      {
+        "value": "acts_L24_ent",
+        "model": "original",
+        "input": "base",
+        "file_path": "acts_L24_ent.safetensors"
+      }
+    ]
+  }
+}

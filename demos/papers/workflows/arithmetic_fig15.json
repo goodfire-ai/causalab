@@ -1,0 +1,19 @@
+{
+  "version": "1",
+  "description": "Figure 15 of Feucht et al. 2026 (arXiv:2605.01148), residual-stream patching on the weekdays task: interchange the whole residual stream at every depth x token position and score each interchange against the three causal variables' labels, one child per depth. workflows/scripts/arithmetic_fig15/fig15_figure.py draws the three heatmaps from the joined tables.",
+  "output_dir": "arithmetic_fig15",
+  "steps": {
+    "scan": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_fig15_scan.json",
+      "fan_out": {
+        "over": {
+          "axis": "axes.depth"
+        },
+        "join": {
+          "require": "all"
+        }
+      }
+    }
+  }
+}

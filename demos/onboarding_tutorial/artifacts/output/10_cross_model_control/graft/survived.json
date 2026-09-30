@@ -1,0 +1,514 @@
+[
+  {
+    "example_id": "0",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "survived",
+    "value": 0.0,
+    "unit": "fraction",
+    "estimand_version": "match/v1",
+    "eligible": true
+  }
+]

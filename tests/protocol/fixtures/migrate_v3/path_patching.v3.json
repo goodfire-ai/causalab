@@ -1,0 +1,53 @@
+{
+  "header": {
+    "protocol_version": "3",
+    "description": "migrate_v3 fixture: path_patching (trimmed from causalab/configs/protocols/path_patching.json)"
+  },
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "IOI/data/default", "field": "input"},
+    "counterfactual": {"dataset": "IOI/data/default", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "sites": {
+      "sender": {"component": "attention_premix", "layers": [9], "head": 9},
+      "receiver": {"component": "block_input", "layers": [12]},
+      "a10": {"component": "attention_output", "layers": [10]},
+      "a11": {"component": "attention_output", "layers": [11]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_sender": {"site": "sender", "pos": -1, "model": "original", "input": "counterfactual"},
+      "v_a10": {"site": "a10", "pos": -1, "model": "original", "input": "base"},
+      "v_a11": {"site": "a11", "pos": -1, "model": "original", "input": "base"},
+      "v_receiver": {"site": "receiver", "pos": -1, "model": "patched", "input": "base"},
+      "logits": {"site": "lm_head", "pos": -1, "model": "final", "input": "base"}
+    },
+    "writes": {
+      "swap_sender": {"site": "sender", "pos": -1, "do": {"swap": "v_sender"}},
+      "freeze_10": {"site": "a10", "pos": -1, "do": {"swap": "v_a10"}},
+      "freeze_11": {"site": "a11", "pos": -1, "do": {"swap": "v_a11"}},
+      "inject": {"site": "receiver", "pos": -1, "do": {"swap": "v_receiver"}}
+    },
+    "intervened_models": {
+      "patched": {"input": "base", "writes": ["swap_sender", "freeze_10", "freeze_11"]},
+      "final": {"input": "base", "writes": ["inject"]}
+    },
+    "metrics": {
+      "logit_diff": {
+        "kind": "logit_diff",
+        "of": "logits",
+        "a": "base_answer",
+        "b": "cf_answer"
+      }
+    },
+    "save": [
+      {
+        "value": "logit_diff",
+        "model": "final",
+        "input": "base",
+        "file_path": "logit_diff.json"
+      }
+    ]
+  }
+}

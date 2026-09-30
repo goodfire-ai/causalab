@@ -3,11 +3,11 @@
 Provides positions for: last_token, entity.
 """
 
-from causalab.neural.token_positions import (
+from causalab.tasks.token_positions import (
     build_token_positions,
     TokenPosition,
 )
-from causalab.neural.token_positions import LMPipeline
+from causalab.tasks.token_positions import LMPipeline
 
 from typing import Any
 

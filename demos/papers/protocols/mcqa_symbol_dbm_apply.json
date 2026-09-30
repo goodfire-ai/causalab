@@ -1,0 +1,41 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Held-out scoring of the mcqa_symbol DBM-DAS fit: load the rotation and the boundary gate mcqa_symbol_dbm_fit.json saved, whose eval mask keeps the first ceil(beta) columns, swap that subspace at the answer slot of the selected layer and save the interchange intervention accuracy against `label_forms`, which workflows/scripts/mcqa_symbol/iia_figure.py draws. The bundles are run-tree paths that only the workflow resolves."
+  },
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "mcqa_symbol/data#test", "field": "input"},
+    "counterfactual": {"dataset": "mcqa_symbol/data#test", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "positions": {"answer_slot": {"index": -1}},
+    "sites": {
+      "target": {"component": "block_output", "layers": [27]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "rot": {"kind": "subspace", "k": 128, "parametrization": "cayley", "file_path": "dbm_fit/rot.safetensors"},
+      "bnd": {"kind": "gate", "parametrization": "boundary", "file_path": "dbm_fit/bnd.safetensors"}
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": "answer_slot", "featurizer": ["rot", "bnd"]},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "patch": {"site": "target", "pos": "answer_slot", "featurizer": ["rot", "bnd"], "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia.json"
+      }
+    ]
+  }
+}

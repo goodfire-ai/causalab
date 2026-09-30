@@ -8,7 +8,7 @@ import pytest
 
 from causalab.analysis.compare_hypotheses import compare_saved_outputs
 from causalab.analysis.hypothesis_artifacts import export_hypotheses
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 
 pytestmark = pytest.mark.unit
 
@@ -25,7 +25,6 @@ def records():
             pair_id=f"p{i}",
             family="broad",
             split="test",
-            scoring_digest="frozen",
         )
         for i in range(4)
     ]
@@ -40,7 +39,6 @@ def records():
             metric="top1",
             value=json.dumps({"indices": [value]}),
             eligible=True,
-            produced_by="point",
         )
         for i, value in enumerate([1, 1, 0, 9])
     ]
@@ -56,7 +54,6 @@ def compare(pairs, predictions, neural):
         target="target",
         alternatives=["alternative"],
         metric="top1",
-        token_form="bare",
     )
 
 
@@ -73,9 +70,7 @@ def test_four_pairs_preserve_agreement_and_distinguishing_denominators():
     assert rows[0]["target_score"] == rows[0]["alternative_score"] == 0
 
 
-@pytest.mark.parametrize(
-    "defect", ["missing", "duplicate", "identity", "scoring", "null_id"]
-)
+@pytest.mark.parametrize("defect", ["missing", "duplicate", "identity", "null_id"])
 def test_bad_handoffs_are_refused(defect):
     pairs, predictions, neural = records()
     if defect == "missing":
@@ -84,12 +79,26 @@ def test_bad_handoffs_are_refused(defect):
         neural.append(neural[0])
     elif defect == "identity":
         predictions[0]["pair_id"] = "other"
-    elif defect == "scoring":
-        predictions[0]["scoring_digest"] = "other"
     else:
         pairs[0]["example_id"] = None
     with pytest.raises(ValueError):
         compare(pairs, predictions, neural)
+
+
+def test_points_are_their_coordinate_columns():
+    """Two sweep points share one pair table; each is keyed by its coordinates
+    and each must cover the table on its own."""
+    pairs, predictions, neural = records()
+    swept = [
+        {**row, "sites.target.layers": layer} for layer in (4, 8) for row in neural
+    ]
+    rows = compare(pairs, predictions, swept)
+    assert len(rows) == 8
+    assert {row["sites.target.layers"] for row in rows} == {4, 8}
+    with pytest.raises(ValueError, match="duplicate neural output"):
+        compare(pairs, predictions, [*swept, swept[-1]])
+    with pytest.raises(ValueError, match="cover the exact pair table"):
+        compare(pairs, predictions, swept[:-1])
 
 
 def test_unavailable_output_retains_its_reason_and_identity():
@@ -142,7 +151,6 @@ def test_export_to_saved_neural_comparison(tmp_path):
             metric="top1",
             value=json.dumps({"indices": [value]}),
             eligible=True,
-            produced_by="point",
         )
         for p, value in zip(pairs, [1, 1, 0, 9])
     ]
@@ -154,7 +162,6 @@ def test_export_to_saved_neural_comparison(tmp_path):
         target="swap_a",
         alternatives=["swap_b"],
         metric="top1",
-        token_form="bare",
     )
     assert sum(row["value"] for row in rows) / 4 == 0.5
     assert sum(row["distinguishing"] for row in rows) == 3

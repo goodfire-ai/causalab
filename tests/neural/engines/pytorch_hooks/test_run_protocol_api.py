@@ -34,10 +34,11 @@ from pathlib import Path
 
 import pytest
 
-from causalab.cli import load_engines, main
+from causalab.cli import main
+from causalab.neural.shared.engine_router import route
 from causalab.io.events import EVENTS_FILE
 from causalab.protocol import RUN_RECORD_NAME, run_protocol
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
 from tests.protocol._env import CORPUS_DIR, FIXTURES
@@ -69,6 +70,8 @@ def both_runs(tmp_path_factory: pytest.TempPathFactory, artifacts_root: Path):
 
     argv = [
         "run",
+        "--engine",
+        "auto",
         str(DOCUMENT),
         "--data-root",
         str(FIXTURES / "data"),
@@ -76,6 +79,7 @@ def both_runs(tmp_path_factory: pytest.TempPathFactory, artifacts_root: Path):
         str(artifacts_root),
         "--out",
         str(via_cli),
+        "--record",
     ]
     for path, value in OVERRIDES.items():
         argv += ["--set", f"{path}={value}"]
@@ -83,14 +87,16 @@ def both_runs(tmp_path_factory: pytest.TempPathFactory, artifacts_root: Path):
 
     # the Python path, built the way any caller would: an environment, a
     # loaded document, and the engines it wants to offer
-    from causalab.protocol.loader import load
+    from causalab.protocol.pipeline import compile_protocol
 
     env = ResolutionEnv(
         datasets=FileDatasets(root=FIXTURES / "data"),
         artifacts=FileArtifacts(root=artifacts_root),
     )
-    loaded = load(DOCUMENT, env, overrides=OVERRIDES)
-    result = run_protocol(loaded, env, load_engines("auto", "cpu"), via_api)
+    loaded = compile_protocol(DOCUMENT, env=env, overrides=OVERRIDES)
+    result = run_protocol(
+        loaded, env, route("auto", device="cpu"), via_api, record=True
+    )
 
     return status, via_cli, via_api, result
 
@@ -127,7 +133,7 @@ def test_the_run_record_is_identical(both_runs) -> None:
 
 
 def test_the_canonical_points_and_digests_match_explicitly(both_runs) -> None:
-    """The criterion, named rather than implied by the bytes above —
+    """The criterion for one run, named rather than implied by the bytes above —
     so a future record-format change cannot quietly drop it."""
     _, via_cli, via_api, _ = both_runs
     cli = json.loads((via_cli / RUN_RECORD_NAME).read_text())
@@ -143,7 +149,8 @@ def test_the_canonical_points_and_digests_match_explicitly(both_runs) -> None:
 def test_the_receipt_holds_the_table_to_nothing_beside_it(both_runs) -> None:
     """A run reads the table's bytes and nothing beside them (§2.2): the
     receipt carries no ``preparation`` block, because no sidecar is compared
-    before a forward — a workflow pins a table in its own ``pins`` section."""
+    before a forward — the table's content digest in the canonical form is
+    the whole of its identity to the run."""
     _, via_cli, _, _ = both_runs
     record = json.loads((via_cli / RUN_RECORD_NAME).read_text())
     assert "preparation" not in record
@@ -183,21 +190,22 @@ def test_a_bad_point_shard_is_refused_not_clamped(both_runs, artifacts_root) -> 
     empty engine list would refuse on routing and prove nothing about
     ``points``.
     """
-    from causalab.protocol.errors import ProtocolError
-    from causalab.protocol.loader import load
+    from causalab.protocol.rules.errors import ProtocolError
+    from causalab.protocol.pipeline import compile_protocol
 
     env = ResolutionEnv(
         datasets=FileDatasets(root=FIXTURES / "data"),
         artifacts=FileArtifacts(root=artifacts_root),
     )
-    loaded = load(DOCUMENT, env, overrides=OVERRIDES)
+    loaded = compile_protocol(DOCUMENT, env=env, overrides=OVERRIDES)
     with pytest.raises(ProtocolError, match="outside the campaign"):
         run_protocol(
             loaded,
             env,
-            load_engines("auto", "cpu"),
+            route("auto", device="cpu"),
             Path("never-created"),
             points="0:99",
+            record=True,
         )
     assert not Path("never-created").exists(), (
         "the run receipt was written before the shard was validated"

@@ -12,7 +12,7 @@ pub enum StorageClass {
     /// A local block device (ext4, xfs, btrfs, apfs, ...). Parallel reads of
     /// one file scale; GPUDirect Storage is possible.
     LocalBlock,
-    /// NFS. Measured on an NFS-mounted H100 node (2026-09-08): one file caps near
+    /// NFS. Measured on an NFSv3 mount (2026-09-08): one file caps near
     /// 3 GB/s however it is split, several files in flight reach the mount's
     /// aggregate.
     Nfs,
@@ -198,10 +198,10 @@ mod tests {
 
     const MOUNTS: &str = "\
 rootfs / ext4 rw 0 0
-nfs-server:/export/home /mnt/nfs nfs rw,vers=3 0 0
+server:/export/a /mnt/nfs nfs rw,vers=3 0 0
 tmpfs /dev/shm tmpfs rw 0 0
-/dev/sdb1 /tmp xfs rw 0 0
-blobfuse2 /mnt/nfs/blob fuse.blobfuse2 rw 0 0
+/dev/nvme0n1 /tmp xfs rw 0 0
+blobfuse2 /mnt/nfs/user/blob fuse.blobfuse2 rw 0 0
 s3fs /mnt/with\\040space fuse.s3fs rw 0 0
 ";
 
@@ -217,7 +217,7 @@ s3fs /mnt/with\\040space fuse.s3fs rw 0 0
             StorageClass::Nfs
         );
         assert_eq!(
-            env.storage_class(Path::new("/mnt/nfs/blob/x")),
+            env.storage_class(Path::new("/mnt/nfs/user/blob/x")),
             StorageClass::Fuse
         );
         assert_eq!(

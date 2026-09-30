@@ -14,7 +14,7 @@ recorder of batch geometry (§8; recorded, not gated).
 Every equality test here runs the same document twice, once whole and once
 with ``b`` set to a value that does not divide the row count (so the last
 window is short) and one that does, and compares what the executor holds:
-tensors with :func:`torch.testing.assert_close` at the fixture dtype's
+tensors with `torch.testing.assert_close` at the fixture dtype's
 tolerance — a different batch shape may take a different kernel path, so
 bit-equality is not the claim — and everything integral (token ids, routing
 tables, widths, decoded text) exactly.
@@ -42,13 +42,14 @@ from causalab.neural.engines.pytorch_hooks.executor import (
 )
 from causalab.neural.shared.metrics import compute_metric, compute_windowed_metric
 from causalab.protocol import RUN_RECORD_NAME, run_protocol
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
-from causalab.protocol.schema import MetricSpec
-from causalab.protocol.tables import read_table
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.schema import AggregationSpec
+from causalab.io.tables import read_table
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import UNWRITTEN, saved
 from tests.protocol._env import CORPUS_DIR, FIXTURES, write_rot_fixture
 
 #: Six rows of unequal length, so left padding is in play and the windows
@@ -143,16 +144,9 @@ def _run_counting_forwards(executor: PointExecutor) -> int:
     return prefills
 
 
-def _save(*names: tuple[str, str, str]) -> list[dict[str, str]]:
-    return [
-        {
-            "value": value,
-            "model": model,
-            "input": role,
-            "file_path": f"{value}.safetensors",
-        }
-        for value, model, role in names
-    ]
+def _save(*names: tuple[str, str]) -> list[dict[str, Any]]:
+    """One tensor save per ``(read, model)``, filed under the read's name."""
+    return [saved(read, model, f"{read}.safetensors") for read, model in names]
 
 
 # --------------------------------------------------------------------------- #
@@ -164,29 +158,22 @@ def _read_doc() -> dict[str, Any]:
     """Two ``block_output`` reads on the two-layer fixture: one over every
     padded position (a dense frame-wide gather) and one at the last token."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {
+                "original": {"input": "base", "reads": ["all0", "last1"]}
+            },
             "sites": {
                 "l0": {"component": "block_output", "layers": [0]},
                 "l1": {"component": "block_output", "layers": [1]},
             },
             "reads": {
-                "all0": {
-                    "site": "l0",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "base",
-                },
-                "last1": {
-                    "site": "l1",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "base",
-                },
+                "all0": {"site": "l0", "pos": "all"},
+                "last1": {"site": "l1", "pos": -1},
             },
-            "save": _save(("all0", "original", "base"), ("last1", "original", "base")),
+            "save": _save(("all0", "original"), ("last1", "original")),
         },
     }
 
@@ -199,42 +186,37 @@ def _patch_doc(do: dict[str, Any] | None = None) -> dict[str, Any]:
     it by row. Any other mechanism carries its own operand and needs no
     second role."""
     swap = do is None
+    # the un-intervened model on base goes by `original` alone unless the
+    # network is also read un-intervened on the counterfactual (§2.9)
+    clean_model = "original_base" if swap else "original"
     doc: dict[str, Any] = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": base_data_section(with_counterfactual=swap),
         "method": {
+            "intervened_models": {
+                clean_model: {"input": "base", "reads": ["clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "target": {"component": "block_output", "layers": [1]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "clean": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+                "clean": {"site": "lm_head", "pos": -1},
+                "after": {"site": "lm_head", "pos": -1},
             },
             "writes": {
                 "patch": {"site": "target", "pos": -1, "do": do or {"swap": "v_cf"}}
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "save": _save(("clean", "original", "base"), ("after", "patched", "base")),
+            "save": _save(("clean", clean_model), ("after", "patched")),
         },
     }
     if swap:
-        doc["method"]["reads"]["v_cf"] = {
-            "site": "target",
-            "pos": -1,
-            "model": "original",
-            "input": "counterfactual",
+        doc["method"]["reads"]["v_cf"] = {"site": "target", "pos": -1}
+        doc["method"]["intervened_models"] = {
+            UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+            **doc["method"]["intervened_models"],
         }
     return doc
 
@@ -244,10 +226,13 @@ def _generate_doc() -> dict[str, Any]:
     one at a block output (accumulated per step), both over every generated
     step."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {
+                "original": {"input": "base", "reads": ["logits", "acts"]}
+            },
             "positions": {
                 "cont": {"generated": {"max_new_tokens": BUDGET}, "all": True}
             },
@@ -256,20 +241,10 @@ def _generate_doc() -> dict[str, Any]:
                 "mid": {"component": "block_output", "layers": [1]},
             },
             "reads": {
-                "logits": {
-                    "site": "lm_head",
-                    "pos": "cont",
-                    "model": "original",
-                    "input": "base",
-                },
-                "acts": {
-                    "site": "mid",
-                    "pos": "cont",
-                    "model": "original",
-                    "input": "base",
-                },
+                "logits": {"site": "lm_head", "pos": "cont"},
+                "acts": {"site": "mid", "pos": "cont"},
             },
-            "save": _save(("logits", "original", "base"), ("acts", "original", "base")),
+            "save": _save(("logits", "original"), ("acts", "original")),
         },
     }
 
@@ -279,10 +254,13 @@ def _moe_doc(expert: int) -> dict[str, Any]:
     ``expert:`` face of ``expert_activation``, the routing table it joins on,
     and the router weights."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {
+                "original": {"input": "base", "reads": ["face", "idx", "scores"]}
+            },
             "sites": {
                 "face_site": {
                     "component": "expert_activation",
@@ -293,29 +271,12 @@ def _moe_doc(expert: int) -> dict[str, Any]:
                 "scores_site": {"component": "router_scores", "layers": [0]},
             },
             "reads": {
-                "face": {
-                    "site": "face_site",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "base",
-                },
-                "idx": {
-                    "site": "idx_site",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "base",
-                },
-                "scores": {
-                    "site": "scores_site",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "base",
-                },
+                "face": {"site": "face_site", "pos": "all"},
+                "idx": {"site": "idx_site", "pos": "all"},
+                "scores": {"site": "scores_site", "pos": "all"},
             },
             "save": _save(
-                ("face", "original", "base"),
-                ("idx", "original", "base"),
-                ("scores", "original", "base"),
+                ("face", "original"), ("idx", "original"), ("scores", "original")
             ),
         },
     }
@@ -326,31 +287,24 @@ def _state_patch_doc() -> dict[str, Any]:
     per (row, step), so its row offset into the operand is what a window
     that does not start at row 0 exercises."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["s_cf"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "state": {"component": "delta_state", "layers": [0]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "s_cf": {
-                    "site": "state",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+                "s_cf": {"site": "state", "pos": -1},
+                "after": {"site": "lm_head", "pos": -1},
             },
             "writes": {"patch": {"site": "state", "pos": -1, "do": {"swap": "s_cf"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "save": _save(("after", "patched", "base")),
+            "save": _save(("after", "patched")),
         },
     }
 
@@ -408,6 +362,8 @@ class TestExecutionParameter:
         code = main(
             [
                 "validate",
+                "--engine",
+                "auto",
                 str(CORPUS_DIR / "02_interchange_im.json"),
                 "--data-root",
                 str(FIXTURES / "data"),
@@ -495,10 +451,10 @@ class TestMicrobatchedRunEqualsWholeBatch:
         whole, windowed = _both(
             _patch_doc(), llama_bundle, batch_rows, counterfactual=True, columns=columns
         )
-        top_k = MetricSpec(kind="top_k", of="after", fields={"k": 3, "by": "prob"})
-        match = MetricSpec(kind="match", of="after", fields={"expected": "ans"})
+        top_k = AggregationSpec(kind="top_k", fields={"k": 3, "by": "prob"})
+        match = AggregationSpec(kind="match", fields={"expected": "ans"})
 
-        def table(executor: PointExecutor, metric: MetricSpec) -> list[Any]:
+        def table(executor: PointExecutor, metric: AggregationSpec) -> list[Any]:
             return compute_metric(
                 metric,
                 executor.dense_value("after"),
@@ -554,10 +510,10 @@ class TestMicrobatchedRunEqualsWholeBatch:
             for a, b in zip(whole.windowed_value(name), windowed.windowed_value(name)):
                 _assert_same(a, b)
 
-        decode = MetricSpec(kind="decode", of="logits", fields={})
-        top_k = MetricSpec(kind="top_k", of="logits", fields={"k": 1, "by": "prob"})
+        decode = AggregationSpec(kind="decode", fields={})
+        top_k = AggregationSpec(kind="top_k", fields={"k": 1, "by": "prob"})
 
-        def table(executor: PointExecutor, metric: MetricSpec) -> list[list[Any]]:
+        def table(executor: PointExecutor, metric: AggregationSpec) -> list[list[Any]]:
             ids = executor.generated_ids("logits") if metric.kind == "decode" else None
             return compute_windowed_metric(
                 metric,
@@ -586,10 +542,14 @@ def _tiny_overrides(*extra: str) -> list[str]:
 
 
 def _run_cli(name: str, roots: tuple[Path, Path], out: Path, *args: str) -> int:
+    """``causalab run`` with ``--record``: this suite compares two layouts of
+    one document through their receipts (``_receipts_differ_only_in_batch_rows``)."""
     data_root, artifacts_root = roots
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(CORPUS_DIR / name),
             "--data-root",
             str(data_root),
@@ -597,6 +557,7 @@ def _run_cli(name: str, roots: tuple[Path, Path], out: Path, *args: str) -> int:
             str(artifacts_root),
             "--out",
             str(out),
+            "--record",
             *args,
         ]
     )
@@ -648,13 +609,35 @@ def _receipts_differ_only_in_batch_rows(
     windowed = json.loads((windowed_dir / RUN_RECORD_NAME).read_text())
     assert whole["execution"] == {
         "batch_rows": None,
+        "device": "cpu",
         "fit_rows": None,
         "model_source": "loaded",
+        "parallel": {
+            "data": 1,
+            "data_mode": "points",
+            "pipeline": 1,
+            "context": 1,
+            "tensor": 1,
+            "expert": 1,
+            "world": 1,
+            "launcher": "solo",
+        },
     }
     assert windowed["execution"] == {
         "batch_rows": batch_rows,
+        "device": "cpu",
         "fit_rows": None,
         "model_source": "loaded",
+        "parallel": {
+            "data": 1,
+            "data_mode": "points",
+            "pipeline": 1,
+            "context": 1,
+            "tensor": 1,
+            "expert": 1,
+            "world": 1,
+            "launcher": "solo",
+        },
     }
     assert whole["document_digest"] == windowed["document_digest"]
     assert [p["digest"] for p in whole["points"]] == [
@@ -696,21 +679,21 @@ class TestRunReceiptRecordsTheLayout:
         """Corpus 02 (four rows, a counterfactual role, two metric tables)
         with ``batch_rows=3`` — a short last window — against the whole-batch
         engine: the receipts differ only in ``execution.batch_rows``, the
-        tables within tolerance (every ``produced_by`` stamp exactly)."""
+        tables within tolerance (every coordinate column exactly)."""
         data_root, artifacts_root = roots
         env = ResolutionEnv(
             datasets=FileDatasets(root=data_root),
             artifacts=FileArtifacts(root=artifacts_root),
         )
-        loaded = load(
+        loaded = compile_protocol(
             CORPUS_DIR / "02_interchange_im.json",
-            env,
+            env=env,
             overrides={"model.key": TINY_LLAMA, "sites.target.layers": 1},
         )
         whole_dir, windowed_dir = tmp_path / "whole", tmp_path / "windowed"
-        whole = run_protocol(loaded, env, [PytorchHooksEngine()], whole_dir)
+        whole = run_protocol(loaded, env, PytorchHooksEngine(), whole_dir, record=True)
         windowed = run_protocol(
-            loaded, env, [PytorchHooksEngine(batch_rows=3)], windowed_dir
+            loaded, env, PytorchHooksEngine(batch_rows=3), windowed_dir, record=True
         )
         _receipts_differ_only_in_batch_rows(whole_dir, windowed_dir, 3)
         _stamps_identical(whole_dir, windowed_dir)
@@ -817,6 +800,8 @@ class TestRunReceiptRecordsTheLayout:
             code = main(
                 [
                     "run",
+                    "--engine",
+                    "auto",
                     str(workflow),
                     "--data-root",
                     str(data_root),
@@ -834,13 +819,35 @@ class TestRunReceiptRecordsTheLayout:
         whole, windowed = records["whole"], records["windowed"]
         assert whole["execution"] == {
             "batch_rows": None,
+            "device": "cpu",
             "fit_rows": None,
             "model_source": "loaded",
+            "parallel": {
+                "data": 1,
+                "data_mode": "points",
+                "pipeline": 1,
+                "context": 1,
+                "tensor": 1,
+                "expert": 1,
+                "world": 1,
+                "launcher": "solo",
+            },
         }
         assert windowed["execution"] == {
             "batch_rows": 3,
+            "device": "cpu",
             "fit_rows": None,
             "model_source": "loaded",
+            "parallel": {
+                "data": 1,
+                "data_mode": "points",
+                "pipeline": 1,
+                "context": 1,
+                "tensor": 1,
+                "expert": 1,
+                "world": 1,
+                "launcher": "solo",
+            },
         }
         assert whole["document_digest"] == windowed["document_digest"]
         assert whole["point_digests"] == windowed["point_digests"]

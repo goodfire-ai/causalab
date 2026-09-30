@@ -1,0 +1,367 @@
+{
+ "description": "IIA values the onboarding tutorial states for the answer-slot interchange on Qwen/Qwen2.5-1.5B-Instruct bf16, over the 64 pairs of mcqa/pairs_n64_s0 (Apple M5 Pro, --device mps, 2026-09-28). Copied by hand from the pages and from the plotted-values files the pages link, never read at run time; the page names each value's source. 09's Q1 table and 09_components_component_iia.json give all 28 attention_output cells (0.000 at layers 0-20 and 23-25), the best and second-best mlp_output cells (every other MLP cell is 0.000) and the block_output cells from layer 22 on. 11 states every non-zero head cell, so the other nine heads of layer 22 are 0.000.",
+ "sources": {
+  "09": {
+   "path": "demos/onboarding_tutorial/09_components.md",
+   "sha256": "f30749c0571b54c46b31b2dc5bc66ff209261502a05138cd0ffe02c16ba4f8e7",
+   "where": "Q1 table and text; the other cells in grid/09_components_component_iia.json"
+  },
+  "11": {
+   "path": "demos/onboarding_tutorial/11_attention.md",
+   "sha256": "89154d4b86e1e70ba3abd6e7f43f731f58a68251911eafeeed3c0b8cc2021073",
+   "where": "Q2 table of the nine non-zero heads"
+  }
+ },
+ "records": [
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 0,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 1,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 2,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 3,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 4,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 5,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 6,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 7,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 8,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 9,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 10,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 11,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 12,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 13,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 14,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 15,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 16,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 17,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 18,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 19,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 20,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 21,
+   "head": null,
+   "iia": 0.078
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 22,
+   "head": null,
+   "iia": 0.547
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 23,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 24,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 25,
+   "head": null,
+   "iia": 0.0
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 26,
+   "head": null,
+   "iia": 0.016
+  },
+  {
+   "source": "09",
+   "component": "attention_output",
+   "layer": 27,
+   "head": null,
+   "iia": 0.016
+  },
+  {
+   "source": "09",
+   "component": "mlp_output",
+   "layer": 23,
+   "head": null,
+   "iia": 0.031
+  },
+  {
+   "source": "09",
+   "component": "mlp_output",
+   "layer": 14,
+   "head": null,
+   "iia": 0.016
+  },
+  {
+   "source": "09",
+   "component": "mlp_output",
+   "layer": 25,
+   "head": null,
+   "iia": 0.016
+  },
+  {
+   "source": "09",
+   "component": "mlp_output",
+   "layer": 26,
+   "head": null,
+   "iia": 0.016
+  },
+  {
+   "source": "09",
+   "component": "block_output",
+   "layer": 22,
+   "head": null,
+   "iia": 0.703
+  },
+  {
+   "source": "09",
+   "component": "block_output",
+   "layer": 23,
+   "head": null,
+   "iia": 0.797
+  },
+  {
+   "source": "09",
+   "component": "block_output",
+   "layer": 24,
+   "head": null,
+   "iia": 0.781
+  },
+  {
+   "source": "09",
+   "component": "block_output",
+   "layer": 25,
+   "head": null,
+   "iia": 0.766
+  },
+  {
+   "source": "09",
+   "component": "block_output",
+   "layer": 26,
+   "head": null,
+   "iia": 0.922
+  },
+  {
+   "source": "09",
+   "component": "block_output",
+   "layer": 27,
+   "head": null,
+   "iia": 0.891
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 0,
+   "iia": 0.0
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 1,
+   "iia": 0.0
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 2,
+   "iia": 0.0
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 3,
+   "iia": 0.0
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 4,
+   "iia": 0.0
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 5,
+   "iia": 0.0
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 6,
+   "iia": 0.0
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 7,
+   "iia": 0.234
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 8,
+   "iia": 0.0
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 9,
+   "iia": 0.047
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 10,
+   "iia": 0.0
+  },
+  {
+   "source": "11",
+   "component": "attention_premix",
+   "layer": 22,
+   "head": 11,
+   "iia": 0.016
+  }
+ ]
+}

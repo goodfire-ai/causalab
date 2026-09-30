@@ -44,7 +44,7 @@ import pytest
 
 from causalab.analysis import paired_ttest
 from causalab.io.step_io import StepError
-from causalab.neural.shared.outputs import MetricTable
+from causalab.neural.shared.results import MetricTable
 from causalab.protocol.estimand import (
     REDUCTION_ESTIMANDS,
     Claim,
@@ -55,8 +55,8 @@ from causalab.protocol.estimand import (
     reduction_identity,
     table_record,
 )
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
-from causalab.protocol.tables import read_table
+from causalab.io.env import ResolutionEnv
+from causalab.io.tables import read_table
 from causalab.workflow.document import MAX_RULE, WorkflowError, load_workflow
 from causalab.workflow.reduction import (
     IDENTITY_RULE,
@@ -68,15 +68,16 @@ from causalab.workflow.reduction import (
 from causalab.workflow.runner import run_workflow
 from causalab.workflow.scripts import reduce
 from tests.step_scripts import put_table, run_step
+from tests._helpers.paths import WORKFLOWS_DIR
+
+from tests._helpers.demos import demo_env, demo_workflows
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
 SPEC = REPO / "docs" / "workflow_protocol.md"
-WORKFLOWS = REPO / "causalab" / "configs" / "workflows"
+WORKFLOWS = WORKFLOWS_DIR
 DEMOS = REPO / "demos"
-
-POINT = "ab" * 32
 
 # --------------------------------------------------------------------------- #
 # the fixture — a per-row ratio with unequal denominators
@@ -89,7 +90,7 @@ RATIOS: tuple[tuple[int, int], ...] = ((1, 2), (3, 4), (1, 8), (7, 8))
 
 def ratio_table(pairs=RATIOS, *, unit: str | None = "fraction") -> list[dict[str, Any]]:
     """One row per example: ``value`` is the row's ratio, ``denominator`` its
-    denominator — the shape a normalized-recovery table takes."""
+    denominator — the shape `addition`'s normalized recovery takes."""
     rows = []
     for example, (numerator, denominator) in enumerate(pairs):
         row: dict[str, Any] = {
@@ -98,7 +99,6 @@ def ratio_table(pairs=RATIOS, *, unit: str | None = "fraction") -> list[dict[str
             "value": numerator / denominator,
             "denominator": denominator,
             "estimand_version": "logit_diff/v1",
-            "produced_by": POINT,
         }
         if unit is not None:
             row["unit"] = unit
@@ -185,14 +185,13 @@ def test_t6_two_identifiers_give_two_numbers(tmp_path) -> None:
     assert a["estimand_version"] == "mean_of_eligible_row_ratios/v1"
     assert b["estimand_version"] == "ratio_of_sums/v1"
     assert a["estimand_version"] != b["estimand_version"]
-    # same table, same unit, same provenance — only the arithmetic differs
+    # same table, same unit — only the arithmetic differs
     assert a["unit"] == b["unit"] == "fraction"
-    assert a["produced_by"] == b["produced_by"] == POINT
     assert a["n"] == b["n"] == 4 and a["n_excluded"] == b["n_excluded"] == 0
 
 
 def test_t6_eligible_means_the_rows_exclude_kept(tmp_path) -> None:
-    """The name's 'eligible' is `missing: exclude`'s count, nothing new."""
+    """The name's 'eligible' is `missing: exclude`'s count, nothing new (8·4)."""
     rows = ratio_table()
     rows[1]["value"] = None
     result = _reduce(tmp_path, rows, MEAN_OF_RATIOS, "a")
@@ -236,15 +235,15 @@ def test_t6_the_honest_declarations_load_run_and_digest_apart(env, tmp_path):
     assert a.canonical["steps"]["facts"]["reduction"]["estimand_version"] == (
         "mean_of_eligible_row_ratios/v1"
     )
-    result = run_workflow(a, env, tmp_path / "run_a", engines=[])
+    result = run_workflow(a, env, tmp_path / "run_a", engine=None)
     (row,) = read_table(result.run_root / "facts" / "reduced.json")
     assert row["estimand_version"] == "mean_of_eligible_row_ratios/v1"
     assert row["value"] == pytest.approx(0.5625)
 
 
 def test_t6_the_identifier_is_canonical_only_when_authored(env, tmp_path) -> None:
-    """A block that names nothing keeps the digest it always had, and its rows
-    carry the estimator's own identifier."""
+    """A block that names nothing keeps the digest it had before the
+    identifier existed, and its rows carry the estimator's own identifier."""
     table = put_table(tmp_path / "recovery.json", ratio_table())
     bare = {k: v for k, v in MEAN_OF_RATIOS.items() if k != "estimand_version"}
     loaded = load_workflow(reduce_workflow(table, bare), env, workflow_dir=tmp_path)
@@ -253,7 +252,7 @@ def test_t6_the_identifier_is_canonical_only_when_authored(env, tmp_path) -> Non
         reduce_workflow(table, MEAN_OF_RATIOS), env, workflow_dir=tmp_path
     )
     assert loaded.digest != named.digest
-    result = run_workflow(loaded, env, tmp_path / "run", engines=[])
+    result = run_workflow(loaded, env, tmp_path / "run", engine=None)
     (row,) = read_table(result.run_root / "facts" / "reduced.json")
     assert row["estimand_version"] == "mean/v1"
 
@@ -348,7 +347,6 @@ def _arm(values, *, unit="fraction", estimand="match/v1") -> list[dict[str, Any]
             "value": v,
             "unit": unit,
             "estimand_version": estimand,
-            "produced_by": POINT,
         }
         for i, v in enumerate(values)
     ]
@@ -375,7 +373,8 @@ def test_t7_paired_ttest_refuses_a_fraction_against_percentage_points(tmp_path):
 
 
 def test_t8_two_arms_with_nothing_declared_compare_cleanly(tmp_path) -> None:
-    """Valid work: two tables written before units existed still compare."""
+    """Valid work is not refused: two tables written before units existed
+    still compare."""
     a = [{"example_id": str(i), "value": v} for i, v in enumerate([1.0, 2.0, 3.0, 4.0])]
     b = [{"example_id": str(i), "value": v} for i, v in enumerate([0.5, 1.0, 2.5, 3.0])]
     row = _ttest(tmp_path, a, b)
@@ -409,14 +408,13 @@ def test_t8_one_declared_side_compares_cleanly(tmp_path) -> None:
 
 def test_t8_a_reduction_over_an_unlabelled_table_runs_with_an_unknown_unit(tmp_path):
     """A pre-identity table reduces; its unit is `null`, its estimand the
-    estimator's own, its provenance whatever the rows carry."""
+    estimator's own."""
     rows = [
         {"example_id": str(i), "value": v} for i, v in enumerate([0.5, 0.75, 0.25, 1.0])
     ]
     block = {k: v for k, v in MEAN_OF_RATIOS.items() if k != "estimand_version"}
     result = _reduce(tmp_path, rows, block, "a")
     assert result["unit"] is None and result["estimand_version"] == "mean/v1"
-    assert result["produced_by"] is None
     assert result["value"] == pytest.approx(0.625)
 
 
@@ -426,14 +424,12 @@ def test_t8_a_reduction_over_an_unlabelled_table_runs_with_an_unknown_unit(tmp_p
 
 
 def _demo_env(document: Path) -> ResolutionEnv:
-    demo = document.parents[1]
-    return ResolutionEnv(
-        datasets=FileDatasets(root=demo / "data"), artifacts=FileArtifacts(root=REPO)
-    )
+    """A demo carries its own tables (``tests/_helpers/demos.py``)."""
+    return demo_env(document)
 
 
 SHIPPED = sorted(WORKFLOWS.glob("*.json"))
-DEMO_WORKFLOWS = sorted(DEMOS.glob("*/workflows/*.json"))
+DEMO_WORKFLOWS = demo_workflows()
 
 
 def _assert_no_identity(canonical: dict[str, Any], name: str) -> None:
@@ -462,22 +458,20 @@ def test_t9_the_workflow_census_found_something() -> None:
 
 def test_t9_metric_rows_carry_the_derived_identity() -> None:
     """`MetricTable._row` (spec §2.10, §6): every row repeats `unit` and
-    `estimand_version` beside `produced_by`, derived from the kind when the
-    document says nothing. Fails without the change: the columns do not
-    exist."""
+    `estimand_version` beside its coordinate columns, derived from the kind
+    when the document says nothing. Fails without the change: the columns do
+    not exist."""
     table = MetricTable()
     table.add(
         "ce",
         [0.5, 1.5],
         {"sites.target.layers": 3},
-        POINT,
         identity=metric_record_identity("cross_entropy"),
     )
     table.add_windowed(
         "said",
         [[1.0], []],
         {},
-        POINT,
         identity=metric_record_identity(
             "match", unit="fraction", estimand_version="match/v1"
         ),
@@ -485,8 +479,8 @@ def test_t9_metric_rows_carry_the_derived_identity() -> None:
         matched=[True, False],
     )
     ce = [row for row in table.rows if row["metric"] == "ce"]
-    # `eligible` is the eligibility record (§2.10 "Eligibility"), between
-    # the identity and the provenance; an eligible row carries no reason_code
+    # `eligible` is the eligibility record (§2.10 "Eligibility"), after
+    # the identity; an eligible row carries no reason_code
     assert [list(row) for row in ce] == [
         [
             "example_id",
@@ -496,7 +490,6 @@ def test_t9_metric_rows_carry_the_derived_identity() -> None:
             "unit",
             "estimand_version",
             "eligible",
-            "produced_by",
         ]
     ] * 2
     assert {(row["unit"], row["estimand_version"]) for row in ce} == {
@@ -513,9 +506,7 @@ def test_t9_metric_rows_carry_the_derived_identity() -> None:
 
 def test_t9_a_structure_kind_carries_a_null_unit() -> None:
     table = MetricTable()
-    table.add(
-        "top", [{"indices": [1]}], {}, POINT, identity=metric_record_identity("top_k")
-    )
+    table.add("top", [{"indices": [1]}], {}, identity=metric_record_identity("top_k"))
     (row,) = table.rows
     assert row["unit"] is None and row["estimand_version"] == "top_k/v1"
 
@@ -523,7 +514,7 @@ def test_t9_a_structure_kind_carries_a_null_unit() -> None:
 def test_t9_reduced_rows_carry_the_identity_columns_in_order(tmp_path) -> None:
     result = _reduce(tmp_path, ratio_table(), MEAN_OF_RATIOS, "a")
     assert list(result) == list(OUTPUT_COLUMNS)
-    assert OUTPUT_COLUMNS[-3:] == ("unit", "estimand_version", "produced_by")
+    assert OUTPUT_COLUMNS[-2:] == ("unit", "estimand_version")
 
 
 def test_t9_count_is_in_count_whatever_the_table_holds(tmp_path) -> None:
@@ -534,26 +525,20 @@ def test_t9_count_is_in_count_whatever_the_table_holds(tmp_path) -> None:
     assert result["value"] == 4
 
 
-def test_t9_a_group_spanning_points_has_no_single_provenance(tmp_path) -> None:
-    rows = ratio_table()
-    rows[0]["produced_by"] = "cd" * 32
-    result = _reduce(tmp_path, rows, MEAN_OF_RATIOS, "a")
-    assert result["produced_by"] is None
-    assert result["unit"] == "fraction"
-
-
 # --------------------------------------------------------------------------- #
 # T10 — the stale claim, end to end through the built-in
 # --------------------------------------------------------------------------- #
 
 
-def test_t10_a_recomputed_record_refuses_the_claim_naming_record_and_point(tmp_path):
+def test_t10_a_recomputed_record_refuses_the_claim_naming_record_and_row(tmp_path):
     """*Mutation:* bind by file path only — `reduced.json` is unchanged as a
-    path, so a path check passes and the `raises` below fails."""
+    path, so a path check passes and the `raises` below fails. The reduction
+    has no group-by, so the file is one row and the claim's `where` is
+    empty."""
     result = _reduce(tmp_path, ratio_table(), MEAN_OF_RATIOS, "first")
     claim = Claim(
         file="first/reduced.json",
-        produced_by=result["produced_by"],
+        where={},
         estimand_version=result["estimand_version"],
         unit=result["unit"],
         value=result["value"],
@@ -574,33 +559,8 @@ def test_t10_a_recomputed_record_refuses_the_claim_naming_record_and_point(tmp_p
     with pytest.raises(EstimandError) as err:
         check_claim(claim, read_table(tmp_path / "first" / "reduced.json"))
     message = str(err.value)
-    assert "first/reduced.json" in message and POINT in message
+    assert "first/reduced.json" in message
     assert "0.5625" in message
-
-
-def test_t10_a_rerun_under_another_document_refuses_by_point_digest(tmp_path):
-    result = _reduce(tmp_path, ratio_table(), MEAN_OF_RATIOS, "first")
-    claim = Claim(
-        "first/reduced.json",
-        POINT,
-        result["estimand_version"],
-        "fraction",
-        result["value"],
-    )
-    rerun = ratio_table()
-    for row in rerun:
-        row["produced_by"] = "ef" * 32
-    put_table(tmp_path / "first" / "recovery.json", rerun)
-    run_step(
-        reduce,
-        {
-            "table": tmp_path / "first" / "recovery.json",
-            REDUCTION_INPUT: MEAN_OF_RATIOS,
-        },
-        {"table": tmp_path / "first" / "reduced.json"},
-    )
-    with pytest.raises(EstimandError, match="holds no record produced by that point"):
-        check_claim(claim, read_table(tmp_path / "first" / "reduced.json"))
 
 
 # --------------------------------------------------------------------------- #
@@ -692,9 +652,9 @@ def test_every_estimator_has_exactly_one_own_identifier() -> None:
     assert {e.estimator for e in campaign} == {"mean", "weighted_mean"}
 
 
-def test_a_copy_of_the_block_with_no_identifier_keeps_its_six_keys() -> None:
-    """Nothing already pinned moves: the canonical block of an unauthored
-    declaration has exactly the six keys it had."""
+def test_a_copy_of_the_block_with_no_identifier_is_the_original_form() -> None:
+    """Nothing pinned before the identifier moves: the canonical block of an
+    unauthored declaration has exactly the six keys it had."""
     block = copy.deepcopy(MEAN_OF_RATIOS)
     del block["estimand_version"]
     assert set(parse_reduction(block).canonical()) == {

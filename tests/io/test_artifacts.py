@@ -216,8 +216,8 @@ class TestSaveInterventionResults:
     hand ``save_intervention_results`` the legacy one-synthetic-batch
     ``raw_results`` view (``GenerationResult.to_raw_results()``); the on-disk
     schema is independent of the run's internal batch split (the flat result
-    erased batch boundaries before io ever sees them, so
-    ``batch_size < n_examples`` changes nothing here) and unchanged vs legacy runs with
+    erased batch boundaries before io ever sees them, the
+    ``batch_size < n_examples`` case) and unchanged vs legacy runs with
     ``batch_size >= n_examples``. Legacy multi-batch runs stored one inner
     ``"string"`` list per batch (and single-example batches a bare str);
     ``to_raw_results()`` always emits the one-batch nesting instead."""

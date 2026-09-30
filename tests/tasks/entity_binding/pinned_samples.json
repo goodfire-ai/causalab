@@ -5,22 +5,22 @@
         {
           "active_groups": 2,
           "answer_index": 0,
+          "entities[0,0]": "Tim",
+          "entities[0,1]": "soup",
+          "entities[1,0]": "Sue",
+          "entities[1,1]": "bread",
           "entities_per_group": 2,
-          "entity_g0_e0": "Tim",
-          "entity_g0_e1": "soup",
-          "entity_g1_e0": "Sue",
-          "entity_g1_e1": "bread",
           "positional_answer": 0,
-          "positional_entity_g0_e0": 0,
-          "positional_entity_g0_e1": 0,
-          "positional_entity_g1_e0": 1,
-          "positional_entity_g1_e1": 1,
-          "positional_query_e0": [],
-          "positional_query_e1": [
+          "positional_entities[0,0]": 0,
+          "positional_entities[0,1]": 0,
+          "positional_entities[1,0]": 1,
+          "positional_entities[1,1]": 1,
+          "positional_queries[0]": [],
+          "positional_queries[1]": [
             0
           ],
-          "query_e0": "Tim",
-          "query_e1": "soup",
+          "queries[0]": "Tim",
+          "queries[1]": "soup",
           "query_group": 0,
           "query_indices": [
             1
@@ -34,22 +34,22 @@
       "input": {
         "active_groups": 2,
         "answer_index": 0,
+        "entities[0,0]": "Tim",
+        "entities[0,1]": "soup",
+        "entities[1,0]": "Sue",
+        "entities[1,1]": "bread",
         "entities_per_group": 2,
-        "entity_g0_e0": "Tim",
-        "entity_g0_e1": "soup",
-        "entity_g1_e0": "Sue",
-        "entity_g1_e1": "bread",
         "positional_answer": 1,
-        "positional_entity_g0_e0": 0,
-        "positional_entity_g0_e1": 0,
-        "positional_entity_g1_e0": 1,
-        "positional_entity_g1_e1": 1,
-        "positional_query_e0": [],
-        "positional_query_e1": [
+        "positional_entities[0,0]": 0,
+        "positional_entities[0,1]": 0,
+        "positional_entities[1,0]": 1,
+        "positional_entities[1,1]": 1,
+        "positional_queries[0]": [],
+        "positional_queries[1]": [
           1
         ],
-        "query_e0": "Sue",
-        "query_e1": "bread",
+        "queries[0]": "Sue",
+        "queries[1]": "bread",
         "query_group": 1,
         "query_indices": [
           1
@@ -66,22 +66,22 @@
         {
           "active_groups": 2,
           "answer_index": 1,
+          "entities[0,0]": "Pete",
+          "entities[0,1]": "bread",
+          "entities[1,0]": "Sue",
+          "entities[1,1]": "soup",
           "entities_per_group": 2,
-          "entity_g0_e0": "Pete",
-          "entity_g0_e1": "bread",
-          "entity_g1_e0": "Sue",
-          "entity_g1_e1": "soup",
           "positional_answer": 1,
-          "positional_entity_g0_e0": 0,
-          "positional_entity_g0_e1": 0,
-          "positional_entity_g1_e0": 1,
-          "positional_entity_g1_e1": 1,
-          "positional_query_e0": [
+          "positional_entities[0,0]": 0,
+          "positional_entities[0,1]": 0,
+          "positional_entities[1,0]": 1,
+          "positional_entities[1,1]": 1,
+          "positional_queries[0]": [
             1
           ],
-          "positional_query_e1": [],
-          "query_e0": "Sue",
-          "query_e1": "soup",
+          "positional_queries[1]": [],
+          "queries[0]": "Sue",
+          "queries[1]": "soup",
           "query_group": 1,
           "query_indices": [
             0
@@ -95,22 +95,22 @@
       "input": {
         "active_groups": 2,
         "answer_index": 1,
+        "entities[0,0]": "Pete",
+        "entities[0,1]": "bread",
+        "entities[1,0]": "Sue",
+        "entities[1,1]": "soup",
         "entities_per_group": 2,
-        "entity_g0_e0": "Pete",
-        "entity_g0_e1": "bread",
-        "entity_g1_e0": "Sue",
-        "entity_g1_e1": "soup",
         "positional_answer": 0,
-        "positional_entity_g0_e0": 0,
-        "positional_entity_g0_e1": 0,
-        "positional_entity_g1_e0": 1,
-        "positional_entity_g1_e1": 1,
-        "positional_query_e0": [
+        "positional_entities[0,0]": 0,
+        "positional_entities[0,1]": 0,
+        "positional_entities[1,0]": 1,
+        "positional_entities[1,1]": 1,
+        "positional_queries[0]": [
           0
         ],
-        "positional_query_e1": [],
-        "query_e0": "Pete",
-        "query_e1": "bread",
+        "positional_queries[1]": [],
+        "queries[0]": "Pete",
+        "queries[1]": "bread",
         "query_group": 0,
         "query_indices": [
           0
@@ -127,22 +127,22 @@
         {
           "active_groups": 2,
           "answer_index": 1,
+          "entities[0,0]": "Tim",
+          "entities[0,1]": "soup",
+          "entities[1,0]": "Ann",
+          "entities[1,1]": "tea",
           "entities_per_group": 2,
-          "entity_g0_e0": "Tim",
-          "entity_g0_e1": "soup",
-          "entity_g1_e0": "Ann",
-          "entity_g1_e1": "tea",
           "positional_answer": 0,
-          "positional_entity_g0_e0": 0,
-          "positional_entity_g0_e1": 0,
-          "positional_entity_g1_e0": 1,
-          "positional_entity_g1_e1": 1,
-          "positional_query_e0": [
+          "positional_entities[0,0]": 0,
+          "positional_entities[0,1]": 0,
+          "positional_entities[1,0]": 1,
+          "positional_entities[1,1]": 1,
+          "positional_queries[0]": [
             0
           ],
-          "positional_query_e1": [],
-          "query_e0": "Tim",
-          "query_e1": "soup",
+          "positional_queries[1]": [],
+          "queries[0]": "Tim",
+          "queries[1]": "soup",
           "query_group": 0,
           "query_indices": [
             0
@@ -156,22 +156,22 @@
       "input": {
         "active_groups": 2,
         "answer_index": 1,
+        "entities[0,0]": "Tim",
+        "entities[0,1]": "soup",
+        "entities[1,0]": "Ann",
+        "entities[1,1]": "tea",
         "entities_per_group": 2,
-        "entity_g0_e0": "Tim",
-        "entity_g0_e1": "soup",
-        "entity_g1_e0": "Ann",
-        "entity_g1_e1": "tea",
         "positional_answer": 1,
-        "positional_entity_g0_e0": 0,
-        "positional_entity_g0_e1": 0,
-        "positional_entity_g1_e0": 1,
-        "positional_entity_g1_e1": 1,
-        "positional_query_e0": [
+        "positional_entities[0,0]": 0,
+        "positional_entities[0,1]": 0,
+        "positional_entities[1,0]": 1,
+        "positional_entities[1,1]": 1,
+        "positional_queries[0]": [
           1
         ],
-        "positional_query_e1": [],
-        "query_e0": "Ann",
-        "query_e1": "tea",
+        "positional_queries[1]": [],
+        "queries[0]": "Ann",
+        "queries[1]": "tea",
         "query_group": 1,
         "query_indices": [
           0
@@ -188,22 +188,22 @@
         {
           "active_groups": 2,
           "answer_index": 1,
+          "entities[0,0]": "Sue",
+          "entities[0,1]": "bread",
+          "entities[1,0]": "Kate",
+          "entities[1,1]": "jam",
           "entities_per_group": 2,
-          "entity_g0_e0": "Sue",
-          "entity_g0_e1": "bread",
-          "entity_g1_e0": "Kate",
-          "entity_g1_e1": "jam",
           "positional_answer": 1,
-          "positional_entity_g0_e0": 0,
-          "positional_entity_g0_e1": 0,
-          "positional_entity_g1_e0": 1,
-          "positional_entity_g1_e1": 1,
-          "positional_query_e0": [
+          "positional_entities[0,0]": 0,
+          "positional_entities[0,1]": 0,
+          "positional_entities[1,0]": 1,
+          "positional_entities[1,1]": 1,
+          "positional_queries[0]": [
             1
           ],
-          "positional_query_e1": [],
-          "query_e0": "Kate",
-          "query_e1": "jam",
+          "positional_queries[1]": [],
+          "queries[0]": "Kate",
+          "queries[1]": "jam",
           "query_group": 1,
           "query_indices": [
             0
@@ -217,22 +217,22 @@
       "input": {
         "active_groups": 2,
         "answer_index": 1,
+        "entities[0,0]": "Sue",
+        "entities[0,1]": "bread",
+        "entities[1,0]": "Kate",
+        "entities[1,1]": "jam",
         "entities_per_group": 2,
-        "entity_g0_e0": "Sue",
-        "entity_g0_e1": "bread",
-        "entity_g1_e0": "Kate",
-        "entity_g1_e1": "jam",
         "positional_answer": 0,
-        "positional_entity_g0_e0": 0,
-        "positional_entity_g0_e1": 0,
-        "positional_entity_g1_e0": 1,
-        "positional_entity_g1_e1": 1,
-        "positional_query_e0": [
+        "positional_entities[0,0]": 0,
+        "positional_entities[0,1]": 0,
+        "positional_entities[1,0]": 1,
+        "positional_entities[1,1]": 1,
+        "positional_queries[0]": [
           0
         ],
-        "positional_query_e1": [],
-        "query_e0": "Sue",
-        "query_e1": "bread",
+        "positional_queries[1]": [],
+        "queries[0]": "Sue",
+        "queries[1]": "bread",
         "query_group": 0,
         "query_indices": [
           0
@@ -249,22 +249,22 @@
         {
           "active_groups": 2,
           "answer_index": 0,
+          "entities[0,0]": "Kate",
+          "entities[0,1]": "bread",
+          "entities[1,0]": "Bob",
+          "entities[1,1]": "pie",
           "entities_per_group": 2,
-          "entity_g0_e0": "Kate",
-          "entity_g0_e1": "bread",
-          "entity_g1_e0": "Bob",
-          "entity_g1_e1": "pie",
           "positional_answer": 1,
-          "positional_entity_g0_e0": 0,
-          "positional_entity_g0_e1": 0,
-          "positional_entity_g1_e0": 1,
-          "positional_entity_g1_e1": 1,
-          "positional_query_e0": [],
-          "positional_query_e1": [
+          "positional_entities[0,0]": 0,
+          "positional_entities[0,1]": 0,
+          "positional_entities[1,0]": 1,
+          "positional_entities[1,1]": 1,
+          "positional_queries[0]": [],
+          "positional_queries[1]": [
             1
           ],
-          "query_e0": "Bob",
-          "query_e1": "pie",
+          "queries[0]": "Bob",
+          "queries[1]": "pie",
           "query_group": 1,
           "query_indices": [
             1
@@ -278,22 +278,22 @@
       "input": {
         "active_groups": 2,
         "answer_index": 0,
+        "entities[0,0]": "Kate",
+        "entities[0,1]": "bread",
+        "entities[1,0]": "Bob",
+        "entities[1,1]": "pie",
         "entities_per_group": 2,
-        "entity_g0_e0": "Kate",
-        "entity_g0_e1": "bread",
-        "entity_g1_e0": "Bob",
-        "entity_g1_e1": "pie",
         "positional_answer": 0,
-        "positional_entity_g0_e0": 0,
-        "positional_entity_g0_e1": 0,
-        "positional_entity_g1_e0": 1,
-        "positional_entity_g1_e1": 1,
-        "positional_query_e0": [],
-        "positional_query_e1": [
+        "positional_entities[0,0]": 0,
+        "positional_entities[0,1]": 0,
+        "positional_entities[1,0]": 1,
+        "positional_entities[1,1]": 1,
+        "positional_queries[0]": [],
+        "positional_queries[1]": [
           0
         ],
-        "query_e0": "Kate",
-        "query_e1": "bread",
+        "queries[0]": "Kate",
+        "queries[1]": "bread",
         "query_group": 0,
         "query_indices": [
           1

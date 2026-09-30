@@ -8,17 +8,18 @@ The causal DAG is:
     walk_sequence  (mechanism: random walk ending at that node)
           |
       raw_input  (mechanism: format walk as text)
-          |
-     raw_output  (mechanism: list of valid neighbor concept tokens)
+
+    node_coordinates → raw_output (valid neighbor concept tokens)
+    walk_seed → walk_sequence (explicit randomness)
 """
 
 from __future__ import annotations
 
 import random
 
-from causalab.causal.causal_model import CausalModel
+from causalab.causal import Dom, Exo, V, mechanism
+from causalab.causal.model import CausalModel
 from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import CausalTrace, Mechanism, input_var
 
 from .config import TASK_NAME, GraphWalkConfig
 from .graphs import build_graph
@@ -37,77 +38,61 @@ def create_causal_model(config: GraphWalkConfig) -> CausalModel:
     graph = build_graph(config.graph_type, config.graph_size, config.graph_size_2)
     concepts = config.concepts
     node_ids = list(range(graph.n_nodes))
-    rng = random.Random(config.seed)
+    # Periodic directions can repeat neighbors, even exceeding the node count.
+    max_neighbors = max(len(neighbors) for neighbors in graph.adjacency.values())
 
     node_to_concept = {i: concepts[i] for i in range(graph.n_nodes)}
 
     # Pre-compute coordinate tuples and reverse mapping
-    node_coordinates = [tuple(graph.coordinates[i]) for i in node_ids]
-    coord_to_node = {coord: i for i, coord in enumerate(node_coordinates)}
+    coordinates = [tuple(graph.coordinates[i]) for i in node_ids]
+    coord_to_node = {coord: i for i, coord in enumerate(coordinates)}
 
-    values: dict = {
-        "node_coordinates": node_coordinates,
-        "concepts": concepts,
-        "walk_sequence": None,
-        "raw_input": None,
-        "raw_output": None,
-    }
+    if config.context_length < 1:
+        raise ValueError("context_length must include at least the target node")
 
-    def _node_idx(t: CausalTrace) -> int:
-        """Look up node index from coordinates."""
-        return coord_to_node[tuple(t["node_coordinates"])]
-
-    def _compute_walk(t: CausalTrace) -> list[int]:
-        """Generate a random walk of context_length steps ending at the node."""
-        target = _node_idx(t)
-        # Generate forward walk from target, then reverse so it ends at target
+    def walk(coordinates, seed):
         path = graph.random_walk_fast(
-            target,
+            coord_to_node[coordinates],
             config.context_length,
-            rng=rng,
+            rng=random.Random(seed),
             no_backtrack=config.no_backtrack,
         )
         path.reverse()
         return path
 
-    def _format_raw_input(t: CausalTrace) -> str:
-        """Format walk sequence as separator-joined concept string.
+    def render(path):
+        return (
+            config.separator.join(node_to_concept[node] for node in path)
+            + config.separator
+        )
 
-        Appends a trailing separator so that the last token position is a
-        separator — matching the position where the model has just processed
-        the final concept and is predicting the next one.
-        """
-        walk = t["walk_sequence"]
-        sep = config.separator
-        return sep.join(node_to_concept[node] for node in walk) + sep
+    def neighbors(coordinates):
+        return [node_to_concept[n] for n in graph.adjacency[coord_to_node[coordinates]]]
 
-    def _compute_raw_output(t: CausalTrace) -> list[str]:
-        """Return list of valid next-token concept strings (neighbors of last node)."""
-        node = _node_idx(t)
-        return [node_to_concept[n] for n in graph.adjacency[node]]
-
-    mechanisms = {
-        "node_coordinates": input_var(node_coordinates),
-        "walk_sequence": Mechanism(
-            parents=["node_coordinates"],
-            compute=_compute_walk,
-        ),
-        "raw_input": Mechanism(
-            parents=["walk_sequence"],
-            compute=_format_raw_input,
-            lazy=True,  # expensive text formatting, only computed when accessed
-        ),
-        "raw_output": Mechanism(
-            parents=["node_coordinates"],
-            compute=_compute_raw_output,
+    @mechanism
+    def equations(
+        node_coordinates: Dom(coordinates), walk_seed: Exo(Dom(range(2**32)))
+    ):
+        walk_sequence = V(
+            walk(node_coordinates, walk_seed),
+            domain=Dom.sequence(
+                Dom(node_ids), length=config.context_length, container=list
+            ),
+        )
+        raw_input = V(render(walk_sequence), domain=Dom(str), lazy=True)  # noqa: F841
+        raw_output = V(
+            neighbors(node_coordinates),
+            domain=Dom.sequence(
+                Dom(concepts), max_length=max_neighbors, container=list
+            ),
             lazy=True,
-        ),
-    }
+        )
+        return raw_output
 
     # Compute periods from graph's periodic dimensions
     periods: dict[str, float] = {}
     if graph.periodic_dims:
-        coords = values["node_coordinates"]
+        coords = coordinates
         n_dims = len(coords[0]) if coords else 0
         for dim, period in graph.periodic_dims.items():
             key = "node_coordinates" if n_dims == 1 else f"node_coordinates_{dim}"
@@ -124,7 +109,8 @@ def create_causal_model(config: GraphWalkConfig) -> CausalModel:
     # keyed by concept, a row's ``raw_output`` list resolves to the union of
     # its members' forms and both paths grade "any valid neighbour". This also
     # keeps the property the coordinate map was introduced for: a lookup by
-    # *value*, never by ``id()``.
+    # *value*, never by ``id()``, so an equal value built as a new object
+    # still finds its forms.
     scoring = ScoringSpec(
         forms={
             "raw_output": {concept: [concept] for concept in dict.fromkeys(concepts)}
@@ -132,8 +118,7 @@ def create_causal_model(config: GraphWalkConfig) -> CausalModel:
     )
 
     model = CausalModel(
-        mechanisms,
-        values,
+        equations,
         id=TASK_NAME,
         embeddings=EMBEDDINGS,
         periods=periods,
@@ -141,6 +126,7 @@ def create_causal_model(config: GraphWalkConfig) -> CausalModel:
     )
     # Store for coordinate_names access; CausalModel doesn't declare _graph,
     # but the attribute is set dynamically here and read by downstream code.
+    model.values["concepts"] = list(concepts)
     model._graph = graph  # pyright: ignore[reportAttributeAccessIssue]
     return model
 

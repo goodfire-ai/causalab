@@ -1,4 +1,4 @@
-"""Golden tier — the A3B inventory requirement on the real Qwen3.6-35B-A3B:
+"""Golden tier — the family inventory's acceptance on the real Qwen3.6-35B-A3B.
 
     the inventory must enumerate 40 attention and 40 MLP components exactly
     once, label 10 full-attention and 30 DeltaNet layers, and reject invalid
@@ -19,7 +19,7 @@ import torch
 
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.registry import (
     COMPONENT_STREAMS,
     DOCS_TABLE_MODEL,

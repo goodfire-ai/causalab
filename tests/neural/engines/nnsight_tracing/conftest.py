@@ -6,7 +6,7 @@ kernel or dtype story. The whole directory skips when the ``nnsight`` extra
 is not installed.
 
 The MPS guard: nnsight's dispatch places models itself and, on a Mac, lands
-them on ``mps:0`` regardless of ``device_map`` (measured in the N0 probes) —
+them on ``mps:0`` regardless of ``device_map`` (measured) —
 which would compare MPS numerics against the reference engine's CPU ones.
 CI has no MPS; this guard makes local runs match it.
 """
@@ -62,7 +62,7 @@ def trace_qwen() -> NnsightBundle:
 
 @pytest.fixture(scope="session")
 def trace_qwen_default_impl() -> NnsightBundle:
-    """The default-implementation path: no pin, so the checkpoint's own default (sdpa) — what the
+    """The unpinned path: the checkpoint's own default (sdpa) — what the
     engine's loader gives a real document, and what the on-demand switch is
     tested against."""
     return load_trace_model(TINY_QWEN35_MOE)

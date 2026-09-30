@@ -22,11 +22,12 @@ from causalab.workflow.document import (
     load_workflow,
     parse_workflow,
 )
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
-LOCATE_PRESET = REPO / "causalab/configs/protocols/weekdays_locate_scan.json"
+LOCATE_PRESET = PROTOCOLS_DIR / "weekdays_locate_scan.json"
 
 
 def _workflow(execution: dict[str, Any] | None = None) -> dict[str, Any]:

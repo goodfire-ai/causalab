@@ -22,13 +22,14 @@ import pytest
 import torch
 
 from causalab.neural.shared.metrics import compute_windowed_metric
-from causalab.neural.shared.outputs import MetricTable
+from causalab.neural.shared.results import MetricTable
 from causalab.protocol.estimand import metric_record_identity
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.schema import parse_document
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import by_label, saved
 
 pytestmark = pytest.mark.smoke
 
@@ -36,33 +37,21 @@ PROMPTS = ["the quick brown fox jumps", "a slow green turtle sleeps deeply today
 BUDGET = 6
 
 
-def _doc(metric: dict[str, Any], *, anchor: dict[str, Any]) -> dict[str, Any]:
+def _doc(aggregation: dict[str, Any], *, anchor: dict[str, Any]) -> dict[str, Any]:
+    """The continuation read on the un-intervened model, reduced by
+    ``aggregation`` into the table ``scored.json`` (its label: ``scored``)."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": {"base": {"dataset": "probe", "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["cont"]}},
             "positions": {
                 "window": {"generated": {"max_new_tokens": BUDGET}, **anchor},
             },
             "sites": {"lm_head": {"component": "lm_head"}},
-            "reads": {
-                "cont": {
-                    "site": "lm_head",
-                    "pos": "window",
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "metrics": {"scored": metric},
-            "save": [
-                {
-                    "value": "scored",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "scored.json",
-                }
-            ],
+            "reads": {"cont": {"site": "lm_head", "pos": "window"}},
+            "save": [saved("cont", "original", "scored.json", aggregation)],
         },
     }
 
@@ -75,12 +64,12 @@ def _run(bundle, raw: dict[str, Any], *, columns: dict[str, list[Any]] | None = 
     return executor
 
 
-def _score(executor, name: str = "scored", of: str = "cont") -> list[list[Any]]:
-    metric = executor.doc.metrics[name]
-    ids = executor.generated_ids(of) if str(metric.kind) == "decode" else None
+def _score(executor, name: str = "scored", read: str = "cont") -> list[list[Any]]:
+    metric = by_label(executor.doc)[name]
+    ids = executor.generated_ids(read) if str(metric.kind) == "decode" else None
     return compute_windowed_metric(
         metric,
-        executor.windowed_value(of),
+        executor.windowed_value(read),
         executor.rows_for_metrics(),
         executor.bundle.tokenizer,
         generated_ids=ids,
@@ -93,9 +82,7 @@ def test_top_k_scores_every_generated_step(llama_bundle):
     off-by-one, seen from the metric side)."""
     executor = _run(
         llama_bundle,
-        _doc(
-            {"kind": "top_k", "of": "cont", "k": 1, "by": "prob"}, anchor={"all": True}
-        ),
+        _doc({"kind": "top_k", "k": 1, "by": "prob"}, anchor={"all": True}),
     )
     values = _score(executor)
     (continuation,) = executor._continuations.values()
@@ -108,9 +95,7 @@ def test_top_k_scores_every_generated_step(llama_bundle):
 
 
 def test_decode_returns_the_text_the_model_generated(llama_bundle):
-    executor = _run(
-        llama_bundle, _doc({"kind": "decode", "of": "cont"}, anchor={"all": True})
-    )
+    executor = _run(llama_bundle, _doc({"kind": "decode"}, anchor={"all": True}))
     values = _score(executor)
     (continuation,) = executor._continuations.values()
     for example, row in enumerate(values):
@@ -119,9 +104,7 @@ def test_decode_returns_the_text_the_model_generated(llama_bundle):
 
 
 def test_decode_over_a_window_reads_only_that_window(llama_bundle):
-    executor = _run(
-        llama_bundle, _doc({"kind": "decode", "of": "cont"}, anchor={"index": -1})
-    )
+    executor = _run(llama_bundle, _doc({"kind": "decode"}, anchor={"index": -1}))
     values = _score(executor)
     (continuation,) = executor._continuations.values()
     for example, row in enumerate(values):
@@ -132,9 +115,7 @@ def test_decode_over_a_window_reads_only_that_window(llama_bundle):
 def test_a_variable_the_model_said_scores_where_it_said_it(llama_bundle):
     """Run once to learn what this model says, then ask for it by name: the
     anchor must land on the steps that produced that text."""
-    seen = _run(
-        llama_bundle, _doc({"kind": "decode", "of": "cont"}, anchor={"all": True})
-    )
+    seen = _run(llama_bundle, _doc({"kind": "decode"}, anchor={"all": True}))
     (continuation,) = seen._continuations.values()
     texts = [
         llama_bundle.tokenizer.decode(continuation.real_ids(row))
@@ -144,7 +125,7 @@ def test_a_variable_the_model_said_scores_where_it_said_it(llama_bundle):
 
     executor = _run(
         llama_bundle,
-        _doc({"kind": "decode", "of": "cont"}, anchor={"variable": "said"}),
+        _doc({"kind": "decode"}, anchor={"variable": "said"}),
         columns={"said": said},
     )
     values = _score(executor)
@@ -158,7 +139,7 @@ def test_a_variable_the_model_never_said_is_null_and_unmatched(llama_bundle):
     the thing is the experiment, so it has to come back as data."""
     executor = _run(
         llama_bundle,
-        _doc({"kind": "decode", "of": "cont"}, anchor={"variable": "said"}),
+        _doc({"kind": "decode"}, anchor={"variable": "said"}),
         columns={"said": ["definitely-not-generated-xyzzy"] * len(PROMPTS)},
     )
     values = _score(executor)
@@ -169,7 +150,6 @@ def test_a_variable_the_model_never_said_is_null_and_unmatched(llama_bundle):
         "scored",
         values,
         {},
-        "digest",
         identity=metric_record_identity("match"),
         steps=None,
         matched=[bool(steps) for steps in executor.addressed_steps("cont")],
@@ -183,9 +163,7 @@ def test_a_variable_the_model_never_said_is_null_and_unmatched(llama_bundle):
 def test_rows_name_the_step_they_scored(llama_bundle):
     executor = _run(
         llama_bundle,
-        _doc(
-            {"kind": "top_k", "of": "cont", "k": 1, "by": "prob"}, anchor={"all": True}
-        ),
+        _doc({"kind": "top_k", "k": 1, "by": "prob"}, anchor={"all": True}),
     )
     steps = executor.addressed_steps("cont")
     table = MetricTable()
@@ -193,7 +171,6 @@ def test_rows_name_the_step_they_scored(llama_bundle):
         "scored",
         _score(executor),
         {},
-        "digest",
         identity=metric_record_identity("match"),
         steps=steps,
         matched=[bool(row) for row in steps],
@@ -206,17 +183,13 @@ def test_rows_name_the_step_they_scored(llama_bundle):
 def test_a_prompt_frame_read_keeps_its_single_row_shape(llama_bundle):
     """The windowed path is for the continuation; a prompt-frame metric must
     not grow a step column just because this landed."""
-    raw = _doc(
-        {"kind": "top_k", "of": "cont", "k": 1, "by": "prob"}, anchor={"all": True}
-    )
+    raw = _doc({"kind": "top_k", "k": 1, "by": "prob"}, anchor={"all": True})
     raw["method"]["positions"] = {"window": {"index": -1}}
     raw["method"]["reads"]["cont"]["pos"] = "window"
     executor = _run(llama_bundle, raw)
     assert executor.is_generated("cont") is False
     table = MetricTable()
-    table.add(
-        "scored", [1.0, 2.0], {}, "digest", identity=metric_record_identity("top_k")
-    )
+    table.add("scored", [1.0, 2.0], {}, identity=metric_record_identity("top_k"))
     assert all("step" not in row for row in table.rows)
 
 
@@ -225,43 +198,38 @@ def test_kl_across_different_widths_refuses(llama_bundle):
     that stopped at different places have none."""
     executor = _run(
         llama_bundle,
-        _doc(
-            {"kind": "top_k", "of": "cont", "k": 1, "by": "prob"}, anchor={"all": True}
-        ),
+        _doc({"kind": "top_k", "k": 1, "by": "prob"}, anchor={"all": True}),
     )
-    metric = parse_document(
-        {
-            "header": {"protocol_version": "3"},
-            "model": {"key": TINY_LLAMA},
-            "data": {"base": {"dataset": "probe", "field": "input"}},
-            "method": {
-                "sites": {"lm_head": {"component": "lm_head"}},
-                "reads": {
-                    "a": {
-                        "site": "lm_head",
-                        "pos": -1,
-                        "model": "original",
-                        "input": "base",
+    metric = by_label(
+        parse_document(
+            {
+                "header": {"protocol_version": "4"},
+                "model": {"key": TINY_LLAMA},
+                "data": {"base": {"dataset": "probe", "field": "input"}},
+                "method": {
+                    "intervened_models": {
+                        "original": {"input": "base", "reads": ["a", "b"]}
                     },
-                    "b": {
-                        "site": "lm_head",
-                        "pos": -1,
-                        "model": "original",
-                        "input": "base",
+                    "sites": {"lm_head": {"component": "lm_head"}},
+                    "reads": {
+                        "a": {"site": "lm_head", "pos": -1},
+                        "b": {"site": "lm_head", "pos": -1},
                     },
+                    "save": [
+                        saved(
+                            "a",
+                            "original",
+                            "d.json",
+                            {
+                                "kind": "kl",
+                                "target": {"read": "b", "model": "original"},
+                            },
+                        )
+                    ],
                 },
-                "metrics": {"d": {"kind": "kl", "of": "a", "target": "b"}},
-                "save": [
-                    {
-                        "value": "d",
-                        "model": "original",
-                        "input": "base",
-                        "file_path": "d.json",
-                    }
-                ],
-            },
-        }
-    ).metrics["d"]
+            }
+        )
+    )["d"]
     windows = executor.windowed_value("cont")
     with pytest.raises(ProtocolError, match="different position counts"):
         compute_windowed_metric(

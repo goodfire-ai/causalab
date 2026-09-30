@@ -1,16 +1,11 @@
-"""The Triton programs of the single-chunk gated delta rule — one program per
-(sequence, value head), forward and backward. Imported lazily by
-``triton_kernel.py``: this module needs ``triton`` at import time.
+"""Triton programs for the single-chunk gated delta rule.
 
-Everything is float32 inside the program: the inputs are loaded and
-normalized in float32, every ``tl.dot`` runs at the ``PREC`` constexpr the
-caller chose (``triton_kernel.DOT_PRECISION``: three TF32 passes by default,
-IEEE FMA as the exact alternative), and only the stores round to the output
-dtype. The
-math is the closed form of ``reference.single_chunk_gated_delta_rule_torch``;
-the one reformulation is the unit-lower-triangular inverse, computed as the
-finite Neumann product ``(I+L)^-1 = (I+M)(I+M²)(I+M⁴)…`` with ``M = -L``,
-exact for a nilpotent ``M`` of size ``BT`` after ``log2(BT)`` squarings.
+One program handles each sequence and value head. Inputs, normalization,
+and intermediate values use float32. Dots use the caller's ``PREC``;
+stores round to the output dtype. The triangular inverse uses the finite
+Neumann product ``(I+L)^-1 = (I+M)(I+M^2)(I+M^4)...`` with ``M=-L``.
+Nilpotence makes it exact after ``log2(BT)`` squarings in exact arithmetic.
+``triton_kernel`` imports this module lazily because it requires Triton.
 """
 
 # The kernels are Triton programs: their bodies are traced, not executed, by

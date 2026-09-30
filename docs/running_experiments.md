@@ -1,21 +1,17 @@
 # Running experiments
 
-Causalab runs neural-network interventions from a **document**: a JSON file that
-names the model, the data, the activations to read, the edits to make, and the
-numbers to save. The document is the experiment — there is no Python config
-layer, and nothing about a run is decided by code you write.
+Causalab executes interventions from JSON documents. Each document specifies
+the network and data, which activations to read or change, and which results to
+save. This guide builds one interchange experiment.
 
-This page is the path from "I have a hypothesis" to "I have a saved,
-digest-stamped result", plus the table of every hookpoint the
-[Qwen3.6-35B-A3B](https://huggingface.co/Qwen/Qwen3.6-35B-A3B) architecture
-exposes.
+Follow §§1–4 for a first run. See [workflows](#8-chaining-documents-workflows)
+to connect experiments, or use the component and engine tables in §§5–6 as
+reference.
 
-Reference material this page points at rather than repeats:
-[`intervention_protocol.md`](intervention_protocol.md) (the normative spec),
-[`workflow_protocol.md`](workflow_protocol.md) (chaining documents),
-[`CODEBASE.md`](CODEBASE.md) (module map), [`TESTS.md`](TESTS.md) (test tiers).
-These pages describe the tree they are committed in; the run receipt names
-the commit a result was produced from.
+The [intervention specification](intervention_protocol.md) defines field
+semantics. The [workflow specification](workflow_protocol.md) covers connected
+runs and analysis. See [code structure](CODEBASE.md) and [tests](TESTS.md) for
+development instructions.
 
 ## Setup
 
@@ -26,34 +22,34 @@ uv run causalab --help
 
 ## 1. Serialize a dataset
 
-A document names a dataset **by ref**; a ref resolves by reading bytes under
-`--data-root`, which defaults to the task packages themselves — every task ships
-its table under `causalab/tasks/<task>/data/`, so `<task>/data/<variant>#<split>`
-resolves with no flag (`causalab/tasks/README.md` §2). Nothing is generated during a load, so `validate` needs no task
-code, no tokenizer and no network — and a document's digest is a function of
-committed bytes.
+A dataset reference resolves a saved table under `--data-root` or the packaged
+task data. Packaged refs have the form `<task>/data/<variant>#<split>` and need
+no flag. Validation reads those bytes without running a task generator.
+To create a new MCQA table:
 
 ```bash
 uv run python scripts/build_task_dataset.py \
-    --task MCQA --n 32 --seed 0 --split all --target-variable answer \
+    --task MCQA \
+    --n 32 \
+    --seed 0 \
+    --split all \
+    --target-variable answer \
     --out data/mcqa.json
 # wrote data/mcqa.json (32 rows, digest 355e6b69d4b5…)
 ```
 
-The command above is the record of the parameters the bytes came from: the
-table is a build product, and nothing sits beside it. The workflow that names
-the table pins its digest in its `pins` section (workflow spec §7).
+Record the build command with the study so the table can be reproduced.
 
 ## 2. Write the document
 
-An interchange intervention — read the answer-slot residual stream from the
-counterfactual prompt, patch it into the base prompt, score what changed. Save
-as `patch.json`:
+This experiment reads a residual activation from the counterfactual input and
+interchanges it into the original input. It measures agreement with the causal
+model's intervened answer. Save the document as `patch.json`:
 
 ```json
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "Interchange the answer-slot residual stream at one layer."
   },
   "model": {"key": "Qwen/Qwen3.6-35B-A3B", "revision": "main"},
@@ -62,41 +58,33 @@ as `patch.json`:
     "counterfactual": {"dataset": "mcqa", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "sites": {
       "target": {"component": "block_output", "layers": [20]},
       "lm_head": {"component": "lm_head"}
     },
-    "reads": {
-      "v_cf": {"site": "target", "pos": -1, "model": "original", "input": "counterfactual"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
-    },
+    "reads": {"v_cf": {"site": "target", "pos": -1}, "logits": {"site": "lm_head", "pos": -1}},
     "writes": {
       "patch": {"site": "target", "pos": -1, "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "label",
-        "token_form": "space_prefixed"
-      },
-      "logit_diff": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
       {
-        "value": "logit_diff",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "label"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {
+          "kind": "logit_diff",
+          "a": "cf_answer",
+          "b": "base_answer"
+        },
         "file_path": "logit_diff.json"
       }
     ]
@@ -104,141 +92,181 @@ as `patch.json`:
 }
 ```
 
-Reading it in section order (the recommended order — a document in another
-order warns and runs identically; `save` is conventionally last):
+The `method` group defines the experiment:
 
-- **`sites`** is the complete tap inventory. Every address a read or write
-  names, `lm_head` included. There are no implicit site names.
-- **`reads`** produce values, each bound to one (site, position, model, input).
-- **`writes`** are inert definitions — an address and a mechanism, no model.
-  They do nothing until an intervened model lists them, which is what makes one
-  write reusable across several.
-- **`intervened_models`** is where a write comes into force. `original` is
-  reserved for the un-intervened model and is never declared.
-- **`metrics`** reduce a read against dataset columns.
-- **`save`** is the complete manifest of what leaves the run.
+- `sites` names every activation address, including `lm_head`.
+- Each `read` names an address: a site and a position.
+- A `write` defines an intervention. An `intervened_models` entry runs the
+  network on an input, lists the reads taken on it and the writes in force;
+  one write or read can be listed by several models. A model with no writes
+  is the network as it is, conventionally named `original`.
+- An aggregation reduces a read on a model against the table's answer
+  columns; it lives on the `save` entry, objective term or eval entry that
+  consumes it.
+- `save` lists the outputs to write.
 
-`v_cf` is read in one model and consumed by a write in force in another: that is
-the single channel for cross-model data flow, and the graph it induces is the
-execution schedule.
+`v_cf` passes a value from the counterfactual run to the intervened run.
+The resulting dependencies determine execution order.
 
 ### Document sections
 
-| section | required | declares |
-|---|---|---|
-| `version` | ✓ | `"1"` |
-| `description` | – | intent, free text |
-| `model` | ✓ | the network as a name: `key`, `revision`, `dtype`, `quantization`, optional `attn_implementation` |
-| `data` | ✓ | input rows: `base`, optional `counterfactual` — dataset ref + field |
-| `positions` | – | named token-position specs |
-| `sites` | ✓ | named activation addresses — the complete tap inventory |
-| `featurizers` | – | named feature-space maps |
-| `params` | – | free/constant tensors owned by no featurizer |
-| `code` | – | user functions a `pytorch_fn` write names: locator + source hash, args, declared file/env inputs, row roles |
-| `reads` | ✓ | value producers: (site, pos, model, input) [+ featurizer, dims] |
-| `writes` | – | inert effect definitions: (site, pos, `do`) |
-| `intervened_models` | –* | which writes are in force on which input (*required with `writes`) |
-| `metrics` | – | closed reductions over read values |
-| `train` | – | the fit: objective, params, optimizer, steps, batch, seed |
-| `save` | ✓ | the output manifest — non-empty, last |
+| Group | Contents |
+|---|---|
+| `header` | `protocol_version: "4"`, with optional title and description. |
+| `model` | Model key, revision, precision, quantization, and optional attention backend. |
+| `data` | Original (`base`) and counterfactual table references. |
+| `method` | Intervened models, sites, reads, writes, training, and saves (with their aggregations). |
+
+Optional method sections define positions, feature maps, free parameters, and
+custom code. See [document layout](intervention_protocol.md#1-document-layout)
+for the full field reference.
 
 ### Closed vocabularies
 
-Anything outside them is a load error, not a fallback.
+Fields with a fixed vocabulary reject values outside it.
 
 | vocabulary | values |
 |---|---|
-| `sites.component` | 56 names; the 54 the A3B exposes are tabulated in [§5](#5-hookpoints-on-qwen36-35b-a3b) (`mlp_activation` and `mlp_neuron_output` have no tensor on this architecture); eight retired `deltanet_*` spellings are aliases (§5) |
-| `sites.stream` | `full_attention` · `linear_attention` — a per-layer fact on a hybrid tower, refused at load if the layer carries the other one |
+| `sites.component` | 56 names; the 54 the A3B exposes are tabulated on the [Qwen3.6-35B-A3B page](qwen36_35b_a3b.md#components) (`mlp_activation` and `mlp_neuron_output` have no tensor on this architecture); eight retired `deltanet_*` spellings are aliases (§5) |
+| `sites.stream` | `full_attention` · `linear_attention`: a per-layer fact on a hybrid tower, refused at load if the layer carries the other one |
 | `sites.head` / `sites.expert` | sub-axis selectors, legal only where the component has that axis |
 | `writes.do` | `swap` · `add_scaled` · `lerp` · `affine` · `gaussian` · `renormalize` · `clamp` · `pytorch_fn` (local-only; names a `code` declaration) |
-| `metrics.kind` | `logit_diff` · `token_logit` · `cross_entropy` · `kl` · `class_probs` · `token_logits` · `top_k` · `match` · `decode` |
+| `aggregation.kind` | `logit_diff` · `token_logit` · `cross_entropy` · `kl` · `class_probs` · `token_logits` · `top_k` · `match` · `decode` |
 | `featurizers.kind` | `identity` · `subspace` · `pca` · `sae` · `standardize` · `gate` |
 | `pos` forms | `-1` (sugar for `{"index": n}`) · `"all"` · `{"variable": v}` · `{"column": c}` · `{"span": [a, b]}` (half-open), modified by `scope` / `relative_to` / `generated` |
 | save formats | `.json` (per-example tables) · `.safetensors` (dense numerics) |
 
-Three rules that catch most authoring mistakes:
+The following rules help catch document errors:
 
 | rule | consequence |
 |---|---|
-| one global namespace over the named sections | every name unique; `base`, `counterfactual`, `counterfactual[j]`, `original` are reserved |
-| at most one **absolute** write per (site, overlapping pos, model) | any number of additive writes; absolute applies first, then the summed deltas — so write sets are order-free |
+| one global namespace over the named sections | every name unique; `base`, `counterfactual`, `counterfactual[j]` and `all` are reserved |
+| at most one **absolute** write per (site, overlapping pos, model) | any number of additive writes; absolute applies first, then the summed deltas: so write sets are order-free |
 | `{"sweep": [v, …]}` / `{"sweep": {"range": [a, b]}}` is the only axis | bare arrays are never axes; axis identity is name identity, so sweeping `sites.target.layers` moves the read, the write and the metric together |
 
-Derived, never authored: feature widths, `num_forwards`, the point count, the
-`requires` capability set, digests. If it can be computed from the document, the
-document must not say it.
+The compiler derives feature widths, forward counts, point counts, required
+capabilities, and digests. Declare the choices these depend on.
 
 ### Generating documents
 
-A document that repeats one shape at every layer or every executed condition
-is generated, not typed. A generator writes an ordinary document — nothing at
-run time knows it was generated, and the output validates like anything else.
-Three rules make a generator safe to apply: it refuses rather than renames on a
-name collision, so applying it twice is an error; it takes the model's facts
-(layer count, `layer_types`, expert count) from the registry entry, with
-`--register-from-hf` as the same opt-in `validate` takes
-([§3](#3-check-it-before-you-spend-a-gpu)) for a model that has no built-in
-entry; and it derives every name deterministically from the coordinates it
-expands over. Qwen3.6-35B-A3B has a built-in entry and validates offline. Three
-shapes recur:
+The following scripts generate documents for repeated layer and component
+patterns. They reject duplicate names and validate their output. Use
+`--register-from-hf` for a model outside the registry. Qwen3.6-35B-A3B has a
+built-in entry.
 
-**A per-layer harvest.** The template is a one-layer, one-site, pure-read
-document (the shape of `mean_harvest.json`); the output declares, per layer,
-`L{n}A` (`block_mid`, the residual after the mixer) and `L{n}M`
-(`block_output`, after the MLP), and at every kept position one read
-`acts_L{n}{A|M}_{position}` with its save entry. A save-time `reduce` carries
-over, so a mean-harvest template yields per-layer means. Refuse `writes` or
-`intervened_models` in the template (a harvest is a pure read), a read through
-a featurizer, and more than one site.
-
-**Routing capture as declared reads.** A run saves nothing implicitly, so
-routing is captured by adding reads. For every MoE layer of the model and
-every `(model, input)` pair the document executes — `original` on each input a
-read names, plus every intervened model on its input — add an `expert_idx` and
-a `router_scores` read at each position, named
-`routing_L{n}_{model}_{input}_{position}_{idx|scores}`, and their save entries.
-Positions default to the ones the pair's own reads use. Refuse a model whose
-registry entry declares no experts. The result validates like any document:
+`expand_layers.py` expands a one-layer, one-site harvest template. At each
+layer it adds `L{n}A` (`block_mid`) and `L{n}M` (`block_output`), with reads
+and saves for each selected position. A save-time `reduce` carries over.
+Templates must be pure reads at one site, without featurizers.
 
 ```bash
-uv run causalab validate patch_routed.json --data-root data --artifacts-root .
+uv run python scripts/expand_layers.py harvest_template.json --out harvest.json
+# wrote harvest.json (80 sites, 160 reads, 160 save entries)      # 40 layers × 2 positions
+uv run python scripts/expand_layers.py harvest_template.json \
+    --out harvest_early.json \
+    --layers 0:8 \
+    --positions answer_tok
 ```
 
-**A joint DBM fit across layers** fits gates at every layer under one sparsity
-penalty. The mask unit picks the sites: whole heads (`attention_premix` on
-full-attention layers, `delta_premix` on Gated DeltaNet layers), channels within
-a head output (the same premix sites with a coordinate gate), complete MLP
-neurons (`expert_neuron_output` with `group: expert_neuron` plus
-`shared_expert_activation`; `mlp_neuron_output` on dense layers), or the union
-of the last two. Routed and shared experts gate `act(gate) * up`, before the
-down projection; a routed gate has one parameter per expert and neuron, and the
-routing table maps those parameters to the active slots. Head families need the
-registry's `layer_types` to identify each layer's mixer. Independent gates at
-explicit aligned token positions give each layer and position its own
-parameters under one objective; `all` broadcasts one gate across positions, and
-the readout position (the answer logits, typically the final token) is
-independent of the intervention positions. The fit document crosses penalties
-with seeds; IIA compares the output with the label column, `logit_diff`
-subtracts the base-answer logit from the gold-label logit in the intervened
-output, and `ce` trains against that same gold label.
+`add_routing_reads.py` adds `expert_idx` and `router_scores` reads at every
+MoE layer for each executed model/input pair. Positions default to those
+already read by the pair; `--positions` can select named positions, integers,
+or `all`. Generated names are
+`routing_L{n}_{model}_{input}_{position}_{idx|scores}`.
+The model must declare experts in the registry.
 
-The **apply** document loads each gate's saved parameters and evaluates its hard
-mask (`theta > 0`) on a confirmation split. One document evaluates every
-penalty × seed cell with all gates linked to one `axes.fit_cell` axis: each row
-holds the fit's exact bundle selector in `entry`, and metric rows carry the
-corresponding `axes.fit_cell` row index. An optional `rank` save writes one
-record per unit per evaluated cell — keep it to small audits, because an
-all-token neuron sweep can produce millions of records. Report viewers must use
-the mask evaluated for each saved cell; separate fits can select different
-components at the same sparsity. Both documents pass through the loader before
-writing; apply validation checks bundle identities under `--artifacts-root`.
-The training defaults are `configs/protocols/dbm.json`.
+```bash
+uv run python scripts/add_routing_reads.py patch.json --out patch_routed.json
+# wrote patch_routed.json (160 routing reads added over 162)     # 40 layers × 2 pairs × 2
+uv run causalab validate patch_routed.json \
+    --engine auto \
+    --data-root data \
+    --artifacts-root .
+```
 
-**Exporting a DBM result.** `causalab.analysis.export_dbm.export(manifest_path,
-register_from_hf=False)` joins saved apply metrics to the frozen gate bundles
-used for evaluation. Its manifest groups apply runs by experiment; paths
-resolve from the manifest's folder:
+`joint_dbm.py` fits Desiderata-Based Masking (DBM) gates across layers under
+one sparsity penalty. Choose components with `--family`:
+
+| Family | Mask unit | Sites |
+|---|---|---|
+| `heads` | Whole head | `attention_premix` on full-attention layers; `delta_premix` on Gated DeltaNet layers |
+| `head-channels` | Channel within a head output | The same premix sites, with a coordinate gate |
+| `neurons` | Complete MLP neuron output | `expert_neuron_output` with `group: expert_neuron` and `shared_expert_activation`; `mlp_neuron_output` on dense layers |
+| `all-neurons` | Head-output channel or MLP neuron | The union of `head-channels` and `neurons` |
+
+Routed and shared experts use `act(gate) * up`, before the down projection.
+A routed gate has one parameter per expert and neuron. The routing table
+maps those parameters to the active slots. Add `--dense` to request neurons
+on a model without experts. Head families require the registry's
+`layer_types` to identify each layer's mixer.
+
+Use `--positions 0 1 2` to fit independent gates at explicit aligned token
+positions. Each layer and position gets separate parameters under the same
+objective. Supply distinct nonnegative positions that exist in every base
+and counterfactual prompt. `--position all` broadcasts one gate across all
+positions. `--readout-position -1` reads answer logits at the final token,
+independently of the intervention positions.
+
+The fit crosses `--penalties` with `--seeds`. IIA compares the output with
+`--label-column` (default `label`). `logit_diff` subtracts the logit for
+`--base-answer-column` (default `base_answer`) from the gold-label logit in
+the intervened output. `ce` trains against that same gold label. Validation
+saves IIA and logit difference by default.
+
+```bash
+uv run python scripts/joint_dbm.py \
+    --family all-neurons \
+    --model Qwen/Qwen3.6-35B-A3B \
+    --variable output \
+    --dataset weekdays/data#train \
+    --validation weekdays/data#validation \
+    --positions 0 1 2 \
+    --readout-position -1 \
+    --penalties 0.001 0.003 0.01 0.03 0.1 \
+    --seeds 0 1 2 \
+    --data-root data \
+    --out neurons_fit.json
+```
+
+Use the same model, family, layer and position flags for replay. The apply
+document loads each gate's saved parameters and evaluates its hard mask on
+`--confirmation`. `--apply --penalty 0.01 --seed 0` selects one saved cell.
+`--apply-all` evaluates every penalty and seed cell, with all gates linked to
+one `axes.fit_cell` axis. Each row holds the fit's exact bundle selector in
+`entry`. Metric rows carry the corresponding `axes.fit_cell` row index.
+
+```bash
+uv run python scripts/joint_dbm.py \
+    --family all-neurons \
+    --model Qwen/Qwen3.6-35B-A3B \
+    --variable output \
+    --dataset weekdays/data#train \
+    --positions 0 1 2 \
+    --readout-position -1 \
+    --penalties 0.001 0.003 0.01 0.03 0.1 \
+    --seeds 0 1 2 \
+    --apply-all \
+    --fit-dir runs/neurons_fit \
+    --confirmation weekdays/data#confirmation \
+    --data-root data \
+    --artifacts-root . \
+    --out neurons_apply.json
+```
+
+Each fit saves its gate bundles. A replay uses `theta > 0` to select units.
+Optional `--save-rank` writes `rank.json` in either document, with one record
+per unit per evaluated cell. Limit this option to small audits because an
+all-token neuron campaign can produce millions of records. Report viewers
+must use the mask evaluated for each saved cell. Separate fits can select
+different components at the same sparsity.
+
+Both documents pass through the loader before writing. Apply validation
+checks bundle identities under `--artifacts-root`. The training defaults
+come from `demos/methods/protocols/dbm.json`; `--help` lists the controls.
+
+**`export_dbm.py`** joins saved apply metrics to the frozen gate bundles
+used for evaluation. Its manifest groups apply runs by experiment. Paths
+resolve from the manifest's folder.
 
 ```json
 {
@@ -255,12 +283,21 @@ resolve from the manifest's folder:
 }
 ```
 
-Set `register_from_hf=True` to resolve an unregistered model from its HF
-config. Export checks document, point and bundle digests. Each point contains
-the frozen hard masks, selected count, metrics and provenance. Gate positions
-are integer token indices or `"all"`; named scalar definitions resolve to those
-values. Other position forms are refused. The fit identity depends on bundle
-content and entry selectors, so it survives a moved run folder.
+```bash
+uv run python scripts/export_dbm.py \
+    --manifest dbm_manifest.json \
+    --out output_dbm.json
+```
+
+The Python API is `causalab.analysis.export_dbm.export(manifest_path,
+register_from_hf=False)`. Add `--register-from-hf` to the CLI, or set the
+keyword to `True`, to resolve an unregistered model from its HF config.
+
+Export checks the document and point digests and places each metric row on
+the receipt point whose coordinates it carries. Each point contains the frozen
+hard masks, selected count, metrics and provenance. Gate positions are integer
+token indices or `"all"`; named scalar definitions resolve to those values.
+Other position forms are refused.
 
 IIA uses all eligible pairs. Logit difference uses eligible pairs whose gold
 and original answers differ. Each metric carries its sample count, while
@@ -273,129 +310,115 @@ reads the aligned counterfactual site through that gate.
 Report applications add captions and token examples, then embed the JSON in
 their own templates.
 
-## 3. Check it before you spend a GPU
+The generators share registry lookups and naming rules through
+`scripts/protocol_authoring.py`.
 
-Both verbs are pure — no weights, no network, no accelerator — so they cost a
-second and catch every load error.
+<a id="3-check-it-before-you-spend-a-gpu"></a>
 
-⚠️ **"Load error" is narrower than "would have run".** The pure verbs hold no
-tokenizer, so nothing whose answer is a token count is knowable here: a
-`{"variable": …}` or `{"all": true}` position that turns out ragged across rows
-is refused when the batch is encoded ([V19] for a write), not by `validate`.
-`--data` does check that every column and every prompt variable a document
-names *exists* in the resolved tables, at every expanded point of a sweep —
-that half used to be checked at coordinate 0 only, and for columns only, which
-is how a 64-point scan validated `OK` with 32 points that could not run.
+## 3. Validate and inspect
 
-⚠️ They are also **registry-only**: they derive featurizer widths from the
-static metadata in `causalab/protocol/registry.py` rather than fetching a
-config, so a digest never depends on connectivity. The A3B is a built-in entry,
-with its hybrid layer pattern, so the document above validates offline — and so
-does the refusal that matters most on this tower: a full-attention component
-at a DeltaNet layer.
+`validate` checks document structure, data references, and engine support.
+`explain` reports the resulting plan. Both run without model weights.
+
+Data checks cover named columns and prompt variables at representatives of
+each sweep axis. Token positions and answer forms are checked when `run`
+encodes the batch, before weights load. A window that is ragged across rows
+can therefore fail at encoding even after document validation.
+
+Inspection commands use the model registry to derive widths and layer types.
+For this model they run offline and detect a full-attention site placed on a
+DeltaNet layer.
 
 ```bash
-uv run causalab validate patch.json --data-root data --artifacts-root . --data
-# OK: patch.json — 1 point, digest …
+uv run causalab validate patch.json \
+    --engine auto \
+    --data-root data \
+    --artifacts-root . \
+    --data
+# Validation reports one point.
 
-uv run causalab validate patch.json --data-root data --artifacts-root . --data \
+uv run causalab validate patch.json \
+    --engine auto \
+    --data-root data \
+    --artifacts-root . \
+    --data \
     --set sites.target.component=attention_premix
 # refused: [V4] at sites.target.component site 'target': component
 #          'attention_premix' exists only on a 'full_attention' mixer, but layer
-#          20 of 'Qwen/Qwen3.6-35B-A3B' carries 'linear_attention' — …
+#          layer 20 uses linear attention.
 #          Layers carrying 'full_attention': [3, 7, 11, 15, 19, 23, 27, 31, 35, 39]
 ```
 
-A model that is **not** built in refuses with `[V4] … is not in the protocol
-model registry`. Two ways forward, and which you want depends on what you are
-checking:
-
-- **pre-flighting on the real model** — `--register-from-hf` resolves the key
-  from its HF config first. Opt-in, because it is the one thing that makes a
-  pure verb touch the network:
+For an unregistered model, use `--register-from-hf` to load its Hugging Face
+configuration. Use the actual model key so widths and layer bounds match:
 
   ```bash
-  uv run causalab validate patch.json --data-root data --artifacts-root . \
-      --data --register-from-hf
-  # OK: patch.json — 1 point, digest …
+  uv run causalab validate patch.json \
+      --engine auto \
+      --data-root data \
+      --artifacts-root . \
+      --data \
+      --register-from-hf
+  # Validation reports one point.
   ```
 
-  ⚠️ Do **not** substitute a similar registered model for this. It produces a
-  *false* refusal — `[V4] … layer 36 out of range for the 36-layer model
-  'Qwen/Qwen3-4B-Instruct-2507'` on a perfectly valid 40-layer A3B document.
+`run` resolves unregistered model metadata automatically.
 
-- **checking the document alone** — point the pure verbs at a registered key.
-  The structure, the reference graph and the save manifest are
-  model-independent; only widths and layer bounds are not, so read a
-  width-or-bounds refusal as being about the stand-in:
+Use `explain` to estimate work from the point count and forward groups.
+`requires` lists capabilities, with `:write` on edited components. The selected
+engine must support all of them; `[V13]` names a shortfall.
 
-  ```bash
-  uv run causalab validate patch.json --data-root data --artifacts-root . --data \
-      --set model.key=Qwen/Qwen3-4B-Instruct-2507
-  # OK: patch.json — 1 point, digest cc2e2500fac13029…
-
-  uv run causalab explain patch.json --data-root data --artifacts-root . \
-      --set model.key=Qwen/Qwen3-4B-Instruct-2507
-  # digest    cc2e2500fac130298f0513e6f836da2d16056660147fdbd03f1e37e65427e4cf
-  # model     Qwen/Qwen3-4B-Instruct-2507@main fp32
-  # points    1
-  # requires  ['component:block_output', 'component:block_output:write',
-  #            'component:lm_head', 'paired_forward']
-  # forwards  2 per point
-  #   original on counterfactual: v_cf
-  #   patched on base: logits
-  # save
-  #   iia (model=patched, input=base) -> iia.json
-  #   logit_diff (model=patched, input=base) -> logit_diff.json
-  ```
-
-- **running it** — just run. `run` touches the model anyway, so it resolves an
-  unregistered key from its HF config and registers it before canonicalizing.
-
-`explain`'s `points` and `forwards` are what to size a job against: a sweep of
-40 layers is 40 points, and the run cost is roughly points × forwards.
-`requires` is the capability set routing matches engines on — every component
-the document names appears there, `:write` suffixed where a write targets it.
-
-`dry-run` is both verbs' answers in one report, plus what neither prints: per
-site, what the registry entry says exists — shape, width, head space, which
-engines read it and which mechanisms may write it — the forward count the
-campaign actually owes once shared forwards are interned, the shard count for a
-`--shard-size`, and, as its last line, the `undecided` facts only the run
-decides (token windows and widths, answer tokens, pair validity, controls), so
-a refusal at encoding time is never mistaken for a green here. It exits `1` on
-any refusal and `0` otherwise; `--engine auto` also asks, per installed engine,
-what `check_engine` would refuse (a `capability_shortfall`, reported not
-raised), and `--data` folds in `validate --data`'s pass:
+`dry-run` combines validation and planning with per-site shapes, widths,
+head spaces, and engine support. Its `undecided` list names checks that need
+encoding, such as token windows and answer forms. The command exits 1 for a
+reported error and 0 otherwise. `--engine` is required; `--data` adds the data
+checks that `validate` performs by default. `--tokenizer` loads the model's
+tokenizer, never its weights, and decides the token windows and answer
+tokens as the run would; `validate --tokenizer` runs the same checks.
 
 ```bash
-uv run causalab dry-run patch.json --data-root data --artifacts-root . \
-    --set model.key=Qwen/Qwen3-4B-Instruct-2507 --shard-size 4
+uv run causalab dry-run patch.json \
+    --engine auto \
+    --data-root data \
+    --artifacts-root . \
+    --set model.key=Qwen/Qwen3-4B-Instruct-2507
 # dry-run   patch.json
 # digest    cc2e2500fac130298f0513e6f836da2d16056660147fdbd03f1e37e65427e4cf
+# overrides model.key=Qwen/Qwen3-4B-Instruct-2507
 # model     Qwen/Qwen3-4B-Instruct-2507@main fp32
 #   36 layers, hidden 2560, 32 heads (8 kv) x 128, vocab 151936, family qwen3; declares no layer pattern
+# data
+#   mcqa (base, counterfactual): digest … 20 columns
 # points    1
-# forwards  2 per point, 2 interned
-# shards    1 of at most 4 points (1 point)
 # requires  ['component:block_output', 'component:block_output:write',
 #            'component:lm_head', 'paired_forward']
+# engine    pytorch_hooks: serves
 # sites
 #   target: block_output layer 20: available
 #     shape (batch, position, feature), width 2560, no head axis
 #     reads nnsight, pytorch_hooks; writes add_scaled, affine, clamp, gaussian, lerp, pytorch_fn, renormalize, swap
 #   lm_head: lm_head: available
 #     …
-# undecided (decided when the run encodes its inputs): engines, inventory, tokenization, pair_validity, controls
+# inventory undecided (see below)
+# readouts
+#   v_cf: original on counterfactual at target -> (saved or operand only)
+#   logits: patched on base at lm_head -> iia, logit_diff
+# save
+#   iia (model=patched, input=base) -> iia.json
+#   logit_diff (model=patched, input=base) -> logit_diff.json
+#   …
+# undecided (decided when the run encodes its inputs): inventory, tokenization, pair_validity, controls
 ```
 
-The same document with an unavailable site refuses before any of that, with
-the reason code beside the rule — the acceptance case of the dry run, and it
-holds on a machine with no accelerator and no model cached:
+An unavailable component reports its reason code before model loading:
 
 ```bash
-uv run causalab dry-run patch.json --data-root data --artifacts-root . \
-    --set sites.target.component=routed_output --set model.key=Qwen/Qwen3-4B-Instruct-2507
+uv run causalab dry-run patch.json \
+    --engine auto \
+    --data-root data \
+    --artifacts-root . \
+    --set sites.target.component=routed_output \
+    --set model.key=Qwen/Qwen3-4B-Instruct-2507
 # refused: [V4] at sites.target.component site 'target': component 'routed_output'
 #          needs a sparse-MoE block (the entry declares no experts), which model
 #          'Qwen/Qwen3-4B-Instruct-2507' does not have — there is no such tensor on this model
@@ -404,11 +427,14 @@ uv run causalab dry-run patch.json --data-root data --artifacts-root . \
 
 ## 4. Run it
 
-Smoke it on a tiny random model of the same architecture — four layers, hidden
-8, hybrid DeltaNet/attention tower, sparse MoE in every layer:
+For a CPU smoke check, use a small random model with the same architecture:
+four layers with hybrid DeltaNet and full attention, plus sparse MoE.
 
 ```bash
-uv run causalab run patch.json --data-root data --artifacts-root . \
+uv run causalab run patch.json \
+    --engine auto \
+    --data-root data \
+    --artifacts-root . \
     --out runs/patch \
     --set model.key=tiny-random/qwen3.5-moe \
     --set sites.target.layers=1 \
@@ -418,200 +444,90 @@ uv run causalab run patch.json --data-root data --artifacts-root . \
 # cells 2 / 2 eligible
 ```
 
-The numbers are meaningless — random weights answer nothing. What this proves is
-that the document loads, plans, executes and saves. `--set` is for exploration
-only: anything that matters about an experiment belongs in the file, where it
-enters the digest.
+A random-weight run checks execution and saving. Use trained weights for
+scientific measurements. Save final model and method choices in the document;
+`--set` supports temporary exploration.
 
-The last line is the **denominator** (spec §4.1): one cell per `save` entry per
-point, and how many of them measured something. A cell can be legal and still
-measure nothing — a site scoped to `expert: 7` when the router sent expert 7 no
-token at the addressed positions — and such a cell is *unavailable*, not an
-error: the run writes it with `status: "unavailable"`, a reason code from the
-spec's §2.4 table (`empty_selector` here) and the fact in `detail`, and counts
-it as excluded. A sweep that prints `cells 155 / 157 eligible; 2 excluded:
-empty_selector ×2` says, in one line and with nothing kept beside the result,
-that two cells were excluded measurements rather than null localizations. The
-same numbers are `RunResult.cells` / `RunResult.denominator` from Python, and
-each excluded cell is repeated under `unavailable` in its point's summary.
+The `cells` summary counts eligible measurements and exclusions, with one
+cell per save entry and sweep point. An expert selected by no token can produce
+`status: "unavailable"` with reason `empty_selector`. Preserve these exclusions
+when reporting results. Python callers can read `RunResult.cells`,
+`RunResult.denominator`, and each point's `unavailable` summary.
 
-That run also **refuses**, and the refusal is the point: MCQA's answers are
-single letters, and ` Z` and `Z` are *different* tokens that both exist.
-`token_form="auto"` cannot know which one the model emits, so it says so
-instead of picking one. Set the metric's `token_form` to `bare` or
-`space_prefixed` and run it again.
+The metrics score the answer columns as the table writes them. Check the
+table against the model's natural answers: `Z` and ` Z` can be distinct
+tokens, and the answer that follows a space carries that space in its column.
 
-Then the real thing, on an accelerator:
+Run the experiment on trained weights with an accelerator:
 
 ```bash
-uv run causalab run patch.json --data-root data --artifacts-root . \
-    --out runs/patch --device cuda --dtype bf16
+uv run causalab run patch.json \
+    --engine auto \
+    --data-root data \
+    --artifacts-root . \
+    --out runs/patch \
+    --device cuda \
+    --dtype bf16
 ```
 
-| flag | why |
+| Flag | Purpose |
 |---|---|
-| `--device` | placement is execution, not a document fact |
-| `--dtype` | shorthand for `--set model.dtype=…`; precision **is** a document fact, so it enters the digest. Refused on a **workflow** — its steps each declare their own realization |
-| `--artifacts-root` | where a relative artifact `file_path` resolves. It merely *defaults* to `.`, so passing it is what keeps absolute machine paths out of a digest — pass it in every invocation |
-| `--engine` | `auto` (default: every installed engine, reference first, routed by `choose_engine`), or name one to pin it — see [§6](#6-engines-and-routing) |
-| `--points START:STOP` | execute one half-open slice of an expanded sweep; the seam to shard a campaign on |
-| `--batch-rows N` | reference engine: run a forward group over more than `N` rows as several forwards of at most `N` rows each, captures concatenated in row order. Execution only — the numbers equal the single-forward run up to dtype rounding, digests and stamps are unaffected, and the run receipt records the bound as `execution.batch_rows` — see [§6](#6-engines-and-routing). Refused together with `--engine nnsight`, which runs one batch per group and would honour no bound |
-| `--resume` | reuse completed outputs whose inputs and code hash are unchanged. A **workflow** flag: refused on a single intervention specification, which has no step boundaries to resume at — wrap it in a workflow step. The first `run` of a workflow also stamps its `pins` section, the digests of everything it touches, which every later load is held to (`causalab pin` re-stamps after a meant change; workflow spec §7) |
-| `--register-from-hf` | resolve an unregistered `model.key` from its HF config instead of refusing `[V4]`; `run` always does this, the pure verbs only on request |
+| `--device` | Choose execution placement: one device (`cpu`, `cuda`, `cuda:1`, `mps`) or a comma list (`cuda:0,cuda:1`) placing layers across the devices of one process (PyTorch engine). Recorded as `execution.device`; document identity is unchanged. |
+| `--dtype` | Set `model.dtype`, which enters the digest. For workflows, set precision in each step document. |
+| `--artifacts-root` | Resolve relative artifact paths. Defaults to `.`. |
+| `--engine` | Select `pytorch_hooks`, `nnsight`, or `auto` (`pytorch_hooks`). |
+| `--points START:STOP` | Run a half-open range of sweep points. |
+| `--batch-rows N` | Bound PyTorch forward batches; recorded in execution metadata. Rounding can vary with batching. Unsupported by `nnsight`. |
+| `--verbose`, `-v` | Print progress on stderr: point selection, each point's model load, cohort fits, each point's run, and the output write. Also shows Hugging Face Hub download and lock-wait messages. Changes no output file. |
+| `--parallel AXES` | PyTorch engine: data, pipeline, context, tensor, and expert parallelism (`dp, pp, cp, tp, ep`; default `1`). Recorded as `execution.parallel`; document identity is unchanged. See [§6](#6-engines). |
+| `--resume` | Reuse completed workflow steps after checking their identities and contents. |
+| `--register-from-hf` | Fetch metadata for an unregistered model during inspection; `run` does this automatically. |
 
 
-## 5. Hookpoints on Qwen3.6-35B-A3B
+## 5. Hookpoints
 
-The tower is **40 layers on a repeating 3+1 schedule**
-(`full_attention_interval: 4`): layers 3, 7, … 39 carry a gated full-attention
-mixer, the other 30 carry a Gated DeltaNet (linear-attention) mixer. Both kinds
-carry the **same** MLP — a sparse MoE of 256 experts routed top-8, plus a shared
-expert that runs on every token.
-[`qwen36-35b-a3b-architecture.html`](qwen36-35b-a3b-architecture.html) draws
-that forward pass one box per tensor, lavender where a hookpoint sits.
+A site names a component, such as `block_output` or `expert_neuron_output`.
+The registry states which components each model family exposes, at which
+layers, with which shape and write rules. `causalab explain` prints the
+components a document uses on its model. The
+[Qwen3.6-35B-A3B page](qwen36_35b_a3b.md) lists the full component table for
+the model most templates use, with its architecture diagram.
 
-| | |
-|---|---|
-| layers | 40 — 30 `linear_attention`, 10 `full_attention` |
-| hidden size | 2048 |
-| full attention | 16 query heads, 2 KV heads (GQA), `head_dim` 256, output-gated, partial RoPE (0.25) |
-| Gated DeltaNet | 16 key heads, 32 value heads (GVA), `d_k` = `d_v` = 128, causal conv kernel 4, 64-token chunked kernel |
-| MoE | 256 experts, top-8, `moe_intermediate_size` 512; shared expert 512 |
+### Model families
 
-Which mixer a layer carries is checked twice against one component→stream
-table: at **load**, from the `layer_types` the registry entry declares (`[V4]`,
-so `validate` refuses offline — the A3B entry declares its pattern), and at
-**run**, against the module the layer really carries (`[P4]`), for a model
-whose entry declares none. A site that names the wrong mixer is refused
-either way:
+A family is a module tree. The registry detects it from the loaded model's
+children, never from the config's `model_type`, and refuses a tree that no
+family or several families detect. Three trees are built in
+(`causalab/protocol/registry/families.py`):
 
-```json
-{"component": "attention_probs", "layers": [3]}    // ✓ layer 3 is full attention
-{"component": "attention_probs", "layers": [4]}    // ✗ [V4] a Gated DeltaNet block
-                                                   //     computes no attention matrix
-{"component": "block_output", "layers": [4], "stream": "linear_attention"}  // ✓ optional, checked
-```
+| family | detected by | models |
+|---|---|---|
+| `llama_tree` | `model.layers` and `model.embed_tokens` | Llama, Qwen, Mistral, Gemma, the Qwen3.5-MoE hybrid |
+| `gpt2_tree` | a `transformer.h` block with `ln_2` and `attn.c_proj` | GPT-2 |
+| `gptj_tree` | a `transformer.h` block with `ln_1`, `attn.q_proj`, `attn.k_proj`, `attn.v_proj`, `attn.out_proj`, `mlp.fc_in`, `mlp.fc_out` and no `ln_2` | GPT-J (`EleutherAI/gpt-j-6b`) |
 
-### The table
+A component that a family declares no tap for fails with
+`component_unavailable` and names the family.
 
-**Reading the columns.** *blocks* is which of the two block types the tensor
-exists in (and how many such layers the tower has). *shape* is the component's
-declared axes — `head·feature` means head-major and already flattened,
-`batch·position` means the MoE block's flattened token axis. *tap* is the
-mechanism the engine reaches it by, which is what the engine column follows
-from. *write* is the policy: a refusal names the alternative rather than just
-saying no — and the text in that cell is the text the refusal prints.
-
-**This table is generated.** Every cell is read off the capability registry
-(`causalab/protocol/registry.py`, one row per component — spec §2.4) and the
-A3B entry's shapes, by `registry.render_component_tables()`;
-`tests/protocol/test_vocabulary_census.py` holds the committed text to that
-rendering row for row, so it cannot drift from what the engines and the
-validator actually do. The same rows generate each engine's component set (§6
-below), the write policy `validate` and the executor apply, and the
-component→stream table the mixer check reads. The table sits between
-`generated: begin component-table` / `end` marker lines and is regenerated,
-never edited by hand.
-
-⚠️ **The engines column is information, not something to author.** It names
-engines the way `--engine` does — `pytorch_hooks`, `nnsight` — since those are
-the values the flag takes and the names the engines answer to. But a document
-never names an engine: it declares the components it addresses, `requires`
-derives the capabilities from those, and `choose_engine` picks (§8). So read a
-single engine in that column as "only this one serves that component today",
-and check the routing rather than copying the name:
-
-```bash
-uv run causalab explain patch.json --data-root data --artifacts-root . \
-    --engine auto
-# ... engine    nnsight
-```
-
-
-<!-- generated: begin component-table -->
-
-**Model boundary (no `layer`)**
-
-| component | blocks | shape | tap | engines | write |
-|---|---|---|---|---|---|
-| `input_ids` | — (layer-less) | `(batch, position)` | module input | both | read-only — the model's token input is not an activation; change the row's text instead, or write 'embeddings' to edit the vector the ids look up |
-| `embeddings` | — (layer-less) | `(batch, position, feature)` | module output | both | any mechanism |
-| `ln_final` | — (layer-less) | `(batch, position, feature)` | module output | both | any mechanism |
-| `lm_head` | — (layer-less) | `(batch, position, feature)` | module output | both | any mechanism |
-
-**Residual stream and dense MLP — every layer**
-
-| component | blocks | shape | tap | engines | write |
-|---|---|---|---|---|---|
-| `block_input` | every layer (40) | `(batch, position, feature)` | module input | both | any mechanism |
-| `attention_input_norm` | every layer (40) | `(batch, position, feature)` | module output | both | any mechanism |
-| `attention_output` | every layer (40) | `(batch, position, feature)` | module output | both | any mechanism |
-| `block_mid` | every layer (40) | `(batch, position, feature)` | module input | both | any mechanism |
-| `mlp_input_norm` | every layer (40) | `(batch, position, feature)` | module output | both | any mechanism |
-| `mlp_input` | every layer (40) | `(batch, position, feature)` | module input | both | any mechanism |
-| `mlp_output` | every layer (40) | `(batch, position, feature)` | module output | both | any mechanism |
-| `mlp_activation` | none — no such tensor on this architecture | — | module output | both | any mechanism |
-| `mlp_neuron_output` | none — no such tensor on this architecture | — | module input | both | any mechanism |
-| `block_output` | every layer (40) | `(batch, position, feature)` | module output | both | any mechanism |
-
-**Full-attention mixer interior — the 10 `full_attention` layers**
-
-| component | blocks | shape | tap | engines | write |
-|---|---|---|---|---|---|
-| `attention_query_pre_rope` | full-attn (10) | `(batch, position, head·feature)` | module output | both | any mechanism |
-| `attention_key_pre_rope` | full-attn (10) | `(batch, position, head·feature)` | module output | both | any mechanism |
-| `attention_value_states` | full-attn (10) | `(batch, position, head·feature)` | module output | both | any mechanism |
-| `attention_gate` | full-attn (10) | `(batch, position, head·fused·feature)` | module output | both | any mechanism |
-| `attention_query` | full-attn (10) | `(batch, head, position, feature)` | attention-function slot | both | any mechanism |
-| `attention_key` | full-attn (10) | `(batch, head, position[key], feature)` | attention-function slot | both | any mechanism |
-| `attention_scores` | full-attn (10) | `(batch, head, position[query], key_position[key])` | attention-function slot | both | any mechanism |
-| `attention_z` | full-attn (10) | `(batch, position, head, feature)` | attention-function slot | both | any mechanism |
-| `attention_result` | full-attn (10) | `(batch, position, head·feature)` | derived from `attention_premix` | both | read-only — it is derived, not computed: the model never forms the per-head contribution at all — it forms their sum, by projecting the whole 'attention_premix' at once — so there is no tensor here for a write to change. Write 'attention_premix' instead, with the same 'head'; 'attention_result' is a linear function of it, so a write there moves this by exactly the projection of what you wrote |
-| `attention_premix` | full-attn (10) | `(batch, position, head·feature)` | module input | both | any mechanism |
-| `attention_probs` | full-attn (10) | `(batch, head, position[query], key_position[key])` | module output | both | `swap` only — its rows are a probability distribution and the value multiply immediately downstream assumes they sum to 1 — nothing renormalizes them after an edit. Write 'attention_scores' instead: it is the same tensor one step earlier, upstream of the model's own softmax, so every mechanism is legal there and the rows still sum to 1 by construction |
-
-**Gated DeltaNet mixer interior — the 30 `linear_attention` layers**
-
-| component | blocks | shape | tap | engines | write |
-|---|---|---|---|---|---|
-| `delta_qkv` | DeltaNet (30) | `(batch, position, feature)` | module output | both | any mechanism |
-| `delta_gate` | DeltaNet (30) | `(batch, position, head·feature)` | module output | both | any mechanism |
-| `delta_conv` | DeltaNet (30) | `(batch, feature, position)` | delta-kernel boundary | both | any mechanism |
-| `delta_query` | DeltaNet (30) | `(batch, position, head, feature)` | delta-kernel boundary | `pytorch_hooks` | any mechanism |
-| `delta_key` | DeltaNet (30) | `(batch, position, head, feature)` | delta-kernel boundary | `pytorch_hooks` | any mechanism |
-| `delta_value` | DeltaNet (30) | `(batch, position, head, feature)` | delta-kernel boundary | both | any mechanism |
-| `delta_beta` | DeltaNet (30) | `(batch, position, head)` | delta-kernel boundary | both | any mechanism |
-| `delta_decay` | DeltaNet (30) | `(batch, position, head)` | delta-kernel boundary | both | any mechanism |
-| `delta_kv_mem` | DeltaNet (30) | `(batch, position, head, feature)` | delta-kernel boundary | `pytorch_hooks` | read-only — a memory readout has no independent existence: it is (S_{t-1}·exp(g_t) · k̂_t) summed, recomputed from the state at every step, so there is no tensor a write could persist into. Write 'delta_state' to change what the memory holds, or 'delta_value' to change what is stored into it |
-| `delta_state_update` | DeltaNet (30) | `(batch, position, head, feature)` | delta-kernel boundary | `pytorch_hooks` | read-only — its write lowers exactly onto a state edit through the reconstruction identity S_t = S_{t-1}·exp(g_t) + k̂_t ⊗ delta_t, and that lowering is deferred — write 'delta_state' instead |
-| `delta_state` | DeltaNet (30) | `(batch, position[steps], head, state, state)` | delta-kernel boundary | `pytorch_hooks` | any mechanism |
-| `delta_kernel_output` | DeltaNet (30) | `(batch, position, head, feature)` | delta-kernel boundary | both | any mechanism |
-| `deltanet_query` | DeltaNet (30) | `(batch, position, head, feature)` | `.source` line (fused forward) | `nnsight` | any mechanism |
-| `deltanet_key` | DeltaNet (30) | `(batch, position, head, feature)` | `.source` line (fused forward) | `nnsight` | any mechanism |
-| `deltanet_state` | DeltaNet (30) | `(batch, position[chunk], head, feature)` | `.source` line (fused forward) | `nnsight` | any mechanism |
-| `delta_premix` | DeltaNet (30) | `(batch, position, head·feature)` | module input | both | any mechanism |
-
-**Sparse MoE + shared expert — every layer**
-
-| component | blocks | shape | tap | engines | write |
-|---|---|---|---|---|---|
-| `router_logits` | every layer (40) | `(batch·position, feature)` | module output | both | read-only — the MoE block discards the router's logits (it destructures them into '_') and routes on the scores and indices it computed from them, so a write here cannot reach anything — write 'router_scores' to reweight the chosen experts, or 'expert_idx' to change which experts fire |
-| `router_scores` | every layer (40) | `(batch·position, topk)` | module output | both | any mechanism |
-| `expert_idx` | every layer (40) | `(batch·position, topk)` | module output | both | `swap` only — the routing table carries integer expert ids, not features: a delta, a scale or a clamp over them yields ids chosen by arithmetic on labels, which route to arbitrary experts where they stay in range and fail at the gather where they do not. Swap in an index tensor read from elsewhere to change which experts fire, or write 'router_scores' to reweight the experts already chosen. Refusing rather than doing arithmetic on values that are labels |
-| `expert_gate_proj` | every layer (40) | `(batch·position, topk·fused·feature)` | grouped-experts dispatch | both | any mechanism |
-| `expert_up_proj` | every layer (40) | `(batch·position, topk·fused·feature)` | grouped-experts dispatch | both | any mechanism |
-| `expert_activation` | every layer (40) | `(batch·position, topk·feature)` | grouped-experts dispatch | both | any mechanism |
-| `expert_neuron_output` | every layer (40) | `(batch·position, topk·feature)` | grouped-experts dispatch | both | any mechanism |
-| `expert_permutation` | every layer (40) | `(batch·position, topk)` | `.source` line (fused forward) | `nnsight` | read-only — it is the serving kernel's row bookkeeping (where each (token, slot) row sits in expert-sorted order), not routing: the kernel derives it from the routing table, and an edited copy would describe rows that were never sorted that way. Write 'expert_idx' to change which experts fire, or 'router_scores' to reweight them |
-| `expert_output` | every layer (40) | `(batch·position, topk·feature)` | grouped-experts dispatch | both | any mechanism |
-| `routed_output` | every layer (40) | `(batch·position, feature)` | module output | both | any mechanism |
-| `shared_expert_gate_proj` | every layer (40) | `(batch·position, feature)` | module output | both | any mechanism |
-| `shared_expert_up_proj` | every layer (40) | `(batch·position, feature)` | module output | both | any mechanism |
-| `shared_expert_activation` | every layer (40) | `(batch·position, feature)` | module input | both | any mechanism |
-| `shared_expert_output` | every layer (40) | `(batch·position, feature)` | module output | both | any mechanism |
-| `shared_expert_gate` | every layer (40) | `(batch·position, feature)` | module output | both | any mechanism |
-
-<!-- generated: end component-table -->
+GPT-J uses a parallel residual block: `ln_1` feeds the attention and the MLP,
+and the block adds both outputs to its input in one step. The tree therefore
+has no `block_mid` and no `mlp_input_norm`. The declared identity is
+`block_output == attention_output + mlp_output + block_input`. It is exact in
+fp32 when you add the terms in this order, which is the block's own order.
+`mlp_input` is the `ln_1` output as the MLP receives it, so a write there
+changes the MLP only. A write at `attention_input_norm` changes the attention
+and the MLP. `attention_premix` and `attention_result` come from the input to
+`attn.out_proj`, which has 16 heads of 256 on GPT-J 6B. `mlp_activation` and
+`mlp_neuron_output` are the input to `mlp.fc_out`. The rotary embedding
+rotates the first 64 of each head's 256 query and key features. The
+pre-RoPE `attention_query_pre_rope` and `attention_key_pre_rope` are the
+`q_proj` and `k_proj` outputs. GPT-J computes its attention pattern in its own
+method and does not call the Transformers attention interface. For this
+reason the tree does not serve `attention_query`, `attention_key`,
+`attention_scores`, `attention_z` or `attention_probs`. Both engines serve the
+GPT-J tree; `tests/neural/engines/nnsight_tracing/test_parity_gptj.py` holds
+them to each other. Load the fp16 weights with `"revision": "float16"` and
+`"dtype": "fp16"`. The `main` revision stores fp32 weights.
 
 ### Dense neuron sites
 
@@ -620,30 +536,12 @@ reads the complete neuron output at the input to its down projection. A gated
 MLP forms this value as `act(gate) * up`. GPT-2 has one activation branch, so
 both sites expose its complete activated neuron output.
 
-Qwen3.6-35B-A3B has a sparse MoE block at each layer. Its registry entry
-has no dense inner width, so `validate` refuses both dense sites with
-`component_unavailable`. Use `expert_neuron_output` for routed experts and
-`shared_expert_activation` for shared experts. Both expose complete neuron
-outputs before the down projection. `expert_activation` remains the activated
-gate branch inside routed experts.
-
 ### The attention interior, per family
 
-The four module-boundary components of the full-attention mixer
-(`attention_query_pre_rope`, `attention_key_pre_rope`,
-`attention_value_states`, `attention_gate`) are the one place the model
-families disagree about *where* a component is: GPT-2 fuses q, k and v into
-one `c_attn`, llama keeps three projections, qwen3.5-moe normalizes q and k
-before RoPE and packs a gate beside q. Each component's registry row carries
-that address per family (spec §2.4, `overrides`, keyed by the entry's
-`family` — the HF `model_type`), so the **same logical site** reads and writes
-on all three: on GPT-2 the queries are the first `H·d` columns of `c_attn`'s
-output, and a swap there moves the logits exactly as a direct write into
-those columns does.
-
-**This table is generated** from the rows by `registry.render_family_table()`
-and held to it by `tests/protocol/test_vocabulary_census.py` (block
-`family-table`):
+The same component name can map to different module locations across model
+families. GPT-2 fuses q, k, and v in `c_attn`; Llama has separate projections.
+Qwen normalizes q and k before RoPE and packs a gate beside q.
+Registry overrides map these logical components to each implementation:
 
 <!-- generated: begin family-table -->
 
@@ -652,112 +550,140 @@ and held to it by `tests/protocol/test_vocabulary_census.py` (block
 | `attention_query_pre_rope` | `c_attn` output `(batch, position, fused·head·feature)`, split 0 of 3 | `q_proj` output `(batch, position, head·feature)` | `q_norm` output `(batch, position, head, feature)` |
 | `attention_key_pre_rope` | `c_attn` output `(batch, position, fused·head·feature)`, split 1 of 3 | `k_proj` output `(batch, position, head·feature)` | `k_norm` output `(batch, position, head, feature)` |
 | `attention_value_states` | `c_attn` output `(batch, position, fused·head·feature)`, split 2 of 3 | `v_proj` output `(batch, position, head·feature)` | `v_proj` output `(batch, position, head·feature)` |
-| `attention_gate` | — (no such tensor: refused at load and at run) | — (no such tensor: refused at load and at run) | `q_proj` output `(batch, position, head·fused·feature)`, split 1 of 2 |
+| `attention_gate` | unavailable on this family | unavailable on this family | `q_proj` output `(batch, position, head·fused·feature)`, split 1 of 2 |
 
 <!-- generated: end family-table -->
 
-The `fused` axis is the one the component does *not* span: the executor
-selects the row's split on the way out and scatters it back on the way in, so
-a write to `attention_key_pre_rope` on GPT-2 leaves the q and v columns of
-`c_attn` untouched. `head` slices inside the logical value, in the
-component's own head space (KV heads for `k` and `v` under GQA).
+For fused projections, the executor selects the component's slice and writes
+it back into that slice. A GPT-2 key write preserves the query and value
+columns. `head` selects within the component's head space, including KV heads
+for GQA keys and values.
 
-A family with no column here is one the table has not met. Its entry decides
-nothing about the mixer interior offline, and the run serves it by measurement
-where that is unambiguous — a bare projection of the value's width, or a norm
-after it — and refuses by name where it is not: a fused projection's block
-order. Because `validate` reads the same rows, a document naming
-`attention_gate` on a `gpt2` or `llama` entry is refused before a GPU is
-spent on it (`[V4]`, reason `component_unavailable`), the same refusal the
-run makes from the module tree.
+For unlisted families, execution can identify a separate projection or
+normalization with an unambiguous width. Ambiguous fused layouts fail with a
+named error. Known missing components, such as `attention_gate` on GPT-2 and
+Llama, fail validation with `component_unavailable`.
 
 ### `delta_*` and `deltanet_*`: one name per tensor, three typed pairs
 
-The DeltaNet interior used to appear twice in the table, because the two
-engines reach it by unrelated mechanisms — the reference engine swaps the
-modeling file's kernel globals for the extent of one mixer forward, the
-nnsight engine drills `.source` inside the fused forward — and each named
-what it could serve. 📐 Measured on the fixture and asserted at both test
-tiers, eight of the eleven pairs were the *same tensor*: same shape, same
-timing, max abs diff 0.0. Those eight carry **one name each**
-(`delta_qkv`, `delta_conv`, `delta_gate`, `delta_value`, `delta_beta`,
-`delta_decay`, `delta_kernel_output`, `delta_premix`), served by both engines,
-and the `deltanet_*` spellings that named them are aliases: a document that
-authors `deltanet_core_out` parses and digests as `delta_kernel_output`
-(`schema.DEPRECATED_COMPONENTS`, spec §2.4). The three pairs whose tensors
-differ in shape or timing stay two names, each served by one engine, with the
-relation declared as a row (`registry.BACKEND_PAIRS`):
+Both engines expose common DeltaNet tensors through the `delta_*` names.
+Eight older `deltanet_*` names parse as aliases for the same tensors, preserving
+their shapes and timing. Three pairs retain separate names because their values
+occur at different stages:
 
 | `pytorch_hooks` | `nnsight` | relation |
 |---|---|---|
-| `delta_query` `delta_key` | `deltanet_query` `deltanet_key` | `gva_tile` — `delta_*` is **post** GVA `repeat_interleave` (32 value heads); `deltanet_*` is **pre** (16 key heads). Exact after tiling. |
-| `delta_state` | `deltanet_state` | `chunk_boundary` — per **step** vs per 64-token **chunk**; the chunk's state is the step-state at the chunk's last position |
+| `delta_query` `delta_key` | `deltanet_query` `deltanet_key` | `gva_tile`: `delta_*` is **post** GVA `repeat_interleave` (32 value heads); `deltanet_*` is **pre** (16 key heads). Exact after tiling. |
+| `delta_state` | `deltanet_state` | `chunk_boundary`: per **step** vs per 64-token **chunk**; the chunk's state is the step-state at the chunk's last position |
 
-An alias across one of these would *rebind* rather than redirect — hand one
-engine's tensor to the other engine's math — and `registry.alias_would_rebind`
-refuses it by the declared relation (a census holds the alias table to it). So
-name the tensor, not the engine: the eight one-name components route to
-whichever engine is listed first; if you need per-step state, that is
-`delta_state` on the reference engine, and the pre-tiling q/k are
-`deltanet_query` / `deltanet_key` on the nnsight engine.
+Use `delta_state` for per-step state on the PyTorch engine. Use
+`deltanet_query` and `deltanet_key` for pre-tiling values on nnsight.
+`registry.BACKEND_PAIRS` records these relations; aliases cannot cross them.
 
 ### Reading state and attention is expensive
 
-Two components have a position axis that is not the token axis, and both cost
-real memory on the A3B:
+State and attention reads can require substantial memory:
 
-- `delta_state` is one `d_k × d_v` matrix per head per step — 30 layers ×
-  seq × 32 × 128 × 128 floats if you ask for every layer at `pos: "all"`.
-  Address positions in the read, not afterwards: the gather runs before
-  anything is kept.
+- `delta_state` holds one matrix per head per step. The
+  [Qwen3.6-35B-A3B page](qwen36_35b_a3b.md#state-reads) gives its size on
+  that model.
 - `attention_scores` / `attention_probs` have **two** position axes (query and
   key), so an integer `pos` is ambiguous and refused. Read them whole.
 
-## 6. Engines and routing
+## 6. Engines
 
-Two engines implement the same protocol. A document does not name one — it
-declares what it needs, and `choose_engine` takes the first engine in the list
-whose capabilities cover it. **`--engine auto` is the default**: every installed
-engine with the reference first. List order is preference, so anything the
-reference serves behaves exactly as pinning `pytorch_hooks` would — while a
-document only the nnsight engine can serve runs instead of refusing by name.
-Pinning one engine is then a deliberate act (a parity check, or reproducing a
-run that named one), not the thing you fall into by not passing a flag.
+`--engine` is required on `run`, `validate`, `explain`, and `dry-run`.
+Choose `pytorch_hooks`, `nnsight`, or `auto`, which selects `pytorch_hooks`.
+The engine must support all required components and operations. A capability
+shortfall fails with `[V13]` before loading weights.
 
-The table's `capabilities` and `components` rows are generated — from the
-engine classes' `capabilities` sets and the registry's rows (block
-`engine-summary`, carried here and in `docs/CODEBASE.md` §3); the other rows
-are prose.
+The component and capability counts below are generated from the registry:
 
 <!-- generated: begin engine-summary -->
 
 | | `pytorch_hooks` | `nnsight` |
 |---|---|---|
 | how | `register_forward_hook` / pre-hook, plus global swaps for the delta kernel and the experts dispatch | one trace over an envoy tree, `.source` for fused-forward interiors |
-| capabilities | `grad` `paired_forward` `full_logits` `writable_attention_probs` `pytorch_fn_local` `generate` `quantized_weights` | `paired_forward` `full_logits` `writable_attention_probs` `pytorch_fn_local` `generate` |
-| components | 52 of 56 — every component but `deltanet_query`, `deltanet_key`, `deltanet_state` and `expert_permutation` | 51 of 56 — every component but `delta_query`, `delta_key`, `delta_kv_mem`, `delta_state_update` and `delta_state` |
+| capabilities | `grad` `paired_forward` `full_logits` `writable_attention_probs` `pytorch_fn_local` `generate` `generation_writes` `quantized_weights` | `paired_forward` `full_logits` `writable_attention_probs` `pytorch_fn_local` `generate` |
+| components | 52 of 56; unsupported: `deltanet_query`, `deltanet_key`, `deltanet_state` and `expert_permutation` | 51 of 56; unsupported: `delta_query`, `delta_key`, `delta_kv_mem`, `delta_state_update` and `delta_state` |
 | serves alone | the post-tiling `delta_query` / `delta_key` and the per-step `delta_state` (the typed backend pairs, §5), training (`train` documents need `grad`), quantized weights | the fused-forward faces `deltanet_query` / `deltanet_key` / `deltanet_state` and `expert_permutation` |
 | install | always | `uv sync` (dev group) or the `nnsight` extra |
 
 <!-- generated: end engine-summary -->
 
-Both engines run **one device per run** (no `device_map` sharding). The
-reference engine runs a forward group as one batch unless `--batch-rows N`
-bounds it to row windows of at most `N` (§8, execution scale — the numbers are
-equal up to dtype rounding and digests are unaffected; the run receipt records
-the bound as `execution.batch_rows`); the nnsight engine always runs one batch
-per group. A `train` document routes to the reference engine because only it
-declares `grad`.
+Each engine runs one process per rank. PyTorch supports `--batch-rows N` to
+bound forward groups; nnsight runs each group as one batch. These bounds are
+recorded as execution settings. Training requires the PyTorch engine's `grad`
+capability. A comma-list `--device` places a model's layers across the devices
+of one process (PyTorch engine only).
 
-The two engines' answers are asserted to agree over the whole shared vocabulary,
-read and written, at both test tiers —
-`tests/neural/engines/nnsight_tracing/test_parity_a3b_sweep.py` on the tiny
-fixture and `tests/golden/test_a3b_engine_parity.py` on the real checkpoint.
+Parity tests compare reads and writes across the shared vocabulary on a tiny
+fixture and the real checkpoint: `test_parity_a3b_sweep.py` and
+`tests/golden/test_a3b_engine_parity.py`.
+
+### Parallel execution
+
+`--parallel` configures the PyTorch engine's five axes: data (`dp`), pipeline
+(`pp`), context (`cp`), tensor (`tp`), and expert (`ep`). Unspecified axes
+default to `1`. The process count is `dp × pp × cp × max(tp, ep)`. The receipt
+records the geometry under `execution.parallel`; document identity and
+artifact stamps do not change. See the
+[parallelism guide](model_parallelism.md).
+
+| Axis | Use | Constraints |
+|---|---|---|
+| `dp=N` or `dp=N:points` | Divide campaign points into contiguous shards and join their outputs. | At least one selected point per replica. |
+| `dp=N:rows` | Split each fit minibatch across replicas. | Requires `train` and at least `N` rows in every minibatch, including the remainder. |
+| `pp=N` | Place contiguous layer ranges on separate ranks. | No more stages than layers; tied heads and decoding are unsupported. |
+| `tp=N` | Shard attention and dense projections. | Must divide query heads; must divide the KV-head count or be a multiple of it. |
+| `ep=N` | Shard routed experts. | Must divide the expert count; dense models reject `ep > 1`. |
+| `cp=N` | Split padded sequence positions across ranks. | No decoding; sufficient frame and convolution-history length; hybrid families require `CAUSALAB_EXPERIMENTAL_CONTEXT=1`. |
+
+`dry-run --parallel AXES` checks the geometry against the model's registry
+entry and reports memory estimates from cached checkpoint headers. A model
+needs a registered parallel plan (`gpt2` and `gptj` have none). `--engine nnsight` is
+refused above a world of 1.
+
+On one node, `run` spawns the required processes and waits for them. Each rank
+uses `cuda:LOCAL_RANK` under `--device cuda`. If a launcher supplies
+`WORLD_SIZE`, `RANK`, `LOCAL_RANK`, `MASTER_ADDR`, and `MASTER_PORT`, each
+process joins that world; its size must match the geometry. CUDA uses NCCL and
+CPU uses gloo.
+
+```bash
+# One node: two data replicas over the campaign's points.
+uv run causalab run scan.json \
+    --engine pytorch_hooks \
+    --out runs/scan \
+    --device cuda \
+    --parallel dp=2
+
+# External launcher: two ranks with experts divided between them.
+uv run torchrun \
+    --nproc_per_node=2 \
+    -m causalab.cli run patch.json \
+    --engine pytorch_hooks \
+    --out runs/patch \
+    --device cuda \
+    --dtype bf16 \
+    --parallel ep=2
+```
+
+Point-parallel replicas run disjoint parts of the selection; the publishing
+rank of replica 0 joins the results in campaign order and writes them once.
+Row-parallel replicas run every point, combine minibatch gradients and
+evaluation scores, and make the same early-stop decisions. The receipt records
+the launcher (`solo`, `spawned`, or `joined`). Tensor, expert, context, and
+row-parallel execution can change floating-point rounding; see the
+parallelism guide §10. Writes to `router_scores` under expert parallelism are
+rejected. Workflow runs execute ranks in lockstep with the joiner alone
+writing the run tree; workflows reject the data axis, so shard a step with
+`fan_out.over.shards` instead.
 
 ## 7. Running at scale
 
-Scale is not document vocabulary: a document never names a device, a host or a
-scheduler. Sharding is `--points`, and job dispatch is site tooling.
+Use `--points` to shard a protocol sweep. External tooling assigns shards
+to jobs and devices.
 
 ```bash
 #!/usr/bin/env bash
@@ -768,102 +694,92 @@ scheduler. Sharding is `--points`, and job dispatch is site tooling.
 set -euo pipefail
 
 uv run causalab run patch.json \
-    --data-root data --artifacts-root . --out "runs/patch" \
-    --device cuda --dtype bf16
+    --engine auto \
+    --data-root data \
+    --artifacts-root . \
+    --out "runs/patch" \
+    --device cuda \
+    --dtype bf16
 ```
 
-Shard a sweep by point range — `explain` tells you how many points there are,
-and `dry-run --shard-size N` how many shards of at most `N` that is
-(`ceil(points / N)`), so the array bound below is read off, not computed by
-hand:
+Read the point count from `explain`. For shards of at most N points, use
+`ceil(points / N)` jobs:
 
 ```bash
-#SBATCH --array=0-9           # dry-run --shard-size 4 says 40 points -> 10 shards
+#SBATCH --array=0-9           # explain says 40 points -> 10 shards of 4
 START=$(( SLURM_ARRAY_TASK_ID * 4 ))
 uv run causalab run scan.json \
-    --data-root data --artifacts-root . \
+    --engine auto \
+    --data-root data \
+    --artifacts-root . \
     --out "runs/scan/shard_${SLURM_ARRAY_TASK_ID}" \
     --points "${START}:$(( START + 4 ))" \
-    --device cuda --dtype bf16
+    --device cuda \
+    --dtype bf16
 ```
 
-Each point's digest is the provenance unit, so shards are independent and their
-outputs merge by coordinate. Each shard prints its own `cells` line; the
-campaign's denominator is the sum.
+Merge shard outputs by coordinate and retain their point digests. Sum the
+shards' cell counts to report the full campaign denominator.
 
-**If a generator writes your documents, have it skip an empty axis rather than
-emit one.** `{"sweep": []}` is a load error — a campaign of zero points is
-almost always a bug in whatever produced the list, and expanding it to "one
-point, unswept" would silently change the experiment. The refusal names the
-axis:
+An empty sweep is invalid. A document generator should report which filter
+produced no values before submitting the batch:
 
 ```
 refused: [V14] at sites.target.layers a sweep axis must have at least one value
 ```
 
-That is legible on its own; the reason it is worth planning for is the shape of
-a job loop. Under `set -euo pipefail` one document that refuses at load takes
-the whole loop with it, so a generator that emits `{"sweep": []}` for a filter
-that matched nothing loses every *later* document in the batch too. Either drop
-the field when the list is empty, or let the generator refuse where it can say
-which filter came back empty.
-
 ## 8. Chaining documents: workflows
 
-A workflow document chains protocol steps with `script` steps between them —
-select the best layer from a scan, fit a PCA, plot a curve — and the runner
-resolves the dependency graph. See
-[`workflow_protocol.md`](workflow_protocol.md).
+A workflow connects experiments with analysis steps and derives their
+dependencies. See the [workflow specification](workflow_protocol.md).
 
-The shipped one, `causalab/configs/workflows/weekdays_8b.json`: scan 64 points
-for the layer that carries the variable, select it, fit a DAS rotation over a
-subspace sweep, select the best `k`, apply it — with two figures along the way.
+`demos/methods/workflows/weekdays.json` scans layer and position, selects
+a location, fits DAS across ranks and seeds, and evaluates the chosen fit.
 
 ```bash
-uv run causalab explain causalab/configs/workflows/weekdays_8b.json --artifacts-root .
+uv run causalab explain demos/methods/workflows/weekdays.json \
+    --engine auto \
+    --artifacts-root .
 # schedule  5 levels
 #   level 0: locate
 #   level 1: best, scan_heatmap
 #   level 2: fit
 #   level 3: best_fit, iia_by_k
 #   level 4: apply
-#   locate: intervention_protocol ../protocols/weekdays_locate_scan.json — 64 point(s), campaign digest 0f80f33a03bb8356…
+#   locate: intervention_protocol ../protocols/weekdays_locate_scan.json — 56 point(s), campaign digest 633cffc755706117…
 #   best: script causalab.workflow.scripts.select -> values.json
-#   fit: intervention_protocol ../protocols/weekdays_das_sweep.json — 9 point(s), authored digest 17667939591e92a6…
+#   fit: intervention_protocol ../protocols/weekdays_das_sweep.json — 9 point(s), authored digest 58040cee29c16b64…
 #   best_fit: script causalab.workflow.scripts.select -> values.json
-#   apply: intervention_protocol ../protocols/weekdays_das_apply.json — 1 point(s), authored digest 42b93035b7320066…
+#   apply: intervention_protocol ../protocols/weekdays_das_apply.json — 1 point(s), authored digest 1d85cd221c85d257…
 #   scan_heatmap: script causalab.io.plots.workflow_figures -> scan_iia.json, scan_iia.png
 #   iia_by_k: script causalab.io.plots.workflow_figures -> iia_by_k.json, iia_by_k.png
 
-uv run causalab run causalab/configs/workflows/weekdays_8b.json --artifacts-root . \
-    --out runs/weekdays --device cuda
+uv run causalab run demos/methods/workflows/weekdays.json \
+    --engine auto \
+    --artifacts-root . \
+    --out runs/weekdays \
+    --device cuda
 ```
 
-⚠️ No `--dtype` on that command, and that is not an omission: a workflow's
-steps each declare their own realization, so `--dtype` is **refused** on one
-(`refused: --dtype sets model.dtype on one intervention specification; a workflow's steps
-each declare their own realization`). Precision for a workflow goes in the
-step's document, or in that step's own `set` block — and the earlier version of
-this example printed the refused command, which cost one GPU job to find out.
+Set precision in each step's document or `set` block. Workflow commands
+reject `--dtype` because steps can use different precisions.
 
-`explain` on a workflow is the same pre-flight as on a document, one level up:
-the schedule is derived from the steps' references, so a level is what can run
-in parallel, and each protocol step reports its own point count — 64 + 9 + 1
-forward groups is what to size the job against.
+`explain` reports the derived schedule and point count for each protocol step.
+Steps at the same schedule level have independent dependencies.
 
-`--resume` reuses a step whose inputs *and* script content hash are unchanged;
-editing a script busts its reuse, which is why the hash is in the digest.
+`--resume` reuses completed steps after checking code identity, inputs,
+and output contents.
 
 ## 9. Where to look next
 
 | you want | read |
 |---|---|
-| a worked experiment, end to end | [`../demos/`](../demos/) — one markdown demo per research question |
-| a **fit** and the **apply** that scores it honestly | [`04_subspace`](../demos/onboarding_tutorial/04_subspace.md) (a trained rotation) · [`06_components`](../demos/onboarding_tutorial/06_components.md) (a trained mask) |
+| a worked experiment, end to end | [`../demos/`](../demos/): one markdown demo per research question |
+| a **fit** and the **apply** that scores it honestly | [`07_subspace`](../demos/onboarding_tutorial/07_subspace.md) (a trained rotation) · [`09_components`](../demos/onboarding_tutorial/09_components.md) (a trained mask) |
 | the demo format | [`demos.md`](demos.md) |
 | the normative document spec | [`intervention_protocol.md`](intervention_protocol.md) |
 | chaining documents | [`workflow_protocol.md`](workflow_protocol.md) |
 | the module map and layering rules | [`CODEBASE.md`](CODEBASE.md) |
 | test tiers and pinned-artifact discipline | [`TESTS.md`](TESTS.md) |
-| worked documents | `causalab/configs/protocols/*.json`, `causalab/configs/workflows/` |
-| a picture of the hookpoints above | [`qwen36-35b-a3b-architecture.html`](qwen36-35b-a3b-architecture.html) |
+| worked documents | [`../demos/methods/`](../demos/methods/README.md): one document per method, `protocols/*.json` and `workflows/` |
+| the A3B hookpoints and their picture | [Qwen3.6-35B-A3B](qwen36_35b_a3b.md) |

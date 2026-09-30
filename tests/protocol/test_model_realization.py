@@ -15,15 +15,17 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.engine import Engine, choose_engine, requires
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ParseError, ValidationError
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import ARTIFACT_IDENTITY_KEYS, build_artifact_identity
+from causalab.protocol.engine import Engine, requires
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ParseError, ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.env import ARTIFACT_IDENTITY_KEYS, build_artifact_identity
+from causalab.protocol.rules.capability import refuse_shortfall
 from causalab.protocol.schema import parse_document
-from causalab.protocol.validate import validate_document
+from causalab.protocol.rules.document import validate_document
 
-from tests.protocol._docs import base_doc, in_order
+from tests.protocol._docs import LOGIT_DIFF, base_doc, in_order, term
+from tests.protocol._env import steps_of
 
 pytestmark = pytest.mark.unit
 
@@ -64,7 +66,7 @@ def test_the_model_dtype_has_one_home(env):
     it could (and in the corpus did) name a precision the run never used."""
     raw = base_doc()
     raw["method"]["train"] = {
-        "objective": [[1.0, "ld"]],
+        "objective": [[1.0, term("logits", "patched", dict(LOGIT_DIFF))]],
         "params": ["rot"],
         "optimizer": {"name": "adamw", "lr": 1e-3},
         "steps": {"epochs": 1},
@@ -169,7 +171,7 @@ class _Plain(Engine):
     name = "plain"
     capabilities = frozenset({"paired_forward"})
 
-    def execute(self, request):  # pragma: no cover — routing never gets here
+    def execute(self, compiled, run):  # pragma: no cover — the check never gets here
         raise AssertionError
 
 
@@ -177,7 +179,7 @@ def test_quantization_requires_a_capability_and_refuses_without_it():
     doc = parse_document(doc_with_model(quantization=NF4))
     assert "quantized_weights" in requires(doc)
     with pytest.raises(ValidationError) as err:
-        choose_engine(doc, [_Plain()])
+        refuse_shortfall(requires(doc), _Plain().effective_capabilities)
     assert "quantized_weights" in str(err.value)
 
 
@@ -207,7 +209,7 @@ def _stamped_keys(tree: ast.AST) -> set[str]:
     Three shapes, because all three appear or could: ``identity_base = {...}``,
     ``identity_base[...] = ...``, and ``identity_base.update(...)``. Anything
     assigned to ``identity_base`` or ``featurizer_identity`` counts; a stage's
-    ``identity_fields`` stamps are :func:`_stage_stamps`'s, by method rather
+    ``identity_fields`` stamps are `_stage_stamps`'s, by method rather
     than by name.
     """
     names = ("identity_base", "featurizer_identity")
@@ -278,7 +280,7 @@ def test_the_identity_schema_covers_every_key_the_engine_stamps():
 def _stage_stamps(tree: ast.AST) -> set[str]:
     """Every key any ``identity_fields`` body can put into its mapping —
     literal subscript assignments (``fields["axis"] = …``, whatever the
-    local is called) and, through :func:`_dict_keys`, the string keys of
+    local is called) and, through `_dict_keys`, the string keys of
     every dict literal inside it — so a stamp on a *new* ``Stage`` subclass
     that builds its dict under another name is read too, not only ``Gate``'s
     ``fields``. Deliberately over-broad: a dict literal in the body that is
@@ -305,8 +307,9 @@ def _stage_stamps(tree: ast.AST) -> set[str]:
 
 
 def test_every_key_a_stage_stamps_is_an_artifact_identity_key() -> None:
-    """A reader over every ``identity_fields`` body in ``featurizers.py``
-    (§2.5 stamps): the keys are literal, so a stamp a stage adds — ``stretch``,
+    """A reader over every ``identity_fields`` body in the ``featurizers/``
+    package — every submodule, so a stage kind moved between them is not lost
+    — for the §2.5 stamps: the keys are literal, so a stamp a stage adds — ``stretch``,
     ``pool``, ``axis``, ``forward`` — is read here without an instance being
     built for it, under whatever local the method builds its dict. This is
     the census closed over ``identity_fields`` bodies; the per-instance guard
@@ -319,23 +322,21 @@ def test_every_key_a_stage_stamps_is_an_artifact_identity_key() -> None:
     its first save."""
     import causalab.neural
 
-    source = (
-        Path(causalab.neural.__file__).parent / "shared" / "featurizers.py"
-    ).read_text()
-    written = _stage_stamps(ast.parse(source))
+    package = Path(causalab.neural.__file__).parent / "shared" / "featurizers"
+    written: set[str] = set()
+    for source in sorted(package.glob("*.py")):
+        written |= _stage_stamps(ast.parse(source.read_text()))
     assert {"stretch", "pool", "pool_units", "axis", "forward"} <= written, written
     undeclared = sorted(written - set(ARTIFACT_IDENTITY_KEYS))
     assert not undeclared, (
-        f"featurizers.py stamps {undeclared}, which build_artifact_identity "
+        f"featurizers/ stamps {undeclared}, which build_artifact_identity "
         "refuses — a saving fit would die at its first save"
     )
 
 
 def test_applied_implementations_are_stampable():
     """The specific key that was missing, through the real function."""
-    stamped = build_artifact_identity(
-        produced_by="d", engine="nnsight", implementations="attn_eager"
-    )
+    stamped = build_artifact_identity(engine="nnsight", implementations="attn_eager")
     assert stamped["implementations"] == "attn_eager"
 
 
@@ -348,10 +349,13 @@ def test_the_realization_is_stampable_identity():
 
 def test_a_swept_dtype_expands_like_any_other_axis(env):
     raw = doc_with_model(dtype={"sweep": ["fp32", "bf16"]})
-    loaded = load(raw, env)
-    assert len(loaded.expansion.points) == 2
-    assert [c["model"]["dtype"] for c in loaded.canonical_points] == ["fp32", "bf16"]
-    assert len(set(loaded.point_digests)) == 2
+    loaded = compile_protocol(raw, env=env)
+    assert len(steps_of(loaded, env).points) == 2
+    assert [c["model"]["dtype"] for c in steps_of(loaded, env).canonical] == [
+        "fp32",
+        "bf16",
+    ]
+    assert len(set(steps_of(loaded, env).digests)) == 2
 
 
 def test_a_fit_bundle_is_refused_at_a_different_realization(env, artifacts_root):
@@ -364,10 +368,14 @@ def test_a_fit_bundle_is_refused_at_a_different_realization(env, artifacts_root)
     """
     from tests.protocol._env import CORPUS_DIR
 
-    assert load(CORPUS_DIR / "09_das_apply_im.json", env)  # bf16, as fitted
+    assert compile_protocol(
+        CORPUS_DIR / "09_das_apply_im.json", env=env
+    )  # bf16, as fitted
     with pytest.raises(ValidationError) as err:
-        load(
-            CORPUS_DIR / "09_das_apply_im.json", env, overrides={"model.dtype": "fp32"}
+        compile_protocol(
+            CORPUS_DIR / "09_das_apply_im.json",
+            env=env,
+            overrides={"model.dtype": "fp32"},
         )
     assert err.value.rule == 15
     assert "model_dtype" in str(err.value)
@@ -387,7 +395,7 @@ def _realizations(env) -> dict[str, Any]:
     that can separate their digests is how the weights are realized.
     """
     return {
-        name: load(raw, env).point_documents[0]
+        name: steps_of(compile_protocol(raw, env=env), env).documents[0]
         for name, raw in {
             "fp32": doc_with_model(dtype="fp32"),
             "bf16": doc_with_model(dtype="bf16"),
@@ -396,35 +404,35 @@ def _realizations(env) -> dict[str, Any]:
     }
 
 
-def test_forward_group_digests_separate_the_realizations(env):
+def test_forward_group_keys_separate_the_realizations(env):
     """The bug: `_build_group` hashed ``{key, revision}`` and nothing about the
     numerics, while the canonical form has carried ``dtype`` and a normalized
     ``quantization`` block all along.
 
-    A forward-group digest is a *content* identity — equal digests mean "one
+    A forward-group key is a *content* identity — equal keys mean "one
     shared harvest" — so an fp32 and a bf16 group interning together meant one
     of the two points silently read the other's activations. Three
     realizations, three distinct groups.
     """
-    from causalab.protocol.plan import plan_point
+    from causalab.neural.shared.plan import plan_point
 
-    digests = {
-        name: {group.digest for group in plan_point(doc).groups}
+    keys = {
+        name: {group.key for group in plan_point(doc).groups}
         for name, doc in _realizations(env).items()
     }
-    for name, groups in digests.items():
+    for name, groups in keys.items():
         assert groups, f"{name} planned no forward group"
-    pooled = [d for groups in digests.values() for d in groups]
+    pooled = [k for groups in keys.values() for k in groups]
     assert len(set(pooled)) == len(pooled), (
         "two realizations share a forward group: "
-        f"{ {name: sorted(g) for name, g in digests.items()} }"
+        f"{ {name: sorted(g) for name, g in keys.items()} }"
     )
 
 
 def test_closure_digests_separate_the_realizations(env):
     """The same claim for a read's content identity: an fp32 and a bf16
     harvest of one address are different tensors."""
-    from causalab.protocol.plan import closure_digest
+    from causalab.neural.shared.plan import closure_digest
 
     digests = {
         name: closure_digest(doc, "v_cf") for name, doc in _realizations(env).items()
@@ -440,7 +448,7 @@ def test_the_interning_digests_agree_with_the_canonical_form(env):
     remembering to copy it. This asserts that plumbing rather than the values,
     because the values are the thing that is allowed to change.
     """
-    from causalab.protocol.canonical import canonical_model_ref
+    from causalab.protocol.schema.explicit import canonical_model_ref
 
     for name, doc in _realizations(env).items():
         realization = canonical_model_ref(doc.model)
@@ -458,18 +466,22 @@ def test_one_realization_still_interns_with_itself(env):
     "distinct digests per realization" would have been bought by making every
     digest unique, which would cost the dedup §3 exists for.
     """
-    from causalab.protocol.plan import plan_point
+    from causalab.neural.shared.plan import plan_point
 
-    first = load(doc_with_model(dtype="bf16"), env).point_documents[0]
-    second = load(doc_with_model(dtype="bf16"), env).point_documents[0]
-    assert {g.digest for g in plan_point(first).groups} == {
-        g.digest for g in plan_point(second).groups
+    first = steps_of(
+        compile_protocol(doc_with_model(dtype="bf16"), env=env), env
+    ).documents[0]
+    second = steps_of(
+        compile_protocol(doc_with_model(dtype="bf16"), env=env), env
+    ).documents[0]
+    assert {g.key for g in plan_point(first).groups} == {
+        g.key for g in plan_point(second).groups
     }
 
 
 @pytest.mark.parametrize("backend", ["eager", "sdpa", "flash_attention_2"])
 def test_attention_backend_survives_parsing_and_canonicalization(env, backend):
-    from causalab.protocol.canonical import canonical_model_ref
+    from causalab.protocol.schema.explicit import canonical_model_ref
 
     raw = doc_with_model(attn_implementation=backend)
     parsed = parse_document(raw)
@@ -492,20 +504,21 @@ def test_invalid_attention_backend_is_refused(backend):
 
 
 def test_attention_sweep_separates_campaigns_forwards_and_prefixes(env):
-    from causalab.protocol.plan import plan_point
+    from causalab.neural.shared.plan import plan_point
 
-    loaded = load(
+    loaded = compile_protocol(
         doc_with_model(
             attn_implementation={"sweep": ["eager", "sdpa", "flash_attention_2"]}
         ),
-        env,
+        env=env,
     )
     assert [
-        point["model"]["attn_implementation"] for point in loaded.canonical_points
+        point["model"]["attn_implementation"]
+        for point in steps_of(loaded, env).canonical
     ] == ["eager", "sdpa", "flash_attention_2"]
-    assert len(set(loaded.point_digests)) == 3
-    plans = [plan_point(doc) for doc in loaded.point_documents]
-    for field in ("digest", "base_digest"):
+    assert len(set(steps_of(loaded, env).digests)) == 3
+    plans = [plan_point(doc) for doc in steps_of(loaded, env).documents]
+    for field in ("key", "base_key"):
         groups = [{getattr(g, field) for g in plan.groups} for plan in plans]
         assert all(groups)
         assert groups[0].isdisjoint(groups[1] | groups[2])
@@ -516,8 +529,8 @@ def test_declared_attention_is_checked_when_loading_fitted_artifacts(env):
     from tests.protocol._env import CORPUS_DIR
 
     with pytest.raises(ValidationError, match="model_attn_implementation"):
-        load(
+        compile_protocol(
             CORPUS_DIR / "09_das_apply_im.json",
-            env,
+            env=env,
             overrides={"model.attn_implementation": "sdpa"},
         )

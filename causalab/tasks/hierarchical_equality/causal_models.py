@@ -6,58 +6,36 @@ DAG: (var_1, var_2) → left_equality
      (left_equality, right_equality) → result_equality → raw_output
 """
 
-from causalab.causal.causal_model import CausalModel
+from causalab.causal import Dom, Exo, V, mechanism
+from causalab.causal.model import CausalModel
 from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import Mechanism, input_var
 
 from .config import LETTERS, TASK_NAME
 from .templates import TEMPLATES, fill_template
 
-values = {
-    "template": TEMPLATES,
-    "var_1": LETTERS,
-    "var_2": LETTERS,
-    "var_3": LETTERS,
-    "var_4": LETTERS,
-    "left_equality": [True, False],
-    "right_equality": [True, False],
-    "result_equality": [True, False],
-    "raw_input": None,
-    "raw_output": None,
-}
 
-mechanisms = {
-    "template": input_var(TEMPLATES),
-    "var_1": input_var(LETTERS),
-    "var_2": input_var(LETTERS),
-    "var_3": input_var(LETTERS),
-    "var_4": input_var(LETTERS),
-    "left_equality": Mechanism(
-        parents=["var_1", "var_2"],
-        compute=lambda t: t["var_1"] == t["var_2"],
-    ),
-    "right_equality": Mechanism(
-        parents=["var_3", "var_4"],
-        compute=lambda t: t["var_3"] == t["var_4"],
-    ),
-    "result_equality": Mechanism(
-        parents=["left_equality", "right_equality"],
-        compute=lambda t: t["left_equality"] == t["right_equality"],
-    ),
-    "raw_input": Mechanism(
-        parents=["template", "var_1", "var_2", "var_3", "var_4"],
-        compute=lambda t: fill_template(
-            t["template"], t["var_1"], t["var_2"], t["var_3"], t["var_4"]
-        ),
-    ),
-    "raw_output": Mechanism(
-        parents=["result_equality"],
-        compute=lambda t: "1" if t["result_equality"] else "0",
-    ),
-}
+@mechanism
+def equations(
+    template: Dom(TEMPLATES),
+    var_1: Dom(LETTERS),
+    var_2: Dom(LETTERS),
+    var_3: Dom(LETTERS),
+    var_4: Dom(LETTERS),
+    icl_seed: Exo(Dom(range(2**32))),
+):
+    left_equality = V(var_1 == var_2)
+    right_equality = V(var_3 == var_4)
+    result_equality = V(left_equality == right_equality)
+    raw_input = V(  # noqa: F841
+        fill_template(template, var_1, var_2, var_3, var_4, seed=icl_seed),
+        domain=Dom(str),
+    )
+    raw_output = V("1" if result_equality else "0", domain=Dom(str))  # noqa: F841
+    return result_equality
+
 
 # All three equality variables have boolean values, but the model emits the
-# digit "1" (True) or "0" (False). Declare those surface forms once, per value,
+# digit "1" (True) or "0" (False). Declare those surface forms once, per value
 # in the task's one ``ScoringSpec``: the probability path reads
 # them, and the grader uses ``string_mode="prefix"`` — ``raw_output`` is the
 # bare digit possibly followed by text, so a generation that starts with it is
@@ -68,8 +46,7 @@ _EQUALITY_VARS = ("left_equality", "right_equality", "result_equality")
 _EQUALITY_FORMS: dict[object, list[str]] = {True: [" 1", "1"], False: [" 0", "0"]}
 
 CAUSAL_MODEL = CausalModel(
-    mechanisms,
-    values,
+    equations,
     id=TASK_NAME,
     scoring=ScoringSpec(
         forms={v: dict(_EQUALITY_FORMS) for v in _EQUALITY_VARS},

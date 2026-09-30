@@ -13,9 +13,9 @@ from __future__ import annotations
 # pyright: reportPrivateUsage=false
 
 import copy
+import math
 import os
 import sys
-from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -27,16 +27,18 @@ from causalab.neural.engines.pytorch_hooks.graph_cohort import CohortGraphs
 from causalab.neural.engines.pytorch_hooks.graph_reuse import FitGraphCache
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.neural.shared.execution import campaign_cache
-from causalab.neural.shared.executor_base import Interning
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.plan import plan_point
-from causalab.protocol.resolve import FileArtifacts, ResolutionEnv
+from causalab.neural.shared.executor import Interning
+from causalab.protocol.engine import RunContext
+from causalab.neural.shared.plan import plan_point
+from causalab.io.env import FileArtifacts, ResolutionEnv
 from tests.golden.test_cuda_graphs import Datasets, document
 from tests.neural.engines.pytorch_hooks._drive import executor_for
+from tests.protocol._docs import saved
 from tests.neural.engines.pytorch_hooks.test_train import (
     ANSWERS,
     BASES,
     COUNTERFACTUALS,
+    ce_term,
 )
 
 pytestmark = [
@@ -61,7 +63,7 @@ def bundle():
     return load_model(MODEL, "main", dtype="bf16", device="cuda", quantization=None)
 
 
-def _docs(pairs: int, epochs: int = 3, early_stop: dict[str, Any] | None = None):
+def _docs(pairs: int, epochs: int = 3):
     """A DAS point at layer 18, a DAS point at layer 12 and a DBM point at
     layer 18 — members at different layers, DAS beside DBM."""
     docs = []
@@ -73,14 +75,49 @@ def _docs(pairs: int, epochs: int = 3, early_stop: dict[str, Any] | None = None)
         raw["method"]["train"]["eval"] = {
             "split": "eval",
             "every": {"epochs": 1},
-            "metrics": ["ce"],
+            "aggregations": {"ce": ce_term()},
         }
-        if early_stop is None:
-            raw["method"]["train"].pop("early_stop", None)
-        else:
-            raw["method"]["train"]["early_stop"] = early_stop
         docs.append(raw)
     return docs
+
+
+# The early-stop fixture. The two tests it serves assert the loop's
+# bookkeeping around a stop — no recapture, stale slots, one eval capture —
+# so the stop is arranged to follow from the code rather than from a loss
+# curve: ``_evaluate`` counts the first eval as an improvement (``best`` is
+# None) and every later eval that does not beat it as stale, so ``mode: max``
+# on ``ce`` — which only falls — is stale from the second eval on and stops a
+# member at pass ``patience + 2`` for any curve whose later evals never beat
+# the first (pinned on CPU by ``test_train.py::
+# test_max_mode_on_a_falling_metric_stops_at_patience_plus_two``). The first
+# eval is after one epoch, so the premise is
+# ``max(ce_2, ce_3, ce_4) <= ce_1``: here the DAS members' ``ce`` goes
+# 8.85 → 2.68 → 0.068 → 0.028 (layer 18) and 8.96 → 3.99 → 1.23 → 0.049
+# (layer 12) in the captured frame, and 8.95 → 2.73 and 8.98 → 4.01 over the
+# first two evals of the eager cohort under an auto budget (one CUDA run of
+# this fixture on ``MODEL`` in bf16) — the comparison
+# that matters is the second eval's against the first, in the steepest part
+# of the descent. The DBM member authors no ``early_stop`` and runs its whole
+# budget by construction. Both facts hold in the captured frame and in the
+# eager cohort's whatever their bf16 scores, so the two cohorts stop on the
+# same pass. (An earlier fixture stopped on a real ``ce`` rise; a later kernel
+# change moved it onto the budget's last eval.)
+EARLY_STOP_BUDGET = 6
+EARLY_STOP_PATIENCE = 2
+EARLY_STOP = {"on": "ce", "mode": "max", "patience": EARLY_STOP_PATIENCE}
+# the stop has to land strictly inside the budget, or the tests below assert
+# their identities over a cohort in which nothing ever stopped
+assert EARLY_STOP_PATIENCE + 2 < EARLY_STOP_BUDGET
+#: ``_docs`` orders the members DAS, DAS, DBM; the DAS members stop, the DBM
+#: runs its budget
+EARLY_STOP_PASSES = [EARLY_STOP_PATIENCE + 2] * 2 + [EARLY_STOP_BUDGET]
+
+
+def _early_stop_docs():
+    raws = _docs(pairs=3, epochs=EARLY_STOP_BUDGET)
+    for raw in raws[:2]:
+        raw["method"]["train"]["early_stop"] = EARLY_STOP
+    return raws
 
 
 DATA_IDENTITY = {
@@ -109,7 +146,7 @@ def _executors(raws, bundle, *, graphs: bool, store: bool = False):
         cache = campaign_cache(docs, plans)
         handles = [
             Interning(
-                digests={(g.model, g.input): g.digest for g in plan.groups},
+                keys={(g.model, g.input): g.key for g in plan.groups},
                 cache=cache,
             )
             for plan in plans
@@ -128,13 +165,8 @@ def _executors(raws, bundle, *, graphs: bool, store: bool = False):
     ]
 
 
-def _request(tmp_path) -> ExecutionRequest:
-    return ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+def _request(tmp_path) -> RunContext:
+    return RunContext(
         env=ResolutionEnv(datasets=Datasets(), artifacts=FileArtifacts(tmp_path)),
         output_dir=tmp_path,
     )
@@ -379,8 +411,8 @@ def _distance(left, right) -> float:
 
 def _solo_fits(raws, bundle, tmp_path):
     """Each point fitted alone, eagerly — the reference the eager cohort is
-    itself measured against (the intervention protocol spec §4: equal to the
-    rounding of a different batch shape)."""
+    itself measured against (spec §4: equal to the rounding of a different
+    batch shape)."""
     outcomes, traces = [], []
     for i, raw in enumerate(raws):
         (executor,) = _executors([raw], bundle, graphs=False)
@@ -399,7 +431,8 @@ def test_padded_slots_change_only_rounding(bundle, tmp_path):
     already has against solo fits (its documented contract). The bound pinned
     here is that one: the padded replay strays from the eager cohort by no
     more than a small multiple of what the eager cohort strays from the solo
-    fits, on the first step's gradients and on the fitted parameters."""
+    fits, on the first step's gradients, on the fitted parameters and on the
+    first epoch's eval scores."""
     raws = _docs(pairs=4)
     expected, eager = _fit(raws, bundle, tmp_path / "eager", graphs=False, fit_rows=12)
     actual, graphs = _fit(raws, bundle, tmp_path / "graphs", graphs=True, fit_rows=12)
@@ -429,11 +462,22 @@ def test_padded_slots_change_only_rounding(bundle, tmp_path):
             )
     # eval scores: `_evaluate` scores the due members in cohort order, one
     # eval per epoch, so score e*3+i is member i's e-th eval in either cohort
-    # run and alone[i].scores[e] the solo fit's
+    # run and alone[i].scores[e] the solo fit's. The rounding bound is pinned
+    # on the first epoch's scores only: they score the parameters the bound
+    # above holds. Later epochs compound bf16 rounding through a three-row fit
+    # whose loss is far from converged. Comparing ratios of later drifts
+    # cannot isolate the replay's rounding error.
     assert len(graphs.scores) == len(eager.scores) == 9
     for k, (got, want) in enumerate(zip(graphs.scores, eager.scores, strict=True)):
         ref = alone[k % 3].scores[k // 3]
         assert got.keys() == want.keys() == ref.keys()
+        for name in got:
+            for label, series in (("graphs", got), ("eager", want), ("solo", ref)):
+                assert math.isfinite(series[name]), (
+                    f"eval {k}: {label} {name} is {series[name]!r}"
+                )
+    for k in range(3):
+        got, want, ref = graphs.scores[k], eager.scores[k], alone[k].scores[0]
         for name in got:
             graph_vs_cohort = abs(got[name] - want[name])
             cohort_vs_solo = abs(want[name] - ref[name])
@@ -446,16 +490,16 @@ def test_padded_slots_change_only_rounding(bundle, tmp_path):
 
 
 def test_a_member_that_stops_early_keeps_its_slot(bundle, tmp_path):
-    """Patience 0 on a metric that cannot keep improving: a member drops out
-    while the others go on. No recapture; the dropped member's parameters
-    stay where its last update left them."""
-    raws = _docs(
-        pairs=3, epochs=6, early_stop={"metric": "ce", "mode": "min", "patience": 0}
-    )
+    """The DAS members drop out at pass four while the DBM goes on
+    (``_early_stop_docs``). No recapture; the loop never steps a dropped
+    member again — its slot replays stale until the cohort's budget ends.
+    (The returned stages are another matter: under ``mode: max`` the first
+    eval is the best, so ``_finish`` restores the epoch-1 snapshot.)"""
+    raws = _early_stop_docs()
     actual, graphs = _fit(raws, bundle, tmp_path / "graphs", graphs=True)
     assert graphs.captures == 1
     passes = [outcome.eval_score.passes for outcome in actual]
-    assert min(passes) < 6, "some member stopped before its budget"
+    assert passes == EARLY_STOP_PASSES, f"passes {passes}"
     assert graphs.replays == 2 * max(passes)
     # a stopped member's slot replays stale: the loop never steps it again
     assert len(graphs.updates) == 2 * sum(passes)
@@ -541,20 +585,22 @@ def test_a_mixed_cohort_keeps_eager_batching(bundle, tmp_path):
     """A member the graph path refuses (a JS objective) keeps the whole
     cohort on the eager batched path."""
     raws = _docs(pairs=3)
-    # a declared JS metric is enough to keep a document off the graph path
+    # a JS aggregation is enough to keep a document off the graph path: the
+    # clean logits are read on the un-intervened model on base (§2.9)
     raws[1]["method"]["reads"]["base_logits"] = {
         "site": "lm_head",
         "pos": {"index": -1},
-        "model": "original",
-        "input": "base",
     }
-    raws[1]["method"]["metrics"]["js"] = {
-        "kind": "js",
-        "of": "logits",
-        "target": "base_logits",
-    }
+    raws[1]["method"]["intervened_models"]["original_base"]["reads"].append(
+        "base_logits"
+    )
     raws[1]["method"]["save"].append(
-        {"value": "js", "model": "patched", "input": "base", "file_path": "js.json"}
+        saved(
+            "logits",
+            "patched",
+            "js.json",
+            {"kind": "js", "target": {"read": "base_logits", "model": "original_base"}},
+        )
     )
     executors = _executors(raws, bundle, graphs=True)
     kinds = {type(e).__name__ for e in executors}
@@ -664,16 +710,15 @@ def test_copy_of_the_eager_cohort_is_not_disturbed_by_padding_code(bundle):
 
 
 def test_an_early_stop_keeps_the_eval_capture(bundle, tmp_path):
-    """Patience 0 drops a member while the others go on: the eval layout is
-    captured once and replayed for the members still due — the stopped
-    member's slot replays stale and is never scored again — and while every
-    member is due the replayed scores are the eager cohort's exactly. After
-    the stop the eager cohort evaluates a smaller frame, so from there the
-    two agree only to bf16 rounding and the early-stop decisions may part."""
-    raws = _docs(
-        pairs=3, epochs=6, early_stop={"metric": "ce", "mode": "min", "patience": 0}
-    )
-    _expected, eager = _fit(
+    """The DAS members drop out at pass four while the DBM goes on
+    (``_early_stop_docs``): the eval layout is captured once and replayed for
+    the members still due — a stopped member's slot replays stale and is
+    never scored again — and while every member is due the replayed scores
+    are the eager cohort's exactly. After the stops the eager cohort
+    evaluates a smaller frame, so from there the two agree only to bf16
+    rounding."""
+    raws = _early_stop_docs()
+    expected, eager = _fit(
         raws, bundle, tmp_path / "eager", graphs=False, fit_rows=100, store=True
     )
     actual, graphs = _fit(
@@ -684,7 +729,13 @@ def test_an_early_stop_keeps_the_eval_capture(bundle, tmp_path):
         for outcome in actual
         if outcome.eval_score is not None
     ]
-    assert len(passes) == 3 and min(passes) < 6, "no member stopped early"
+    assert passes == EARLY_STOP_PASSES, f"passes {passes}"
+    eager_passes = [
+        outcome.eval_score.passes
+        for outcome in expected
+        if outcome.eval_score is not None
+    ]
+    assert eager_passes == EARLY_STOP_PASSES, f"eager passes {eager_passes}"
     assert graphs.eval_captures == 1
     assert graphs.eval_replays == max(passes) - 1
     assert len(graphs.scores) == sum(passes)

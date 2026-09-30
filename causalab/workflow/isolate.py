@@ -1,16 +1,7 @@
-"""Entry point for an isolated step script (workflow spec §4.1).
+"""Run a workflow script in an isolated process.
 
-Reads one JSON request on stdin — ``{script, inputs, outputs}`` — imports the
-script by path, and calls ``main(inputs, outputs)`` with paths rebuilt as
-:class:`~pathlib.Path`. The parent runner still owns verification and identity
-stamping, so this file is deliberately thin: everything it could get wrong is
-something the runner would have to re-check anyway.
-
-Invoked as ``uv run --no-project --python <the runner's interpreter> --with
-<deps> python -m causalab.workflow.isolate``: the runner's environment with the
-step's ``deps`` layered on top, so this module — and ``causalab`` — import from
-the bytes the runner is executing, whether that is a checkout or a wheel.
-"""
+The runner supplies the resolved input and output mappings and the script's
+declared dependencies. The entry point invokes the script and returns its status."""
 
 from __future__ import annotations
 

@@ -1,7 +1,8 @@
 """Qualify each point once, at the workflow layer (workflow spec §2.2 rule 15,
 §4.3, §8). The identity a qualification is keyed to is
 ``RuntimeIdentity.tree_digest``, the same digest ``--resume`` compares, not a
-numerical fingerprint.
+numerical fingerprint. "Corpus NN" is the intervention specification
+``tests/protocols/NN_*_im.json``.
 
 A control qualifies its target's *points*, and a target's rank × seed fanout is
 one step's expansion. So the control runs once for the whole fanout, its
@@ -29,9 +30,9 @@ What is pinned, and how each test fails without the change:
 * **T11 — one identity.** A control at another ``model.dtype``,
   ``model.revision`` or ``model.attn_implementation`` than its target is refused
   under rule 15 naming the field — the comparison is the whole
-  ``canonical_model_ref`` dict, so a field added to ``canonical_model`` (the
-  backend) is checked without being re-listed here, and a backend
-  authored on one side only is refused naming the omission; without the change
+  ``canonical_model_ref`` dict, so a field added to ``canonical_model`` (such
+  as the attention backend) is checked without being re-listed here, and a
+  backend authored on one side only is refused naming the omission; without the change
   the bf16/fp32 pair loads (that is the defect the shipped fixture had). At run
   time a control record from another ``tree_digest`` is
   re-run by ``--resume``, never reused, and the dependent's inherited identity
@@ -83,12 +84,13 @@ from tests.workflow.test_controls import (
     TWIN,
     _certifier,  # pyright: ignore[reportPrivateUsage]
     _protocol,  # pyright: ignore[reportPrivateUsage]
+    INTERNALS,
     _section,  # pyright: ignore[reportPrivateUsage]
     _shuffled_workflow,  # pyright: ignore[reportPrivateUsage]
     _workflow,  # pyright: ignore[reportPrivateUsage]
 )
 from tests.workflow.test_controls_run import (
-    _engines,  # pyright: ignore[reportPrivateUsage]
+    _engine,  # pyright: ignore[reportPrivateUsage]
     _record,  # pyright: ignore[reportPrivateUsage]
     _t6_workflow,  # pyright: ignore[reportPrivateUsage]
     _tiny_env,  # pyright: ignore[reportPrivateUsage]
@@ -147,8 +149,8 @@ def _qualified_fit(
 
 
 def _pair(fit_set: dict[str, Any], control_set: dict[str, Any]) -> dict[str, Any]:
-    """The load-only pair on the corpus documents (Llama-3.1-8B): corpus 04's
-    fit (bf16) and the self-swap twin (no dtype authored — fp32)."""
+    """The load-only pair on the corpus documents (``Qwen/Qwen3-8B``): corpus
+    04's fit (bf16) and the self-swap twin (no dtype authored — fp32)."""
     return _workflow(
         {
             "fit": _protocol(FIT, set=fit_set, waive={"matched_random": EXTERNAL}),
@@ -240,7 +242,7 @@ def _planned_forwards(loaded: Any, step: str) -> int:
     """What the control's campaign *owes* (IM spec §3): its interned forward
     groups, the number ``RunResult.forwards`` reports it paid."""
     from causalab.neural.shared.execution import campaign_plans
-    from causalab.protocol.plan import interned_groups
+    from causalab.neural.shared.plan import interned_groups
 
     inner = loaded.inner[step]
     return len(
@@ -298,14 +300,18 @@ def test_the_spec_names_forwards_and_the_identity_triple() -> None:
         line for line in four.splitlines() if line.startswith("| `phase_completed` |")
     ]
     assert "`forwards`" in row.split("|")[3]
-    eight = _section("## 8. Runner contract")
+    eight = _section("## 8. Runner contract", INTERNALS)
     (stamping,) = [
         line for line in eight.splitlines() if line.startswith("| stamping |")
     ]
     assert "`forwards`" in stamping and "never compared" in stamping
     (resume,) = [line for line in eight.splitlines() if line.startswith("| resume |")]
     assert "`implementation.tree_digest`" in resume and "forwards" not in resume
-    controls = eight.split("**Controls in the record**", 1)[1]
+    controls = next(
+        paragraph
+        for paragraph in eight.split("\n\n")
+        if "qualification `identity`" in paragraph
+    )
     assert "`identity`" in controls
     for field in QUALIFICATION_IDENTITY_FIELDS:
         assert field in controls, field
@@ -333,7 +339,7 @@ def test_the_edge_is_derived_and_an_authored_after_adds_nothing(env) -> None:
 
 @pytest.mark.unit
 def test_t6s_hand_authored_after_is_now_redundant(env) -> None:
-    """Slice 1's T6 fixture wrote ``after: [cert_a, cert_b]`` by hand; the same
+    """The T6 fixture once wrote ``after: [cert_a, cert_b]`` by hand; the same
     workflow without it has the same schedule."""
     env = _tiny_env(env)
     raw = _t6_workflow(fail_b=True, bound=1.0)
@@ -349,7 +355,7 @@ def test_t6s_hand_authored_after_is_now_redundant(env) -> None:
 def test_a_post_hoc_control_keeps_its_direction(env) -> None:
     """The ``fit → random_mask → apply`` chain: the control draws from the
     fit's bundle, so it depends on its target and no edge is added — the fit
-    runs first, exactly as `test_controls.py`'s T8 has it."""
+    runs first, exactly as T8 in ``test_controls.py`` has it."""
     steps = {
         "fit": _protocol(PROTOCOLS / "dbm.json", waive={"self_swap": EXTERNAL}),
         "draw": {
@@ -392,7 +398,7 @@ _AUTHORED_AFTER = (
 def test_a_certifiable_control_authored_after_its_target_is_refused_under_rule_15(
     env,
 ) -> None:
-    """A fail-open: ``after: ["fit"]`` on a
+    """A fail-open, now closed: ``after: ["fit"]`` on a
     self-swap control let the authored edge win — ``inherit`` found no
     ancestor, the fit's record got no ``controls`` block and nothing refused.
     Now refused under rule 15 naming the authored route and its last hop."""
@@ -443,7 +449,7 @@ _ORDERING_ALONE = (
 def test_a_self_contained_matched_random_authored_after_its_target_is_refused(
     env,
 ) -> None:
-    """A second fail-open: the post-hoc
+    """A second fail-open, now closed: the post-hoc
     skip read ``_reaches`` over *every* authored edge, and ``after`` feeds the
     same graph as a reference does — so a self-contained ``matched_random``
     (its own featurizer seeds, nothing read from the fit) that also authored
@@ -576,7 +582,7 @@ def test_t11_a_control_at_another_realization_is_refused_naming_the_field(
     the field and both values. The attention backend is a realization field
     (``canonical_model`` hashes an authored one), and it is checked
     without being listed anywhere in ``document.py``. The mutation — re-list
-    the other four fields — loads the ``attn_implementation`` case; compare
+    only the four other fields — loads the ``attn_implementation`` case; compare
     ``model.key`` alone and the dtype case loads too."""
     err = _refused_15(
         _pair(fit_set, control_set),
@@ -668,7 +674,11 @@ def test_t12_one_realization_loads_and_a_dtype_change_on_both_steps_re_qualifies
 def test_the_shipped_workflows_declare_no_control(env) -> None:
     """Fail-closed: no shipped workflow declares a control, so rule 15 and the
     derived edge touch none of them."""
-    assert {path.name for path in SHIPPED} == {"mean_ablation.json", "weekdays_8b.json"}
+    assert {path.name for path in SHIPPED} == {
+        "mean_ablation.json",
+        "pca_basis.json",
+        "weekdays.json",
+    }
     for path in SHIPPED:
         loaded = load_workflow(path, env)
         assert all("control" not in e for e in loaded.canonical["steps"].values())
@@ -696,7 +706,7 @@ def test_t9_a_control_qualifies_once_for_its_targets_whole_fanout(
     assert loaded.order == ("ctl", "cert", "fit")
     assert len(loaded.inner["fit"].point_digests) == 6
     assert len(loaded.inner["ctl"].point_digests) == 1
-    result = run_workflow(loaded, env, tmp_path / "runs", _engines())
+    result = run_workflow(loaded, env, tmp_path / "runs", _engine())
     assert _statuses(result) == {name: "completed" for name in loaded.order}
 
     records = read_events(result.run_root / EVENTS_FILE)
@@ -745,7 +755,7 @@ def test_t9_a_control_qualifies_once_for_its_targets_whole_fanout(
     )
     assert len(one.inner["fit"].point_digests) == 1
     assert one.inner_digests["ctl"] == loaded.inner_digests["ctl"]
-    second = run_workflow(one, env, tmp_path / "runs_one", _engines())
+    second = run_workflow(one, env, tmp_path / "runs_one", _engine())
     assert _statuses(second) == {name: "completed" for name in one.order}
     assert _record(second.run_root, "ctl")["forwards"] == planned
     fit_one = _record(second.run_root, "fit")["controls"]
@@ -775,7 +785,7 @@ def test_t10_n_failing_points_invalidate_n_points_not_n_times_the_fanout(
     )
     assert len(loaded.inner["ctl"].point_digests) == 2
     assert len(loaded.inner["fit"].point_digests) == 12
-    result = run_workflow(loaded, env, tmp_path / "runs", _engines())
+    result = run_workflow(loaded, env, tmp_path / "runs", _engine())
     assert _statuses(result) == {name: "completed" for name in loaded.order}
 
     cert = _record(result.run_root, "cert")["certifies"]
@@ -829,7 +839,7 @@ def test_t11_a_qualification_from_another_tree_is_re_run_and_forwards_is_never_c
         _qualified_fit(layer=0, ks=[2], seeds=[0]), env, workflow_dir=tmp_path
     )
     out = tmp_path / "runs"
-    first = run_workflow(loaded, env, out, _engines())
+    first = run_workflow(loaded, env, out, _engine())
     root = first.run_root
     assert _statuses(first) == {name: "completed" for name in loaded.order}
     real = _record(root, "ctl")["implementation"]["tree_digest"]
@@ -841,7 +851,7 @@ def test_t11_a_qualification_from_another_tree_is_re_run_and_forwards_is_never_c
     doctored = json.loads(record_path.read_text())
     doctored["forwards"] = 999_999
     record_path.write_text(json.dumps(doctored))
-    reused = run_workflow(loaded, env, out, _engines(), resume=True)
+    reused = run_workflow(loaded, env, out, _engine(), resume=True)
     assert _statuses(reused) == {name: "reused" for name in loaded.order}
     assert _record(root, "ctl")["forwards"] == 999_999
     completed = {
@@ -852,7 +862,7 @@ def test_t11_a_qualification_from_another_tree_is_re_run_and_forwards_is_never_c
     assert completed["ctl"] == {"step": "ctl", "status": "reused", "forwards": 999_999}
 
     _stand_in(monkeypatch, "0" * 64)
-    third = run_workflow(loaded, env, out, _engines(), resume=True)
+    third = run_workflow(loaded, env, out, _engine(), resume=True)
     assert _statuses(third) == {name: "completed" for name in loaded.order}
     ctl = _record(root, "ctl")
     assert ctl["implementation"]["tree_digest"] == "0" * 64
@@ -870,7 +880,7 @@ def test_t11_a_qualification_from_another_tree_is_re_run_and_forwards_is_never_c
         _qualified_fit(layer=0, ks=[4], seeds=[0]), env, workflow_dir=tmp_path
     )
     assert changed.inner_digests["ctl"] == loaded.inner_digests["ctl"]
-    fourth = run_workflow(changed, env, out, _engines(), resume=True)
+    fourth = run_workflow(changed, env, out, _engine(), resume=True)
     assert _statuses(fourth) == {"ctl": "reused", "cert": "reused", "fit": "completed"}
     fit = _record(root, "fit")
     assert fit["controls"]["identity"]["ctl"] == {
@@ -897,7 +907,7 @@ def test_a_control_record_under_another_engine_is_re_run_by_resume(
         _qualified_fit(layer=0, ks=[2], seeds=[0]), env, workflow_dir=tmp_path
     )
     out = tmp_path / "runs"
-    first = run_workflow(loaded, env, out, _engines())
+    first = run_workflow(loaded, env, out, _engine())
     root = first.run_root
     assert _statuses(first) == {name: "completed" for name in loaded.order}
     assert _record(root, "ctl")["engine"] == "pytorch_hooks"
@@ -909,14 +919,14 @@ def test_a_control_record_under_another_engine_is_re_run_by_resume(
         else:
             del record["engine"]
         record_path.write_text(json.dumps(record))
-        again = run_workflow(loaded, env, out, _engines(), resume=True)
+        again = run_workflow(loaded, env, out, _engine(), resume=True)
         assert _statuses(again) == {
             "ctl": "completed",
             "cert": "reused",
             "fit": "reused",
         }, doctoring
         assert _record(root, "ctl")["engine"] == "pytorch_hooks"
-    untouched = run_workflow(loaded, env, out, _engines(), resume=True)
+    untouched = run_workflow(loaded, env, out, _engine(), resume=True)
     assert _statuses(untouched) == {name: "reused" for name in loaded.order}
 
 
@@ -924,11 +934,11 @@ def test_a_control_record_under_another_engine_is_re_run_by_resume(
 def test_a_host_with_no_engine_for_the_step_reuses_its_record_under_resume(
     env, tmp_path
 ) -> None:
-    """A fail-closed: with no
+    """A fail-closed, now fixed: with no
     configured engine covering the step (``engines=[]`` — under ``auto`` the
-    host's install changed) ``_engine_for`` is ``None``, and an earlier version
-    read that as "never reuse", re-running a content-digest-verified record on a host
-    that could not run it. Now nothing is compared and the record is reused:
+    host's install changed) ``_engine_for`` is ``None``, and an earlier runner
+    read that as "never reuse", re-running a content-digest-verified record on
+    a host that could not run it. Now nothing is compared and the record is reused:
     a ``--resume`` with no engine reuses every step, a control record carrying
     another engine's name too; a record **without** the key is still not
     reused, and under a routed name a mismatch still is not (the test above)."""
@@ -937,31 +947,31 @@ def test_a_host_with_no_engine_for_the_step_reuses_its_record_under_resume(
         _qualified_fit(layer=0, ks=[2], seeds=[0]), env, workflow_dir=tmp_path
     )
     out = tmp_path / "runs"
-    first = run_workflow(loaded, env, out, _engines())
+    first = run_workflow(loaded, env, out, _engine())
     root = first.run_root
     assert _statuses(first) == {name: "completed" for name in loaded.order}
-    no_engine = run_workflow(loaded, env, out, [], resume=True)
+    no_engine = run_workflow(loaded, env, out, None, resume=True)
     assert _statuses(no_engine) == {name: "reused" for name in loaded.order}
 
     record_path = root / "ctl" / SIDECAR
     record = json.loads(record_path.read_text())
     record["engine"] = "nnsight"
     record_path.write_text(json.dumps(record))
-    foreign = run_workflow(loaded, env, out, [], resume=True)
+    foreign = run_workflow(loaded, env, out, None, resume=True)
     assert _statuses(foreign) == {name: "reused" for name in loaded.order}
     assert _record(root, "ctl")["engine"] == "nnsight"  # reused as recorded
 
     implementation = {"tree_digest": runtime_identity().tree_digest}
     step = loaded.document.steps["ctl"]
-    assert runner._engine_for(loaded, "ctl", []) is None  # pyright: ignore[reportPrivateUsage]
+    assert runner._engine_for(loaded, "ctl", None) is None  # pyright: ignore[reportPrivateUsage]
     kept = runner._reusable(  # pyright: ignore[reportPrivateUsage]
-        loaded, "ctl", step, root / "ctl", True, False, implementation, []
+        loaded, "ctl", step, root / "ctl", True, False, implementation, None
     )
     assert kept is not None and kept["status"] == "reused"
     del record["engine"]
     record_path.write_text(json.dumps(record))
     dropped = runner._reusable(  # pyright: ignore[reportPrivateUsage]
-        loaded, "ctl", step, root / "ctl", True, False, implementation, []
+        loaded, "ctl", step, root / "ctl", True, False, implementation, None
     )
     assert dropped is None
 
@@ -980,7 +990,7 @@ def test_a_self_contained_matched_random_qualifies_its_fit_through_the_derived_e
         _self_contained_matched_random(seeds=[0]), env, workflow_dir=tmp_path
     )
     assert loaded.dependencies == {"fit": ("ctl",), "ctl": ()}
-    result = run_workflow(loaded, env, tmp_path / "runs", _engines())
+    result = run_workflow(loaded, env, tmp_path / "runs", _engine())
     assert _statuses(result) == {"ctl": "completed", "fit": "completed"}
     fit = _record(result.run_root, "fit")
     block = fit["controls"]
@@ -1006,7 +1016,7 @@ def test_t12_a_dtype_change_on_both_steps_is_re_qualified_not_refused(
         env,
         workflow_dir=tmp_path,
     )
-    first = run_workflow(fp32, env, tmp_path / "fp32", _engines())
+    first = run_workflow(fp32, env, tmp_path / "fp32", _engine())
     assert _statuses(first) == {name: "completed" for name in fp32.order}
     before = _record(first.run_root, "ctl")
 
@@ -1017,7 +1027,7 @@ def test_t12_a_dtype_change_on_both_steps_is_re_qualified_not_refused(
     assert bf16.digest != fp32.digest
     assert bf16.inner_digests["ctl"] != fp32.inner_digests["ctl"]
     assert bf16.inner_digests["fit"] != fp32.inner_digests["fit"]
-    second = run_workflow(bf16, env, tmp_path / "bf16", _engines())
+    second = run_workflow(bf16, env, tmp_path / "bf16", _engine())
     assert _statuses(second) == {name: "completed" for name in bf16.order}
     after = _record(second.run_root, "ctl")
     assert after["document_digest"] != before["document_digest"]

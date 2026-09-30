@@ -1,0 +1,75 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Subspace stage: DAS at the located cell, k x seed = 9 fits from ONE harvest. k and seed are explicit {sweep: ...} axes; the parser trains all nine rotations in parallel against the same collected activations - where CLI multirun ran 9 processes, each re-loading the model and re-harvesting. The located cell arrives from stage 1's artifact, resolved by the parser at load; a missing artifact is a load error, never a silent default."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#train",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "positions": {"best": {"artifact": "weekdays/qwen25_7b/locate", "key": "best_pos"}},
+    "sites": {
+      "target": {
+        "component": "block_output",
+        "layers": {"artifact": "weekdays/qwen25_7b/locate", "key": "best_layer"}
+      },
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "rot": {
+        "kind": "subspace",
+        "k": {"sweep": [8, 16, 32]},
+        "parametrization": "cayley"
+      }
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": "best", "featurizer": "rot"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "patch": {"site": "target", "pos": "best", "featurizer": "rot", "do": {"swap": "v_cf"}}
+    },
+    "train": {
+      "objective": {
+        "ce": {
+          "weight": 1.0,
+          "read": "logits",
+          "model": "patched",
+          "aggregation": {"kind": "cross_entropy", "target": "label"}
+        }
+      },
+      "params": ["rot"],
+      "optimizer": {"name": "adamw", "lr": 0.001, "weight_decay": 0.0},
+      "steps": {"epochs": 10},
+      "batch": {"pairs": 16},
+      "precision": {"feature": "fp32", "loss": "fp32"},
+      "eval": {
+        "every": {"epochs": 1},
+        "split": "natural_domains_arithmetic/data/weekdays#test",
+        "aggregations": {
+          "iia": {
+            "read": "logits",
+            "model": "patched",
+            "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"}
+          }
+        }
+      },
+      "early_stop": {"on": "iia", "patience": 3, "mode": "max"},
+      "seed": {"sweep": [0, 1, 2]}
+    },
+    "save": [
+      {"train": "iia", "file_path": "iia.json"},
+      {"train": "ce", "file_path": "ce.json"},
+      {"value": "rot", "site": "target", "file_path": "rot.safetensors"}
+    ]
+  }
+}

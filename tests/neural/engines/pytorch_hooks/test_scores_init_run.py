@@ -20,10 +20,10 @@ import torch
 from safetensors.torch import load_file
 
 from causalab.cli import main
-from causalab.protocol.engine import ExecutionRequest
+from causalab.protocol.engine import RunContext
 from causalab.protocol.registry import component_width
 from causalab.protocol.schema import parse_document
-from causalab.protocol.validate import validate_document
+from causalab.protocol.rules.document import validate_document
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
@@ -34,12 +34,15 @@ from tests.neural.engines.pytorch_hooks.test_train import (
     _NoDatasets,
     clamp_dbm_doc,
 )
-from tests.protocol._docs import in_order
+from tests.protocol._docs import UNWRITTEN, aggregation, in_order, saved, term
 from tests.protocol._env import FIXTURES
 
 pytestmark = pytest.mark.smoke
 
 KEEP = 3
+
+#: The masked model's readout the fit trains on and `ce.json` tabulates.
+CE = aggregation("cross_entropy", target="cf_answer")
 
 
 def _width() -> int:
@@ -69,7 +72,7 @@ def _loader(rows: list[dict]):
 def test_the_executor_starts_the_gate_where_the_table_says_and_the_fit_records_it():
     from causalab.neural.engines.pytorch_hooks.loading import load_model
     from causalab.neural.engines.pytorch_hooks.train import run_training
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     rows = _scores()
     doc = clamp_dbm_doc(lr=1e-3)
@@ -89,12 +92,7 @@ def test_the_executor_starts_the_gate_where_the_table_says_and_the_fit_records_i
     width = _width()
     assert gate.hard_mask().nonzero().flatten().tolist() == kept
     assert gate.theta.tolist() == [1.0 if i in kept else 0.0 for i in range(width)]
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=_NoDatasets(), artifacts=None),  # type: ignore[arg-type]
         output_dir=None,  # type: ignore[arg-type]
     )
@@ -150,7 +148,7 @@ def test_an_untrained_ranking_gate_is_a_legal_document_and_applies_as_the_split(
 def _document(keep: int) -> dict:
     return {
         "header": {
-            "protocol_version": "3",
+            "protocol_version": "4",
             "description": "a DBM gate started from a score table and fitted for one epoch at a negligible lr",
         },
         "model": {"key": TINY_LLAMA, "revision": "main", "dtype": "fp32"},
@@ -162,6 +160,10 @@ def _document(keep: int) -> dict:
             },
         },
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]},
+            },
             "sites": {
                 "target": {"component": "block_output", "layers": [0]},
                 "lm_head": {"component": "lm_head"},
@@ -176,19 +178,8 @@ def _document(keep: int) -> dict:
                 }
             },
             "reads": {
-                "v_cf": {
-                    "site": "target",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                    "featurizer": "gate",
-                },
-                "logits": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "masked",
-                    "input": "base",
-                },
+                "v_cf": {"site": "target", "pos": -1, "featurizer": "gate"},
+                "logits": {"site": "lm_head", "pos": -1},
             },
             "writes": {
                 "mask": {
@@ -198,17 +189,8 @@ def _document(keep: int) -> dict:
                     "do": {"swap": "v_cf"},
                 }
             },
-            "intervened_models": {"masked": {"input": "base", "writes": ["mask"]}},
-            "metrics": {
-                "ce": {
-                    "kind": "cross_entropy",
-                    "of": "logits",
-                    "target": "cf_answer",
-                    "token_form": "space_prefixed",
-                }
-            },
             "train": {
-                "objective": [[1.0, "ce"]],
+                "objective": [[1.0, term("logits", "masked", dict(CE))]],
                 "params": ["gate"],
                 "optimizer": {"name": "adamw", "lr": 1e-9, "weight_decay": 0.0},
                 "steps": {"epochs": 1},
@@ -216,12 +198,7 @@ def _document(keep: int) -> dict:
                 "seed": 0,
             },
             "save": [
-                {
-                    "value": "ce",
-                    "model": "masked",
-                    "input": "base",
-                    "file_path": "ce.json",
-                },
+                saved("logits", "masked", "ce.json", dict(CE)),
                 {"value": "gate", "site": "target", "file_path": "gate.safetensors"},
             ],
         },
@@ -253,6 +230,8 @@ def test_the_cli_resolves_the_table_through_the_artifact_store(tmp_path: Path) -
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(wf),
             "--data-root",
             str(FIXTURES / "data"),
@@ -278,9 +257,9 @@ def test_the_cli_resolves_the_table_through_the_artifact_store(tmp_path: Path) -
     # table's sha256 — a different table would be a different experiment
     from transformers import AutoConfig
 
-    from causalab.protocol.canonical import canonicalize, digest
+    from causalab.protocol.schema.explicit import canonicalize, digest
     from causalab.protocol.registry import model_info_from_hf_config
-    from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+    from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 
     info = model_info_from_hf_config(TINY_LLAMA, AutoConfig.from_pretrained(TINY_LLAMA))
     env = ResolutionEnv(

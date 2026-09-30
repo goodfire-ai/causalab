@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 from causalab.analysis import harvest_difference
 from causalab.io.step_io import StepError, read_tensor, write_tensor
 from tests.step_scripts import run_step

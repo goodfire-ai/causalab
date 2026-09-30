@@ -16,26 +16,25 @@ from pathlib import Path
 import pytest
 
 from causalab.cli import main
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.resolve import FileDatasets
+from causalab.protocol.rules.errors import ValidationError
+from causalab.io.env import FileDatasets
 from causalab.tables import table_bytes
 from causalab.tasks import TASKS_ROOT
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
 #: The one shipped document that names a fixture table on purpose. It is the
-#: standalone-install smoke assertion: a tiny random Llama on CPU, whose
-#: sentencepiece tokenizer cannot spell the shipped weekdays answers ([P2]) — so,
-#: like every tiny-scale smoke run, it reads the 4-row fixture, and the smoke run
-#: passes `--data-root` to it. Its model
+#: standalone-install smoke document: a tiny random Llama on CPU, whose sentencepiece tokenizer cannot spell the
+#: shipped weekdays answers ([P2]) — so, like every tiny-scale smoke run, it
+#: reads the 4-row fixture, and the smoke run passes `--data-root` to it. Its model
 #: is not in the static registry either (`run` registers it from the HF config).
 SMOKE_DOCUMENTS = frozenset({"minimal_cpu.json"})
 
 SHIPPED_DOCUMENTS = [
     path
-    for path in sorted(REPO.glob("causalab/configs/protocols/*.json"))
-    + sorted(REPO.glob("causalab/configs/runs/*.json"))
+    for path in sorted(PROTOCOLS_DIR.glob("*.json"))
     if path.name not in SMOKE_DOCUMENTS
 ]
 
@@ -43,7 +42,7 @@ SHIPPED_DOCUMENTS = [
 def test_the_smoke_exemption_names_real_documents() -> None:
     """A retired smoke document must leave this list, not linger as a hole."""
     for name in SMOKE_DOCUMENTS:
-        assert (REPO / "causalab/configs/protocols" / name).is_file(), name
+        assert (PROTOCOLS_DIR / name).is_file(), name
 
 
 def test_a_shipped_ref_resolves_behind_an_empty_root(tmp_path: Path) -> None:
@@ -88,7 +87,15 @@ def test_every_shipped_document_validates_with_no_data_root(
     artifact and nothing else, which is the one refusal accepted here.
     """
     code = main(
-        ["validate", str(document), "--data", "--artifacts-root", str(artifacts_root)]
+        [
+            "validate",
+            "--engine",
+            "auto",
+            str(document),
+            "--data",
+            "--artifacts-root",
+            str(artifacts_root),
+        ]
     )
     captured = capsys.readouterr()
     out = captured.out + captured.err

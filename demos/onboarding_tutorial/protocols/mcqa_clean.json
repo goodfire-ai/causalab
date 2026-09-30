@@ -1,0 +1,48 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Measure clean next-token accuracy on all 64 original and counterfactual MCQA prompts, plus the unpatched rate of counterfactual answers and the unpatched logit difference between the counterfactual and original answers."
+  },
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "mcqa/pairs_n64_s0", "field": "input"},
+    "counterfactual": {"dataset": "mcqa/pairs_n64_s0", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_base": {"input": "base", "reads": ["base_logits"]},
+      "original_counterfactual": {"input": "counterfactual", "reads": ["cf_logits"]}
+    },
+    "sites": {"lm_head": {"component": "lm_head"}},
+    "reads": {
+      "base_logits": {"site": "lm_head", "pos": -1},
+      "cf_logits": {"site": "lm_head", "pos": -1}
+    },
+    "save": [
+      {
+        "read": "base_logits",
+        "model": "original_base",
+        "aggregation": {"kind": "match", "expected": "base_answer"},
+        "file_path": "clean_base.json"
+      },
+      {
+        "read": "cf_logits",
+        "model": "original_counterfactual",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "clean_cf.json"
+      },
+      {
+        "read": "base_logits",
+        "model": "original_base",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "unpatched_cf.json"
+      },
+      {
+        "read": "base_logits",
+        "model": "original_base",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "unpatched_logit_diff.json"
+      }
+    ]
+  }
+}

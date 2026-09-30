@@ -1,0 +1,101 @@
+{
+  "output_dir": "10_cross_model_control",
+  "steps": {
+    "source": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "81a62a2f25540fb0fe72ee8396734e98c4e1efbaf33fbff815446379d213ee28",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_source_harvest.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "81a62a2f25540fb0fe72ee8396734e98c4e1efbaf33fbff815446379d213ee28",
+      "points": 1,
+      "point_digests": [
+        "81a62a2f25540fb0fe72ee8396734e98c4e1efbaf33fbff815446379d213ee28"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "acts.safetensors"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 1,
+      "digests": {
+        "acts.safetensors": "af1846c7cf32c39578c804af508463987919304d886929d58eab6fe90f4bbec4"
+      },
+      "checks": {
+        "acts.safetensors": "safetensors-header"
+      },
+      "disposition": "accepted"
+    },
+    "graft": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "3e42f61bfc80a5b6556664309891b4c2a0405602408cd00ee5e0fc34038164aa",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_cross_patch.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "3e42f61bfc80a5b6556664309891b4c2a0405602408cd00ee5e0fc34038164aa",
+      "points": 1,
+      "point_digests": [
+        "3e42f61bfc80a5b6556664309891b4c2a0405602408cd00ee5e0fc34038164aa"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "iia.json",
+        "said.json",
+        "survived.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 1,
+      "digests": {
+        "iia.json": "36fd29da232f3b191371d2f90393eaab6a2512292b135edd291781e5440c48a3",
+        "said.json": "69d1fb73833e6bea11d0c81dc133e3ec02e0ef6f57fc62bc5f843135cc17e566",
+        "survived.json": "b342439431b266c8a2dc575032cda1a8995ed528d894983cef2c7253eb4ec069"
+      },
+      "checks": {
+        "iia.json": "json",
+        "said.json": "json",
+        "survived.json": "json"
+      },
+      "disposition": "accepted"
+    }
+  }
+}

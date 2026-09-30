@@ -18,7 +18,7 @@ pytestmark = pytest.mark.unit
 
 class TestNormalizeFigureFormat:
     def test_default_is_png(self):
-        """No value supplied → png (the default)."""
+        """No value supplied → png (the default flip to PNG)."""
         assert normalize_figure_format(None) == "png"
 
     def test_pdf_opt_in_preserved(self):

@@ -19,7 +19,8 @@ everything here loads a model, so it is ``smoke``, one tier per test
 * **The stop bound.** With the default ``stop_after_failure_rate`` (``0.0``)
   the same failure makes the certifying step ``failed`` and the dependent
   ``blocked``; the ``instrument_failure`` warning lines move no status.
-  Stopping an expansion is the sweep layer's job, not this one's.
+  "Does not expand further" is out of scope here: nothing below stops an
+  expansion.
 * **A swept control.** One control swept over both layers certifies both
   points — the certifier's rows carry the saved header's coordinate spelling
   and the ledger spells its points the same way — and a ``--resume`` that
@@ -42,7 +43,7 @@ import pytest
 
 from causalab.io.events import EVENTS_FILE, read_events
 from causalab.io.step_record import SIDECAR
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 from causalab.workflow import manifest as mf
 from causalab.workflow.derived import derive_statuses
 from causalab.workflow.document import load_workflow
@@ -82,8 +83,7 @@ def _t6_workflow(
             "sites.target.layers": [layer] if band else layer,
         }
         if fail_b and name == "ctl_b":
-            overrides["reads.v_cf.input"] = "base"
-            overrides["save[0].input"] = "base"
+            overrides["intervened_models.original_counterfactual.input"] = "base"
         steps[name] = _protocol(
             TWIN,
             set=overrides,
@@ -106,7 +106,7 @@ def _tiny_env(env: Any) -> Any:
     from transformers import AutoConfig
 
     from causalab.protocol.registry import model_info_from_hf_config
-    from causalab.protocol.resolve import ResolutionEnv
+    from causalab.io.env import ResolutionEnv
 
     info = model_info_from_hf_config(TINY_LLAMA, AutoConfig.from_pretrained(TINY_LLAMA))
     return ResolutionEnv(
@@ -114,10 +114,10 @@ def _tiny_env(env: Any) -> Any:
     )
 
 
-def _engines() -> list[Any]:
-    from causalab.cli import load_engines
+def _engine() -> Any:
+    from causalab.neural.shared.engine_router import route
 
-    return load_engines("auto", "cpu")
+    return route("auto", device="cpu")
 
 
 def _record(run_root: Path, step: str) -> dict[str, Any]:
@@ -135,7 +135,7 @@ def test_t6_the_dependent_inherits_its_controls_status_by_coordinates(
     loaded = load_workflow(
         _t6_workflow(fail_b=True, bound=1.0), env, workflow_dir=tmp_path
     )
-    result = run_workflow(loaded, env, tmp_path / "runs", _engines())
+    result = run_workflow(loaded, env, tmp_path / "runs", _engine())
     statuses = {name: e["status"] for name, e in result.manifest["steps"].items()}
     assert statuses == {name: "completed" for name in loaded.order}
 
@@ -179,7 +179,7 @@ def test_t6_the_dependent_inherits_its_controls_status_by_coordinates(
     assert by_layer[1]["controls"] == {"ctl_b": "failed"}
     assert set(block["by_point"]) == set(dep["point_digests"])
 
-    # the failed control point is a warning on the stream, not a status
+    # 7·3: the failed control point is a warning on the stream, not a status
     records = read_events(result.run_root / EVENTS_FILE)
     failures = [r for r in records if r["event"] == "warning"]
     assert [(r["payload"]["reason"], r["payload"]["step"]) for r in failures] == [
@@ -213,8 +213,10 @@ def test_t6_a_list_spelled_control_pins_the_dependents_point_at_its_layer(
     assert workflow["steps"]["ctl_b"]["set"]["sites.target.layers"] == [1]
     loaded = load_workflow(workflow, env, workflow_dir=tmp_path)
     # the ledger reads the control's explicit document: list-spelled, as authored
-    assert loaded.inner["ctl_b"].raw["method"]["sites"]["target"]["layers"] == [1]
-    result = run_workflow(loaded, env, tmp_path / "runs", _engines())
+    assert loaded.inner["ctl_b"].compiled.tree["method"]["sites"]["target"][
+        "layers"
+    ] == [1]
+    result = run_workflow(loaded, env, tmp_path / "runs", _engine())
     statuses = {name: e["status"] for name, e in result.manifest["steps"].items()}
     assert statuses == {name: "completed" for name in loaded.order}
 
@@ -254,8 +256,7 @@ def test_the_default_bound_makes_the_certifier_a_failed_step_and_blocks_below(
     stops. The certifier is ``failed`` (a ``ControlFailure``, its
     ``controls.json`` retained with the attempt), the dependent ``blocked`` by
     the manifest's own rule, the stream ends ``attempt_failed`` →
-    ``campaign_terminal failed``. What this does not do — stop an expansion —
-    is the sweep layer's."""
+    ``campaign_terminal failed``. It does not test stopping an expansion."""
     env = _tiny_env(env)
     loaded = load_workflow(
         _t6_workflow(fail_b=True, bound=None), env, workflow_dir=tmp_path
@@ -263,7 +264,7 @@ def test_the_default_bound_makes_the_certifier_a_failed_step_and_blocks_below(
     with pytest.raises(
         ControlFailure, match=r"control 'ctl_b' \(self_swap of 'dep'\): 1 of 1"
     ):
-        run_workflow(loaded, env, tmp_path / "runs", _engines())
+        run_workflow(loaded, env, tmp_path / "runs", _engine())
     run_root = tmp_path / "runs" / "controls"
     manifest = json.loads((run_root / mf.MANIFEST).read_text())
     statuses = {name: e["status"] for name, e in manifest["steps"].items()}
@@ -331,7 +332,7 @@ def test_a_swept_control_certifies_every_point_and_resume_re_seats_its_coordinat
     certifier is refused as matching no point."""
     env = _tiny_env(env)
     loaded = load_workflow(_swept_workflow(), env, workflow_dir=tmp_path)
-    result = run_workflow(loaded, env, tmp_path / "runs", _engines())
+    result = run_workflow(loaded, env, tmp_path / "runs", _engine())
     statuses = {name: e["status"] for name, e in result.manifest["steps"].items()}
     assert statuses == {name: "completed" for name in loaded.order}
 
@@ -372,7 +373,7 @@ def test_a_swept_control_certifies_every_point_and_resume_re_seats_its_coordinat
     # --resume: the control is reused, the certifier and the dependent run again
     shutil.rmtree(result.run_root / "cert")
     shutil.rmtree(result.run_root / "dep")
-    again = run_workflow(loaded, env, tmp_path / "runs", _engines(), resume=True)
+    again = run_workflow(loaded, env, tmp_path / "runs", _engine(), resume=True)
     assert {name: e["status"] for name, e in again.manifest["steps"].items()} == {
         "ctl": "reused",
         "cert": "completed",
@@ -392,7 +393,7 @@ from pathlib import Path
 
 from causalab.analysis.certify_control import main as certify
 from causalab.io.step_io import write_table
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 
 
 def main(inputs, outputs):
@@ -423,7 +424,7 @@ def test_a_certifier_that_leaves_a_point_without_a_row_is_a_failed_step(
         ControlFailure,
         match=r"controls\.json has no row for 1 of 2 points of control 'ctl'",
     ) as info:
-        run_workflow(loaded, env, tmp_path / "runs", _engines())
+        run_workflow(loaded, env, tmp_path / "runs", _engine())
     assert "a control that did not run on a point cannot certify it" in str(info.value)
     run_root = tmp_path / "runs" / "controls"
     manifest = json.loads((run_root / mf.MANIFEST).read_text())

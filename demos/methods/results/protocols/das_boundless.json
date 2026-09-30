@@ -1,0 +1,58 @@
+{
+  "document": "protocols/das_boundless.json",
+  "document_digest": "06d0d2232ecfd11c2192f3c68887724aa10d37f45bfc401202adeb8010d56f58",
+  "run_digest": "06d0d2232ecfd11c2192f3c68887724aa10d37f45bfc401202adeb8010d56f58",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "bf16",
+  "date": "2026-09-21",
+  "elapsed_s": 45.0,
+  "metrics": {
+    "ce": {
+      "metric": "ce",
+      "unit": "nat",
+      "rows": 30,
+      "eligible_rows": 30,
+      "mean": 0.2054
+    },
+    "fit_diagnostics": {
+      "points": 1,
+      "bnd": {
+        "width": 64.0,
+        "decisive_fraction": 0.9844,
+        "hard_mask_size": 32.0,
+        "boundary": 31.7746
+      },
+      "rot": {}
+    },
+    "iia": {
+      "metric": "iia",
+      "unit": "logit",
+      "rows": 30,
+      "eligible_rows": 30,
+      "mean": 6.2375
+    },
+    "train_eval": {
+      "metric": "iia",
+      "split": "natural_domains_arithmetic/data/weekdays#test",
+      "selected": "early_stop.best",
+      "points": 1,
+      "best": 0.6283,
+      "passes": 10
+    },
+    "saved_tensors": {
+      "bnd.safetensors": {
+        "theta": [
+          1
+        ]
+      },
+      "rot.safetensors": {
+        "weight": [
+          3584,
+          64
+        ]
+      }
+    }
+  }
+}

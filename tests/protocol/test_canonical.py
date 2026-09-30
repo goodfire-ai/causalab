@@ -7,12 +7,25 @@ import json
 
 import pytest
 
-from causalab.protocol.canonical import canonical_bytes, canonicalize, digest
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.loader import load
+from causalab.protocol.schema.explicit import canonical_bytes, canonicalize, digest
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.rules.document import validate_document
+from causalab.protocol.schema import inline_train_saves, parse_document
 
-from tests.protocol._env import CORPUS_DIR
-from tests.protocol._docs import base_doc, in_order
+from tests.protocol._env import CORPUS_DIR, steps_of
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.tables import inline_rows, table_bytes
+from tests.protocol._docs import (
+    UNWRITTEN,
+    aggregation,
+    base_doc,
+    base_only_doc,
+    in_order,
+    inline_doc,
+    saved,
+    term,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -50,6 +63,62 @@ def test_dataset_digest_stamped(env):
     assert len(stamped) == 64
 
 
+def test_a_role_less_data_block_digests_as_base(env):
+    """The short and the explicit spelling of a single-input document are one
+    document (§2.2, §7): same canonical ``data``, same digest, and the short
+    one passes the document rules as the explicit one does."""
+    short, explicit = base_only_doc(), base_only_doc()
+    short["data"] = explicit["data"]["base"]
+    validate_document(parse_document(short), model_info=env.model_info)
+    assert canonicalize(short, env)["data"] == canonicalize(explicit, env)["data"]
+    assert "base" in canonicalize(short, env)["data"]
+    assert digest(canonicalize(short, env)) == digest(canonicalize(explicit, env))
+
+
+def test_an_inline_role_canonicalizes_with_its_derived_fields(env):
+    """§2.2, §7: the authored prompts stay, and the column and the ref every
+    reader of a canonical role expects materialize next to the digest."""
+    prompts = ["The Space Needle is located in"]
+    role = canonicalize(inline_doc(*prompts), env)["data"]["base"]
+    assert role["inputs"] == prompts
+    assert role["field"] == "input"
+    assert role["dataset"].startswith("inline:")
+    assert role["digest"] == role["dataset"][len("inline:") :]
+    assert len(role["digest"]) == 64
+
+
+def test_an_inline_table_and_a_file_table_with_equal_rows_are_one_dataset(
+    env, tmp_path
+):
+    """The digest is over the rows, never the ref's name (§2.2, §7,
+    ``_data_identity``): a document that inlines its prompts and one that
+    reads them from a file of the same rows stamp the same digest, so they
+    intern into one forward group."""
+    prompts = ["The Space Needle is located in", "The Eiffel Tower is located in"]
+    root = tmp_path / "data"
+    (root / "spots").mkdir(parents=True)
+    (root / "spots" / "data.json").write_bytes(table_bytes(inline_rows(prompts)))
+    file_env = ResolutionEnv(
+        datasets=FileDatasets(root=root), artifacts=FileArtifacts(root=tmp_path)
+    )
+    inline = canonicalize(inline_doc(*prompts), env)["data"]["base"]
+    on_disk = inline_doc(*prompts)
+    on_disk["data"] = {"dataset": "spots/data", "field": "input"}
+    from_file = canonicalize(on_disk, file_env)["data"]["base"]
+    assert inline["digest"] == from_file["digest"]
+
+
+def test_an_inline_document_compiles_with_its_data_checked(env):
+    """The demo shape end to end: ``validate --data`` resolves the inline
+    rows, checks the field against their columns, and the compiled protocol
+    records the table under its ref."""
+    compiled = compile_protocol(inline_doc(), env=env, data=True)
+    (ref,) = compiled.data
+    assert ref.startswith("inline:")
+    assert compiled.data[ref].columns == ("input", "split")
+    assert compiled.data[ref].digest == ref[len("inline:") :]
+
+
 def test_im_write_lists_sorted(env):
     raw = base_doc()
     raw["method"]["writes"]["another"] = {
@@ -68,15 +137,48 @@ def test_im_write_lists_sorted(env):
     ]
 
 
+def test_writes_during_generation_is_canonical_only_when_true(env):
+    """§2.9: an authored ``false`` and the absent field are one intervention
+    (prefill-only) and digest identically; ``true`` enters the canonical form
+    and changes the digest, as a different intervention must."""
+    raw = base_doc()
+    raw["method"]["positions"] = {
+        "tail": {"generated": {"max_new_tokens": 8}, "index": -1}
+    }
+    raw["method"]["reads"]["logits"]["pos"] = "tail"
+    raw["method"]["writes"]["patch"]["do"] = {"swap": 0.0}
+    del raw["method"]["reads"]["v_cf"]
+    absent = canonicalize(in_order(raw), env)
+    assert (
+        "writes_during_generation"
+        not in absent["method"]["intervened_models"]["patched"]
+    )
+
+    off = copy.deepcopy(raw)
+    off["method"]["intervened_models"]["patched"]["writes_during_generation"] = False
+    assert digest(canonicalize(in_order(off), env)) == digest(absent)
+
+    on = copy.deepcopy(raw)
+    on["method"]["intervened_models"]["patched"]["writes_during_generation"] = True
+    canonical = canonicalize(in_order(on), env)
+    assert canonical["method"]["intervened_models"]["patched"] == {
+        "input": "base",
+        "reads": ["logits"],
+        "writes": ["patch"],
+        "writes_during_generation": True,
+    }
+    assert digest(canonical) != digest(absent)
+
+
 def test_train_defaults_materialized(env):
-    loaded = load(CORPUS_DIR / "04_das_im.json", env)
-    train = loaded.canonical_document["method"]["train"]
+    loaded = compile_protocol(CORPUS_DIR / "04_das_im.json", env=env)
+    train = loaded.canonical["method"]["train"]
     assert train["optimizer"]["betas"] == [0.9, 0.999]
     assert train["optimizer"]["eps"] == 1e-8
     assert train["optimizer"]["schedule"] == "constant"
     assert train["precision"] == {"feature": "fp32", "loss": "fp32"}
     # the model's own precision has one home, and it is the model section
-    assert loaded.canonical_document["model"]["dtype"] == "bf16"
+    assert loaded.canonical["model"]["dtype"] == "bf16"
     assert "digest" in train["eval"]  # eval.split is a dataset ref too
 
 
@@ -112,22 +214,22 @@ def test_a_linear_anneal_has_one_canonical_spelling(env):
 
 
 def test_featurizer_widths_derived(env):
-    loaded = load(CORPUS_DIR / "04_das_im.json", env)
-    rot = loaded.canonical_document["method"]["featurizers"]["rot"]
+    loaded = compile_protocol(CORPUS_DIR / "04_das_im.json", env=env)
+    rot = loaded.canonical["method"]["featurizers"]["rot"]
     assert rot["width"] == 4096
     assert rot["params"] == {"weight": [4096, 8]}
     assert rot["dtype"] == "fp32"
 
 
 def test_gate_width_derived(env):
-    loaded = load(CORPUS_DIR / "05_dbm_im.json", env)
-    gate = loaded.canonical_document["method"]["featurizers"]["gate"]
+    loaded = compile_protocol(CORPUS_DIR / "05_dbm_im.json", env=env)
+    gate = loaded.canonical["method"]["featurizers"]["gate"]
     assert gate["params"] == {"theta": [4096]}
 
 
 def test_loaded_featurizer_hashed_not_shaped(env):
-    loaded = load(CORPUS_DIR / "09_das_apply_im.json", env)
-    rot = loaded.canonical_document["method"]["featurizers"]["rot"]
+    loaded = compile_protocol(CORPUS_DIR / "09_das_apply_im.json", env=env)
+    rot = loaded.canonical["method"]["featurizers"]["rot"]
     assert "content_digest" in rot and len(rot["content_digest"]) == 64
     assert "params" not in rot  # loaded bundles are identified by their bytes
 
@@ -141,13 +243,8 @@ def _loaded_rotation_at(components: tuple[str, ...]) -> dict:
     for i, component in enumerate(components[1:], start=2):
         site = f"target{i}"
         method["sites"][site] = {"component": component, "layers": [18]}
-        method["reads"][f"v_cf{i}"] = {
-            "site": site,
-            "pos": -1,
-            "model": "original",
-            "input": "counterfactual",
-            "featurizer": "rot",
-        }
+        method["reads"][f"v_cf{i}"] = {"site": site, "pos": -1, "featurizer": "rot"}
+        method["intervened_models"][UNWRITTEN]["reads"].append(f"v_cf{i}")
         method["writes"][f"patch{i}"] = {
             "site": site,
             "pos": -1,
@@ -161,7 +258,7 @@ def _loaded_rotation_at(components: tuple[str, ...]) -> dict:
 def test_a_loaded_featurizer_at_two_sites_is_held_to_one_width_at_load(env):
     """§2.5, one name at several sites, on a *loaded* featurizer: rule 4's
     one-width check ran on the fitted path only, so a loaded rotation named
-    from a 4096-wide and a 14336-wide site reached the build and was refused
+    from a 4096-wide and a 12288-wide site reached the build and was refused
     there, after its weights were read. It is refused at load now — while its
     canonical form still records its bytes and no width (one description of a
     loaded bundle), and two sites of one width are the tie they always were."""
@@ -172,15 +269,15 @@ def test_a_loaded_featurizer_at_two_sites_is_held_to_one_width_at_load(env):
         canonicalize(_loaded_rotation_at(("block_output", "mlp_activation")), env)
     assert err.value.rule == 4
     assert "one featurizer, one width" in str(err.value)
-    assert "4096" in str(err.value) and "14336" in str(err.value)
+    assert "4096" in str(err.value) and "12288" in str(err.value)
     assert err.value.path == "featurizers.rot"
 
 
 def test_swept_document_keeps_wrappers(env):
-    loaded = load(CORPUS_DIR / "08_weekdays_das_sweep_im.json", env)
-    doc_form = loaded.canonical_document
+    loaded = compile_protocol(CORPUS_DIR / "08_weekdays_das_sweep_im.json", env=env)
+    doc_form = loaded.canonical
     assert doc_form["method"]["featurizers"]["rot"]["k"] == {"sweep": [8, 16, 32]}
-    point_form = loaded.canonical_points[0]
+    point_form = steps_of(loaded, env).canonical[0]
     assert point_form["method"]["featurizers"]["rot"]["k"] == 8
     assert point_form["method"]["featurizers"]["rot"]["params"] == {"weight": [4096, 8]}
 
@@ -193,11 +290,18 @@ def test_canonical_bytes_are_sorted_and_minimal(env):
 
 
 def test_out_of_range_layer_refused(env):
+    """Rule 4's address half is the checklist's since the rules package: the
+    canonicalizer keeps the folds and returns; ``validate_document`` refuses,
+    with the environment's static model metadata."""
     raw = base_doc()
     raw["method"]["sites"]["tgt"]["layers"] = 40  # gpt2 has 12 layers
     with pytest.raises(Exception) as err:
-        canonicalize(raw, env)
+        validate_document(parse_document(raw), model_info=env.model_info)
     assert "[V4]" in str(err.value)
+    assert canonicalize(raw, env)["method"]["sites"]["tgt"]["layers"] == [40]
+
+
+MATCH = aggregation("match", expected="label")
 
 
 def test_match_mode_default_materialized(env):
@@ -205,51 +309,22 @@ def test_match_mode_default_materialized(env):
     defaults (§2.10): the two spellings of "exact" are one canonical form, so
     adding the field cannot split the digest of documents that omit it."""
     omitted = base_doc()
-    omitted["method"]["metrics"]["m"] = {
-        "kind": "match",
-        "of": "logits",
-        "expected": "label",
-        "token_form": "space_prefixed",
-    }
-    omitted["method"]["save"].append(
-        {"value": "m", "model": "patched", "input": "base", "file_path": "m.json"}
+    omitted["method"]["save"].append(saved("logits", "patched", "m.json", MATCH))
+    spelled = copy.deepcopy(omitted)
+    spelled["method"]["save"][1]["aggregation"]["mode"] = "exact"
+    assert (
+        canonicalize(omitted, env)["method"]["save"][1]["aggregation"]["mode"]
+        == "exact"
     )
-    spelled = {
-        **omitted,
-        "method": {
-            **omitted["method"],
-            "metrics": {
-                **omitted["method"]["metrics"],
-                "m": {**omitted["method"]["metrics"]["m"], "mode": "exact"},
-            },
-        },
-    }
-    assert canonicalize(omitted, env)["method"]["metrics"]["m"]["mode"] == "exact"
     assert digest(canonicalize(omitted, env)) == digest(canonicalize(spelled, env))
 
 
 def test_first_token_mode_is_a_different_document(env):
     """...and a real semantic choice still moves the digest."""
     exact = base_doc()
-    exact["method"]["metrics"]["m"] = {
-        "kind": "match",
-        "of": "logits",
-        "expected": "label",
-        "token_form": "space_prefixed",
-    }
-    exact["method"]["save"].append(
-        {"value": "m", "model": "patched", "input": "base", "file_path": "m.json"}
-    )
-    first = {
-        **exact,
-        "method": {
-            **exact["method"],
-            "metrics": {
-                **exact["method"]["metrics"],
-                "m": {**exact["method"]["metrics"]["m"], "mode": "first_token"},
-            },
-        },
-    }
+    exact["method"]["save"].append(saved("logits", "patched", "m.json", MATCH))
+    first = copy.deepcopy(exact)
+    first["method"]["save"][1]["aggregation"]["mode"] = "first_token"
     assert digest(canonicalize(exact, env)) != digest(canonicalize(first, env))
 
 
@@ -296,7 +371,7 @@ def test_subspace_init_hashes_the_basis(env):
     the canonical form as ``init.content_digest``, the way a loaded
     featurizer's do (§7) — while the featurizer stays a *fit*, so its param
     shape is still derived. A missing basis is a load error, never a default."""
-    from causalab.protocol.errors import ValidationError
+    from causalab.protocol.rules.errors import ValidationError
 
     from tests.protocol._env import PCA_FIXTURE_RELPATH
 
@@ -435,9 +510,21 @@ def test_the_ungrouped_gate_canonical_form_is_untouched(env):
 # --------------------------------------------------------------------------- #
 
 
+#: The corpus DBM document's fit term (§2.11): the cross-entropy of the
+#: masked model's logits against the label, the aggregation its `ce.json`
+#: save entry tabulates.
+CE = term(
+    "logits",
+    "masked",
+    aggregation("cross_entropy", target="label"),
+)
+
+
 def _two_gate_dbm(env, objective):
     """The corpus DBM fit with a second gate at the layer below."""
-    raw = copy.deepcopy(dict(load(CORPUS_DIR / "05_dbm_im.json", env).raw))
+    raw = copy.deepcopy(
+        dict(compile_protocol(CORPUS_DIR / "05_dbm_im.json", env=env).tree)
+    )
     raw["method"]["sites"]["below"] = dict(raw["method"]["sites"]["target"])
     raw["method"]["sites"]["below"]["layers"] = [
         raw["method"]["sites"]["target"]["layers"][0] - 1
@@ -446,6 +533,10 @@ def _two_gate_dbm(env, objective):
     raw["method"]["reads"]["v_below"] = dict(
         raw["method"]["reads"]["v_cf"], site="below", featurizer="gate_below"
     )
+    # the new read is taken where `v_cf` is (§2.9)
+    for model in raw["method"]["intervened_models"].values():
+        if "v_cf" in model["reads"]:
+            model["reads"] = [*model["reads"], "v_below"]
     raw["method"]["writes"]["mask_below"] = dict(
         raw["method"]["writes"]["mask"],
         site="below",
@@ -454,6 +545,9 @@ def _two_gate_dbm(env, objective):
     )
     raw["method"]["intervened_models"]["masked"]["writes"] = ["mask", "mask_below"]
     raw["method"]["train"]["params"] = ["gate", "gate_below"]
+    # the corpus saves name its objective terms (§2.12); spelled inline, the
+    # saves hold whatever `objective` this test puts in their place
+    raw["method"]["save"] = inline_train_saves(raw["method"])
     raw["method"]["train"]["objective"] = objective
     raw["method"]["save"].append(
         {"value": "gate_below", "site": "below", "file_path": "gate_below.safetensors"}
@@ -465,11 +559,11 @@ def test_a_regularizer_reduce_passes_through_unmaterialized(env):
     """§2.11 ``reduce``: authored, it is in the canonical form as written, the
     names beside it still sorted; absent, nothing is added — so no document
     without it moves its digest."""
-    plain = _two_gate_dbm(env, [[1.0, "ce"], [0.01, {"l1": ["gate_below", "gate"]}]])
+    plain = _two_gate_dbm(env, [[1.0, CE], [0.01, {"l1": ["gate_below", "gate"]}]])
     canonical = canonicalize(plain, env)["method"]["train"]["objective"]
     assert "reduce" not in canonical[1][1]
     summed = _two_gate_dbm(
-        env, [[1.0, "ce"], [0.01, {"l1": ["gate_below", "gate"], "reduce": "sum"}]]
+        env, [[1.0, CE], [0.01, {"l1": ["gate_below", "gate"], "reduce": "sum"}]]
     )
     canonical = canonicalize(summed, env)["method"]["train"]["objective"]
     assert canonical[1][1] == {"l1": ["gate", "gate_below"], "reduce": "sum"}
@@ -477,54 +571,57 @@ def test_a_regularizer_reduce_passes_through_unmaterialized(env):
 
 
 def test_a_regularizer_list_is_sorted(env):
-    raw = _two_gate_dbm(env, [[1.0, "ce"], [0.01, {"l1": ["gate_below", "gate"]}]])
+    raw = _two_gate_dbm(env, [[1.0, CE], [0.01, {"l1": ["gate_below", "gate"]}]])
     canonical = canonicalize(raw, env)
     assert canonical["method"]["train"]["objective"][1] == [
         0.01,
         {"l1": ["gate", "gate_below"]},
     ]
-    other = _two_gate_dbm(env, [[1.0, "ce"], [0.01, {"l1": ["gate", "gate_below"]}]])
+    other = _two_gate_dbm(env, [[1.0, CE], [0.01, {"l1": ["gate", "gate_below"]}]])
     assert digest(canonicalize(other, env)) == digest(canonical)
 
 
 def test_a_one_name_list_collapses_to_the_name(env):
     """``{"l1": ["gate"]}`` is ``{"l1": "gate"}``: the corpus DBM document's
     digest is the same whichever way its one gate is written."""
-    listed = dict(load(CORPUS_DIR / "05_dbm_im.json", env).raw)
-    listed["method"]["train"] = dict(listed["method"]["train"])
-    listed["method"]["train"]["objective"] = [[1.0, "ce"], [0.01, {"l1": ["gate"]}]]
-    plain = load(CORPUS_DIR / "05_dbm_im.json", env)
-    assert canonicalize(listed, env)["method"]["train"]["objective"] == [
-        [1.0, "ce"],
-        [0.01, {"l1": "gate"}],
-    ]
-    assert digest(canonicalize(listed, env)) == plain.document_digest
+    listed = copy.deepcopy(
+        dict(compile_protocol(CORPUS_DIR / "05_dbm_im.json", env=env).tree)
+    )
+    objective = listed["method"]["train"]["objective"]
+    assert objective["l1"] == {"weight": 0.01, "l1": "gate"}
+    objective["l1"]["l1"] = ["gate"]
+    plain = compile_protocol(CORPUS_DIR / "05_dbm_im.json", env=env)
+    assert canonicalize(listed, env)["method"]["train"]["objective"]["l1"] == {
+        "weight": 0.01,
+        "l1": "gate",
+    }
+    assert digest(canonicalize(listed, env)) == plain.digests.document
 
 
 def test_the_named_form_keeps_its_names_and_sorts_its_lists(env):
     raw = _two_gate_dbm(
         env,
         {
-            "fit": {"weight": 1.0, "metric": "ce"},
+            "fit": {"weight": 1.0, **CE},
             "sparsity": {
                 "weight": {"sweep": [0.01, 0.1]},
                 "l1": ["gate_below", "gate"],
             },
         },
     )
-    loaded = load(raw, env)
-    assert loaded.canonical_document["method"]["train"]["objective"] == {
-        "fit": {"weight": 1.0, "metric": "ce"},
+    loaded = compile_protocol(raw, env=env)
+    assert loaded.canonical["method"]["train"]["objective"] == {
+        "fit": {"weight": 1.0, **CE},
         "sparsity": {"weight": {"sweep": [0.01, 0.1]}, "l1": ["gate", "gate_below"]},
     }
     assert [
         p["method"]["train"]["objective"]["sparsity"]["weight"]
-        for p in loaded.canonical_points
+        for p in steps_of(loaded, env).canonical
     ] == [
         0.01,
         0.1,
     ]
-    assert len(set(loaded.point_digests)) == 2
+    assert len(set(steps_of(loaded, env).digests)) == 2
 
 
 # --------------------------------------------------------------------------- #
@@ -550,14 +647,14 @@ def test_an_unshuffled_document_keeps_its_canonical_bytes_and_digest(env):
     """Corpus 02 without ``shuffle`` canonicalizes to its committed pin — the
     verb adds nothing when unauthored, so no shipped digest moved with it. The
     corpus pins prove this for every document; this names the mechanism."""
-    loaded = load(_corpus_02(), env)
+    loaded = compile_protocol(_corpus_02(), env=env)
     pin = CORPUS_PINS["02_interchange_im.json"]
-    assert loaded.document_digest == pin["document"]
-    assert list(loaded.point_digests) == pin["points"]
-    for role in loaded.canonical_document["data"].values():
+    assert loaded.digests.document == pin["document"]
+    assert list(steps_of(loaded, env).digests) == pin["points"]
+    for role in loaded.canonical["data"].values():
         assert "shuffle" not in role
-    assert digest(loaded.canonical_document) == pin["document"]
-    assert canonical_bytes(loaded.canonical_document)  # the bytes the digest is of
+    assert digest(loaded.canonical) == pin["document"]
+    assert canonical_bytes(loaded.canonical)  # the bytes the digest is of
 
 
 def test_an_authored_shuffle_passes_through_and_moves_the_digest(env):
@@ -566,28 +663,25 @@ def test_an_authored_shuffle_passes_through_and_moves_the_digest(env):
     stamped digest, the document and point digests both move, and the base
     role's entry is byte-identical. The mutation that drops ``shuffle`` from
     the canonical form fails here and in the two-seeds test below."""
-    plain = load(_corpus_02(), env)
-    shuffled = load(_with_shuffle(_corpus_02(), 0), env)
-    cf = shuffled.canonical_document["data"]["counterfactual"]
+    plain = compile_protocol(_corpus_02(), env=env)
+    shuffled = compile_protocol(_with_shuffle(_corpus_02(), 0), env=env)
+    cf = shuffled.canonical["data"]["counterfactual"]
     assert cf["shuffle"] == {"seed": 0}
     assert {k: v for k, v in cf.items() if k != "shuffle"} == (
-        plain.canonical_document["data"]["counterfactual"]
+        plain.canonical["data"]["counterfactual"]
     )
-    assert (
-        shuffled.canonical_document["data"]["base"]
-        == (plain.canonical_document["data"]["base"])
-    )
-    assert shuffled.document_digest != plain.document_digest
-    assert shuffled.point_digests != plain.point_digests
+    assert shuffled.canonical["data"]["base"] == (plain.canonical["data"]["base"])
+    assert shuffled.digests.document != plain.digests.document
+    assert steps_of(shuffled, env).digests != steps_of(plain, env).digests
 
 
 def test_two_seeds_are_two_digests(env):
-    zero = load(_with_shuffle(_corpus_02(), 0), env)
-    one = load(_with_shuffle(_corpus_02(), 1), env)
-    assert zero.document_digest != one.document_digest
-    assert zero.point_digests != one.point_digests
-    assert zero.canonical_document["data"]["counterfactual"]["shuffle"] == {"seed": 0}
-    assert one.canonical_document["data"]["counterfactual"]["shuffle"] == {"seed": 1}
+    zero = compile_protocol(_with_shuffle(_corpus_02(), 0), env=env)
+    one = compile_protocol(_with_shuffle(_corpus_02(), 1), env=env)
+    assert zero.digests.document != one.digests.document
+    assert steps_of(zero, env).digests != steps_of(one, env).digests
+    assert zero.canonical["data"]["counterfactual"]["shuffle"] == {"seed": 0}
+    assert one.canonical["data"]["counterfactual"]["shuffle"] == {"seed": 1}
 
 
 def _with_draw(raw, eval_member=None):
@@ -606,9 +700,9 @@ def test_an_undrawn_document_keeps_its_canonical_bytes_and_digest(env):
     """§7: ``draw`` adds nothing when unauthored — corpus 02 keeps its
     committed pin and no role's canonical entry holds the block (``shuffle``'s
     mechanism, one verb over)."""
-    loaded = load(_corpus_02(), env)
-    assert loaded.document_digest == CORPUS_PINS["02_interchange_im.json"]["document"]
-    for role in loaded.canonical_document["data"].values():
+    loaded = compile_protocol(_corpus_02(), env=env)
+    assert loaded.digests.document == CORPUS_PINS["02_interchange_im.json"]["document"]
+    for role in loaded.canonical["data"].values():
         assert "draw" not in role
 
 
@@ -621,28 +715,25 @@ def test_an_authored_draw_passes_through_and_moves_the_digest(env):
     fails here; the one that materializes ``eval`` fails on the last lines —
     ``draw`` with an explicit ``eval: 0`` is a different value from ``draw``
     without it (§7: only when authored, down to the nested key)."""
-    plain = load(_corpus_02(), env)
-    drawn = load(_with_draw(_corpus_02()), env)
-    plain_cf = plain.canonical_document["data"]["counterfactual"]
-    cf = drawn.canonical_document["data"]["counterfactual"]
+    plain = compile_protocol(_corpus_02(), env=env)
+    drawn = compile_protocol(_with_draw(_corpus_02()), env=env)
+    plain_cf = plain.canonical["data"]["counterfactual"]
+    cf = drawn.canonical["data"]["counterfactual"]
     assert cf["draw"] == {"kind": "uniform"}
     assert cf["field"] == "counterfactual_inputs"
     assert plain_cf["field"] == "counterfactual_inputs[0]"
     assert {k: v for k, v in cf.items() if k not in ("draw", "field")} == {
         k: v for k, v in plain_cf.items() if k != "field"
     }
-    assert (
-        drawn.canonical_document["data"]["base"]
-        == (plain.canonical_document["data"]["base"])
-    )
-    assert drawn.document_digest != plain.document_digest
-    assert drawn.point_digests != plain.point_digests
-    explicit = load(_with_draw(_corpus_02(), 0), env)
-    assert explicit.canonical_document["data"]["counterfactual"]["draw"] == {
+    assert drawn.canonical["data"]["base"] == (plain.canonical["data"]["base"])
+    assert drawn.digests.document != plain.digests.document
+    assert steps_of(drawn, env).digests != steps_of(plain, env).digests
+    explicit = compile_protocol(_with_draw(_corpus_02(), 0), env=env)
+    assert explicit.canonical["data"]["counterfactual"]["draw"] == {
         "kind": "uniform",
         "eval": 0,
     }
-    assert explicit.document_digest != drawn.document_digest
+    assert explicit.digests.document != drawn.digests.document
 
 
 def _position_gate_doc(
@@ -675,6 +766,7 @@ def _position_gate_doc(
             "site": "tgt2",
             "featurizer": name,
         }
+        method["intervened_models"][UNWRITTEN]["reads"].append("v2")
         method["writes"]["patch2"] = {
             **method["writes"]["patch"],
             "site": "tgt2",

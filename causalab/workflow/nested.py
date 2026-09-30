@@ -1,38 +1,8 @@
-"""Nested reusable workflows — the ``workflow`` step kind (workflow spec
-§2.10, §5 rule 20).
+"""Load reusable workflows and mount their steps in the parent schedule.
 
-A ``workflow`` step's ``document`` is another workflow document. It is
-**loaded once, at the outer's load, through the same**
-:func:`~causalab.workflow.document.load_workflow` — so every inner refusal is
-an outer refusal — with the step's ``set`` laid over the named inner steps'
-own ``set`` before the inner parse (one level deeper than a document step's
-``set``, and the tree's one instrument for parametrisation). Its steps join
-the outer run as ``<step>/<inner>``: ``/`` is outside rule 3's alphabet, so no
-authored name can collide with a flattened one, and ``/`` already is the
-run-tree path separator the reference grammars use, so ``tail/best/values.json``
-reads as ``<step>/<file>`` with ``<step> = tail/best`` — every site that took
-a path's producer from its head takes the **longest step name** instead
-(:func:`~causalab.workflow.document.producer_of`). The inner steps keep their
-own identities (``step_digests``, ``inner_digests``), are scheduled on the one
-flattened graph, and execute rooted at ``<run_root>/<step>/`` on the one
-stream and the one manifest (:mod:`causalab.workflow.runner`).
-
-The ``workflow`` step itself is a **container**: it publishes no file, writes
-no receipt, is in no schedule and has no status — its inner steps have
-theirs. In the canonical form it is one entry, ``{type, document, set,
-workflow_digest, requires_receipt, after}``, whose ``workflow_digest`` is the
-inner document's own §7 digest: the outer digest moves exactly when the inner
-one does, and the inner's steps are never entries of the outer (both shipped
-pins hold — the check that the kind leaked into no other document).
-
-A document that includes itself, directly or through a chain of ``workflow``
-steps, is refused naming the chain; controls inside a nested workflow, a
-``workflow`` step named by a ``control.of``, ``set`` into a nested
-``workflow`` step and ``fan_out`` on a ``workflow`` step are left for a later
-version (rule 20; ``fan_out`` inside the inner document is free, §2.9).
-
-Torch-free, engine-free; in no hashed script's closure.
-"""
+Inner names are prefixed with the containing step. References resolve within
+the corresponding run subtree. Validation checks recursive inclusion, supported
+control declarations, and conditional dependencies across nesting boundaries."""
 
 from __future__ import annotations
 
@@ -40,9 +10,9 @@ import dataclasses
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
 
-from causalab.protocol.errors import ProtocolError, suggest
-from causalab.protocol.loader import load_text
-from causalab.protocol.resolve import ResolutionEnv
+from causalab.protocol.rules.errors import ProtocolError, suggest
+from causalab.io.sources import load_text
+from causalab.io.env import ResolutionEnv
 from causalab.workflow.document import (
     ConditionalStep,
     DecisionStep,
@@ -190,7 +160,7 @@ def parse_workflow_step(
 
 def parse_step_set(raw: Any, path: str) -> dict[str, dict[str, Any]]:
     """The nested ``set`` form, shape-checked (its names are held to the inner
-    document by :func:`check_step_set` once that document is read)."""
+    document by [`check_step_set`][] once that document is read)."""
     shape = (
         "'set' on a workflow step maps inner step names to that step's own "
         '\'set\' — {"<inner step>": {"<dotted path>": value}} (§2.10)'
@@ -227,7 +197,7 @@ def check_step_set(
 ) -> None:
     """Rule 20: every inner name a ``workflow`` step's ``set`` names is a step
     of the inner document, and one with a ``set`` of its own to lay over — a
-    document step (:data:`_DOCUMENT_KINDS`); a script, a decision, a
+    document step (`_DOCUMENT_KINDS`); a script, a decision, a
     conditional or a nested ``workflow`` step is refused naming the field."""
     steps_raw = inner_raw.get("steps")
     if not isinstance(steps_raw, Mapping):
@@ -404,7 +374,7 @@ def mount(
     ``mounted`` records ``{flattened name: the workflow step it came in
     through}``. The container's own edges — ``after``, a receipt, a
     conditional's gate — are derived by the outer's loop and folded onto the
-    inner roots by :func:`flatten_edges`."""
+    inner roots by [`flatten_edges`][]."""
     for local, step in nested.document.steps.items():
         flat = qualified(name, local)
         steps[flat] = rebase(step, name)
@@ -600,7 +570,7 @@ def check_nested(
                     "name at one root (§2.10)",
                     f"steps.{name}.document",
                 )
-            if engaged and workflow.inner[local].document.train is not None:
+            if engaged and workflow.inner[local].compiled.document.train is not None:
                 raise _refuse(
                     f"workflow {step.document!r} contains the fit "
                     f"{qualified(name, local)!r}, and this document engages the "
@@ -626,7 +596,7 @@ def _walk(
 ) -> Iterator[tuple[LoadedWorkflow, str, str]]:
     """Each ``workflow`` step a flattened name descends through, outermost
     first, as ``(its owner, its local name there, its owner's sub-root)`` —
-    the one walk :func:`locate` and :func:`containers` read, so the two can
+    the one walk [`locate`][] and [`containers`][] read, so the two can
     never disagree about where a step lives."""
     owner, rel, rest = loaded, "", name
     while SEPARATOR in rest:

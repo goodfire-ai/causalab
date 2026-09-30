@@ -1,7 +1,7 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Chat-coherent drift tier, point document (successor to the retired Qwen golden tier): weekday-successor task on Qwen3-4B in raw completion form (protocol v1 has no chat-template path - a recorded fidelity gap vs the old tier). Pins: baseline accuracy (gated >= 0.9 like the old tier), IIA and logit_diff under an interchange at layer 26 (where a preliminary layer scan localizes Qwen3-4B's last-token binding signal - layers <= 22 give IIA 0), and tensor statistics of the harvested residual. Values are captured on cuda by tests/golden/drift/update_drift_goldens.py, never asserted from papers."
+    "protocol_version": "4",
+    "description": "Chat-coherent drift tier, point document: weekday-successor task on Qwen3-4B in raw completion form (the document applies no chat template). Pins: baseline accuracy (gated >= 0.9), IIA and logit_diff under an interchange at layer 26, and tensor statistics of the harvested residual. Layer 26 is where the layer scan of the same interchange (drift_locate_scan_im.json, run on Apple MPS) localizes Qwen3-4B's last-token binding signal: layers <= 22 give IIA 0. Values are captured on the canonical GPU by tests/golden/drift/update_drift_goldens.py, never asserted from papers."
   },
   "model": {"key": "Qwen/Qwen3-4B-Instruct-2507", "revision": "main", "dtype": "bf16"},
   "data": {
@@ -9,51 +9,46 @@
     "counterfactual": {"dataset": "drift/weekdays", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_src"]},
+      "original_base": {"input": "base", "reads": ["acts_mid", "logits_clean"]},
+      "patched": {"input": "base", "reads": ["logits_patched"], "writes": ["patch"]}
+    },
     "sites": {
       "target": {"component": "block_output", "layers": [26]},
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "v_src": {"site": "target", "pos": -1, "model": "original", "input": "counterfactual"},
-      "acts_mid": {"site": "target", "pos": -1, "model": "original", "input": "base"},
-      "logits_clean": {"site": "lm_head", "pos": -1, "model": "original", "input": "base"},
-      "logits_patched": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
+      "v_src": {"site": "target", "pos": -1},
+      "acts_mid": {"site": "target", "pos": -1},
+      "logits_clean": {"site": "lm_head", "pos": -1},
+      "logits_patched": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "patch": {"site": "target", "pos": -1, "do": {"swap": "v_src"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "acc": {
-        "kind": "match",
-        "of": "logits_clean",
-        "expected": "answer",
-        "token_form": "space_prefixed"
-      },
-      "iia": {
-        "kind": "match",
-        "of": "logits_patched",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "ld": {
-        "kind": "logit_diff",
-        "of": "logits_patched",
-        "a": "cf_answer",
-        "b": "answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "acc", "model": "original", "input": "base", "file_path": "acc.json"},
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
-      {"value": "ld", "model": "patched", "input": "base", "file_path": "ld.json"},
       {
-        "value": "acts_mid",
-        "model": "original",
-        "input": "base",
+        "read": "logits_clean",
+        "model": "original_base",
+        "aggregation": {"kind": "match", "expected": "answer"},
+        "file_path": "acc.json"
+      },
+      {
+        "read": "logits_patched",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits_patched",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "answer"},
+        "file_path": "ld.json"
+      },
+      {
+        "read": "acts_mid",
+        "model": "original_base",
         "file_path": "acts_mid.safetensors"
       }
     ]

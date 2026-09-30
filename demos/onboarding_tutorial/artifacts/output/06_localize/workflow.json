@@ -1,0 +1,1719 @@
+{
+  "output_dir": "06_localize",
+  "steps": {
+    "clean": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "69234c9e05fe63ccd8e3f316f897cb3b58ae514e4e0b065aacabd617ba3dc20c",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_clean.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "69234c9e05fe63ccd8e3f316f897cb3b58ae514e4e0b065aacabd617ba3dc20c",
+      "points": 1,
+      "point_digests": [
+        "69234c9e05fe63ccd8e3f316f897cb3b58ae514e4e0b065aacabd617ba3dc20c"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "clean_base.json",
+        "clean_cf.json",
+        "unpatched_cf.json",
+        "unpatched_logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "clean_base.json": "57f4ff53823604223e24ae9b59db858a035f7496719f70ebdb13271ee505ba63",
+        "clean_cf.json": "aebe1c03ccb752d4452dc886362837d43ccfd582cde1a99512e9bb01be53aee2",
+        "unpatched_cf.json": "297a3b972d9f10bd7ca79d2bdbd72a3717fb4b87c1e208e7245660ba3814a416",
+        "unpatched_logit_diff.json": "3107c0194345443e95b1eefb1e75fe80d6fd477c80fa69299971299a8422c0a0"
+      },
+      "checks": {
+        "clean_base.json": "json",
+        "clean_cf.json": "json",
+        "unpatched_cf.json": "json",
+        "unpatched_logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "scan": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "2d8ec458ef09151d5655bf290fa177017c4ef7e9aa4629cad542cc47a9522b86",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_locate_scan.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "2d8ec458ef09151d5655bf290fa177017c4ef7e9aa4629cad542cc47a9522b86",
+      "points": 224,
+      "point_digests": [
+        "6910fbc336ab6fe04be006591891aabe7d1b14995e4670a429c29da12225acfc",
+        "bec54bfc8e7f12fd15c04ac41bd4151b458d60ec7205b2193ce9a4075e0818d1",
+        "84dba63ff2d0576148abef34c60eb3d27372cb09ec549b4614ba988e6cc4a10b",
+        "786fc7d1db48ec1a3dc4b53fc9f4602a10ca9b48a34d89e5eab71a39e2dddec9",
+        "b76c61ccaf698f7516418bd936fef3ce0db75ed6861cd110c20ecb08098a1d83",
+        "ce29ea78e6a488ce1ee1df9f1730d7158b43f34c8c9100b9e2d24db2b1857a1c",
+        "9abc82e3499f072179a24f69139559d6628aaaa56ef9107f96222b05b982dc4b",
+        "d2b152f0126c00c80c1d0108b3f0c4bc65e757c381d8141111e7adab5d1fce26",
+        "9a02fe6d09dfece13418c208b25d8db206aa98dac5e35486380987d5b3b0ecdc",
+        "5c62370f1ed4af6f3934602ec86c6d1c6f89ed9c3f5c7ad4b21208c965850969",
+        "2ccd4c5b0358ba226194f9dec025cd8272dc36873bb54e5e3afbea62989bf536",
+        "d6f4a73e25fde0b046fef0669e97fc7becbcd80d3932bd78182db8fe8f439a3d",
+        "52705edcbb5813d6ccb95032da8f95fd8cfc74097d712934be597de5754d7a9d",
+        "1191ea4a5c51be993354147a5be0510797c70af9491f8a929099f5e5b341ec33",
+        "4682ed8d998dcb67f327ba2813f971fd2a24e28640e67438ff1b70d2f5d65895",
+        "3bdf833cba9be7384ac387b876d54470c9c9f2c2b97fd661b222510789034dbc",
+        "f80fbd4ce94be3ce9de699ac1e2872cf4746b2af000c6b8b4a6715fd7d10dc19",
+        "453822c77cad7aed0d4d3974c209fad82f308dfcb84a6b5e8c034665a6a933d7",
+        "103be0400bcc8994e3246ef40db396dde64cbb0eb40dafc8fc90269a4d1863fd",
+        "4255e976d125cac97b99ac7258ac74e43b7f366e8a20d34f1d937e744d43a358",
+        "5f732deae3a54375bdca93b5671baa406d883a5e71c0dfb4603dc2c89c8a4125",
+        "3d05be8535d578f079341fde2953690eb4f6b48ceb45aad39ab18b0da9412144",
+        "4f143752c191fb292b04408949c7b182965d2f30de8acf7deaead586bcbd98fd",
+        "75bec348b6ebd251bdb38e154491cbb268b5cc14a7731c888b2ae2b6f387acc5",
+        "8ea7b3dc1b6c4e66780f9aacf4695b809e12484345b2cdcda0c47d7244b2dce6",
+        "56df6ff19bd513deb5adf068f90f5fe3e7868811d1f1ee103b174b9e05afcbf1",
+        "d62c6ef94cd442a09ec89549162041b3aef33b4489112b87e4fbca6c9f2f708b",
+        "088bbc6da84c2616c28629115fc55e95bd4b09272d51a0d47599d5bc666be19c",
+        "2b0c783d3942dd548db2075ea33dd90d555f7cd49fffb40ff67a4bfe6a802123",
+        "97815bc008ea5f1cad0f39de17652cb8ecb828a2046202ae9c9d53b3ade60535",
+        "4064a828c117f308871d4362e328c07f4be7ab6352dec0f3391b352f1e4d2c72",
+        "9009152d7e3da01f63f30f8da57e9da9d837bd77037ad034e404759301047b90",
+        "3cca7b0b34d6bf4d03e26f5ff852054fbdacacfab6bec7551d5ab0be013ecaf5",
+        "360b0a4b180802e90612869c4aa4979d0a6ef042d7f4b90a129e979026602cab",
+        "db86c18c7641e0dd5190000ac8765be3f29c997d0e1e0a1c97ff985abc859536",
+        "8dbc47efdc6609ef972db516cd1059f4125d2038d9855f38041a348697f23b86",
+        "af946267d4414dc3f87dcae29a1bbf47ee32490dd54b0fb229ce49db1ae1c638",
+        "0990ba2e5f97ff644ca48ed7f87ffe20f925bfa9a158763ca835494eed007585",
+        "e48c519cba70816047f0a67862ff97714dd6a12eea133c5a39fdc4390572e5cc",
+        "d1a45ddea37af6d425866a30f750c8bd32905e9155b38468f364c7b7291e26cc",
+        "574e5a075aaafe8aea5172cfe3badc28fec78dd89c0d05d44d3a6a2fa58d59f4",
+        "ab5213a57b9aa8acba9fd381f47de267f34022ceaaeda67441bbdb981b187fff",
+        "23ae712c1c9318a99ca5874a709be0f29a30b3c36f0d4d9c88cd6cc0f10feb20",
+        "c8e6f10a6851277b91b2c1497789d6ef444bab5ee67cf2644e7c92edd36b9ce2",
+        "e2818e8b0ce073fd2f4c3edc7db7cdf6fd138046fbe4dcf40a9fbaa24b8479b6",
+        "ea0fc0e7de188581f7a6266bd3ff54ab8869b7f55e23696f8dba3e60a66f5eff",
+        "d7cd729b3c530edf47d6dbfff33f9c292f25a619f0d8132f6fc0a3c89288942b",
+        "0864147b9b08a3f3b50d064a073525dff143ee723c7856991a9da72fe0d7fe0d",
+        "7769c39078b986afe6437d14e1ea2129b8e2cfc719d2aec54486e3d2b2d02e67",
+        "24151a124f8304819d265579b4cbc35d1941e5617f8d768fa9407db96d1ecd93",
+        "0f85fef9e6efa362a4f8bc783148db0cecbb53fdd464927cf529f47f31aa0c69",
+        "5aa07df22842a63667925f0a86c071b450b25814b5244b4e7e4de643f861ca6b",
+        "e3f2c285ce76595f561b26af62ebb50cd43e050415cfc8ac66801fd298d20842",
+        "000dbdeaeac30e29c22b0204ea7587d45a3ded599790558789df878af7578b97",
+        "4150fc0853d25e8abaad5937c324deedd8134823f48a34138b12f784e5333e83",
+        "1e2a0e3c39c5e82c09104d5e49662a63963c4cd9085b9fc1abd858ceff3e0a09",
+        "8c34b4d37027fced87ce912ac91a9da95a786458ac5c21035777aadbb865be3b",
+        "3a1a2a7c5b568007418f7ad31d4203adf7ca7fc410b5a6df51d5568948db3cf6",
+        "3bfae13eada65fcc49e9dca983ea1f077da34905ae9559cab96898755f271052",
+        "ef47d11124eebbd7722f9ceb8edc2534925f3e15d713d0a31bc19e5b54b32957",
+        "b899c004512e583e24390cf1db8352fc69319def3e51fc254a35c535dac08995",
+        "ad26bf35f9b28d182d99654ee8e3a7d6446955304f689b42c218734fe1319467",
+        "4526f61ca34c042371cc5b5f8454c4c26e13945e514e70e184eb697e134f5d2c",
+        "78c4d2dcf11b038618fbffabedc30f4607550edff8713c0d6541a2c71385272b",
+        "672e8b27f3c21e3c965587ad6f46b70bb027d8aed63630d8c28749d7aec9e2c8",
+        "e083bdca7ce9b5097391d75081c02468a6dd1fd0317cb4a87bcb57ec15529ee2",
+        "3f11f287169c3f674b68e2cfa9a5811789bf6599873bdf13aeea9ad2607ee51e",
+        "ec1e3e90205591736a033945fe16991c1cf6d151bcd09225e881e72e26070bae",
+        "1a8ba2917af0d95f08afb1e3544ad5292c922205725d01a54512b617e4f692de",
+        "22a9691adb3e4b304d6c65cd695827d3c97b199a848daf232ec3819608939d12",
+        "6d2fcc0d5c5bc2bb640e7765980139f9c5c0fe5e80a317068b439a2137e3172d",
+        "9653a6390c83d57066571404ff7a03495b418538deafca359e5792d45f43e1c5",
+        "22003d2c91a3325ace3711ba22097c7102bcf831480117f5357a5d53e144e2f0",
+        "0d16872b0d717a776fd49070066dfaf552367cee803688ed7c1ee3af9c7844d9",
+        "92fcd1a734e5950ff03c17e0f30dcaebd771f72452b149375f14ce5944c1faf0",
+        "445c6ee654d2f9aa132213328ace72b458c0940bc9d9d3558c11d53c3763bc1b",
+        "ceee8b671db698b2ada610437b45c8bfd7bc867adf6dc3ce4f605966fb5a99e2",
+        "5a9a3cbf67b9c93049d69aeef651101014bb9dfefb92641d98761e3d0e2cd6ed",
+        "7f8436bca93ef38a2f6a1219b44dc8d77395fdfc585485f1d6aabe72a718c4da",
+        "f03b9a7e05e9bae0310acdc91074afa06f60f1aa7467b6509e3971e784973ae8",
+        "a0dc359b7a03b9b9bc2cd5dd8f43cf4ea45db53c19f16da2bd00829e6e4fcffd",
+        "646fe270d1cff9f9a6986a0392b142331670a33e66c1b243b64a752301e7101b",
+        "919301e0dd7ce8ed5ccaf8740bc0e4d35cc5273d18dd46e4948c707507f220c5",
+        "589cbb5b3a21c44bf98da2455c0fa14c27bee744113371081d207587e58a1f5d",
+        "34810a33129b19b012f76dc3fa4a583336ec9cf4b7c7c6d7de964f14707be69b",
+        "522ea04fa93a59642df6513955a8038394cf39d31e0d57f5c187b37462f31332",
+        "8542cd51330be054504579b7a34ed272a2377d69526d04f4181062a0cb4dbc2d",
+        "103fd1750b356d6ec6c1134848a666d3dc860cd954382dbb8cc03262a8b74246",
+        "93798b3aa1ac0855ccb259f04a677635f4e094cc7adada5b10c23755d24fce36",
+        "d1fd7f5ef913b6c30cc789fd7920dcaa84a9c82cfc6f895ef8bbf1ef5e0b057e",
+        "ec1b4854fe8e7fbbc8b6dc0ebf4c91c9c47d479dac7e717ad6efe63e7d6ab5a2",
+        "34a770ddc9eecea79952c8a99d44a19e9c1b8a4984dffd65f59be060f2fcda29",
+        "24e507eea8c95644cac3ec384e8b3496d226bf68fd273dc3135f4bd3da3ff5b6",
+        "8c46598b1fb10de9344368f75635cabd11caadd86d24f5b6ab34a3a78df65f12",
+        "3580fb3b700dd1a4314ba7194d371189a8e4f81bb4375b41f0d8f98c45b4ab1f",
+        "3c5dcbd9a39de8217acb1c715ea9eb02ec36e8b28293b6defdccb8e1fcf1e564",
+        "e64244ba212a5e6e4addbc9900936d328039bcaf988129de8451c406db215501",
+        "c5104dcbfc7a2f1188cabf5d0697c8edba77de4140c582ea401e35d799e7a9ba",
+        "46619aa9d9590a3d54825073f2681bd9a2c7c857b01c956de452a8b4397d71f2",
+        "6b63f57aeb67fc7687690e37b3206ab627a9fb50ea9e674d138f5d682d4a7181",
+        "6da39bc56d0368d95a42abe1d745166d120c814e568e5c3a3e7d1736059cc9ff",
+        "b62ffccfc7cf679134b74be2fe1a9a06dc0c1858462091d490d3481d8d2a70d4",
+        "4c9ce48743c85bedb8455af5e46f4b6932b38f6a9d1f382308efc9ba67b6a436",
+        "891fc0ba299a57ca437e66fd821612401c84138f3c6861164e399caeafb8ae01",
+        "3b234363ee5971e28201058a5a80d2920110a8c35495c8d0a641a3f2c81155ab",
+        "e3d461ed99408718e28b2d35d9ac5a3002028e87965058fdc12bf72ee17984a3",
+        "c2b70f705f82ee367d055be7e54b4951c7575a8ab866fb3e0a287bb03b9200fe",
+        "611e00f35eb8dbdff12f5ebee489625f33030c364971a43314a43c253a16b1c3",
+        "a34c2d1e77cf1b0cdb435c69f1edbfdc88305196e0b0ddd34db896d272089ffa",
+        "f379ccf1e1ca3e2a6ad94a3a3f0df9393dd88a1ef4466f01808caac50785f90c",
+        "fe10b3d00be19eb12d0cee6954954eb24af15dc959812414e62b3ce9191df588",
+        "471a0d2e47a3ca68f54dc41c22ad8a3c1cac5a19e5f978ccff740b4750f8861e",
+        "d91e378d0b47681be72156bc15bf638135af21b008fbea2e16e72dff31ffa59d",
+        "8ae861f6a1f0488fc37d3137c6294df90f095877e726cc8744a0c0f00dbd8bf3",
+        "7e41d9e55d329e0c25e77b743faaa69dcdf0bab33002528caa470235598b5e74",
+        "64967ae6adf64912f3367fcbb7912f0c8c51a253da1472238be495a01a7d364d",
+        "b0d87f3aa87b54fec743568a10bfe1fc86d9bab39b98882e5fac06eed6e83878",
+        "663889f820dd716d6d55878bd2cff171da345c3b44aac02e83dae9c2f0e1bb90",
+        "d2ca8373168e98760a13a927bc2c97d7b2fc9c6835ba5dbc695c05eb914e3014",
+        "c5741a6297e9d50b477845639614759539eb5ee31a89ca82e93392325deca975",
+        "81700005848e35b104d9f41d841a384e3102e1d291c06401d5583e53e2d6e93f",
+        "467f9eca5c4aed10c4dc4730467d7434573d434cd4aae76ebe578bfaf3fec9d8",
+        "ab2e1babdfdba8b2bf4e29ce482c84ea670f4c474c944ef6afb5ee2961f76e3e",
+        "657ab1562041774353355e934e6322f08943cac29a73613d2b24ffe0d475f603",
+        "0a5a9345c9faad418d600ab550407667c8ce88d56aeed5c5cfc5f315b37eebba",
+        "cd776db88d8374dce6193f3860a584010ace1ead3a0ff8cdfe8693d04b2d612d",
+        "4707c828eeb1c541103dd00ad8db47de37cbcd79adcf1927eed6a4286de8e3f1",
+        "f633299796d302df7d3470563a809f4dfb721d8723f3099e34f30d4382bdcafb",
+        "dbf68c1148859e1db13e7c9c1d3979a6d07736a157236b52682905ce9f69c878",
+        "66c6f827761b9e13e86c5840ea8f0fbb6ae9d97f1b2e6e4db631a52446dc3f5c",
+        "1a4ca6c698b933573ccfc36bc68ddaae4f6fcd55d08c42d2ea243889bd7ea430",
+        "9d2ad9df5e87423120b9323c9f9ad2fc808a31696695d42f879c69b38b27130c",
+        "1c58b3a6dd8f358be9b874d4d59fa0298bb7c0df04edf72e66ffc6eea66593e3",
+        "a1dd6ac874c62291f9eab1150064ac71e698f6e123f45cda95b5c9b05e686d4d",
+        "10492f5db276dcf3578551c4ea9e3a33735ded9ed280093f74433d2bc8a90b22",
+        "7cadca0c318e7582c1ec020fc4539f13f47549a5c7d23f3b2177a39aa5c0afcf",
+        "4198e5f077d6774a4a3692a361c028503e97a54f023f90ab7d30d1d31e6a15d6",
+        "71d09396fa502cd4ef0b06c33240cddb735e92f368c07bacd66c288ae49665f8",
+        "3ff61d5b6126cd9ae7a4336d1dc2c943a2a4163d887a81b3cb495544fd485653",
+        "0bc50b4682fc85ceb78a908437ce670824c30519ab15b8ae6d901f3e1c116a63",
+        "d3fbb8132dfe577bfc852f95d123ffa86bc1b468e2642fe7c3a9bbb1d77ee307",
+        "ce1aa454e1da1e967015242e7be541b633a94e25cfaa32a9e28b5fbd68c9fc6d",
+        "2e11dfb2ba6d6082e4cac41bd26f23520504f6b086cfa3987215465279ee7428",
+        "2e242370b064ff2ae708a9c9e9a355a14c01fac0c4bcfcb270630d8c4b6023a6",
+        "5eace7ae7408027413769d2e31d3334ddcf5440f4d965c8524678a91a4636f90",
+        "ebb5f67c5c9be848ff60911a6ea45ae6abfa07ae00a640c0a3d544fc60a021ac",
+        "67a738a3aada83ded343e0975ac47e53b2be6ee47d09d5e07ce2702ae0817911",
+        "3027ba03a3d49cc0e0bfaee2c48ec2ae80c99480d74bce3078af43e8938c6426",
+        "f9401a36e96b68bcb6cacb5fadd6f0823ccf516985a9f9cd7c7a92a38a507581",
+        "f49a3b8739f68b44802e743a14a256b349fc5473b496f9fb7414eadd3b8ff113",
+        "71e922088b628e2d6aa7d1a2d753126aedf7c66a1beddda9aefaac142ecc9cd1",
+        "bbc2846b97f0273d7ee9475a2d08f80d6b85ba6cdfdb42847669f2db92ca4219",
+        "30d471085aa40f749931e62f0bed00998daa7c272ce303cb484d98b086f219c2",
+        "3758db675e4ef820767e835a9101359f380d766b646ddbe92f1927a786e00f40",
+        "e71980a939dd090e90093456c537617128ca3402e9dcea492f884e083f603545",
+        "b62ba8ecf352aa7a5c7cbeb4e4ff5c157db336ec28a7858b1522dcb221f7fa7d",
+        "80e09706d39242eae01385a5fe6ea82e7d4b0966ceae1b04cbb9ca33a133d11a",
+        "f436ba5900b652c31df427d1a9cdcb56dbf153c589a263e2bf967b4072a3002f",
+        "f8b83f89016a80596c9a4fc8d119b2fb0eb2b99bfeb0ea7bd654fded3457da62",
+        "fdd8feb2232cec61ffa65794df1046c1fed363dae95597760fc5dc048f6d435a",
+        "38648425a6ae69ee37219352e43bc475cdd1cba1bbeac6fc4a99d29b1854fb67",
+        "b2c407b935ff7f4e74fc715aedeccaaa99f9dfce53c6191d26713f2052522b7f",
+        "56e368dcbcf0a05aab8874d805651cbfc852d214b2258f3a23a57d56a17467fe",
+        "446b95707a68db309aa051fd2651aac0cfb2db4844ab98adcdd14f74b6b4676e",
+        "38c294db5b4f57d9d485df16676f49890de0db63f2cbed0c4f9b8234d276da12",
+        "aa3d4cf20438e4192f3ad99826fa9215b90324c7f94ce38ccc4116e752cdbe6f",
+        "b18b9cf4b8769cc1d1d21d88763d50e666fb434af4c49cf600f0c04673a63be5",
+        "0ec4d6b70f78fcc995f57f3285f85cd4a6fe35777bd14cd4441927aaa7842afe",
+        "081e4cc897dc539a0e6005a05710f2263cbe34643555234525cd00c22a7bdea6",
+        "5a4e79f87596d72f95139dc61a6af303b10c22425b7d024803437c20f655044b",
+        "a05f4bf0ce49ef763147ca17b9134397815dcf29e19fd806263e4cf8f06eccdd",
+        "fc6158aebb80f2ca8b735e0264c6f0418b192193a07b931da7fa34587e4511ea",
+        "30ce41d3ed52d0da033be4166e280d367bfc3f810ac7b6be5709fb7fb82b4660",
+        "a11d10872fe8d88274e6bc9fa7a84e63304b89cf03b5ccd01fcdbd6847b72c95",
+        "7beb0a0ae3f25559294f9ab29eafb112f522e22fec41867d3b2fbb9789fc9064",
+        "6a085160f90975473e3f8c5279eebb5db08ffc8cc41d35c211ebfb0b3cdecd30",
+        "e7dcca57bd137e448d468861757c7b7cfc7eb0889bc87cfdb9a1babb6ca823e2",
+        "136736e8e02253033c427edcbec58498bf507c6048e3ac5d754161e2895a2aaf",
+        "285ebfef8ec9fdb94633ac793835ca8363638043e6514da8ada0de2dc358a5ac",
+        "ac33868ff2a4d3e7d0368ea57b25f56466ef0662bb3e72f4c153244eb4218d85",
+        "8bf4f7f50f5031f4d742728f82843f799968f6c7c9147be98ad8064ef6d8db31",
+        "9261d5d6bbabb994c70eb7f25878889f3d1b7b97759960aa078500e2786f4083",
+        "ebcd85536076892a73931e1ed1bb92eb761432a83ec8c1d74f3fdb09eed15e0f",
+        "463bb5b818189576a5c25b3949e4a6162051d964e0c1f4f7f6d0c47f6685c7c2",
+        "677cd6e9bc935888ca590476ca56b1f8460bbfe0f1824a3ddc654a7eea23f4f5",
+        "9befe166a34d390ef5575b59637e6b82ec6794ceae0653178ceee0cb5143f178",
+        "e1f3138cf0531e6be444daaf6171d39f4aa2ce0cd2b3929fca02835f3c56b3a2",
+        "9cefedb6eea093ba315c536d493d4f0584e1a05ba9a97492c208b846c22c1e07",
+        "4ffa1e71bcb56b58dfc491d4ecda64da00d83c753d8df5a2aa8025602bce0b09",
+        "f9d8d02073403d5b47b828863a215aa797497342fe85ba87b8344c127a59f99c",
+        "ceb94016dd81024099955889edaaa59f99603326950f58b56f1bf48999d0cdc5",
+        "41ae559b4b1b086194cb1e92ada1afc87a4a1bb6c79ca70578e83089cceb3260",
+        "ff5e3b71b98ee165d3f285cd539f1c58cfe7226a7fb8ca566cb8510d25b6be55",
+        "5abd7f6f4d4372283848bace6a7b3822ab0f68901eaeb601d854cd81bdd54cfc",
+        "dbba1f36b1d7f0ca768941023d53f1e3142406322d73f2f6dec3a33edf9405ef",
+        "54dc20bf47134551f68aa318fd8f6855afe17772b639216f601d49c347249bc8",
+        "a96f6b0823c7b595ae51babfba32528231e5a3608f00b339ddc093dec4ef800a",
+        "99c4ad7159cd0053c2bd3f6d7386bfe54d2ce8bdc81484f22b34597f12897b2a",
+        "813e202ae52f4f180cc6a7aea219fa1451b20e6327928818382e2888cb6aa082",
+        "b44784515aeb905b10003fd5ca4b526e5a90d4cb682cc97bc15fba86594b101b",
+        "1eea76329d43a290f855279f5ea929cf599859305e8ea6c9a554ce2e26c534f2",
+        "ed6b38d9dbbacf073cd92891bc9865a103d4add52110f8dca02b7ce6e5f17d56",
+        "96683fcf6349c235003628aa1274b5e32dfbd60ab209e4d00c35c9a7f1072b75",
+        "39aab98d25ec9a3c9dcd92ef6bf810c52ad08ce762e04565b0b58d8bb35b0100",
+        "af059d54f2a9e4dcfce2ca7e9fa15e76930abbd9ed9dd4c4b2f918dd9f072725",
+        "1a5e315bd491bb1c37e05285d67c965395868e7b65ef5fca30dc4a788cccbde9",
+        "94763921228c05c0e30cc4be9a7c4004bf3690fbefd950f625d266101beeb75d",
+        "f79b7ea580ce8d105a2ff20ffa37cb5ee8b0a8853c952aeb970ce2996de45478",
+        "77ef85c8f7ec7f5ef08262b593cad5cbc3114a2d3dbd3205d34f8384689c28d7",
+        "52a5c437a8d130aa7d7198487ff9fdbbd3ddab1a1faa1feb4447ac878cef2e09",
+        "30712814916faf3d03bdf4b48def77da7beff4f4dc2a2d7f45972cbd007d717c",
+        "45b333e9759f7b6741c2f8d967dcce6be78cdb4d942219512d4072bdc580e7e6",
+        "cd6e7b766d60f2633109669fd2e3ba151a3ded54bead9b465d06763079482924",
+        "29ff2fa9dd6daae5e3c7a5660d1c10de3a27f1aaf7864978258baf323a6a2de9",
+        "5728ee29f292639b99c8464a911ad40bcee328ad6746982ab127335fce2d7851",
+        "0d54f8fc91c3ec12f869fb8a9d29378f329958cfcff85aeee45eec45adaee5e3",
+        "9ded75d88b267e46cbd46451b5d2dfefabae80d632b9e869feccac352e129cdd",
+        "482b583831387b3e3ac6630ed8a6a7dbc925af8ae3517de0f2a369607c576ba6",
+        "d134fce7b5a636e0bdaf1b58e23a41f6b0bce8c26bddbe51d8fcd6996c9efad8",
+        "c18fee7f15628e18052115ca8e9065b99fe591e2e0f50fec665859ad467cf614",
+        "0b146f08409b88df72a9ec2bea6145355db03d147f3f38e7a17a5266ed17d039",
+        "34df09080d5df72586540755c9906d09ac58623d79f6b8fe987e59542be83c28",
+        "90fab8ad9bc93c35d530b30cbc374a793d0e482ab5d19ea2682367a7a299aeba",
+        "e14feafb5d6c590b38885d3343612886cd745c956ecc35b0a0cb56d6e754899c"
+      ],
+      "coords": [
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 0
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 1
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 2
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 3
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 4
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 5
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 6
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 7
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 8
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 9
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 10
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 11
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 12
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 13
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 14
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 15
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 16
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 17
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 18
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 19
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 20
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 21
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 22
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 23
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 24
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 25
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 26
+        },
+        {
+          "positions.tap": {
+            "index": -11
+          },
+          "sites.target.layers": 27
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 0
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 1
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 2
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 3
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 4
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 5
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 6
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 7
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 8
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 9
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 10
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 11
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 12
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 13
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 14
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 15
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 16
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 17
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 18
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 19
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 20
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 21
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 22
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 23
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 24
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 25
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 26
+        },
+        {
+          "positions.tap": {
+            "index": -10
+          },
+          "sites.target.layers": 27
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 0
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 1
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 2
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 3
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 4
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 5
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 6
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 7
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 8
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 9
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 10
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 11
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 12
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 13
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 14
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 15
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 16
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 17
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 18
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 19
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 20
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 21
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 22
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 23
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 24
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 25
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 26
+        },
+        {
+          "positions.tap": {
+            "index": -9
+          },
+          "sites.target.layers": 27
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 0
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 1
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 2
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 3
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 4
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 5
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 6
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 7
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 8
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 9
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 10
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 11
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 12
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 13
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 14
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 15
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 16
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 17
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 18
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 19
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 20
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 21
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 22
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 23
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 24
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 25
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 26
+        },
+        {
+          "positions.tap": {
+            "index": -8
+          },
+          "sites.target.layers": 27
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 0
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 1
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 2
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 3
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 4
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 5
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 6
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 7
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 8
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 9
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 10
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 11
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 12
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 13
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 14
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 15
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 16
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 17
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 18
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 19
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 20
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 21
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 22
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 23
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 24
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 25
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 26
+        },
+        {
+          "positions.tap": {
+            "index": -6
+          },
+          "sites.target.layers": 27
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 0
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 1
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 2
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 3
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 4
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 5
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 6
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 7
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 8
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 9
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 10
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 11
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 12
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 13
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 14
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 15
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 16
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 17
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 18
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 19
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 20
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 21
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 22
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 23
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 24
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 25
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 26
+        },
+        {
+          "positions.tap": {
+            "index": -5
+          },
+          "sites.target.layers": 27
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 0
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 1
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 2
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 3
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 4
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 5
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 6
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 7
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 8
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 9
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 10
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 11
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 12
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 13
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 14
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 15
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 16
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 17
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 18
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 19
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 20
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 21
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 22
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 23
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 24
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 25
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 26
+        },
+        {
+          "positions.tap": {
+            "index": -4
+          },
+          "sites.target.layers": 27
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 0
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 1
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 2
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 3
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 4
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 5
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 6
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 7
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 8
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 9
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 10
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 11
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 12
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 13
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 14
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 15
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 16
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 17
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 18
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 19
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 20
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 21
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 22
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 23
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 24
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 25
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 26
+        },
+        {
+          "positions.tap": {
+            "index": -1
+          },
+          "sites.target.layers": 27
+        }
+      ],
+      "axes": [
+        "positions.tap",
+        "sites.target.layers"
+      ],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 225,
+      "digests": {
+        "iia.json": "5033bb0a1dc2a6a438b5414a0895c65b65db7156bac4dab4390625dc3e4e2487",
+        "logit_diff.json": "6b91b7a130958fa70cf3f7b9794f18882498337c2c1d8720d532d9e84bcda97f"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "heatmap": {
+      "type": "script",
+      "status": "completed",
+      "identity": "60bca80729fcfd6b3e937f5eebb40c2893f6ab2985d8b54cbdfebe3a477f18c1",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "scripts/plot_localize.py",
+      "script_sha256": "27f60dca1373a24ae1762add0ffc32b1e73d6a6e07164e6717c2fd0c6d5ff86c",
+      "digest": "60bca80729fcfd6b3e937f5eebb40c2893f6ab2985d8b54cbdfebe3a477f18c1",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "scan/iia.json",
+        "pairs": "../artifacts/data/mcqa/pairs_n64_s0.json",
+        "clean_base": "clean/clean_base.json",
+        "clean_cf": "clean/clean_cf.json",
+        "unpatched_cf": "clean/unpatched_cf.json"
+      },
+      "input_digests": {
+        "table": "5033bb0a1dc2a6a438b5414a0895c65b65db7156bac4dab4390625dc3e4e2487",
+        "pairs": "72261d298f2c9136b50c93a11e00981ff6778985ddb1cfa5197feb9b24e83fb5",
+        "clean_base": "57f4ff53823604223e24ae9b59db858a035f7496719f70ebdb13271ee505ba63",
+        "clean_cf": "aebe1c03ccb752d4452dc886362837d43ccfd582cde1a99512e9bb01be53aee2",
+        "unpatched_cf": "297a3b972d9f10bd7ca79d2bdbd72a3717fb4b87c1e208e7245660ba3814a416"
+      },
+      "axes": [],
+      "files": [
+        "06_localize_iia_heatmap.png",
+        "06_localize_plotted.json",
+        "06_localize_summary.json"
+      ],
+      "digests": {
+        "06_localize_iia_heatmap.png": "79736dba49f10fd87d2aafb71568ba78af63e22970a6f4a6a1c44d8e022f0218",
+        "06_localize_plotted.json": "769629660b6cc3e5af9bf0f3591164025b7928049e7839551d44075e0b687278",
+        "06_localize_summary.json": "308e2fcf27912d3c48d4f24844cd0aaaa7ae50dd5fd45d6dd21f360128c3c96c"
+      },
+      "checks": {
+        "06_localize_iia_heatmap.png": "png-signature",
+        "06_localize_plotted.json": "json",
+        "06_localize_summary.json": "json"
+      },
+      "disposition": "accepted"
+    }
+  }
+}

@@ -1,0 +1,222 @@
+[
+  {
+    "panel": "all",
+    "setting": "weight=0.3",
+    "weight": 0.3,
+    "kept": "L15: 0,1,2,3,4,7; L19: 4,5; L23: 6",
+    "n_kept": 9,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "all",
+    "setting": "weight=1",
+    "weight": 1.0,
+    "kept": "L15: 0,1,2,3,4,7; L19: 4,5; L23: 6",
+    "n_kept": 9,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "all",
+    "setting": "weight=3",
+    "weight": 3.0,
+    "kept": "L15: 0,1,2,3,4,7; L23: 6",
+    "n_kept": 7,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "all",
+    "setting": "weight=10",
+    "weight": 10.0,
+    "kept": "L15: 1,2,3,4",
+    "n_kept": 4,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "all",
+    "setting": "weight=30",
+    "weight": 30.0,
+    "kept": "L15: 1,2,4",
+    "n_kept": 3,
+    "iia": 0.98,
+    "null": 0.005,
+    "n": 200
+  },
+  {
+    "panel": "all",
+    "setting": "weight=100",
+    "weight": 100.0,
+    "kept": "L15: 1,2",
+    "n_kept": 2,
+    "iia": 0.74,
+    "null": 0.045,
+    "n": 200
+  },
+  {
+    "panel": "l15",
+    "setting": "weight=0.01",
+    "weight": 0.01,
+    "kept": "L15: 0,1,2,3,4,7",
+    "n_kept": 6,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "l15",
+    "setting": "weight=0.1",
+    "weight": 0.1,
+    "kept": "L15: 0,1,2,3,4,7",
+    "n_kept": 6,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "l15",
+    "setting": "weight=0.3",
+    "weight": 0.3,
+    "kept": "L15: 0,1,2,3,4,7",
+    "n_kept": 6,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "l15",
+    "setting": "weight=1",
+    "weight": 1.0,
+    "kept": "L15: 0,1,2,3,4",
+    "n_kept": 5,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "l15",
+    "setting": "weight=3",
+    "weight": 3.0,
+    "kept": "L15: 1,2,4",
+    "n_kept": 3,
+    "iia": 0.98,
+    "null": 0.005,
+    "n": 200
+  },
+  {
+    "panel": "l15",
+    "setting": "weight=10",
+    "weight": 10.0,
+    "kept": "L15: 1,2,4",
+    "n_kept": 3,
+    "iia": 0.98,
+    "null": 0.005,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "all 6 layers, whole",
+    "weight": null,
+    "kept": "all 6 layers, whole",
+    "n_kept": 48,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "layer 15, whole",
+    "weight": null,
+    "kept": "layer 15, whole",
+    "n_kept": 8,
+    "iia": 1.0,
+    "null": 0.0,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "L15 {1, 2, 4}",
+    "weight": null,
+    "kept": "L15 {1, 2, 4}",
+    "n_kept": 3,
+    "iia": 0.98,
+    "null": 0.005,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "L15 {1, 2}",
+    "weight": null,
+    "kept": "L15 {1, 2}",
+    "n_kept": 2,
+    "iia": 0.74,
+    "null": 0.045,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "L15 {0, 3, 5, 6, 7}",
+    "weight": null,
+    "kept": "L15 {0, 3, 5, 6, 7}",
+    "n_kept": 5,
+    "iia": 0.005,
+    "null": 0.995,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "random L15 {0, 3, 5}",
+    "weight": null,
+    "kept": "L15: 0,3,5",
+    "n_kept": 3,
+    "iia": 0.005,
+    "null": 0.995,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "random L15 {1, 2, 5}",
+    "weight": null,
+    "kept": "L15: 1,2,5",
+    "n_kept": 3,
+    "iia": 0.74,
+    "null": 0.045,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "random L15 {0, 5, 7}",
+    "weight": null,
+    "kept": "L15: 0,5,7",
+    "n_kept": 3,
+    "iia": 0.0,
+    "null": 1.0,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "random L15 {0, 2, 3}",
+    "weight": null,
+    "kept": "L15: 0,2,3",
+    "n_kept": 3,
+    "iia": 0.235,
+    "null": 0.245,
+    "n": 200
+  },
+  {
+    "panel": "checks",
+    "setting": "random L15 {3, 4, 6}",
+    "weight": null,
+    "kept": "L15: 3,4,6",
+    "n_kept": 3,
+    "iia": 0.025,
+    "null": 0.9,
+    "n": 200
+  }
+]

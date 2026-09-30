@@ -1,91 +1,75 @@
 # Optional attention backends
 
-The base install needs neither FlashAttention nor Flash Linear Attention (FLA).
-The `pytorch_hooks` reference engine loads eager full attention; `nnsight`
-keeps the model's Transformers default (normally SDPA). For supported linear
-attention models such as Qwen3.5/3.6, Transformers supplies PyTorch delta-rule
-and causal-convolution fallbacks when the optional packages are absent.
+The `pytorch_hooks` engine uses eager full attention by default. The `nnsight`
+engine uses the Transformers model default, usually SDPA. Supported Qwen
+linear-attention models use PyTorch delta-rule and convolution kernels in a
+base install.
 
 ## Install
 
-From a checkout on Linux with a supported NVIDIA GPU and CUDA-enabled PyTorch:
+On Linux with a supported NVIDIA GPU and CUDA-enabled PyTorch:
 
 ```bash
 uv sync --extra flash-attn
 uv sync --extra flash-linear-attention
-# To keep both installed, select both in the same sync:
-uv sync --extra flash-attn --extra flash-linear-attention
+# Select both extras to keep both installed.
+uv sync \
+    --extra flash-attn \
+    --extra flash-linear-attention
 ```
 
-`flash-attn` installs FlashAttention 2. `flash-linear-attention` installs FLA's
-CUDA dependencies and `causal-conv1d`, accelerating both the delta-rule kernel
-and the short convolution used by Qwen's linear-attention layers. These kernels
-serve models on a CUDA device only: Transformers binds them at import time
-without checking where a tensor lives, so both engines bind a model whose
-weights are not on CUDA (a CPU test model, a caller-owned CPU model) to
-Transformers' torch implementations for the duration of each forward
-(`causalab/neural/shared/kernels.py`). Installing the extra therefore leaves the
-CPU test tiers and CPU runs unchanged. The extras
-are independent of `nnsight`; a runtime install using that engine also needs
-`--extra nnsight` (the dev group already includes it).
+`flash-attn` supplies FlashAttention 2. The `flash-linear-attention` extra
+supplies FLA and `causal-conv1d` for Qwen's linear-attention layers. A runtime
+install that uses nnsight also needs `--extra nnsight`; the dev group includes it.
 
-These extras are guarded by Linux package markers; selecting them on macOS or
-Windows installs no attention kernels. CPU-only Linux users should omit them.
-FlashAttention 2 needs supported GPU hardware and fp16/bf16 inputs; source
-builds need a compatible CUDA toolkit, including `nvcc`, and a C++ compiler.
-The upstream [FlashAttention installation guide](https://github.com/Dao-AILab/flash-attention#installation-and-features)
-and [FLA installation guide](https://github.com/fla-org/flash-linear-attention/blob/main/INSTALL.md)
-describe hardware support. Set `MAX_JOBS` to limit compilation memory if needed.
+The extras have Linux package markers. Use the base install on CPU, macOS, or
+Windows. Source builds need a compatible CUDA toolkit with `nvcc` and a C++
+compiler. FlashAttention 2 requires supported hardware and fp16 or bf16 inputs.
+See the [FlashAttention installation guide](https://github.com/Dao-AILab/flash-attention#installation-and-features)
+and [FLA installation guide](https://github.com/fla-org/flash-linear-attention/blob/main/INSTALL.md).
+`MAX_JOBS` limits build parallelism and memory use.
 
-Training through FLA on Hopper GPUs (including H100) also needs a working
-backward kernel. FLA 0.5.2 rejects gated-delta backward with Triton versions
-3.4.0 through 3.7.0 because of incorrect results. With that combination,
-install `tilelang` in the same environment (FLA selects it automatically), or
-use a compatible stack with Triton 3.7.1 or newer.
-
-FLA reads its tuning knobs from its own environment at dispatch time, so none
-of them needs causalab code (FLA 0.5.2, from its source): `FLA_TILELANG` (`1`
-forces the tilelang `chunk_bwd_dqkwg` backward, `0` the Triton one — which FLA
-refuses on Hopper with Triton 3.4–3.7.0, fla-org #640), `FLA_FLASH_QLA` (`0`
-disables the FlashQLA backend, Qwen's fused tilelang forward and backward for
-K = V = 128 on SM90/SM100, used automatically when the `flash_qla` package is
-importable), `FLA_CACHE_MODE` with `FLA_CONFIG_DIR` (pinned `num_warps` /
-`num_stages` / `BV` per Triton kernel from `<dir>/<kernel_name>.json` in place
-of autotuning; the tilelang backward has no such table), `FLA_USE_TMA`,
-`FLA_TRIL_PRECISION` (`ieee` / `tf32` / `tf32x3` in the triangular solve),
-`FLA_USE_FAST_OPS`, `FLA_DISABLE_BACKEND_DISPATCH`. The one knob that is a
-call argument rather than an environment variable, `chunk_size` ∈ {16, 32,
-64} (default 64), cannot be set from outside the modeling code: Transformers'
-hub wrapper filters keyword arguments to the implementation's named
-parameters, and FLA takes it through `**kwargs`. Measured on one H100 with
-Qwen3.6-35B-A3B (2026-09-11) no other value helps anyway — 16 fails inside
-tilelang ("No valid warp partition for T.gemm: M=16"), 32 runs slower and
-changes the fit — so the default is the only viable path on that stack.
-
-Both compilers build their kernels before a model's first forward and cache
-them on disk, under the home directory by default. To share those artifacts
-across jobs on a common filesystem, set `CAUSALAB_COMPILE_CACHE` to a directory
-there; see [compilation caches](cuda_graphs.md#compilation-caches).
-
-The checkout configures isolated extension builds against the runtime PyTorch
-version, following [uv's build dependency guidance](https://docs.astral.sh/uv/concepts/projects/config/#augmenting-build-dependencies).
-Static metadata for the pinned extensions lets `uv lock` resolve on a machine
-without CUDA. A source build still needs the toolkit; metadata does not supply
-compiled kernels.
-
-For pip from a checkout, install the base and build tools first, then the extras
-without build isolation so they compile against that environment's PyTorch:
+The checkout builds extensions against its runtime PyTorch version. Static
+package metadata lets `uv lock` resolve dependencies on a machine without CUDA.
+For pip, install the base package and build tools before compiling the extras:
 
 ```bash
 pip install -e .
 pip install setuptools wheel packaging ninja
-pip install --no-build-isolation -e '.[flash-attn,flash-linear-attention]'
+pip install \
+    --no-build-isolation \
+    -e '.[flash-attn,flash-linear-attention]'
 ```
+
+Both engines bind CPU models to the Transformers PyTorch kernels during each
+forward. This keeps CPU runs usable when the CUDA extras are installed.
+
+### FLA training and tuning
+
+FLA 0.5.2 rejects gated-delta backward on Hopper with Triton 3.4.0 through 3.7.0
+because those kernels produce incorrect results. Install `tilelang`, which FLA
+selects automatically, or use a compatible stack with Triton 3.7.1 or newer.
+
+FLA 0.5.2 reads these environment settings:
+
+| Setting | Effect |
+| --- | --- |
+| `FLA_TILELANG` | `1` selects tilelang backward; `0` selects Triton, subject to the Hopper version check. |
+| `FLA_FLASH_QLA` | `0` disables FlashQLA. FLA can select an installed FlashQLA for K = V = 128 on SM90/SM100. |
+| `FLA_CACHE_MODE`, `FLA_CONFIG_DIR` | Load per-kernel `num_warps`, `num_stages`, and `BV` from `<dir>/<kernel_name>.json`. |
+| `FLA_USE_TMA`, `FLA_TRIL_PRECISION` | Control memory transfers and triangular-solve precision (`ieee`, `tf32`, or `tf32x3`). |
+| `FLA_USE_FAST_OPS`, `FLA_DISABLE_BACKEND_DISPATCH` | Control FLA's kernel dispatch. |
+
+FLA's `chunk_size` is a call argument with values 16, 32, or 64. The Transformers
+wrapper filters this argument, so causalab uses the default of 64. Changing it
+requires a modeling-code change.
+
+Compiled kernels are cached on disk. To share them across jobs, see
+[compilation caches](cuda_graphs.md#compilation-caches).
 
 ## Select a backend
 
-Choose the backend in the campaign or application JSON, alongside the model
-and precision:
+Set the full-attention backend in a campaign or application document:
 
 ```json
 {
@@ -98,14 +82,12 @@ and precision:
 }
 ```
 
-`model.attn_implementation` accepts `"eager"`, `"sdpa"`, or
-`"flash_attention_2"`. Both engines read this field. The model and hardware
-must support the requested backend; a missing or unusable backend raises
-Transformers' error. Installing an extra provides the dependency; it does not
-select the full-attention backend.
+The field accepts `"eager"`, `"sdpa"`, or `"flash_attention_2"`. Both engines
+honor it. Transformers raises an error when the model, hardware, or installed
+dependencies cannot support the choice. Select this field explicitly to use
+FlashAttention 2 after installing its extra.
 
-A workflow can set the same field for a protocol step using its existing
-`set` object:
+A workflow can set the field on a protocol step:
 
 ```json
 {
@@ -116,75 +98,61 @@ A workflow can set the same field for a protocol step using its existing
 }
 ```
 
-The field supports ordinary sweep and bind wrappers, so backend comparisons
-can be defined in the campaign itself. Each backend occupies a separate model
-cache entry and can retain a full copy of the weights. For models close to GPU
-memory capacity, compare backends in separate processes rather than one sweep. Explicit choices enter campaign,
-forward-group and step digests and are stamped as
-`model_attn_implementation` in tensor and fitted-featurizer artifacts. Applying
-a fitted artifact checks this field when the application declares it.
-Omission makes no backend compatibility assertion: explicitly select the same
-backend in fit and apply documents when this check is required. Point receipts
-and tensor entries also record `loaded_attn_implementation`, including when
-the document omits the choice; `implementations` records eager requirements. A
-caller-owned model must match the document's declared backend; the engine
-refuses a mismatch before running it.
+Sweep and bind wrappers also work. Each backend has a separate model cache
+entry that can retain a full weight copy. Use separate processes for comparisons
+when one model nearly fills GPU memory.
 
-Omitting the field preserves the existing engine defaults: eager for hooks,
-and the Transformers model default for nnsight. An explicit eager choice is
-distinct from omission, since omission leaves that choice to the engine. The
-engine constructor has no backend option: the JSON is the source of truth.
+An explicit backend enters campaign, forward-group, and step digests. Tensor
+and fitted-featurizer artifacts store it as `model_attn_implementation`. An
+application checks compatibility when its document declares the field. Declare
+the same backend in fit and apply documents to require this check. A caller-owned
+model must also match the declared backend.
 
-The nnsight executor temporarily switches to eager attention for traces that
-need attention scores or probabilities, and restores the selected backend
-afterward. The hooks executor similarly switches a forward to eager when it
-reads or writes `attention_query`, `attention_key`, `attention_scores`,
-`attention_probs`, or `attention_z`. Module-boundary interventions, including
-residuals, MLPs, attention outputs, and value projections, keep the selected
-backend. Prefill and decode use one backend for the whole continuation, including
-when only a generated-token read needs attention interiors. The selection is
-restored even when a forward raises. Prefix caches separate
-activations by backend so an eager forward never resumes from an accelerated
-prefix. A hooks run that switches to eager records `attn_eager` in its applied
-implementation metadata. These temporary switches apply to caller-owned models too; wrapping
-one in a bundle changes nothing.
+Omitting the field delegates the choice to the engine and gives a distinct
+identity from explicit `"eager"`. Point receipts and tensor entries record
+`loaded_attn_implementation`; `implementations` records eager requirements.
+The engine constructor takes its backend choice from the document.
 
-FLA selection is separate from `attn_implementation`: Transformers' Qwen
-modeling functions automatically dispatch to importable FLA and
-`causal-conv1d` implementations. Start a fresh Python process after installing
-or removing them, since Transformers resolves these functions during import.
-This accelerates existing linear-attention layers; it does not turn ordinary
-softmax attention into linear attention. Causalab's delta boundary taps wrap
-the functions Transformers selected. Fused kernels need not expose the same
-interior tensors.
+### Attention interiors and linear attention
+
+The engines temporarily use eager attention for these operations:
+
+| Engine | Tensors that require eager attention |
+| --- | --- |
+| `pytorch_hooks` | `attention_query`, `attention_key`, `attention_scores`, `attention_probs`, `attention_z` |
+| `nnsight` | `attention_scores`, `attention_probs` |
+
+Reads and writes at module boundaries keep the selected backend. These include
+residuals, MLPs, attention outputs, and value projections. Prefill and decode use
+one backend throughout a continuation. The engine restores the selection after
+the forward, including on failure. Prefix caches separate backends. Hooks runs
+record a temporary eager choice as `attn_eager` in implementation metadata.
+These rules also apply to caller-owned models.
+
+Transformers selects FLA and `causal-conv1d` separately when it imports Qwen's
+linear-attention functions. Restart Python after installing or removing these
+packages. Delta boundary taps wrap the selected functions; fused kernels can
+expose different interior tensors.
 
 ## Return to the fallbacks
+
+Run an exact sync and retain any other extras you need:
 
 ```bash
 uv sync
 ```
 
-An exact sync without the GPU extras removes their packages (include any other
-extras you want to retain). Restart Python afterward. With pip, remove
-`flash-attn`, `flash-linear-attention`, `fla-core`, and `causal-conv1d` from the
-environment to restore the package-free paths. Setting eager full attention
-alone does not disable FLA in linear-attention layers.
-
-Neither GPU extra is in the base `requirements.lock.txt` export or the default
-dev group. Ordinary installs and CPU tests therefore retain their existing
-dependency footprint.
+With pip, remove `flash-attn`, `flash-linear-attention`, `fla-core`, and
+`causal-conv1d`. Restart Python. Removing the linear-attention packages restores
+the PyTorch kernels for those layers; `attn_implementation` controls full
+attention separately.
 
 ## Reproducibility and batching variance
 
-Accelerated kernels introduce numerical nondeterminism through batching
-variance: the same example can produce different floating-point results when
-batch size, batch composition, padding, or row chunking changes. A fixed random
-seed does not eliminate this variance. Differences can affect logits, generated
-tokens, intervention metrics, and fitted parameters.
+Changes to batch size, batch composition, padding, or row chunks can change
+floating-point results. This affects logits, generated tokens, intervention
+metrics, and fitted parameters even with a fixed random seed.
 
-For reproducible comparisons, keep the backend, precision, batching, hardware,
-and package versions fixed, and compare numerical results with tolerances.
-Selecting eager full attention alone does not remove variance from FLA;
-remove the linear-attention extras as described above to use the Transformers
-fallbacks. The fallbacks also do not guarantee bitwise equality across hardware
-or batching changes.
+Keep the backend, precision, batching, hardware, and package versions fixed for
+comparisons. Use numerical tolerances. PyTorch fallbacks also vary with hardware
+and batching.

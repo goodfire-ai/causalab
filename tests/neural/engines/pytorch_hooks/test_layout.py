@@ -7,7 +7,7 @@ that a declared shape which does not match reality fails loudly instead of
 being silently reinterpreted.
 
 The conversions are *computed* from a
-:class:`~causalab.protocol.shapes.FeatureShape`, so these run over every shape
+[`FeatureShape`][causalab.protocol.registry.shapes.FeatureShape], so these run over every shape
 the vocabulary can build rather than over an enumerated list of layout strings:
 adding a shape adds a row to ``SHAPES`` and it is covered by all four generic
 properties below.
@@ -18,8 +18,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from causalab.protocol import shapes as sh
-from causalab.protocol.shapes import FeatureShape
+from causalab.protocol.registry import shapes as sh
+from causalab.protocol.registry.shapes import FeatureShape
 
 from causalab.neural.shared.layout import (
     LayoutError,
@@ -35,8 +35,8 @@ BATCH, SEQ, FEATURE = 2, 3, 5
 HEADS, HEAD_DIM = 4, 2
 
 #: ``name -> (shape, native shape, contract feature width)``. Every shape the
-#: constructors build, including the four attention-interior ones, so that a new
-#: descriptor cannot be added without the generic properties covering it.
+#: constructors build is listed, so that a new descriptor cannot be added
+#: without the generic properties covering it.
 SHAPES: dict[str, tuple[FeatureShape, tuple[int, ...], int]] = {
     "bsd": (sh.bsd(FEATURE), (BATCH, SEQ, FEATURE), FEATURE),
     "flat_td": (sh.flat_td(FEATURE), (BATCH * SEQ, FEATURE), FEATURE),

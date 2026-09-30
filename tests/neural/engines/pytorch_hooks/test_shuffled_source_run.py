@@ -1,5 +1,5 @@
-"""The ``shuffled_source`` control as a run (the intervention protocol spec
-§2.2 ``shuffle: {seed}``; workflow spec §2.2), on the tiny Llama fixture.
+"""The ``shuffled_source`` control as a run (intervention protocol
+spec §2.2 ``shuffle: {seed}``; workflow spec §2.2), on the tiny Llama fixture.
 
 Corpus 02's interchange is run twice over the 4-row ``weekdays/train`` fixture
 table (``weekdays/data#train`` is two rows here — too small for a permutation
@@ -28,9 +28,10 @@ import torch
 from safetensors.torch import load_file
 
 from causalab.cli import main
-from causalab.neural.shared.services import shuffle_order
+from causalab.protocol.positions.roles import shuffle_order
 
 from .conftest import TINY_LLAMA
+from tests.protocol._docs import UNWRITTEN, saved
 from tests.protocol._env import CORPUS_DIR, FIXTURES
 
 pytestmark = pytest.mark.smoke
@@ -44,14 +45,7 @@ def _document(*, seed: int | None) -> dict[str, Any]:
         role["dataset"] = TABLE
     if seed is not None:
         raw["data"]["counterfactual"]["shuffle"] = {"seed": seed}
-    raw["method"]["save"].append(
-        {
-            "value": "v_cf",
-            "model": "original",
-            "input": "counterfactual",
-            "file_path": "v_cf.safetensors",
-        }
-    )
+    raw["method"]["save"].append(saved("v_cf", UNWRITTEN, "v_cf.safetensors"))
     return raw
 
 
@@ -65,6 +59,8 @@ def _run(raw: dict[str, Any], root: Path) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(document),
             "--data-root",
             str(FIXTURES / "data"),
@@ -78,6 +74,7 @@ def _run(raw: dict[str, Any], root: Path) -> Path:
             "sites.target.layers=1",
             "--dtype",
             "fp32",
+            "--record",
         ]
     )
     assert code == 0

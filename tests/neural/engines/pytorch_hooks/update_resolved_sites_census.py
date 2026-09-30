@@ -3,8 +3,8 @@
 For each of the three tiny fixtures (``tiny-random-gpt2``,
 ``tiny-random-LlamaForCausalLM``, ``tiny-random/qwen3.5-moe``), every
 ``(component, layer, head)`` the census walks is handed to
-:func:`causalab.neural.shared.sites.resolve_site` and the answer is recorded:
-the :class:`~causalab.neural.shared.sites.ResolvedSite` (module path, io side,
+[`causalab.neural.shared.sites.resolve_site`][] and the answer is recorded:
+the [`ResolvedSite`][causalab.neural.shared.sites.ResolvedSite] (module path, io side,
 feature slice, interface slot, declared shape, derivation) where it resolves,
 the refusal (class, code, reason, message) where it refuses. The site is
 built the way the parser builds one — a retired spelling folds onto its
@@ -12,13 +12,12 @@ replacement first (``schema.DEPRECATED_COMPONENTS``) — so the census records
 what a *document* naming the component gets.
 
 The census is the proof of a refactor whose acceptance is that **nothing
-changes** ("move ``resolve_site`` onto rows" — snapshot before, diff after).
-It was captured on the base recorded in the file before any edit and is
-compared, not regenerated, by ``test_resolved_sites_census.py``; the
+changes** (moving ``resolve_site`` onto rows — snapshot before, diff after).
+It was captured on the resolver before that move (its ``base`` field says so)
+and is compared, not regenerated, by ``test_resolved_sites_census.py``; the
 comparison names the one set of entries a deliberate decision moved (the
 eight ``identical`` DeltaNet pairs that became aliases). Regenerate only to
-extend the census — a fourth fixture, another layer — and say so in the
-change description::
+extend the census — a fourth fixture, another layer — and say so in the PR::
 
     HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 uv run python \\
         tests/neural/engines/pytorch_hooks/update_resolved_sites_census.py [--check]
@@ -37,7 +36,7 @@ from typing import Any
 
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.neural.shared.sites import ResolvedSite, resolve_site
-from causalab.protocol.errors import ProtocolError, ValidationError
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
 from causalab.protocol.registry import component_shape
 from causalab.protocol.schema import (
     COMPONENTS,
@@ -122,7 +121,7 @@ def _site(component: str, layer: int | None, head: int | None) -> SiteSpec:
 
 
 def census() -> dict[str, Any]:
-    out: dict[str, Any] = {"base": "7c28470e", "fixtures": {}}
+    out: dict[str, Any] = {"base": "the resolver before rows", "fixtures": {}}
     for key, layers in FIXTURES.items():
         bundle = load_model(key)
         entries: list[dict[str, Any]] = []

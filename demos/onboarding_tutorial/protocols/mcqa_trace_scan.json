@@ -1,18 +1,22 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Trace one MCQA pair: interchange the residual stream at every (layer, token position) of a single row, and read back what the model says. Two axes -- sites.target.layers over all 16 blocks, positions.tap.index over all 22 tokens of the row -- expand to 352 points. One row is what makes a dense index sweep well defined: token indices are a property of a tokenization, so a many-row document addresses positions by name instead (see mcqa_locate_scan.json)."
+    "protocol_version": "4",
+    "description": "Trace one MCQA pair: interchange the residual stream at every (layer, token position) of a single row, and read back the probability it gives each answer symbol. Two axes -- sites.target.layers over all 28 blocks, positions.tap.index over all 21 tokens of the row -- expand to 588 points. Without a patch the model gives P(Z) = 0.669 and P(Q) = 0.000. One row is what makes a dense index sweep well defined: token indices are a property of a tokenization, so a many-row document addresses positions by name instead (see mcqa_locate_scan.json)."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {
     "base": {"dataset": "mcqa/pair_n1_s0", "field": "input"},
     "counterfactual": {"dataset": "mcqa/pair_n1_s0", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "positions": {
       "tap": {
         "index": {
-          "sweep": {"range": [0, 22]}
+          "sweep": {"range": [0, 21]}
         }
       }
     },
@@ -20,37 +24,24 @@
       "target": {
         "component": "block_output",
         "layers": {
-          "sweep": {"range": [0, 16]}
+          "sweep": {"range": [0, 28]}
         }
       },
       "lm_head": {"component": "lm_head"}
     },
-    "reads": {
-      "v_cf": {"site": "target", "pos": "tap", "model": "original", "input": "counterfactual"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
-    },
+    "reads": {"v_cf": {"site": "target", "pos": "tap"}, "logits": {"site": "lm_head", "pos": -1}},
     "writes": {
       "patch": {"site": "target", "pos": "tap", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "said": {"kind": "top_k", "of": "logits", "k": 1, "by": "prob"},
-      "flipped": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "said", "model": "patched", "input": "base", "file_path": "said.json"},
       {
-        "value": "flipped",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
-        "file_path": "flipped.json"
+        "aggregation": {
+          "kind": "class_probs",
+          "groups": {"Q": [" Q"], "Z": [" Z"]}
+        },
+        "file_path": "p.json"
       }
     ]
   }

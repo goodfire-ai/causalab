@@ -1,32 +1,8 @@
-"""Reading a step script's inputs and writing its outputs.
+"""Read workflow script inputs and write their outputs.
 
-Two formats, so two pairs of functions (workflow spec §2.5): JSON — metric
-tables and values objects — and ``.safetensors`` bundles for dense numerics.
-A script imports what it needs; nothing forces it to use any of this.
-
-The division of labour with the runner is deliberate. A script **writes its own
-files**, because a plot step and a report step both want to, and paying for two
-contracts to spare op tests a ``tmp_path`` fixture is not worth it. But
-**identity stamping stays the runner's job** (:func:`stamp_tensor`): a bundle
-carrying no ArtifactIdentity is refused when a later protocol step loads it, so
-a script that forgot to stamp would produce a file that fails much later, in
-someone else's step. The runner cannot forget.
-
-Provenance of a script-written bundle — three sources, in order:
-
-1. **inherited** from the step's tensor inputs, keeping only the fields they
-   all agree on (:func:`inherited_identity`, the ``record_common`` rule from
-   ``pytorch_hooks/outputs.py``) — a fit over activations from model X at site
-   S really is bound to X and S;
-2. **stamped** by the runner: ``produced_by`` (the step's digest — its
-   provenance unit), ``engine`` and ``dtype``;
-3. never ``commit``: the code identity of a script output is its
-   ``script_sha256``, which is in the document's canonical form and therefore
-   in the digest. A git sha would say less and drift more.
-
-Heavy imports (pandas, safetensors, torch) are function-local, so this module
-is importable and its declarations readable without them.
-"""
+Inputs include JSON tables and values, plus safetensors addressed by slot or
+entry. Tensor outputs inherit the artifact identity supplied by the caller.
+Numerical imports occur inside the operations that need them."""
 
 from __future__ import annotations
 
@@ -35,15 +11,15 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from causalab.protocol.bundles import entry_key, select_entry
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.resolve import (
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.io.env import (
     ARTIFACT_IDENTITY_KEYS,
     build_artifact_identity,
     entry_identity,
     entry_table,
     read_safetensors_metadata,
 )
-from causalab.protocol.tables import read_table, write_table
+from causalab.io.tables import read_table, write_table
 
 __all__ = [
     "StepError",
@@ -140,7 +116,7 @@ def read_tensor(
 ) -> Any:
     """One tensor out of a ``.safetensors`` bundle.
 
-    Selection reuses :func:`causalab.protocol.bundles.select_entry`, so a
+    Selection reuses `causalab.protocol.bundles.select_entry`, so a
     single-entry bundle needs no selector and an ambiguous one refuses with a
     listing instead of picking first. ``implicit`` is always ``False``: a script
     step has no sweep coordinates of its own, so there is nothing to match
@@ -156,7 +132,7 @@ def read_tensor_with_identity(
     entry: Mapping[str, Any] | None = None,
     what: str | None = None,
 ) -> tuple[Any, dict[str, Any]]:
-    """:func:`read_tensor`, plus the entry's identity — what the runner needs
+    """[`read_tensor`][], plus the entry's identity — what the runner needs
     in order to inherit provenance."""
     from causalab.io.tensor_files import load_file
 
@@ -210,7 +186,7 @@ def write_tensor(
     """Write one tensor as a single-entry bundle.
 
     The runner stamps provenance and inherited identity afterwards
-    (:func:`stamp_tensor`), so a script cannot produce a bundle that a later
+    ([`stamp_tensor`][]), so a script cannot produce a bundle that a later
     protocol step will refuse for lack of a stamp.
 
     ``identity`` is for the fields **only the script knows** — a fitted basis's

@@ -1,0 +1,25 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Activations of the 14336 neurons of layer 18's MLP of Llama-3.1-8B at the last token of every addition prompt a+b= (Feucht et al. 2026, arXiv:2605.01148, Section 5.2): the full activation silu(gate)*up that the down projection reads, and the gate half silu(gate) alone; workflows/scripts/arithmetic_neurons/figures.py averages the full activation by output sum for Figure 8a."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
+  "data": {"base": {"dataset": "arithmetic_neurons/addition_prompts", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["full", "gate"]}
+    },
+    "sites": {
+      "neurons": {"component": "mlp_neuron_output", "layers": [18]},
+      "gate_half": {"component": "mlp_activation", "layers": [18]}
+    },
+    "reads": {
+      "full": {"site": "neurons", "pos": -1},
+      "gate": {"site": "gate_half", "pos": -1}
+    },
+    "save": [
+      {"read": "full", "model": "original", "file_path": "full.safetensors"},
+      {"read": "gate", "model": "original", "file_path": "gate.safetensors"}
+    ]
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Layer-band attention patching as ONE document. A band patches the complete attention_output at every layer in the span during the SAME forward pass, and the sweep language genuinely cannot express that - one start-layer value would have to expand into four or eight dependent writes, and a sweep expands one axis into independent points. Two mechanisms carry it. 'intervened_models' names the set of writes in force for one forward, so several bands - overlapping ones included - are several entries over ONE table of per-layer writes; that is one model load for every band, not one per band. And 'at_once' (sec. 3.1) declares that table: the three entries below with an at_once axis denote 8 sites, 8 reads and 8 writes, and each band names the interval it means rather than listing four names. Scale this by moving the at_once range, not by adding entries - a 40-layer tower is the same three entries and one more line per band. For scale, every 5- and 10-layer band of a 40-layer tower is 40 writes and 67 intervened_models (36 five-layer and 31 ten-layer bands) in one document. Note the two widths here share their writes: band8_L9 is band4_L9's and band4_L13's writes together, and each write is authored once."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#train",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v"]},
+      "band4_L9": {
+        "input": "base",
+        "reads": ["logits_band4_L9"],
+        "writes": [
+          {
+            "w": {
+              "layers": {
+                "at_once": {"range": [9, 13]}
+              }
+            }
+          }
+        ]
+      },
+      "band4_L13": {
+        "input": "base",
+        "reads": ["logits_band4_L13"],
+        "writes": [
+          {
+            "w": {
+              "layers": {
+                "at_once": {"range": [13, 17]}
+              }
+            }
+          }
+        ]
+      },
+      "band8_L9": {
+        "input": "base",
+        "reads": ["logits_band8_L9"],
+        "writes": [
+          {
+            "w": {
+              "layers": {
+                "at_once": {"range": [9, 17]}
+              }
+            }
+          }
+        ]
+      }
+    },
+    "positions": {"tap": {"index": -1}},
+    "sites": {
+      "a": {
+        "component": "attention_output",
+        "layers": {
+          "at_once": {"range": [9, 17]}
+        },
+        "names": "a{layers}"
+      },
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v": {"site": "a", "pos": "tap", "names": "v_a{layers}"},
+      "logits_band4_L9": {"site": "lm_head", "pos": -1},
+      "logits_band4_L13": {"site": "lm_head", "pos": -1},
+      "logits_band8_L9": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "w": {"site": "a", "pos": "tap", "do": {"swap": "v"}, "names": "w{layers}"}
+    },
+    "save": [
+      {
+        "read": "logits_band4_L9",
+        "model": "band4_L9",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia_band4_L9.json"
+      },
+      {
+        "read": "logits_band4_L13",
+        "model": "band4_L13",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia_band4_L13.json"
+      },
+      {
+        "read": "logits_band8_L9",
+        "model": "band8_L9",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia_band8_L9.json"
+      }
+    ]
+  }
+}

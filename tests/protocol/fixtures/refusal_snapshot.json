@@ -17,7 +17,7 @@
       "exc_class": "ValidationError",
       "code": "V4",
       "path": "sites.tgt.head",
-      "message": "[V4] at sites.tgt.head site 'tgt': component 'block_output' has no head axis — its shape is (batch, position, feature) — so head 0 would be validated and then silently dropped. Name a component that has heads ('attention_premix'), or drop the 'head' field."
+      "message": "[V4] at sites.tgt.head site 'tgt': component 'block_output' has no head axis: its shape is (batch, position, feature): so head 0 would be validated and then silently dropped. Name a component that has heads ('attention_premix'), or drop the 'head' field."
     },
     {
       "id": "3",
@@ -53,7 +53,7 @@
       "exc_class": "ValidationError",
       "code": "V4",
       "path": null,
-      "message": "[V4] component 'block_output' has no head axis — its shape is (batch, position, feature) — so head 0 would be validated and then silently dropped. Name a component that has heads ('attention_premix'), or drop the 'head' field."
+      "message": "[V4] component 'block_output' has no head axis: its shape is (batch, position, feature): so head 0 would be validated and then silently dropped. Name a component that has heads ('attention_premix'), or drop the 'head' field."
     },
     {
       "id": "7",
@@ -98,7 +98,7 @@
       "exc_class": "ProtocolError",
       "code": "P4",
       "path": null,
-      "message": "[P4] write 'patch' targets 'router_logits', which no write may change: the MoE block discards the router's logits (it destructures them into '_') and routes on the scores and indices it computed from them, so a write here cannot reach anything — write 'router_scores' to reweight the chosen experts, or 'expert_idx' to change which experts fire. Refusing at the plan, before anything runs."
+      "message": "[P4] write 'patch' targets 'router_logits', which no write may change: routing uses the scores and indices already computed from these logits. Write 'router_scores' to reweight selected experts or 'expert_idx' to select experts. Refusing at the plan, before anything runs."
     },
     {
       "id": "12",
@@ -107,7 +107,7 @@
       "exc_class": "ProtocolError",
       "code": "P4",
       "path": null,
-      "message": "[P4] write 'patch' applies 'add_scaled' to 'expert_idx', which only a whole-value 'swap' may change: the routing table carries integer expert ids, not features: a delta, a scale or a clamp over them yields ids chosen by arithmetic on labels, which route to arbitrary experts where they stay in range and fail at the gather where they do not. Swap in an index tensor read from elsewhere to change which experts fire, or write 'router_scores' to reweight the experts already chosen. Refusing rather than doing arithmetic on values that are labels."
+      "message": "[P4] write 'patch' applies 'add_scaled' to 'expert_idx', which only a whole-value 'swap' may change: expert IDs are integer labels. Use swap to replace the routing indices, or write 'router_scores' to reweight selected experts. Arithmetic on IDs can select arbitrary experts or exceed index bounds."
     },
     {
       "id": "13",
@@ -188,7 +188,7 @@
       "exc_class": "ProtocolError",
       "code": "P4",
       "path": null,
-      "message": "[P4] component 'delta_qkv' has no head axis — its shape is (batch, position, feature) — so head 0 would be validated and then silently dropped. Name a component that has heads ('attention_premix'), or drop the 'head' field. It is the fused [q | k | v] projection, widths 128/128/256 — unequal, so it has no head axis. The per-head faces are the kernel-boundary components ('delta_query'/'delta_key'/'delta_value')."
+      "message": "[P4] component 'delta_qkv' has no head axis: its shape is (batch, position, feature): so head 0 would be validated and then silently dropped. Name a component that has heads ('attention_premix'), or drop the 'head' field. It is the fused [q | k | v] projection, widths 128/128/256: unequal, so it has no head axis. The per-head faces are the kernel-boundary components ('delta_query'/'delta_key'/'delta_value')."
     },
     {
       "id": "22",
@@ -203,7 +203,7 @@
       "id": "23",
       "layer": "run",
       "captured": false,
-      "reason": "Retired: GPT-2's fused c_attn no longer refuses the interior q/k/v — the per-family tap table (registry.Capability.overrides, family 'gpt2') addresses them as the three H·d column blocks of c_attn's output, read and written through the layout conversion's fused scatter. The refusal survives for a fused-projection family WITHOUT a row and is pinned in tests/neural/engines/pytorch_hooks/test_family_tap_table.py."
+      "reason": "GPT-2's fused c_attn no longer refuses the interior q/k/v — the per-family tap table (registry.Capability.overrides, family 'gpt2') addresses them as the three H·d column blocks of c_attn's output, read and written through the layout conversion's fused scatter. The refusal survives for a fused-projection family WITHOUT a row and is pinned in tests/neural/engines/pytorch_hooks/test_family_tap_table.py."
     },
     {
       "id": "24",
@@ -254,7 +254,7 @@
       "id": "30",
       "layer": "run",
       "captured": false,
-      "reason": "The alias fold: 'deltanet_qkv' is an alias of 'delta_qkv' — the eight DeltaNet tensors the two engines reached under two spellings carry one name each (schema.DEPRECATED_COMPONENTS), and the reference engine serves the name through in_proj_qkv's output. The refusal survives for the three faces only the nnsight engine serves ('deltanet_query', 'deltanet_key', 'deltanet_state' — registry.BACKEND_PAIRS) and is pinned in tests/neural/engines/nnsight_tracing/test_deltanet_interior.py::test_the_reference_engine_refuses_by_name."
+      "reason": "'deltanet_qkv' is an alias of 'delta_qkv' — the eight DeltaNet tensors the two engines reached under two spellings carry one name each (schema.DEPRECATED_COMPONENTS), and the reference engine serves the name through in_proj_qkv's output. The refusal survives for the three faces only the nnsight engine serves ('deltanet_query', 'deltanet_key', 'deltanet_state' — registry.BACKEND_PAIRS) and is pinned in tests/neural/engines/nnsight_tracing/test_deltanet_interior.py::test_the_reference_engine_refuses_by_name."
     },
     {
       "id": "31",

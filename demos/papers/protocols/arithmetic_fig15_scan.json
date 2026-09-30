@@ -1,0 +1,90 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Figure 15 of Feucht et al. 2026 (arXiv:2605.01148): at one depth of the residual stream and one token position of the weekdays task, the whole hidden state of the counterfactual prompt replaces the base prompt's, and the one patched forward is scored against the three variables' labels, one IIA table per panel; workflows/scripts/arithmetic_fig15/fig15_figure.py draws them."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "arithmetic_fig15/data", "field": "input"},
+    "counterfactual": {"dataset": "arithmetic_fig15/data", "field": "counterfactual_inputs[0]"}
+  },
+  "axes": {
+    "depth": {
+      "rows": [
+        {"depth": 0, "layers": 0, "component": "block_input"},
+        {"depth": 1, "layers": 0, "component": "block_output"},
+        {"depth": 2, "layers": 1, "component": "block_output"},
+        {"depth": 3, "layers": 2, "component": "block_output"},
+        {"depth": 4, "layers": 3, "component": "block_output"},
+        {"depth": 5, "layers": 4, "component": "block_output"},
+        {"depth": 6, "layers": 5, "component": "block_output"},
+        {"depth": 7, "layers": 6, "component": "block_output"},
+        {"depth": 8, "layers": 7, "component": "block_output"},
+        {"depth": 9, "layers": 8, "component": "block_output"},
+        {"depth": 10, "layers": 9, "component": "block_output"},
+        {"depth": 11, "layers": 10, "component": "block_output"},
+        {"depth": 12, "layers": 11, "component": "block_output"},
+        {"depth": 13, "layers": 12, "component": "block_output"},
+        {"depth": 14, "layers": 13, "component": "block_output"},
+        {"depth": 15, "layers": 14, "component": "block_output"},
+        {"depth": 16, "layers": 15, "component": "block_output"},
+        {"depth": 17, "layers": 16, "component": "block_output"},
+        {"depth": 18, "layers": 17, "component": "block_output"},
+        {"depth": 19, "layers": 18, "component": "block_output"},
+        {"depth": 20, "layers": 19, "component": "block_output"},
+        {"depth": 21, "layers": 20, "component": "block_output"},
+        {"depth": 22, "layers": 21, "component": "block_output"},
+        {"depth": 23, "layers": 22, "component": "block_output"},
+        {"depth": 24, "layers": 23, "component": "block_output"},
+        {"depth": 25, "layers": 24, "component": "block_output"},
+        {"depth": 26, "layers": 25, "component": "block_output"},
+        {"depth": 27, "layers": 26, "component": "block_output"},
+        {"depth": 28, "layers": 27, "component": "block_output"},
+        {"depth": 29, "layers": 28, "component": "block_output"},
+        {"depth": 30, "layers": 29, "component": "block_output"},
+        {"depth": 31, "layers": 30, "component": "block_output"},
+        {"depth": 32, "layers": 31, "component": "block_output"}
+      ],
+      "key": "depth"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "positions": {
+      "tap": {
+        "sweep": [{"variable": "offset"}, {"variable": "input_day"}, {"index": -1}]
+      }
+    },
+    "sites": {
+      "target": {"component": {"axis": "depth.component"}, "layers": {"axis": "depth.layers"}},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {"v_cf": {"site": "target", "pos": "tap"}, "logits": {"site": "lm_head", "pos": -1}},
+    "writes": {
+      "patch": {"site": "target", "pos": "tap", "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia_output_day.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "label_offset_forms"},
+        "file_path": "iia_offset.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "label_input_day_forms"},
+        "file_path": "iia_input_day.json"
+      }
+    ]
+  }
+}

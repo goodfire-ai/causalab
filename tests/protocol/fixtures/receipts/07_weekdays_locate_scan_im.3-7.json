@@ -1,0 +1,179 @@
+{
+  "canonical": {
+    "data": {
+      "base": {
+        "dataset": "weekdays/data#train",
+        "digest": "ff2f6b6c9e13813ee546124047e38472e0272bd3a272361e013412ad41425865",
+        "field": "input"
+      },
+      "counterfactual": {
+        "dataset": "weekdays/data#train",
+        "digest": "ff2f6b6c9e13813ee546124047e38472e0272bd3a272361e013412ad41425865",
+        "field": "counterfactual_inputs[0]"
+      }
+    },
+    "header": {
+      "protocol_version": "4"
+    },
+    "method": {
+      "intervened_models": {
+        "original_counterfactual": {
+          "input": "counterfactual",
+          "reads": [
+            "v_cf"
+          ]
+        },
+        "patched": {
+          "input": "base",
+          "reads": [
+            "logits"
+          ],
+          "writes": [
+            "patch"
+          ]
+        }
+      },
+      "positions": {
+        "tap": {
+          "sweep": [
+            {
+              "index": -1
+            },
+            {
+              "index": -1,
+              "scope": {
+                "variable": "entity"
+              }
+            }
+          ]
+        }
+      },
+      "reads": {
+        "logits": {
+          "pos": {
+            "index": -1
+          },
+          "site": "lm_head"
+        },
+        "v_cf": {
+          "pos": "tap",
+          "site": "target"
+        }
+      },
+      "save": [
+        {
+          "aggregation": {
+            "expected": "cf_answer",
+            "kind": "match",
+            "mode": "exact"
+          },
+          "file_path": "iia.json",
+          "model": "patched",
+          "read": "logits"
+        },
+        {
+          "aggregation": {
+            "a": "cf_answer",
+            "b": "base_answer",
+            "kind": "logit_diff"
+          },
+          "file_path": "logit_diff.json",
+          "model": "patched",
+          "read": "logits"
+        }
+      ],
+      "sites": {
+        "lm_head": {
+          "component": "lm_head"
+        },
+        "target": {
+          "component": "block_output",
+          "layers": {
+            "sweep": {
+              "range": [
+                0,
+                32
+              ]
+            }
+          }
+        }
+      },
+      "writes": {
+        "patch": {
+          "do": {
+            "swap": {
+              "model": "original_counterfactual",
+              "read": "v_cf"
+            }
+          },
+          "pos": "tap",
+          "site": "target"
+        }
+      }
+    },
+    "model": {
+      "dtype": "fp32",
+      "key": "Qwen/Qwen3-8B",
+      "revision": "main"
+    }
+  },
+  "document_digest": "06c29ec7ec69a3ddbdc46a48de8ca6516761d26ede8233e36ce8607660bc35ad",
+  "execution": {
+    "batch_rows": null,
+    "device": null,
+    "fit_rows": null,
+    "model_source": "loaded",
+    "parallel": {
+      "context": 1,
+      "data": 1,
+      "data_mode": "points",
+      "expert": 1,
+      "launcher": "solo",
+      "pipeline": 1,
+      "tensor": 1,
+      "world": 1
+    }
+  },
+  "points": [
+    {
+      "coords": {
+        "positions.tap": {
+          "index": -1
+        },
+        "sites.target.layers": 3
+      },
+      "digest": "ac9ff1eb6ff095aa329da81aee1a9610c815d09f80265259a29f784870a0bf0f",
+      "index": 3
+    },
+    {
+      "coords": {
+        "positions.tap": {
+          "index": -1
+        },
+        "sites.target.layers": 4
+      },
+      "digest": "952968a4d87954110b30ac4d096e3b1a87c152ec36bcdca20635b59fcee9294c",
+      "index": 4
+    },
+    {
+      "coords": {
+        "positions.tap": {
+          "index": -1
+        },
+        "sites.target.layers": 5
+      },
+      "digest": "4f3e9646c3aca797399ea1ae38b0f57e05906d957665524b95f45bf7904645d6",
+      "index": 5
+    },
+    {
+      "coords": {
+        "positions.tap": {
+          "index": -1
+        },
+        "sites.target.layers": 6
+      },
+      "digest": "c479ee627f76a435500112d22cbc725fff5b554293f8cab9fb5bc9acb7c5d947",
+      "index": 6
+    }
+  ]
+}

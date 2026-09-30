@@ -1,5 +1,5 @@
-"""Ragged and variable-length writes (spec §2.8 ``ragged``, §5 rule 19) — the
-engine half, on tiny Llama, CPU.
+"""Ragged and variable-length writes (spec §2.8 ``ragged``, §5 rule 19)
+— the engine half, on tiny Llama, CPU.
 
 A write whose rows address different numbers of positions — an ``all`` window
 over prompts of unequal length, a ``variable`` window over an entity that
@@ -37,7 +37,8 @@ the forward the window already runs — nothing about batch geometry changes.
   — and the same document with no policy is rule 19's refusal. The shipped
   document itself keeps its last-token spelling and authors no policy.
 
-Every refusal has its valid-work twin beside it.
+Every refusal has its valid-work twin beside it, so a check that refuses
+everything cannot pass.
 """
 
 from __future__ import annotations
@@ -51,23 +52,25 @@ import torch
 
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.shared.encoding import encode
-from causalab.neural.shared.executor_base import RaggedValue
+from causalab.neural.shared.executor import RaggedValue
 from causalab.protocol import run_protocol
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.loader import load
-from causalab.protocol.resolution import Unavailable
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
-from causalab.protocol.run import RUN_RECORD_NAME
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.results import Unavailable
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.receipt import RUN_RECORD_NAME
 
 from ._drive import base_data_section, executor_for
 from .conftest import TINY_LLAMA
-from tests.protocol._docs import in_order
+from tests.protocol._docs import UNWRITTEN, in_order, saved
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR
+
 
 pytestmark = pytest.mark.smoke
 
 REPO = Path(__file__).resolve().parents[4]
-SHIPPED = REPO / "causalab/configs/protocols/weekdays_locate_scan.json"
+SHIPPED = PROTOCOLS_DIR / "weekdays_locate_scan.json"
 TWIN = REPO / "tests/protocols/07_weekdays_locate_scan_im.json"
 
 LANDING = ("exact_length_buckets", "padded_masked")
@@ -128,42 +131,37 @@ def _doc(
     if ragged is not None:
         write["ragged"] = {"policy": ragged}
     method: dict[str, Any] = {
+        "intervened_models": {
+            "patched": {
+                "input": "base",
+                "reads": ["logits", "after"],
+                "writes": ["patch"],
+            }
+        },
         "sites": {
             "tgt": {"component": "block_output", "layers": [0]},
             "lm_head": {"component": "lm_head"},
         },
         "reads": {
-            "logits": {
-                "site": "lm_head",
-                "pos": {"index": -1},
-                "model": "patched",
-                "input": "base",
-            },
-            "after": {"site": "tgt", "pos": pos, "model": "patched", "input": "base"},
+            "logits": {"site": "lm_head", "pos": {"index": -1}},
+            "after": {"site": "tgt", "pos": pos},
         },
         "writes": {"patch": write},
-        "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
         "save": [
-            {
-                "value": name,
-                "model": "patched",
-                "input": "base",
-                "file_path": f"{name}.safetensors",
-            }
+            saved(name, "patched", f"{name}.safetensors")
             for name in ("logits", "after")
         ],
     }
     if positions is not None:
         method["positions"] = positions
     if with_counterfactual:
-        method["reads"]["v_cf"] = {
-            "site": "tgt",
-            "pos": pos,
-            "model": "original",
+        method["reads"]["v_cf"] = {"site": "tgt", "pos": pos}
+        method["intervened_models"][UNWRITTEN] = {
             "input": "counterfactual",
+            "reads": ["v_cf"],
         }
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=with_counterfactual),
         "method": method,
@@ -350,7 +348,7 @@ def _wide_dense_operand_refusal(bundle: Any, policy: str) -> ValidationError:
 def test_t10_a_uniform_dense_operand_wider_than_a_row_is_refused_under_both_policies(
     llama_bundle, policy
 ) -> None:
-    """The probe that motivated the width check: a dense operand as wide as the widest row
+    """A dense operand as wide as the widest row
     satisfies the padded frame's broadcast, so without the per-row width check
     ``padded_masked`` landed it left-aligned and truncated into the narrower
     row, while ``exact_length_buckets`` refused the same document with
@@ -592,10 +590,12 @@ def test_t11_through_run_protocol_nothing_loads_and_nothing_runs(
     )
     try:
         env = _env_with_rows(tmp_path, LOCATE_ROWS)
-        loaded = load(in_order(_locate_variant(None)), env)
+        loaded = compile_protocol(in_order(_locate_variant(None)), env=env)
         out = tmp_path / "out"
         with pytest.raises(ValidationError) as err:
-            run_protocol(loaded, env, [PytorchHooksEngine(bundle=llama_bundle)], out)
+            run_protocol(
+                loaded, env, PytorchHooksEngine(bundle=llama_bundle), out, record=True
+            )
     finally:
         handle.remove()
     assert err.value.rule == 19
@@ -611,9 +611,12 @@ def test_t11_through_run_protocol_nothing_loads_and_nothing_runs(
 
 def _run_locate(tmp_path: Path, policy: str, name: str) -> tuple[Any, Path]:
     env = _env_with_rows(tmp_path, LOCATE_ROWS)
-    loaded = load(in_order(_locate_variant(policy)), env)
+    loaded = compile_protocol(in_order(_locate_variant(policy)), env=env)
     out = tmp_path / name
-    return run_protocol(loaded, env, [PytorchHooksEngine(device="cpu")], out), out
+    result = run_protocol(
+        loaded, env, PytorchHooksEngine(device="cpu"), out, record=True
+    )
+    return result, out
 
 
 def test_t12_the_variable_half_runs_under_exact_length_buckets(
@@ -634,7 +637,7 @@ def test_t12_the_variable_half_runs_under_exact_length_buckets(
             "buckets": [[1, 1], [3, 1]],
         }
     }
-    assert receipt["execution"]["batch_rows"] is None  # beside the geometry
+    assert receipt["execution"]["batch_rows"] is None  # beside the geometry (X5)
     # the variable half recorded the geometry, the last-token half is uniform
     ragged = [s for s in result.summaries if RAGGED_KEY in s]
     assert len(ragged) == 2
@@ -658,20 +661,27 @@ def test_t12_without_a_policy_the_same_document_is_rule_19(
     tmp_path, llama_bundle
 ) -> None:
     env = _env_with_rows(tmp_path, LOCATE_ROWS)
-    loaded = load(in_order(_locate_variant(None)), env)
+    loaded = compile_protocol(in_order(_locate_variant(None)), env=env)
     with pytest.raises(ValidationError) as err:
-        run_protocol(loaded, env, [PytorchHooksEngine(device="cpu")], tmp_path / "out")
+        run_protocol(loaded, env, PytorchHooksEngine(device="cpu"), tmp_path / "out")
     assert err.value.rule == 19 and err.value.reason == "ragged_write_unsupported"
 
 
 def test_t12_the_shipped_document_keeps_its_spelling_and_authors_no_policy() -> None:
-    """The shipped locate scan and its corpus twin: the same method (the twin
-    retargets only the dataset refs), the last-token spelling on the second
-    tap, no ``ragged`` field — its description now says why, naming the
-    ``ragged`` field and keeping the rendered code."""
+    """The shipped locate scan and its corpus twin: the same method up to the
+    model's depth (the twin retargets the dataset refs and keeps the corpus
+    model's 32-layer range where the shipped document sweeps Qwen2.5-7B's
+    28), the last-token spelling on the second tap, no ``ragged`` field — both
+    descriptions say why, naming the field this PR adds and keeping the
+    rendered code."""
     shipped, twin = json.loads(SHIPPED.read_text()), json.loads(TWIN.read_text())
+    depth = shipped["method"]["sites"]["target"]["layers"]
+    assert depth == {"sweep": {"range": [0, 28]}}
+    assert twin["method"]["sites"]["target"]["layers"] == {"sweep": {"range": [0, 32]}}
+    twin["method"]["sites"]["target"]["layers"] = depth
     assert shipped["method"] == twin["method"]
-    assert shipped["header"]["description"] == twin["header"]["description"]
+    for document in (shipped, twin):
+        assert "writes.<w>.ragged" in document["header"]["description"]
     tap = shipped["method"]["positions"]["tap"]["sweep"]
     assert tap == [{"index": -1}, {"index": -1, "scope": {"variable": "entity"}}]
     assert "ragged" not in shipped["method"]["writes"]["patch"]
@@ -680,8 +690,44 @@ def test_t12_the_shipped_document_keeps_its_spelling_and_authors_no_policy() -> 
 
 
 def test_the_spellings_are_the_code_s() -> None:
-    from causalab.protocol.run import RAGGED_KEY as key
+    from causalab.protocol.receipt import RAGGED_KEY as key
     from causalab.protocol.schema import RAGGED_POLICIES
 
     assert key == RAGGED_KEY
     assert set(RAGGED_POLICIES) == {"refuse", *LANDING}
+
+
+@pytest.mark.parametrize("policy", LANDING)
+def test_renormalize_after_a_delta_restores_each_rows_pre_write_norm(
+    bundle, policy: str
+):
+    """``add_scaled`` + ``renormalize`` over a ragged ``all`` window: every
+    landed position has the norm it had before either write, under both
+    landing policies (§2.8; the ragged landing once made ``renormalize`` the
+    identity, re-reading the post-delta value as its reference)."""
+    ragged = {"policy": policy}
+    doc = _doc(
+        {"add_scaled": {"op": 2.5, "alpha": 1.0}},
+        ragged=policy,
+        with_counterfactual=False,
+    )
+    method = doc["method"]
+    method["writes"]["renorm"] = {
+        "site": "tgt",
+        "pos": "all",
+        "do": {"renormalize": True},
+        "ragged": ragged,
+    }
+    method["intervened_models"]["patched"]["writes"].append("renorm")
+    method["reads"]["before"] = {"site": "tgt", "pos": "all"}
+    method["intervened_models"]["original"] = {"input": "base", "reads": ["before"]}
+    method["save"].append(saved("before", "original", "before.safetensors"))
+    executor = executor_for(doc, bundle, base_texts=BASE_TEXTS)
+    widths = _widths(bundle, BASE_TEXTS)
+    before = _nested(executor.read_value("before"), widths)
+    after = _nested(executor.read_value("after"), widths)
+    for row, (b, a) in enumerate(zip(before, after)):
+        _close(a.norm(dim=-1), b.norm(dim=-1))
+        # anti-vacuity: the write moved the values, and the bumped norm is far
+        assert float((a - b).abs().max()) > 1e-2, f"row {row}: nothing landed"
+        assert float(((b + 2.5).norm(dim=-1) - b.norm(dim=-1)).abs().min()) > 1.0

@@ -1,0 +1,38 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Held-out scoring of the DBM mask of arithmetic_neurons_fit.json (Feucht et al. 2026, arXiv:2605.01148, Section 5): load the fitted gate over the 14336 neurons of layer 18's MLP, swap the neurons its hard mask keeps from the counterfactual weekdays prompt on the test split, and save the interchange intervention accuracy and each neuron's rank, which workflows/scripts/arithmetic_neurons/figures.py reads for the held-out bars and Figure 8a's mask panel; the gate bundle fit/gate.safetensors is a run-tree path that only the workflow resolves."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "arithmetic_neurons/weekdays#test", "field": "input"},
+    "counterfactual": {"dataset": "arithmetic_neurons/weekdays#test", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]}
+    },
+    "sites": {
+      "neurons": {"component": "mlp_neuron_output", "layers": [18]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {"gate": {"kind": "gate", "file_path": "fit/gate.safetensors"}},
+    "reads": {
+      "v_cf": {"site": "neurons", "pos": -1, "featurizer": "gate"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask": {"site": "neurons", "pos": -1, "featurizer": "gate", "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia.json"
+      },
+      {"kind": "rank", "file_path": "rank.json"}
+    ]
+  }
+}

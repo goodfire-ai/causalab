@@ -9,9 +9,9 @@ perform entity-based retrieval with an explicit position-finding intermediate.
 import random
 from typing import Any
 
-from causalab.causal.causal_model import CausalModel, build_output_tokens
-from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import CausalTrace, Mechanism, input_var
+from causalab.causal import Dom, FamilyDom, V, family, mechanism
+from causalab.causal.model import CausalModel, CausalTrace
+from causalab.causal.scoring import ScoringSpec, build_output_tokens
 
 from .config import EntityBindingTaskConfig, create_sample_love_config
 
@@ -80,7 +80,7 @@ def sample_valid_entity_binding_input(
         all_valid = True
         for g in range(active_groups):
             for e in range(config.max_entities_per_group):
-                key = f"entity_g{g}_e{e}"
+                key = f"entities[{g},{e}]"
 
                 if e in config.entity_pools:
                     available = config.entity_pools[e][:]
@@ -113,7 +113,7 @@ def sample_valid_entity_binding_input(
 
         if all_valid:
             input_sample["statement_template"] = config.statement_template
-            # query_e{e} are computed variables — do not pass them as inputs
+            # queries[{e}] are computed variables — do not pass them as inputs
             return model.new_trace(input_sample)
 
     raise ValueError(
@@ -122,320 +122,146 @@ def sample_valid_entity_binding_input(
     )
 
 
-# =============================================================================
-# Compute functions for mechanisms
-# =============================================================================
-
-
-def _compute_query_entity(
-    t: CausalTrace, entity_pos: int, config: EntityBindingTaskConfig
-) -> Any:
-    """Compute query_e{entity_pos} — entity from the query group at that position."""
-    query_group = t["query_group"]
-    active_groups = t["active_groups"]
-
-    if query_group < active_groups:
-        return t[f"entity_g{query_group}_e{entity_pos}"]
-    return None
-
-
-def _compute_question_template(t: CausalTrace, config: EntityBindingTaskConfig) -> str:
-    """Compute question_template based on query_indices and answer_index."""
-    query_indices = t["query_indices"]
-    answer_index = t["answer_index"]
-
-    if isinstance(query_indices, list):
-        query_indices = tuple(query_indices)
-
-    key = (query_indices, answer_index)
-    if key in config.question_templates:
-        return config.question_templates[key]
-    return "What is the answer?"
-
-
-def _compute_positional_query(
-    t: CausalTrace, entity_position: int, config: EntityBindingTaskConfig
-) -> tuple[int, ...]:
-    """Compute positional_query_e{entity_position} — groups where query entity appears."""
-    query_indices = t["query_indices"]
-    active_groups = t["active_groups"]
-
-    if entity_position not in query_indices:
+def _matching_positions(role, query_indices, query, active_groups, entities, positions):
+    if role not in query_indices or query is None:
         return ()
+    return tuple(
+        positions[g]
+        for g in range(active_groups)
+        if entities[g] == query and positions[g] is not None
+    )
 
-    query_entity = t[f"query_e{entity_position}"]
-    if query_entity is None:
-        return ()
 
-    matching_groups = []
+def _intersection(queries, indices):
+    candidates = [set(queries[i]) for i in indices if queries[i]]
+    if not candidates:
+        return None
+    intersection = set.intersection(*candidates)
+    return next(iter(intersection)) if len(intersection) == 1 else None
+
+
+def _render(
+    config,
+    entities,
+    queries,
+    query_indices,
+    answer_index,
+    active_groups,
+    entities_per_group,
+):
+    template = config.build_mega_template(active_groups, query_indices, answer_index)
+    values = {}
     for g in range(active_groups):
-        entity = t[f"entity_g{g}_e{entity_position}"]
-        if entity == query_entity:
-            group_pos = t[f"positional_entity_g{g}_e{entity_position}"]
-            if group_pos is not None:
-                matching_groups.append(group_pos)
-
-    return tuple(matching_groups)
-
-
-def _compute_positional_answer(
-    t: CausalTrace, config: EntityBindingTaskConfig
-) -> int | None:
-    """Compute positional_answer — intersection of all positional queries."""
-    query_indices = t["query_indices"]
-
-    if not query_indices:
-        return None
-
-    candidate_sets = []
-    for entity_idx in query_indices:
-        query_positions = t[f"positional_query_e{entity_idx}"]
-        if query_positions:
-            candidate_sets.append(set(query_positions))
-
-    if not candidate_sets:
-        return None
-
-    intersection = candidate_sets[0]
-    for candidate_set in candidate_sets[1:]:
-        intersection = intersection.intersection(candidate_set)
-
-    if len(intersection) == 0:
-        return None
-    elif len(intersection) > 1:
-        # Ambiguous: multiple groups match. Use sample_valid_entity_binding_input for
-        # proper sampling that enforces positional uniqueness across groups.
-        return None
-
-    return next(iter(intersection))
-
-
-def _compute_raw_input(t: CausalTrace, config: EntityBindingTaskConfig) -> str:
-    """Compute raw_input — the complete prompt text."""
-    query_indices = t["query_indices"]
-    if isinstance(query_indices, list):
-        query_indices = tuple(query_indices)
-    answer_index = t["answer_index"]
-    active_groups = t["active_groups"]
-    entities_per_group = t["entities_per_group"]
-
-    try:
-        mega_template_str = config.build_mega_template(
-            active_groups, query_indices, answer_index
-        )
-
-        values = {}
-        for g in range(active_groups):
-            for e in range(entities_per_group):
-                entity = t[f"entity_g{g}_e{e}"]
-                values[f"g{g}_e{e}"] = (
-                    entity if entity is not None else f"MISSING_{g}_{e}"
-                )
-
-        # Fill question entity role names from query_e{e} computed variables
-        values["query_entity"] = t[f"query_e{query_indices[0]}"]
-        for e in range(entities_per_group):
-            role_name = config.entity_roles.get(e, f"entity{e}")
-            values[role_name] = t[f"query_e{e}"]
-
-        return config.fill_template(mega_template_str, values)
-    except Exception as e:
-        import warnings
-
-        warnings.warn(f"Failed to compute raw_input: {e}")
-        return "Invalid configuration"
-
-
-def _compute_raw_output(t: CausalTrace, config: EntityBindingTaskConfig) -> str:
-    """Compute raw_output — the expected answer entity."""
-    positional_answer = t["positional_answer"]
-    answer_index = t["answer_index"]
-    active_groups = t["active_groups"]
-    entities_per_group = t["entities_per_group"]
-
-    if (
-        positional_answer is not None
-        and positional_answer < active_groups
-        and answer_index < entities_per_group
-    ):
-        answer_entity = t[f"entity_g{positional_answer}_e{answer_index}"]
-        if answer_entity is not None:
-            return answer_entity
-
-    return "UNKNOWN"
-
-
-# =============================================================================
-# Main model creation function
-# =============================================================================
+        for r in range(entities_per_group):
+            value = entities[g, r]
+            values[f"g{g}_e{r}"] = value if value is not None else f"MISSING_{g}_{r}"
+    values["query_entity"] = queries[query_indices[0]]
+    for r in range(entities_per_group):
+        values[config.entity_roles.get(r, f"entity{r}")] = queries[r]
+    return config.fill_template(template, values)
 
 
 def create_positional_entity_causal_model(
     config: EntityBindingTaskConfig,
 ) -> CausalModel:
-    """
-    Create the POSITIONAL ENTITY binding causal model.
-
-    Makes position computation explicit through intermediate variables:
-    - query_e{e}: Entity from the query group at position e (computed)
-    - positional_entity_g{g}_e{e}: Group index of each entity (trivially = g)
-    - positional_query_e{e}: Groups containing the query entity at position e
-    - positional_answer: Intersection → single group position to retrieve from
-
-    Args:
-        config: The task configuration
-
-    Returns:
-        CausalModel instance
-    """
-    mechanisms: dict[str, Mechanism] = {}
-    values: dict[str, Any] = {}
-
-    # =========================================================================
-    # Input Variables
-    # =========================================================================
-
-    for g in range(config.max_groups):
-        for e in range(config.max_entities_per_group):
-            key = f"entity_g{g}_e{e}"
-            if e in config.entity_pools:
-                pool = config.entity_pools[e]
-                mechanisms[key] = input_var(pool)
-                values[key] = pool
-            else:
-                mechanisms[key] = input_var([None])
-                values[key] = [None]
-
-    # Control variables
-    mechanisms["query_group"] = input_var(list(range(config.max_groups)))
-    values["query_group"] = list(range(config.max_groups))
-
-    query_indices_values = [tuple([i]) for i in range(config.max_entities_per_group)]
-    mechanisms["query_indices"] = input_var(query_indices_values)
-    values["query_indices"] = query_indices_values
-
-    mechanisms["answer_index"] = input_var(list(range(config.max_entities_per_group)))
-    values["answer_index"] = list(range(config.max_entities_per_group))
-
-    # Fix active_groups to max_groups so default sampling always produces valid inputs
-    mechanisms["active_groups"] = input_var([config.max_groups])
-    values["active_groups"] = [config.max_groups]
-
-    mechanisms["entities_per_group"] = input_var([config.max_entities_per_group])
-    values["entities_per_group"] = [config.max_entities_per_group]
-
-    mechanisms["statement_template"] = input_var([config.statement_template])
-    values["statement_template"] = [config.statement_template]
-
-    # =========================================================================
-    # Computed Variables
-    # =========================================================================
-
-    # query_e{e}: Entity from the query group at position e (derived from entity_g* and query_group)
-    all_entity_vars = [
-        f"entity_g{g}_e{e}"
-        for g in range(config.max_groups)
-        for e in range(config.max_entities_per_group)
-    ]
-    for e in range(config.max_entities_per_group):
-        key = f"query_e{e}"
-        mechanisms[key] = Mechanism(
-            parents=[f"entity_g{g}_e{e}" for g in range(config.max_groups)]
-            + ["query_group", "active_groups"],
-            compute=lambda t, e=e: _compute_query_entity(t, e, config),
+    """Retain the positional retrieval graph; family indices name each node."""
+    groups, roles = config.max_groups, config.max_entities_per_group
+    keys = [(g, r) for g in range(groups) for r in range(roles)]
+    entity_domains = FamilyDom(
+        {(g, r): Dom(config.entity_pools.get(r, []) + [None]) for g, r in keys}
+    )
+    query_domains = FamilyDom(
+        {r: Dom(config.entity_pools.get(r, []) + [None]) for r in range(roles)}
+    )
+    patterns = list(
+        dict.fromkeys(
+            [(r,) for r in range(roles)] + [key[0] for key in config.question_templates]
         )
-        if e in config.entity_pools:
-            values[key] = config.entity_pools[e] + [None]
-        else:
-            values[key] = [None]
+    )
+    if (
+        config.fixed_query_indices is not None
+        and config.fixed_query_indices not in patterns
+    ):
+        patterns.append(config.fixed_query_indices)
+    positions = Dom(list(range(groups)) + [None])
 
-    # Positional entity variables — position of each entity (trivially = group index)
-    for g in range(config.max_groups):
-        for e in range(config.max_entities_per_group):
-            key = f"positional_entity_g{g}_e{e}"
-            mechanisms[key] = Mechanism(
-                parents=[f"entity_g{g}_e{e}"],
-                compute=lambda t, g=g, e=e: g
-                if t[f"entity_g{g}_e{e}"] is not None
-                else None,
+    @mechanism
+    def equations(
+        entities: entity_domains,
+        query_group: Dom(range(groups)),
+        query_indices: Dom(patterns),
+        answer_index: Dom(range(roles)),
+        active_groups: Dom(range(groups + 1)),
+        entities_per_group: Dom(range(roles + 1)),
+        statement_template: Dom([config.statement_template]),
+    ):
+        queries = family(size=roles, domain=query_domains)
+        for r in range(roles):
+            queries[r] = (
+                entities[query_group, r] if query_group < active_groups else None
             )
-            values[key] = list(range(config.max_groups)) + [None]
-
-    # Question template selection
-    mechanisms["question_template"] = Mechanism(
-        parents=["query_indices", "answer_index"],
-        compute=lambda t: _compute_question_template(t, config),
-    )
-    values["question_template"] = list(config.question_templates.values())
-
-    # Positional query variables — find groups where query entity appears
-    entity_vars = [
-        f"entity_g{g}_e{e}"
-        for g in range(config.max_groups)
-        for e in range(config.max_entities_per_group)
-    ]
-    positional_entity_vars = [
-        f"positional_entity_g{g}_e{e}"
-        for g in range(config.max_groups)
-        for e in range(config.max_entities_per_group)
-    ]
-    query_entity_vars = [f"query_e{e}" for e in range(config.max_entities_per_group)]
-
-    for e in range(config.max_entities_per_group):
-        key = f"positional_query_e{e}"
-        mechanisms[key] = Mechanism(
-            parents=(
-                entity_vars
-                + positional_entity_vars
-                + query_entity_vars
-                + ["query_indices", "active_groups", "entities_per_group"]
+        positional_entities = family(keys=keys, domain=positions)
+        for g, r in keys:
+            positional_entities[g, r] = g if entities[g, r] is not None else None
+        question_template = V(
+            config.question_templates.get(
+                (query_indices, answer_index), "What is the answer?"
             ),
-            compute=lambda t, e=e: _compute_positional_query(t, e, config),
+            domain=Dom(str),
         )
-        values[key] = None
+        positional_queries = family(
+            size=roles, domain=Dom.sequence(Dom(range(groups)), max_length=groups)
+        )
+        for r in range(roles):
+            positional_queries[r] = _matching_positions(
+                r,
+                query_indices,
+                queries[r],
+                active_groups,
+                tuple([entities[g, r] for g in range(groups)]),
+                tuple([positional_entities[g, r] for g in range(groups)]),
+            )
+        positional_answer = V(
+            _intersection(positional_queries, query_indices), domain=positions
+        )
+        raw_input = V(
+            _render(
+                config,
+                entities,
+                queries,
+                query_indices,
+                answer_index,
+                active_groups,
+                entities_per_group,
+            ),
+            domain=Dom(str),
+            lazy=True,
+        )
+        if (
+            positional_answer is not None
+            and positional_answer < active_groups
+            and answer_index < entities_per_group
+        ):
+            answer = entities[positional_answer, answer_index]
+        else:
+            answer = None
+        raw_output = V(answer if answer is not None else "UNKNOWN", domain=Dom(str))
+        return positional_answer
 
-    # Positional answer — intersection of all positional queries
-    positional_query_vars = [
-        f"positional_query_e{e}" for e in range(config.max_entities_per_group)
-    ]
-    mechanisms["positional_answer"] = Mechanism(
-        parents=positional_query_vars + ["query_indices"],
-        compute=lambda t: _compute_positional_answer(t, config),
-    )
-    values["positional_answer"] = list(range(config.max_groups))
-
-    # Raw input — complete prompt text
-    mechanisms["raw_input"] = Mechanism(
-        parents=(
-            entity_vars
-            + query_entity_vars
-            + [
-                "statement_template",
-                "question_template",
-                "query_indices",
-                "answer_index",
-                "active_groups",
-                "entities_per_group",
-            ]
-        ),
-        compute=lambda t: _compute_raw_input(t, config),
-    )
-    values["raw_input"] = None
-
-    # Raw output — expected answer
-    mechanisms["raw_output"] = Mechanism(
-        parents=(
-            entity_vars
-            + [
-                "positional_answer",
-                "answer_index",
-                "active_groups",
-                "entities_per_group",
-            ]
-        ),
-        compute=lambda t: _compute_raw_output(t, config),
-    )
-    values["raw_output"] = None
+    def valid_observation(trace):
+        # Inactive values remain legal interventions. Observational prompts use
+        # the configured full grid and one of its supported question patterns.
+        return (
+            trace["active_groups"] == groups
+            and trace["entities_per_group"] == roles
+            and (trace["query_indices"], trace["answer_index"])
+            in config.question_templates
+            and all(
+                trace[f"entities[{g},{r}]"] is not None
+                for g, r in keys
+                if r in config.entity_pools
+            )
+        )
 
     model_id = (
         f"entity_binding_positional_entity_"
@@ -457,15 +283,15 @@ def create_positional_entity_causal_model(
     # literal fallback never looked the value up) while the serializer, keying
     # each row by the variable's actual value, refused every row as
     # undeclared. One declaration, on the variable it describes, and the two
-    # paths cannot disagree.
+    # paths cannot disagree (``tests/tasks/test_scoring_differential.py``).
     all_entities: list[str] = []
     for pool in config.entity_pools.values():
         all_entities.extend(pool)
     all_entities = list(dict.fromkeys(all_entities))
     return CausalModel(
-        mechanisms,
-        values,
+        equations,
         id=model_id,
+        input_filter=valid_observation,
         scoring=ScoringSpec(
             forms={"raw_output": build_output_tokens(all_entities)},
             string_mode="prefix",

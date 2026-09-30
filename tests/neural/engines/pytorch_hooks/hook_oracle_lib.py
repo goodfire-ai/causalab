@@ -41,7 +41,7 @@ from typing import Any, Callable
 
 import torch
 
-from causalab.causal.trace import CausalTrace, Mechanism
+from causalab.causal.model import CausalTrace
 
 # The Plan-era LMPipeline is gone; every helper needs only `.hf_model`, so a
 # one-field shim satisfies the parameter (tests/neural/engines/pytorch_hooks/conftest.py).
@@ -58,19 +58,14 @@ WriteSpec = tuple[torch.nn.Module, HookKind, WriteFn]
 #  Inputs — lightweight traces and counterfactual examples                    #
 # --------------------------------------------------------------------------- #
 def make_trace(text: str) -> CausalTrace:
-    """Build a single-variable :class:`CausalTrace` from a raw string.
+    """Build a single-variable [`CausalTrace`][causalab.causal.model.CausalTrace] from a raw string.
 
     The tiny-pipeline tests need lightweight inputs that mimic the
     ``raw_input``-only traces produced by simple task harnesses. Inline
     construction keeps the tests readable without coupling them to any
-    specific task's :class:`CausalModel`.
+    specific task's [`CausalModel`][causalab.causal.model.CausalModel].
     """
-    return CausalTrace(
-        mechanisms={
-            "raw_input": Mechanism(parents=[], compute=lambda t: t["raw_input"])
-        },
-        inputs={"raw_input": text},
-    )
+    return CausalTrace.from_values({"raw_input": text})
 
 
 def cf_example(base_text: str, *cf_texts: str) -> dict[str, Any]:
@@ -108,7 +103,7 @@ class DiagFeaturizerModule(torch.nn.Module):
 
 
 class DiagInverseFeaturizerModule(torch.nn.Module):
-    """Inverse of :class:`DiagFeaturizerModule`."""
+    """Inverse of `DiagFeaturizerModule`."""
 
     def __init__(self, weight: torch.Tensor) -> None:
         super().__init__()
@@ -140,7 +135,7 @@ class RotateFeaturizerModule(torch.nn.Module):
 
 
 class RotateInverseFeaturizerModule(torch.nn.Module):
-    """Inverse of :class:`RotateFeaturizerModule` (``R`` is orthonormal)."""
+    """Inverse of `RotateFeaturizerModule` (``R`` is orthonormal)."""
 
     def __init__(self, R: torch.Tensor) -> None:
         super().__init__()
@@ -191,7 +186,7 @@ def _attn_module(pipeline: LMPipeline, layer: int) -> torch.nn.Module:
     of the hybrid tower).
 
     A block carrying children of *both* kinds is refused rather than probed
-    in a fixed order, the rule ``causalab.neural.shared.streams`` follows: a
+    in a fixed order, the rule ``causalab.neural.shared.model_tree.stream_at`` follows: a
     wrong tap produces plausible numbers.
     """
     blk = decoder_block(pipeline, layer)
@@ -559,23 +554,24 @@ def capture_with_writes(
 
 
 # --------------------------------------------------------------------------- #
-#  The hybrid tower's DeltaNet interior — the kernel boundary                  #
-#                                                                              #
-#  A Gated DeltaNet mixer computes its recurrence inside one module-global      #
-#  call (``torch_chunk_gated_delta_rule`` in ``modeling_qwen3_5_moe.py``) that  #
-#  no forward hook reaches. The oracle reaches it the only raw way there is:    #
-#  it swaps the mixer's own modeling module's global for the enclosed forwards  #
-#  and records every call the tapped mixer makes — arguments as the kernel      #
-#  received them, return as the model consumed it. Independent of the engine's  #
-#  ``delta_interface.py``: same physical boundary, separate code.               #
-#                                                                              #
-#  The per-step interior (state, memory readout, update) exists only in the     #
-#  recurrent formulation, so the oracle *is* that formulation, transcribed from  #
-#  ``torch_recurrent_gated_delta_rule`` operation for operation (§ delta_       #
-#  recurrence below). The failure mode is an oracle hand-expanded in a          #
-#  different association than the model; the certification's bit-exact band on  #
-#  fp32 is what makes that failure visible, and the 1-ulp reassociation test    #
-#  (test_family_certification.py, T6) is the mutation that proves it bites.     #
+#  The hybrid tower's DeltaNet interior — the kernel boundary                 #
+#                                                                             #
+#  A Gated DeltaNet mixer computes its recurrence inside one module-global    #
+#  call (``torch_chunk_gated_delta_rule`` in ``modeling_qwen3_5_moe.py``)     #
+#  that no forward hook reaches. The oracle reaches it the only raw way there #
+#  is: it swaps the mixer's own modeling module's global for the enclosed     #
+#  forwards and records every call the tapped mixer makes — arguments as the  #
+#  kernel received them, return as the model consumed it. Independent of the  #
+#  engine's ``delta_interface.py``: same physical boundary, separate code.    #
+#                                                                             #
+#  The per-step interior (state, memory readout, update) exists only in the   #
+#  recurrent formulation, so the oracle *is* that formulation, transcribed    #
+#  from transformers' ``torch_recurrent_gated_delta_rule`` (Apache-2.0)       #
+#  operation for operation (§ delta_recurrence below). An oracle              #
+#  hand-expanded in a different association than the model fails silently;    #
+#  the certification's bit-exact band on fp32 is what makes that failure      #
+#  visible, and the 1-ulp reassociation test (test_family_certification.py,   #
+#  T6) is the mutation that proves it bites.                                  #
 # --------------------------------------------------------------------------- #
 
 #: The chunked kernel the mixer calls at prefill — the boundary the oracle swaps.
@@ -743,6 +739,10 @@ def delta_recurrence(
     """``torch_recurrent_gated_delta_rule`` one step at a time, operation for
     operation, keeping the interior.
 
+    Adapted from Hugging Face transformers' function of that name
+    (``models/qwen3_5_moe/modeling_qwen3_5_moe.py``,
+    https://github.com/huggingface/transformers, Apache-2.0).
+
     Arguments are the kernel's own (``(b, s, h, d)`` layout, pre-l2norm, the
     input dtype; ``g``/``beta`` ``(b, s, h)``). Per step ``t``, in the kernel's
     order: l2-normalize ``q_t``/``k_t`` in the input dtype, cast everything to
@@ -803,7 +803,7 @@ def capture_many_with_writes(
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """One forward: every ``writes`` entry applied, every ``captures`` entry
     (``name -> (module, kind)``) grabbed, and the **all-position** logits
-    returned beside them. The many-capture form of :func:`capture_with_writes`,
+    returned beside them. The many-capture form of `capture_with_writes`,
     for a certification that compares intermediate components and logits from
     the same pass."""
     grabbed: dict[str, torch.Tensor] = {}

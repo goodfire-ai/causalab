@@ -1,0 +1,20 @@
+{
+ "description": "The two Table 5 values of Geva et al. 2022 that this package replicates: the share of toxic continuations (the Toxicity column) for GPT2 and for 10 Manual Pick, on the challenging subset of RealToxicityPrompts. Each record names its Table 5 row, the workflow step that runs that row, the percentage as the table prints it and its value as a fraction. table5_figure.py draws the page's Original from these records.",
+ "source": {
+  "url": "https://arxiv.org/pdf/2203.14680v3",
+  "arxiv_id": "2203.14680",
+  "version": "v3",
+  "sha256": "2e4e37664387eede06dbcec545c97b5ed428e9513853edf11840b8f25ca7ec10",
+  "page": 8,
+  "table": "Table 5"
+ },
+ "extraction": {
+  "command": "pdftotext -layout -f 8 -l 8 2203.14680v3.pdf -",
+  "tool": "poppler pdftotext 26.09.0"
+ },
+ "rule": "value = the number of the printed percentage / 100. The table prints each rate to 0.1 percent, so a value is exact to 0.0005.",
+ "records": [
+  {"row": "GPT2", "step": "baseline", "column": "Toxicity", "printed": "58.5%", "value": 0.585},
+  {"row": "10 Manual Pick", "step": "amplified", "column": "Toxicity", "printed": "30.8%", "value": 0.308}
+ ]
+}

@@ -17,13 +17,16 @@ from pathlib import Path
 
 import pytest
 
-from causalab.cli import load_engines
+from causalab.neural.shared.engine_router import route
 from causalab.protocol import run_protocol
-from causalab.protocol.loader import load
-from causalab.protocol.tables import read_table
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.tables import read_table
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import aggregation
+from tests.protocol._docs import saved as save_entry
 from tests.protocol._env import CORPUS_DIR, build_env
+
 
 pytestmark = pytest.mark.smoke
 
@@ -38,33 +41,19 @@ def _document() -> dict:
     raw = json.loads((CORPUS_DIR / "02_interchange_im.json").read_text())
     raw["model"]["key"] = TINY_LLAMA
     raw["method"]["sites"]["target"]["layers"] = 1
-    raw["method"]["metrics"] = {
-        "answers": {
-            "kind": "token_logits",
-            "of": "logits",
-            "tokens": ANSWERS,
-            "token_form": "space_prefixed",
-        },
-        "cf_logit": {
-            "kind": "token_logit",
-            "of": "logits",
-            "token": "cf_answer",
-            "token_form": "space_prefixed",
-        },
-    }
     raw["method"]["save"] = [
-        {
-            "value": "answers",
-            "model": "patched",
-            "input": "base",
-            "file_path": "a.json",
-        },
-        {
-            "value": "cf_logit",
-            "model": "patched",
-            "input": "base",
-            "file_path": "c.json",
-        },
+        save_entry(
+            "logits",
+            "patched",
+            "answers.json",
+            aggregation("token_logits", tokens=ANSWERS),
+        ),
+        save_entry(
+            "logits",
+            "patched",
+            "cf_logit.json",
+            aggregation("token_logit", token="cf_answer"),
+        ),
     ]
     return raw
 
@@ -84,11 +73,11 @@ def saved(
     root = tmp_path_factory.mktemp("token_logits")
     env = build_env(root / "artifacts")
     raw = _document()
-    loaded = load(raw, env)
-    result = run_protocol(loaded, env, load_engines("auto", "cpu"), root / "out")
+    loaded = compile_protocol(raw, env=env)
+    result = run_protocol(loaded, env, route("auto", device="cpu"), root / "out")
     return (
-        read_table(Path(result.files["a.json"])),
-        read_table(Path(result.files["c.json"])),
+        read_table(Path(result.files["answers.json"])),
+        read_table(Path(result.files["cf_logit.json"])),
         env.datasets.rows(raw["data"]["base"]["dataset"]),
     )
 
@@ -107,7 +96,6 @@ def test_the_table_has_one_row_per_example_with_the_metric_columns(saved) -> Non
             "unit",
             "estimand_version",
             "eligible",  # the eligibility record (§2.10)
-            "produced_by",
         }
         for row in answers
     )

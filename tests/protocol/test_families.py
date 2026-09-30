@@ -22,22 +22,30 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ParseError, ValidationError
-from causalab.protocol.families import expand_families, has_families
-from causalab.protocol.loader import load
-from causalab.protocol.plan import plan_point
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.lowering import expand_families, has_families
+from causalab.protocol.pipeline import compile_protocol
+from causalab.neural.shared.plan import plan_point
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.protocol.schema import parse_document
-from causalab.protocol.sweep import AT_ONCE_KEY, SWEEP_KEY
+from causalab.protocol.lowering import AT_ONCE_KEY, SWEEP_KEY
 
-from tests.protocol._docs import base_doc, in_order
-from tests.protocol._env import FIXTURES, TASKS_ROOT
+from tests.protocol._docs import (
+    LOGIT_DIFF,
+    UNWRITTEN,
+    base_doc,
+    in_order,
+    saved,
+    term,
+)
+from tests.protocol._env import FIXTURES, TASKS_ROOT, steps_of
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
-PRESET = REPO / "causalab/configs/protocols/attention_band_patch.json"
+PRESET = PROTOCOLS_DIR / "attention_band_patch.json"
 #: The preset as it shipped, hand-written, before §3.1 existed.
 HANDWRITTEN = FIXTURES / "band_patch_handwritten.json"
 #: Its digest against the fixture environment, frozen the day the sugar landed.
@@ -45,14 +53,22 @@ HANDWRITTEN = FIXTURES / "band_patch_handwritten.json"
 #: it is the whole of the claim that the sugar costs no digest. (The preset's
 #: own digest did move, because its prose was rewritten too, which is why the
 #: comparison below substitutes this document's `description` before hashing.)
-#: It has moved once, for data identity: staging's shipped tables renamed the
+#: It has moved once, for data identity: the shipped tables renamed the
 #: weekdays ref (`natural_domains_arithmetic/data/weekdays`), and this fixture
 #: followed the preset. With the old ref the previous pin, 2d4a58a349d63d5d,
 #: still reproduces under this code. Re-pinned once more under protocol v2:
 #: the four-group canonical form moves every digest, the one kind of
 #: change spec §7 lets move a pin. And once more under protocol v3: the
 #: ten sites spell `layers: [n]`, a band, and their bytes moved with the field.
-HANDWRITTEN_DIGEST = "df4b03003028eaff"
+#: And once more for data identity: the shipped weekdays table lost
+#: its `scoring_digest` column, so `data.*.digest` moved and this followed.
+#: And again for protocol v4 (reads-first): the models list their reads —
+#: landed on the retired ``token_form``, so the literal lost the key too.
+#: And once more for the method library's retarget (Llama-3.1-8B, bands over
+#: L10-L19 -> Qwen2.5-7B, bands over L9-L16): the fixture followed the preset
+#: again, and their digests still agree (the retarget's v3 pin was
+#: ``40149fa1b44a26e2``; this is the same fixture migrated to v4).
+HANDWRITTEN_DIGEST = "50e756d14e96a6ef"
 
 
 @pytest.fixture(scope="module")
@@ -99,27 +115,21 @@ def band_doc() -> dict[str, Any]:
         "lm_head": {"component": "lm_head"},
     }
     doc["method"]["reads"] = {
-        "v": {
-            "site": "a",
-            "pos": "tap",
-            "model": "original",
-            "input": "counterfactual",
-            "names": "v{layers}",
-        },
-        "logits": {"site": "lm_head", "pos": -1, "model": "band", "input": "base"},
+        "v": {"site": "a", "pos": "tap", "names": "v{layers}"},
+        "logits": {"site": "lm_head", "pos": -1},
     }
     doc["method"]["writes"] = {
         "w": {"site": "a", "pos": "tap", "do": {"swap": "v"}, "names": "w{layers}"}
     }
     doc["method"]["intervened_models"] = {
+        UNWRITTEN: {"input": "counterfactual", "reads": ["v"]},
         "band": {
             "input": "base",
+            "reads": ["logits"],
             "writes": [{"w": {"layers": {"at_once": {"range": [3, 6]}}}}],
-        }
+        },
     }
-    doc["method"]["save"] = [
-        {"value": "ld", "model": "band", "input": "base", "file_path": "ld.json"}
-    ]
+    doc["method"]["save"] = [saved("logits", "band", "ld.json", dict(LOGIT_DIFF))]
     return in_order(doc)
 
 
@@ -150,15 +160,15 @@ def test_the_preset_still_plans_one_shared_harvest_for_every_band(env) -> None:
     """The cost claim `test_band_patch_run.py` makes about the preset, asserted
     here too because it is what the sugar must not disturb: one un-intervened
     harvest of all ten taps, then one forward per band."""
-    loaded = load(PRESET, env)
-    assert len(loaded.expansion.points) == 1
-    assert plan_point(loaded.point_documents[0]).num_forwards == 4
-    doc = loaded.point_documents[0]
-    assert len(doc.writes) == 10  # one per layer, not one per (layer, band)
-    narrow = set(doc.intervened_models["band5_L10"].writes) | set(
-        doc.intervened_models["band5_L15"].writes
+    loaded = compile_protocol(PRESET, env=env)
+    assert len(steps_of(loaded, env).points) == 1
+    assert plan_point(steps_of(loaded, env).documents[0]).num_forwards == 4
+    doc = steps_of(loaded, env).documents[0]
+    assert len(doc.writes) == 8  # one per layer, not one per (layer, band)
+    narrow = set(doc.intervened_models["band4_L9"].writes) | set(
+        doc.intervened_models["band4_L13"].writes
     )
-    assert set(doc.intervened_models["band10_L10"].writes) == narrow
+    assert set(doc.intervened_models["band8_L9"].writes) == narrow
 
 
 def test_a_document_with_no_family_is_untouched() -> None:
@@ -246,20 +256,15 @@ def test_a_position_family_fans_out_through_pos(env) -> None:
         "p": {"index": {AT_ONCE_KEY: [-4, -3, -2]}, "names": "p{index}"}
     }
     doc["method"]["reads"] = {
-        "v": {
-            "site": "tgt",
-            "pos": "p",
-            "model": "original",
-            "input": "counterfactual",
-            "names": "v{index}",
-        },
-        "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"},
+        "v": {"site": "tgt", "pos": "p", "names": "v{index}"},
+        "logits": {"site": "lm_head", "pos": -1},
     }
     doc["method"]["writes"] = {
         "at": {"site": "tgt", "pos": "p", "do": {"swap": "v"}, "names": "at{index}"}
     }
     doc["method"]["intervened_models"] = {
-        "patched": {"input": "base", "writes": ["at"]}
+        UNWRITTEN: {"input": "counterfactual", "reads": ["v"]},
+        "patched": {"input": "base", "reads": ["logits"], "writes": ["at"]},
     }
     doc = in_order(doc)
 
@@ -270,7 +275,9 @@ def test_a_position_family_fans_out_through_pos(env) -> None:
         "at-3",
         "at-2",
     ]
-    load(expanded, env)  # three disjoint absolute writes are legal (§2.8 rule 8)
+    compile_protocol(
+        expanded, env=env
+    )  # three disjoint absolute writes are legal (§2.8 rule 8)
 
 
 def test_a_family_and_a_sweep_on_a_different_entry_compose(env) -> None:
@@ -279,9 +286,9 @@ def test_a_family_and_a_sweep_on_a_different_entry_compose(env) -> None:
     doc = band_doc()
     doc["method"]["reads"]["logits"]["pos"] = {SWEEP_KEY: [-1, -2]}
 
-    loaded = load(doc, env)
-    assert len(loaded.expansion.points) == 2
-    for point in loaded.point_documents:
+    loaded = compile_protocol(doc, env=env)
+    assert len(steps_of(loaded, env).points) == 2
+    for point in steps_of(loaded, env).documents:
         assert len(point.writes) == 3  # the family is inside every point
 
 
@@ -378,21 +385,15 @@ def test_rule_28_a_metric_over_a_family() -> None:
     """Refused by name, and the message says why it is a change rather than a
     line: a saved family needs a rule for per-member `file_path`."""
     doc = band_doc()
-    doc["method"]["metrics"]["ld"]["of"] = "v"
+    # the aggregation over the family, on the model that lists it
+    doc["method"]["save"][0].update(read="v", model=UNWRITTEN)
     err = expect_family_refusal(doc, "do not fan out")
     assert "file_path" in str(err)
 
 
 def test_rule_28_a_save_entry_over_a_family() -> None:
     doc = band_doc()
-    doc["method"]["save"] = [
-        {
-            "value": "v",
-            "model": "original",
-            "input": "counterfactual",
-            "file_path": "v.safetensors",
-        }
-    ]
+    doc["method"]["save"] = [saved("v", UNWRITTEN, "v.safetensors")]
     expect_family_refusal(doc, "do not fan out")
 
 
@@ -516,7 +517,7 @@ def test_a_refusal_survives_the_round_trip_through_load(env) -> None:
         {"w": {"layers": {"at_once": {"range": [3, 9]}}}}
     ]
     with pytest.raises(ValidationError) as err:
-        load(doc, env)
+        compile_protocol(doc, env=env)
     assert err.value.rule_id == "family_wrappers"
 
 
@@ -532,7 +533,7 @@ def test_an_entry_merely_named_at_once_is_a_name_not_a_wrapper() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# review holes, closed and pinned
+# the rule-28 review — every hole it found, closed and pinned
 # --------------------------------------------------------------------------- #
 
 
@@ -573,12 +574,8 @@ def test_rule_28_a_declaring_entry_that_references_another_axis() -> None:
     # inheriting one that was already guarded. `w` is pointed at a plain read
     # so that it does not inherit from both and refuse first, which is how this
     # hole stayed hidden.
-    doc["method"]["reads"]["plain"] = {
-        "site": "lm_head",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-    }
+    doc["method"]["reads"]["plain"] = {"site": "lm_head", "pos": -1}
+    doc["method"]["intervened_models"][UNWRITTEN]["reads"].append("plain")
     doc["method"]["writes"]["w"]["do"] = {"swap": "plain"}
     doc["method"]["reads"]["v"]["pos"] = {AT_ONCE_KEY: [-2, -1]}
     doc["method"]["reads"]["v"]["names"] = "v{pos}"
@@ -637,8 +634,9 @@ def test_an_intervened_model_with_no_writes_keeps_its_own_message() -> None:
     del doc["method"]["intervened_models"]["band"]["writes"]
     expanded = expand_families(doc)
     assert "writes" not in expanded["method"]["intervened_models"]["band"]
-    with pytest.raises(ParseError, match="writes"):
-        parse_document(expanded)
+    # under protocol 4 a model without writes is the un-intervened model on
+    # its input: it parses, and the family stage added nothing to it
+    assert parse_document(expanded).is_unwritten("band")
 
 
 def test_rule_28_names_with_no_axis_in_a_document_that_has_families() -> None:
@@ -660,7 +658,7 @@ def test_a_names_key_deeper_than_the_entry_is_left_alone() -> None:
 
 
 def test_default_member_names_load_end_to_end(env) -> None:
-    """Every `load()` test supplied a `names` template, so the *documented
+    """Every `compile_protocol()` test supplied a `names` template, so the *documented
     default* was only ever asserted at the tree level. `a[layers=3]` has to
     survive the parser, the checklist and the canonical form too."""
     doc = band_doc()
@@ -668,15 +666,19 @@ def test_default_member_names_load_end_to_end(env) -> None:
         del doc["method"][table][entry]["names"]
     doc["method"]["intervened_models"]["band"]["writes"] = ["w"]
 
-    loaded = load(doc, env)
-    point = loaded.point_documents[0]
+    loaded = compile_protocol(doc, env=env)
+    point = steps_of(loaded, env).documents[0]
     assert set(point.intervened_models["band"].writes) == {
         "w[layers=3]",
         "w[layers=4]",
         "w[layers=5]",
     }
     assert point.writes["w[layers=4]"].site == "a[layers=4]"
-    assert loaded.document_digest  # canonicalized and hashed with those names
+    assert loaded.digests.document  # canonicalized and hashed with those names
+
+
+#: base_doc's one table, as an objective term (§2.11).
+LD = term("logits", "patched", dict(LOGIT_DIFF))
 
 
 def _fit_doc() -> dict[str, Any]:
@@ -699,7 +701,7 @@ def test_rule_28_a_regularizer_over_a_family_in_either_objective_form() -> None:
     away."""
     positional = _fit_doc()
     positional["method"]["train"] = {
-        "objective": [[1.0, "ld"], [0.01, {"l1": ["rot"]}]],
+        "objective": [[1.0, LD], [0.01, {"l1": ["rot"]}]],
         "epochs": 1,
     }
     expect_family_refusal(in_order(positional), "do not fan out")
@@ -755,7 +757,7 @@ def _train_block(**overrides: Any) -> dict[str, Any]:
     in. Without this the blocks were shapes the parser would have rejected
     anyway, so the refusal could not be told from a schema error."""
     block: dict[str, Any] = {
-        "objective": [[1.0, "ld"]],
+        "objective": [[1.0, LD]],
         "params": ["rot"],
         "optimizer": {"name": "adamw", "lr": 0.001},
         "steps": {"epochs": 1},
@@ -778,7 +780,7 @@ def test_rule_28_every_spelling_of_a_train_reference_to_a_family() -> None:
         _train_block(params=["rot.weight"]),
         _train_block(anneal={"rot.weight": [1.0, 0.0, 0.5]}),
         # the positional form: [weight, regularizer], a list inside a list
-        _train_block(objective=[[1.0, "ld"], [0.01, {"l2": ["rot.weight"]}]]),
+        _train_block(objective=[[1.0, LD], [0.01, {"l2": ["rot.weight"]}]]),
     ):
         doc = _fit_doc()
         doc["method"]["train"] = block
@@ -792,7 +794,7 @@ def test_the_train_blocks_those_refusals_use_are_real_schema_shapes() -> None:
         _train_block(objective={"decay": {"weight": 0.01, "l1": "rot"}}),
         _train_block(params=["rot.weight"]),
         _train_block(anneal={"rot.weight": [1.0, 0.0, 0.5]}),
-        _train_block(objective=[[1.0, "ld"], [0.01, {"l2": ["rot.weight"]}]]),
+        _train_block(objective=[[1.0, LD], [0.01, {"l2": ["rot.weight"]}]]),
     ):
         doc = _fit_doc()
         doc["method"]["featurizers"] = {"rot": {"kind": "subspace", "k": 2}}

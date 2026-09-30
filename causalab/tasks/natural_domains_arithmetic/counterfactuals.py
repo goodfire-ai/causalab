@@ -1,6 +1,6 @@
 """Counterfactual dataset generators for the natural_domains_arithmetic task."""
 
-from causalab.causal.counterfactual_dataset import CounterfactualExample
+from causalab.causal.counterfactuals import CounterfactualExample
 
 
 def generate_dataset(model, n: int, seed: int = 42) -> list[CounterfactualExample]:

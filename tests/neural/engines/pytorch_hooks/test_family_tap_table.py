@@ -23,7 +23,7 @@ What each group of tests is for:
 * **load and run agree** on every (family × interior component) cell of the
   three fixtures — the offline predicates decide what the run decides;
 * **fail-closed, valid work still passes**: a
-  fused-projection family *without* a row keeps the pre-table refusal, text
+  fused-projection family *without* a row keeps the earlier refusal, text
   pinned (the refusal snapshot's retired entry 23); a family without a row
   whose mixer is unambiguous is served by measurement, exactly as before.
 
@@ -43,7 +43,7 @@ import torch
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
 from causalab.neural.shared.encoding import encode
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.registry import (
     CAPABILITIES,
     INTERIOR_ROWS,
@@ -51,10 +51,11 @@ from causalab.protocol.registry import (
     component_width,
     unavailable_at_load,
 )
-from causalab.protocol.schema import SiteSpec
+from causalab.protocol.schema import PROTOCOL_VERSION, SiteSpec
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_GPT2, TINY_LLAMA
+from tests.protocol._docs import saved
 
 pytestmark = pytest.mark.smoke
 
@@ -151,22 +152,14 @@ def _read_doc(component: str, layer: int, *, head: int | None = None) -> dict:
     if head is not None:
         site["head"] = head
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": site},
-            "reads": {
-                "r": {"site": "tap", "pos": "all", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "r.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "all"}},
+            "save": [saved("r", "original", "r.safetensors")],
         },
     }
 
@@ -175,51 +168,33 @@ def _swap_doc(component: str, layer: int, pos: int) -> dict:
     """Swap the counterfactual's logical value into base at ``pos``; read the
     patched and the clean next-token logits."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "original_base": {"input": "base", "reads": ["clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {"component": component, "layers": [layer]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": {"index": pos},
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "clean": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": {"index": pos}},
+                "clean": {"site": "lm_head", "pos": {"index": -1}},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {
                 "patch": {"site": "tap", "pos": {"index": pos}, "do": {"swap": "v_cf"}}
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "p.safetensors",
-                },
-                {
-                    "value": "clean",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "c.safetensors",
-                },
+                saved("after", "patched", "p.safetensors"),
+                saved("clean", "original_base", "c.safetensors"),
             ],
         },
     }
@@ -351,7 +326,7 @@ def test_the_two_families_expose_the_same_logical_site(component: str):
 def test_the_qwen_norms_keep_their_head_axis_as_measured(qwen35moe_bundle):
     """📐 ``q_norm``/``k_norm`` emit ``(b, s, H, d)`` before RoPE; the row says
     ``head_axis`` and the resolved shape is rank 4 with the head axis kept —
-    unchanged from before the table existed."""
+    unchanged by this table."""
     for component, module_name in (
         ("attention_query_pre_rope", "q_norm"),
         ("attention_key_pre_rope", "k_norm"),
@@ -431,7 +406,7 @@ def test_a_fused_family_without_a_row_keeps_the_refusal(
     family: str | None, component: str
 ):
     """GPT-2's module tree under a family the table has not met: which block
-    of ``c_attn`` is q is not inferred — refused, with the pre-table text (the
+    of ``c_attn`` is q is not inferred — refused, with the pre-PR text (the
     snapshot's retired entry 23) plus where the row goes."""
     bundle = _without_a_row(_bundle("gpt2"), family)
     with pytest.raises(ProtocolError) as excinfo:

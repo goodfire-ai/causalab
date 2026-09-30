@@ -7,10 +7,10 @@ head axis), ``in_proj_z``'s output is the output gate (8 v-heads × 32), and
 ``out_proj``'s **input** is the post-norm, post-gate mixer value — the exact
 analogue of ``attention_premix``, which is why the name. The ``conv1d`` module
 never fires (the forward calls the ``causal_conv1d_fn`` module global instead),
-which is why the conv output and the kernel boundary are *function* taps,
-not module taps.
+which is why the conv output and the kernel boundary are *function* taps
+(tier 2), not module taps.
 
-The stream refusals mirror the attention side's ``_FULL_ATTENTION_ONLY`` in the other
+The stream refusals mirror ``_FULL_ATTENTION_ONLY`` in the other
 direction: a full-attention layer computes no delta-rule state, and a family
 with no linear stream anywhere (llama, GPT-2) hits the same refusal at every
 layer.
@@ -23,9 +23,11 @@ import torch
 
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.registry import component_shape
-from causalab.protocol.schema import SiteSpec
+from causalab.protocol.schema import PROTOCOL_VERSION, SiteSpec
+
+from tests.protocol._docs import saved
 
 from ._drive import base_data_section, executor_for
 from .conftest import TINY_GPT2, TINY_LLAMA
@@ -58,74 +60,66 @@ def _read_doc(
     if head is not None:
         tap["head"] = head
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": tap},
-            "reads": {
-                "r": {"site": "tap", "pos": "all", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "all"}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 
 
+def _also_read(doc: dict, name: str, component: str, site: str) -> None:
+    """Add a second whole-sequence read of ``component`` at the DeltaNet layer
+    to a `_read_doc`, on the same un-intervened forward, and save it."""
+    doc["method"]["sites"][site] = {"component": component, "layers": [DELTANET_LAYER]}
+    doc["method"]["reads"][name] = {"site": site, "pos": "all"}
+    doc["method"]["intervened_models"]["original"]["reads"].append(name)
+    doc["method"]["save"].append(saved(name, "original", f"{site}.safetensors"))
+
+
 def _write_doc(component: str, do: dict, *, layer: int = DELTANET_LAYER) -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "original_base": {"input": "base", "reads": ["clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {"component": component, "layers": [layer]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "clean": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": "all"},
+                "clean": {"site": "lm_head", "pos": {"index": -1}},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {"patch": {"site": "tap", "pos": "all", "do": do}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "p.safetensors",
-                },
-                {
-                    "value": "clean",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "c.safetensors",
-                },
+                saved("after", "patched", "p.safetensors"),
+                saved("clean", "original_base", "c.safetensors"),
             ],
         },
     }
+
+
+def _self_swap(doc: dict) -> dict:
+    """Take ``v_cf`` on the un-intervened *base* forward instead of the
+    counterfactual one, so the write substitutes the tap's own value."""
+    models = doc["method"]["intervened_models"]
+    del models["original_counterfactual"]
+    models["original_base"]["reads"].append("v_cf")
+    return doc
 
 
 def _moved(bundle: ModelBundle, doc: dict, **kw) -> float:
@@ -161,8 +155,8 @@ def test_the_read_has_the_measured_width(qwen35moe_bundle, component: str):
 
 
 def test_the_conv1d_module_never_fires(qwen35moe_bundle):
-    """📐 The premise of the kernel-boundary function taps, pinned where the
-    module-boundary tier can see it: the forward calls the ``causal_conv1d_fn`` module global, so a hook
+    """📐 The premise of the tier-2 function taps, pinned where tier 1 can
+    see it: the forward calls the ``causal_conv1d_fn`` module global, so a hook
     on the ``conv1d`` module reads nothing — a module tap there would be the
     silent-empty-read failure."""
     mixer = qwen35moe_bundle.mixer_at(DELTANET_LAYER)
@@ -183,28 +177,11 @@ def test_the_conv1d_module_never_fires(qwen35moe_bundle):
 
 
 def test_the_gate_is_the_z_projection_of_the_norm_exactly(qwen35moe_bundle):
-    """§4's tier-1 pin: ``delta_gate == in_proj_z(attention_input_norm)`` at
+    """The tier-1 pin: ``delta_gate == in_proj_z(attention_input_norm)`` at
     exactly 0.0 — the tap is where it claims to be, on the tensor the mixer
     actually consumes."""
     doc = _read_doc("delta_gate")
-    doc["method"]["sites"]["norm"] = {
-        "component": "attention_input_norm",
-        "layers": [DELTANET_LAYER],
-    }
-    doc["method"]["reads"]["n"] = {
-        "site": "norm",
-        "pos": "all",
-        "model": "original",
-        "input": "base",
-    }
-    doc["method"]["save"].append(
-        {
-            "value": "n",
-            "model": "original",
-            "input": "base",
-            "file_path": "n.safetensors",
-        }
-    )
+    _also_read(doc, "n", "attention_input_norm", site="norm")
     executor = executor_for(doc, qwen35moe_bundle, base_texts=[TEXT])
     gate, norm_out = executor.read_value("r"), executor.read_value("n")
     mixer = qwen35moe_bundle.mixer_at(DELTANET_LAYER)
@@ -215,24 +192,7 @@ def test_the_gate_is_the_z_projection_of_the_norm_exactly(qwen35moe_bundle):
 
 def test_the_qkv_projection_is_the_same_identity_one_module_over(qwen35moe_bundle):
     doc = _read_doc("delta_qkv")
-    doc["method"]["sites"]["norm"] = {
-        "component": "attention_input_norm",
-        "layers": [DELTANET_LAYER],
-    }
-    doc["method"]["reads"]["n"] = {
-        "site": "norm",
-        "pos": "all",
-        "model": "original",
-        "input": "base",
-    }
-    doc["method"]["save"].append(
-        {
-            "value": "n",
-            "model": "original",
-            "input": "base",
-            "file_path": "n.safetensors",
-        }
-    )
+    _also_read(doc, "n", "attention_input_norm", site="norm")
     executor = executor_for(doc, qwen35moe_bundle, base_texts=[TEXT])
     qkv, norm_out = executor.read_value("r"), executor.read_value("n")
     mixer = qwen35moe_bundle.mixer_at(DELTANET_LAYER)
@@ -245,24 +205,7 @@ def test_the_premix_projects_to_the_mixer_output_exactly(qwen35moe_bundle):
     """The premix is ``out_proj``'s input, so ``out_proj(delta_premix)`` must
     be the mixer's output — the analogue of the ``attention_premix`` identity."""
     doc = _read_doc("delta_premix")
-    doc["method"]["sites"]["out"] = {
-        "component": "attention_output",
-        "layers": [DELTANET_LAYER],
-    }
-    doc["method"]["reads"]["o"] = {
-        "site": "out",
-        "pos": "all",
-        "model": "original",
-        "input": "base",
-    }
-    doc["method"]["save"].append(
-        {
-            "value": "o",
-            "model": "original",
-            "input": "base",
-            "file_path": "o.safetensors",
-        }
-    )
+    _also_read(doc, "o", "attention_output", site="out")
     executor = executor_for(doc, qwen35moe_bundle, base_texts=[TEXT])
     premix, mixer_out = executor.read_value("r"), executor.read_value("o")
     mixer = qwen35moe_bundle.mixer_at(DELTANET_LAYER)
@@ -285,8 +228,7 @@ def test_a_swap_through_the_tap_moves_the_logits(qwen35moe_bundle, component: st
 def test_swapping_a_tap_with_its_own_value_moves_nothing(
     qwen35moe_bundle, component: str
 ):
-    doc = _write_doc(component, {"swap": "v_cf"})
-    doc["method"]["reads"]["v_cf"]["input"] = "base"
+    doc = _self_swap(_write_doc(component, {"swap": "v_cf"}))
     assert _moved(qwen35moe_bundle, doc) == 0.0, component
 
 
@@ -315,7 +257,7 @@ def test_head_on_the_fused_qkv_is_refused_because_its_widths_are_unequal(
 ):
     """The fused ``[q | k | v]`` splits are 128/128/256 — no equal per-head
     packing exists, so ``head`` cannot mean a slice of it. The refusal's note
-    names the per-head faces (the kernel-boundary components)."""
+    names the per-head faces (the tier-2 kernel-boundary components)."""
     with pytest.raises(ProtocolError, match="no head axis") as excinfo:
         resolve_site(
             qwen35moe_bundle,
@@ -473,31 +415,22 @@ def _multi_read(
 ) -> dict[str, torch.Tensor]:
     """Read several layer-0 components in one document: name -> value."""
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {
+                "original": {"input": "base", "reads": list(components)}
+            },
             "sites": {
                 f"{name}_site": {"component": component, "layers": [DELTANET_LAYER]}
                 for name, component in components.items()
             },
             "reads": {
-                name: {
-                    "site": f"{name}_site",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "base",
-                }
-                for name in components
+                name: {"site": f"{name}_site", "pos": "all"} for name in components
             },
             "save": [
-                {
-                    "value": name,
-                    "model": "original",
-                    "input": "base",
-                    "file_path": f"{name}.safetensors",
-                }
-                for name in components
+                saved(name, "original", f"{name}.safetensors") for name in components
             ],
         },
     }
@@ -506,7 +439,7 @@ def _multi_read(
 
 
 def test_the_conv_split_and_tile_reproduces_q_k_v_exactly(qwen35moe_bundle):
-    """§4 tier 2: ``split(delta_conv, [128, 128, 256])``, reshaped to heads and
+    """Tier 2: ``split(delta_conv, [128, 128, 256])``, reshaped to heads and
     GVA-tiled, IS ``(delta_query, delta_key, delta_value)`` — at exactly 0.0,
     which is also why the untiled q/k are not components (one box, one
     address)."""
@@ -531,7 +464,7 @@ def test_the_conv_split_and_tile_reproduces_q_k_v_exactly(qwen35moe_bundle):
 
 
 def test_the_gates_are_the_projections_transformed_exactly(qwen35moe_bundle):
-    """§4 tier 2: ``delta_beta == sigmoid(in_proj_b(norm))`` and
+    """Tier 2: ``delta_beta == sigmoid(in_proj_b(norm))`` and
     ``delta_decay == -exp(A_log) · softplus(in_proj_a(norm) + dt_bias)`` — the
     justification for keeping the raw projections out of the vocabulary:
     both are closed-form steps from tensors that are components."""
@@ -552,7 +485,7 @@ def test_the_gates_are_the_projections_transformed_exactly(qwen35moe_bundle):
 def test_norm_gating_the_kernel_output_reproduces_the_premix_exactly(
     qwen35moe_bundle,
 ):
-    """§4 tier 2: ``norm(delta_kernel_output, delta_gate) == delta_premix`` —
+    """Tier 2: ``norm(delta_kernel_output, delta_gate) == delta_premix`` —
     the kernel's return really is the pre-norm, pre-gate ``core_attn_out``."""
     reads = _multi_read(
         qwen35moe_bundle,
@@ -584,8 +517,7 @@ def test_a_kernel_boundary_swap_moves_the_logits_and_self_swap_does_not(
     """📐 the probe's causal spikes (kernel-arg v ×2: 0.2190, conv ×2: 0.2191),
     with the identity payload at exactly 0.0 — both through the same wrapper."""
     assert _moved(qwen35moe_bundle, _write_doc(component, {"swap": "v_cf"})) > 1e-4
-    doc = _write_doc(component, {"swap": "v_cf"})
-    doc["method"]["reads"]["v_cf"]["input"] = "base"
+    doc = _self_swap(_write_doc(component, {"swap": "v_cf"}))
     assert _moved(qwen35moe_bundle, doc) == 0.0, component
 
 
@@ -593,20 +525,9 @@ def test_a_read_of_a_written_kernel_slot_sees_the_written_value(qwen35moe_bundle
     """Same-forward read-after-write agreement across a third tap mechanism —
     the executor registers edits before reads at the kernel boundary too."""
     doc = _write_doc("delta_value", {"swap": "v_cf"})
-    doc["method"]["reads"]["obs"] = {
-        "site": "tap",
-        "pos": "all",
-        "model": "patched",
-        "input": "base",
-    }
-    doc["method"]["save"].append(
-        {
-            "value": "obs",
-            "model": "patched",
-            "input": "base",
-            "file_path": "o.safetensors",
-        }
-    )
+    doc["method"]["reads"]["obs"] = {"site": "tap", "pos": "all"}
+    doc["method"]["intervened_models"]["patched"]["reads"].append("obs")
+    doc["method"]["save"].append(saved("obs", "patched", "o.safetensors"))
     executor = executor_for(
         doc, qwen35moe_bundle, base_texts=[TEXT], counterfactual_texts=[CF_TEXT]
     )
@@ -621,7 +542,7 @@ def test_a_tap_at_one_layer_leaves_another_linear_layers_mixer_alone(
 ):
     """The globals are swapped process-wide while installed and the fixture has
     three linear layers, so this is the scoping test that can actually fail
-    (the two-layer lesson of the attention interior): tap layer 0, layer 1's mixer output must be
+    (a single-layer version cannot): tap layer 0, layer 1's mixer output must be
     bit-identical."""
     bundle = qwen35moe_bundle
     encoded = bundle.tokenizer(TEXT, return_tensors="pt")
@@ -785,43 +706,28 @@ STATE_TIER = ("delta_kv_mem", "delta_state_update", "delta_state")
 
 def _state_write_doc(do: dict, *, pos: dict | str = "all") -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {
+                "original": {"input": "base", "reads": ["v", "clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {"component": "delta_state", "layers": [DELTANET_LAYER]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v": {"site": "tap", "pos": pos, "model": "original", "input": "base"},
-                "clean": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v": {"site": "tap", "pos": pos},
+                "clean": {"site": "lm_head", "pos": {"index": -1}},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {"patch": {"site": "tap", "pos": pos, "do": do}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": name,
-                    "model": model,
-                    "input": "base",
-                    "file_path": f"{name}.safetensors",
-                }
-                for name, model in (
-                    ("v", "original"),
-                    ("clean", "original"),
-                    ("after", "patched"),
-                )
+                saved("v", "original", "v.safetensors"),
+                saved("clean", "original", "clean.safetensors"),
+                saved("after", "patched", "after.safetensors"),
             ],
         },
     }
@@ -849,7 +755,7 @@ def test_the_derived_faces_read_as_ordinary_head_spaces(
 
 
 def test_a_state_read_leaves_the_base_forward_bit_identical(qwen35moe_bundle):
-    """§2.3's headline: the chunked kernel still runs and the loop runs in its
+    """The shadow's headline: the chunked kernel still runs and the loop runs in its
     *shadow* — reads cost O(seq) extra kernel calls at the tapped layer only,
     and the model's own numbers do not move at all."""
     encoded = qwen35moe_bundle.tokenizer(TEXT, return_tensors="pt")
@@ -864,7 +770,7 @@ def test_a_state_read_leaves_the_base_forward_bit_identical(qwen35moe_bundle):
 
 
 def test_the_reconstruction_identity_pins_the_derived_faces(qwen35moe_bundle):
-    """§4 tier 3: ``S_t == S_{t-1}·exp(g_t) + k̂_t ⊗ delta_t`` at every step,
+    """Tier 3: ``S_t == S_{t-1}·exp(g_t) + k̂_t ⊗ delta_t`` at every step,
     exactly — the two-lines-pinned-by-identity pattern, with the pin
     against the *library's own returned states* rather than a golden. The
     identity — which faces reconstruct the state, and the fp32 tolerance — is
@@ -909,7 +815,7 @@ def test_the_reconstruction_identity_pins_the_derived_faces(qwen35moe_bundle):
 def test_stepping_the_recurrent_kernel_reproduces_the_chunked_output(
     qwen35moe_bundle,
 ):
-    """§4 tier 3: the stacked stepwise output equals the tier-2
+    """Tier 3: the stacked stepwise output equals the tier-2
     ``delta_kernel_output`` to ≤ 1e-9 (📐 4.66e-10) — the two kernels compute
     the same function in fp32, which is what makes the shadow's states faithful
     to what the chunked path computed."""
@@ -988,32 +894,43 @@ def test_a_positional_state_write_lands_on_its_step_and_feeds_forward(
     doubled, and step 3 moves *causally* — the edit threads into what the next
     step decays and writes into."""
     doc = _state_write_doc({"add_scaled": {"op": "v", "alpha": 1.0}}, pos={"index": 2})
-    doc["method"]["reads"]["v_all"] = {
-        "site": "tap",
-        "pos": "all",
-        "model": "original",
-        "input": "base",
-    }
-    doc["method"]["reads"]["obs"] = {
-        "site": "tap",
-        "pos": "all",
-        "model": "patched",
-        "input": "base",
-    }
     for name, model in (("v_all", "original"), ("obs", "patched")):
-        doc["method"]["save"].append(
-            {
-                "value": name,
-                "model": model,
-                "input": "base",
-                "file_path": f"{name}.safetensors",
-            }
-        )
+        doc["method"]["reads"][name] = {"site": "tap", "pos": "all"}
+        doc["method"]["intervened_models"][model]["reads"].append(name)
+        doc["method"]["save"].append(saved(name, model, f"{name}.safetensors"))
     executor = executor_for(doc, qwen35moe_bundle, base_texts=[TEXT])
     v_all, obs = executor.read_value("v_all"), executor.read_value("obs")
     assert float((obs[0, :2] - v_all[0, :2]).abs().max()) == 0.0
     assert float((obs[0, 2] - 2 * v_all[0, 2]).abs().max()) == 0.0
     assert float((obs[0, 3] - v_all[0, 3]).abs().max()) > 1e-4
+
+
+def test_a_renormalized_state_write_keeps_the_steps_pre_write_norm(
+    qwen35moe_bundle,
+):
+    """``add_scaled`` + ``renormalize`` on the state at step 2: the edited
+    matrix keeps the norm the step had before either write (§2.8), over the
+    flattened ``heads·d_k·d_v`` row the per-step writer edits. The per-step
+    writer's renormalize was once the identity, since it read the running
+    edit as its reference."""
+    doc = _state_write_doc({"add_scaled": {"op": 1.0, "alpha": 1.0}}, pos={"index": 2})
+    doc["method"]["writes"]["renorm"] = {
+        "site": "tap",
+        "pos": {"index": 2},
+        "do": {"renormalize": True},
+    }
+    doc["method"]["intervened_models"]["patched"]["writes"].append("renorm")
+    for name, model in (("v_all", "original"), ("obs", "patched")):
+        doc["method"]["reads"][name] = {"site": "tap", "pos": "all"}
+        doc["method"]["intervened_models"][model]["reads"].append(name)
+        doc["method"]["save"].append(saved(name, model, f"{name}.safetensors"))
+    executor = executor_for(doc, qwen35moe_bundle, base_texts=[TEXT])
+    v_all, obs = executor.read_value("v_all"), executor.read_value("obs")
+    pre, written = v_all[0, 2].flatten(), obs[0, 2].flatten()
+    torch.testing.assert_close(written.norm(), pre.norm(), atol=1e-5, rtol=1e-4)
+    # anti-vacuity: the step moved, and the bumped norm is far from the target
+    assert float((written - pre).abs().max()) > 1e-3
+    assert float((pre + 1.0).norm() - pre.norm()) > 1.0
 
 
 def test_a_misaligned_state_operand_is_refused_not_broadcast(qwen35moe_bundle):
@@ -1106,14 +1023,14 @@ def test_generated_state_reads_are_plain_per_step_captures(
 def test_the_cross_path_pin_decode_states_match_test_side_stepping(
     qwen35moe_bundle,
 ):
-    """§6.4's cross-path pin: the decode's *native* recurrent path produces the
+    """The cross-path pin: the decode's *native* recurrent path produces the
     same per-step states as stepping the kernel over the decode's own inputs
     from the prefill's final state — the prompt-frame shadow and the
     decode-frame captures are two faces of one computation."""
     import importlib
 
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
@@ -1133,30 +1050,17 @@ def test_the_cross_path_pin_decode_states_match_test_side_stepping(
                 }.items()
             },
             "reads": {
-                name: {
-                    "site": f"{name}_site",
-                    "pos": "window",
-                    "model": "original",
-                    "input": "base",
-                }
+                name: {"site": f"{name}_site", "pos": "window"}
                 for name in ("S", "q", "k", "v", "beta", "g")
             },
-            "save": [],
         },
     }
-    doc["method"]["reads"]["S0"] = {
-        "site": "S_site",
-        "pos": "last",
-        "model": "original",
-        "input": "base",
+    doc["method"]["reads"]["S0"] = {"site": "S_site", "pos": "last"}
+    doc["method"]["intervened_models"] = {
+        "original": {"input": "base", "reads": list(doc["method"]["reads"])}
     }
     doc["method"]["save"] = [
-        {
-            "value": name,
-            "model": "original",
-            "input": "base",
-            "file_path": f"{name}.safetensors",
-        }
+        saved(name, "original", f"{name}.safetensors")
         for name in doc["method"]["reads"]
     ]
     executor = executor_for(doc, qwen35moe_bundle, base_texts=[TEXT])

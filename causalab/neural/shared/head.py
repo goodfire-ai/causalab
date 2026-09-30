@@ -1,62 +1,18 @@
-"""The vocabulary head where the document reads it (spec §4, "Elision").
+"""Project the vocabulary head at selected read positions.
 
-An ``lm_head`` read at named positions asks for ``lm_head(ln_final)`` at
-those positions and nowhere else. The model's own forward runs the head over
-every position of every row — ``[rows·seq, d_model] × [d_model, vocab]`` —
-and a tap at the head then gathers a column or two out of the result. 📐 On
-the A3B (vocab 248 320, 13-token rows) that projection is the largest tensor
-of a training step, its forward and backward GEMMs run at 13× the rows the
-read wants, and the gather's backward is a vocabulary-wide zero-fill and
-accumulate per step (``fill_ [96, 13, 248320]`` 1.1 ms, ``add_`` 3.0 ms);
-an eval pass over 900 rows materializes 5.8 GB of logits to read 900 rows
-of them.
+An eligible ``lm_head`` read gathers ``ln_final`` at its positions and
+projects those rows through the model's head. The engine can then skip
+the head in the model forward. The campaign cache uses the same predicate
+to capture hidden states for later projection.
 
-So such a read taps ``ln_final`` — the head's input — gathers the rows it
-names, and runs the head module over the gathered ``[rows, width, d_model]``:
-the same module, the same weights and dtype, the same ``F.linear``. Each
-logit is one dot product over the same ``d_model`` entries in the same
-order; only the GEMM's ``M`` changes, so the value is the model's to the
-bit on the CPU, and expected so on CUDA (the parity script under ``_gpu/``
-is what says so for a given cuBLAS). A forward on which nothing reads or
-writes the head then runs without it — the engine swaps the module out for
-the call (``executor._without_head``) — which is the elision spec §4 allows
-past the deepest tap, done for the one module past every block.
+Whole-sequence reads, generated reads, decoding groups, and models with a
+head write keep the ordinary head tap. Differentiable reads also keep it:
+changing the backward GEMM shape can change bf16 gradient rounding and
+training outcomes. ``ENV_PROJECT_UNDER_GRAD=1`` enables that numerical
+change explicitly. CUDA parity is checked at the tested workflow shapes.
 
-What keeps the head as an ordinary tap is decided here, once per read and
-from the document alone (:func:`projects_head`):
-
-* a read of the **whole sequence** (``pos: all``) — the head as the model
-  runs it, over every position;
-* a **continuation** read (``generated``) — the decode's own path: the
-  prefill's logits pick the first token, and the generate tail already
-  projects kept ``ln_final`` steps (``executor._finalize_generated``);
-* any read in a group that **decodes** — the prefill's logits are consumed;
-* a read in an intervened model that **writes at the head** — the read must
-  see the written logits, and a tap below the head cannot;
-* a read a **gradient flows through** (:func:`resolve_read_taps`'s
-  ``differentiable``: a grad-enabled executor's read of the model it trains).
-  📐 The forward is the model's to the bit on the H100 at every workflow
-  shape (M ∈ {42, 96, 900}, bf16 and fp32), but the head's *backward* GEMM —
-  ``grad[M, vocab] × W[vocab, d_model]`` at ``M = rows`` instead of
-  ``rows·seq`` with zero rows — is a different problem for cuBLAS over
-  ``K = 248 320``, and a different split-K moves the fp32 accumulation
-  order: on the A3B the bf16 gradient bits moved, an early stop flipped, and
-  the fit diverged (measured on one H100, 2026-09-15). So a training read keeps the
-  head as the model runs it and its gradient is bit-identical; every no-grad
-  pass — an eval, a scoring pass, a locate / control / harvest / ablate
-  forward, a fit's fit-constant source groups — projects.
-  :data:`ENV_PROJECT_UNDER_GRAD` set to ``1`` projects under grad too, as a
-  documented bf16-level change to the gradient (the forward is exact).
-
-A featurizer or ``dims`` on the read changes nothing: both apply to the
-gathered value, after the projection (``ExecutorBase._finalize_read``). A
-``save`` of the read writes the same tensor either way — the value is
-position-resolved before it is saved.
-
-The same predicate drives the campaign store's tap union
-(``execution._tap_union``), so a shared pass captures ``ln_final`` for such
-a read and every later point finds it under that key: the store holds
-``[rows, seq, d_model]`` where it held ``[rows, seq, vocab]``.
+Featurizers and dimension selections apply after the gathered projection.
+Saved reads contain the resulting position-resolved tensor.
 """
 
 from __future__ import annotations
@@ -68,7 +24,8 @@ from typing import Any, Callable, Iterable
 import torch
 
 from causalab.neural.shared.sites import ResolvedSite, resolve_site
-from causalab.protocol.plan import generated_budget
+from causalab.protocol.positions.encoding import generated_budget
+from causalab.neural.shared.plan import group_reads, write_names
 from causalab.protocol.schema import Document, PositionSpec, ReadSpec, SiteSpec
 
 __all__ = [
@@ -99,21 +56,15 @@ def projects_under_grad() -> bool:
 
 
 def _group_reads(doc: Document, model: str, input_role: str) -> list[ReadSpec]:
-    return [
-        read
-        for read in doc.reads.values()
-        if str(read.model) == model and str(read.input) == input_role
-    ]
+    return [doc.reads[ref.read] for ref in group_reads(doc, model, input_role)]
 
 
 def _writes_at_head(doc: Document, model: str) -> bool:
-    if model == "original":
-        return False
-    writes = doc.intervened_models[model].writes
-    if not isinstance(writes, tuple):
+    names = write_names(doc, model)
+    if names is None:
         return True  # an unexpanded write set: decide nothing, keep the head
     return any(
-        doc.sites[str(doc.writes[ename].site)].component == HEAD for ename in writes
+        doc.sites[str(doc.writes[ename].site)].component == HEAD for ename in names
     )
 
 
@@ -172,7 +123,7 @@ def resolve_read_taps(
     differentiable: bool = False,
 ) -> dict[str, ReadTap]:
     """Resolve the prompt-frame reads of one group to their taps: each read's
-    own site, and — for a read :func:`projects_head` admits — ``ln_final``
+    own site, and — for a read [`projects_head`][] admits — ``ln_final``
     as the capture with the head module as the projection. The head is
     resolved once for the group.
 
@@ -180,7 +131,7 @@ def resolve_read_taps(
     grad-enabled executor reading the model it trains): such a group keeps
     the head as the model runs it, so the backward GEMM is the one the
     model's own forward would have paid and the gradient is bit-identical
-    (module docstring) — unless :data:`ENV_PROJECT_UNDER_GRAD` asks
+    (module docstring) — unless [`ENV_PROJECT_UNDER_GRAD`][] asks
     otherwise."""
     project = not differentiable or projects_under_grad()
     out: dict[str, ReadTap] = {}

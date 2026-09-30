@@ -1,0 +1,60 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Replay a fitted MoE-layer neuron mask (dbm_expert_neuron.json) on a held-out split without re-fitting: each gate's file_path loads its fitted theta, the stages come back in eval mode, and both swaps run through the same hard theta>0 masks the fit was scored on. routed_gate declares group: expert_neuron as the fit did - the bundle's stamped group and group_map (num_experts, d_expert) are checked against what this document's site derives, so a table fitted over another model's experts, or replayed through a per-coordinate gate, is refused by name [V15]; shared_gate is the plain per-coordinate gate, checked at its own width. The routing-mismatch rule applies unchanged (a base slot whose expert is inactive on the counterfactual side keeps its base value), and routing_mismatch.json is written beside the replay's tables. No train section: the number saved is a confirmation one by construction. No entry selector: dbm_expert_neuron.json fits one cell, so each bundle holds a single theta. The dtype is part of the fit's ArtifactIdentity; omit it and the document implies fp32 and is refused against a bf16 fit."
+  },
+  "model": {"key": "Qwen/Qwen3.6-35B-A3B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#test", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#test",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["routed_cf", "shared_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask_routed", "mask_shared"]}
+    },
+    "sites": {
+      "routed": {"component": "expert_activation", "layers": [19]},
+      "shared": {"component": "shared_expert_activation", "layers": [19]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "routed_gate": {
+        "kind": "gate",
+        "group": "expert_neuron",
+        "file_path": "fit/routed_gate.safetensors"
+      },
+      "shared_gate": {"kind": "gate", "file_path": "fit/shared_gate.safetensors"}
+    },
+    "reads": {
+      "routed_cf": {"site": "routed", "pos": -1, "featurizer": "routed_gate"},
+      "shared_cf": {"site": "shared", "pos": -1, "featurizer": "shared_gate"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask_routed": {
+        "site": "routed",
+        "pos": -1,
+        "featurizer": "routed_gate",
+        "do": {"swap": "routed_cf"}
+      },
+      "mask_shared": {
+        "site": "shared",
+        "pos": -1,
+        "featurizer": "shared_gate",
+        "do": {"swap": "shared_cf"}
+      }
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia.json"
+      }
+    ]
+  }
+}

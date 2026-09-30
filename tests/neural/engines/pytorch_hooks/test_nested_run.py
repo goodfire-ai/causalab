@@ -1,5 +1,5 @@
 """A nested workflow whose inner step is a **behavioral** step on the tiny
-fixture (workflow spec §2.10) — the engine variant of the layer's test.
+fixture (workflow spec §2.10; the engine variant).
 
 `tests/workflow/test_nested.py` proves the layer on a CPU chain of scripts and
 decisions. This file nests the behavioral fixture (`qualify.json`) as
@@ -76,6 +76,8 @@ def _run_cli(root: Path, workflow: Path, out: Path) -> int:
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(workflow),
             "--data-root",
             str(root),

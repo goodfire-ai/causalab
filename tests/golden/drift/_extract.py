@@ -48,14 +48,13 @@ PINS = Path(__file__).parent / "drift_goldens.json"
 #: are retained as tolerated names the current
 #: writer never emits — a superset is harmless, the census only asks that
 #: every written non-coordinate column is named here. Spelled as literals
-#: rather than imported from ``causalab.neural.shared.outputs`` (torch-side);
+#: rather than imported from ``causalab.neural.shared.results`` (torch-side);
 #: test_extract_labels.py couples the spelling to the writer's, over a
 #: ``MetricTable`` round trip of every writer column.
 _META_COLUMNS = {
     "value",
     "example_id",
     "point",
-    "produced_by",
     "metric",
     "name",
     "unit",
@@ -73,6 +72,8 @@ def run_drift_documents(out_root: Path, device: str) -> dict[str, Path]:
         out = out_root / name.removesuffix("_im.json")
         argv = [
             "run",
+            "--engine",
+            "auto",
             str(GOLDEN_PROTOCOLS / name),
             "--data-root",
             str(FIXTURES / "data"),
@@ -105,7 +106,7 @@ def _tensor_stats(path: Path, prefix: str, values: dict[str, Any]) -> None:
 def _frame(path: Path) -> "pd.DataFrame":
     """One JSON metric table as a DataFrame — tables are JSON on disk
     (protocol.tables); pandas is only the reduction shape here."""
-    from causalab.protocol.tables import read_table
+    from causalab.io.tables import read_table
 
     return pd.DataFrame(read_table(path))
 
@@ -128,12 +129,12 @@ def extract_values(dirs: dict[str, Path]) -> dict[str, Any]:
 
 def _scan_labels(frame: pd.DataFrame) -> dict[str, float]:
     """``{axis-label: mean}`` over one scan table: the sweep axes are the
-    columns not in :data:`_META_COLUMNS`, one label per coordinate tuple
+    columns not in `_META_COLUMNS`, one label per coordinate tuple
     (``a=c`` joined by commas — a list of keys groups to tuples, one axis
     or many), the mean of ``value`` over its rows. pandas skips an excluded
     row's null, so the mean is over the eligible rows *when there are any*;
     a coordinate whose rows are all excluded keeps its label (the axis value
-    is not null) with a ``NaN`` mean, which :func:`compare` names as a
+    is not null) with a ``NaN`` mean, which `compare` names as a
     mismatch rather than passing against any pin."""
     axes = [c for c in frame.columns if c not in _META_COLUMNS]
     labels: dict[str, float] = {}

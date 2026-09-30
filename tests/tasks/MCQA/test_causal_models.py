@@ -1,7 +1,7 @@
 """Property-tier invariants for the MCQA causal model.
 
 The MCQA task casts multiple-choice question answering as a causal DAG
-over ``(template, object, color, choice0/1, symbol0/1) → answer_position
+over ``(template, object, color, choices[0..1], symbols[0..1]) → answer_position
 → answer → raw_output``. The mechanisms are pure-symbolic: there's no
 LM, no analysis, no runner — so these tests run sub-second and
 hypothesis-driven sweeps catch contract drift the runner-level goldens
@@ -73,7 +73,7 @@ class TestMcqaCausalModelStructureProperty:
             "raw_output",
         }
         for i in range(NUM_CHOICES):
-            expected.update({f"symbol{i}", f"choice{i}"})
+            expected.update({f"symbols[{i}]", f"choices[{i}]"})
 
         assert expected <= set(positional_causal_model.variables), (
             f"missing variables: {expected - set(positional_causal_model.variables)}"
@@ -83,23 +83,23 @@ class TestMcqaCausalModelStructureProperty:
         """``raw_input``'s parents must cover every ``{...}`` in the template."""
         expected = (
             ["template", "object", "color"]
-            + [f"symbol{i}" for i in range(NUM_CHOICES)]
-            + [f"choice{i}" for i in range(NUM_CHOICES)]
+            + [f"symbols[{i}]" for i in range(NUM_CHOICES)]
+            + [f"choices[{i}]" for i in range(NUM_CHOICES)]
         )
-        assert positional_causal_model.parents["raw_input"] == expected
+        assert set(positional_causal_model.parents["raw_input"]) == set(expected)
 
     def test_answer_position_depends_only_on_color_and_choices(self) -> None:
         """The mechanism's parents define what an intervention upstream can affect."""
-        assert positional_causal_model.parents["answer_position"] == [
+        assert set(positional_causal_model.parents["answer_position"]) == {
             "color",
-            *[f"choice{i}" for i in range(NUM_CHOICES)],
-        ]
+            *[f"choices[{i}]" for i in range(NUM_CHOICES)],
+        }
 
     def test_answer_depends_on_position_and_symbols(self) -> None:
-        assert positional_causal_model.parents["answer"] == [
+        assert set(positional_causal_model.parents["answer"]) == {
             "answer_position",
-            *[f"symbol{i}" for i in range(NUM_CHOICES)],
-        ]
+            *[f"symbols[{i}]" for i in range(NUM_CHOICES)],
+        }
 
 
 class TestSampleAnswerableQuestionProperty:
@@ -119,7 +119,7 @@ class TestSampleAnswerableQuestionProperty:
     def test_color_is_always_in_choices(self, seed: int) -> None:
         random.seed(seed)
         trace = sample_answerable_question()
-        choices = [trace[f"choice{i}"] for i in range(NUM_CHOICES)]
+        choices = [trace[f"choices[{i}]"] for i in range(NUM_CHOICES)]
         assert trace["color"] in choices, (
             f"color {trace['color']!r} not in choices {choices!r}"
         )
@@ -129,7 +129,7 @@ class TestSampleAnswerableQuestionProperty:
     def test_symbols_are_unique_across_positions(self, seed: int) -> None:
         random.seed(seed)
         trace = sample_answerable_question()
-        symbols = [trace[f"symbol{i}"] for i in range(NUM_CHOICES)]
+        symbols = [trace[f"symbols[{i}]"] for i in range(NUM_CHOICES)]
         assert len(set(symbols)) == NUM_CHOICES, f"duplicate symbols: {symbols}"
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
@@ -138,7 +138,7 @@ class TestSampleAnswerableQuestionProperty:
         """The fundamental MCQA contract: answer = symbols[answer_position]."""
         random.seed(seed)
         trace = sample_answerable_question()
-        assert trace["answer"] == trace[f"symbol{trace['answer_position']}"]
+        assert trace["answer"] == trace[f"symbols[{trace['answer_position']}]"]
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
     @_HYPOTHESIS_SETTINGS
@@ -149,7 +149,7 @@ class TestSampleAnswerableQuestionProperty:
         for placeholder in ("{object}", "{color}"):
             assert placeholder not in raw, f"unsubstituted placeholder: {placeholder}"
         for i in range(NUM_CHOICES):
-            for placeholder in (f"{{symbol{i}}}", f"{{choice{i}}}"):
+            for placeholder in (f"{{symbols[{i}]}}", f"{{choices[{i}]}}"):
                 assert placeholder not in raw, (
                     f"unsubstituted placeholder: {placeholder}"
                 )
@@ -181,11 +181,11 @@ class TestCounterfactualGeneratorProperty:
         assert base["answer_position"] != ctf["answer_position"], (
             "same_symbol_different_position must change the position"
         )
-        base_symbols = sorted(base[f"symbol{i}"] for i in range(NUM_CHOICES))
-        ctf_symbols = sorted(ctf[f"symbol{i}"] for i in range(NUM_CHOICES))
+        base_symbols = sorted(base[f"symbols[{i}]"] for i in range(NUM_CHOICES))
+        ctf_symbols = sorted(ctf[f"symbols[{i}]"] for i in range(NUM_CHOICES))
         assert base_symbols == ctf_symbols, "symbol multiset must be preserved"
-        base_choices = sorted(base[f"choice{i}"] for i in range(NUM_CHOICES))
-        ctf_choices = sorted(ctf[f"choice{i}"] for i in range(NUM_CHOICES))
+        base_choices = sorted(base[f"choices[{i}]"] for i in range(NUM_CHOICES))
+        ctf_choices = sorted(ctf[f"choices[{i}]"] for i in range(NUM_CHOICES))
         assert base_choices == ctf_choices, "choice multiset must be preserved"
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
@@ -197,8 +197,8 @@ class TestCounterfactualGeneratorProperty:
         base = cf["input"]
         ctf = cf["counterfactual_inputs"][0]
 
-        base_syms = {base[f"symbol{i}"] for i in range(NUM_CHOICES)}
-        ctf_syms = {ctf[f"symbol{i}"] for i in range(NUM_CHOICES)}
+        base_syms = {base[f"symbols[{i}]"] for i in range(NUM_CHOICES)}
+        ctf_syms = {ctf[f"symbols[{i}]"] for i in range(NUM_CHOICES)}
         assert base_syms.isdisjoint(ctf_syms), (
             f"different_symbol left overlapping symbols: "
             f"base={base_syms} ctf={ctf_syms}"
@@ -214,9 +214,9 @@ class TestCounterfactualGeneratorProperty:
         random.seed(seed)
         cf = random_counterfactual()
         for trace in (cf["input"], cf["counterfactual_inputs"][0]):
-            choices = [trace[f"choice{i}"] for i in range(NUM_CHOICES)]
+            choices = [trace[f"choices[{i}]"] for i in range(NUM_CHOICES)]
             assert trace["color"] in choices, "input is not answerable"
-            assert trace["answer"] == trace[f"symbol{trace['answer_position']}"], (
+            assert trace["answer"] == trace[f"symbols[{trace['answer_position']}]"], (
                 "answer/position invariant violated"
             )
 
@@ -263,8 +263,8 @@ class TestMcqaConstantsProperty:
             for required in ("{object}", "{color}"):
                 assert required in tpl
             for i in range(NUM_CHOICES):
-                assert f"{{symbol{i}}}" in tpl
-                assert f"{{choice{i}}}" in tpl
+                assert f"{{symbols[{i}]}}" in tpl
+                assert f"{{choices[{i}]}}" in tpl
 
 
 class TestMcqaInterventionApiUnit:

@@ -1,6 +1,6 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "The fan-out fixture (workflow spec §2.9): 07_weekdays_locate_scan's shape at a size a unit test can enumerate — an interchange scored over a 4-layer x 2-position grid on gpt2 (a registered model, so the document loads torch-free), eight points on two axes (positions.tap, sites.target.layers), two metric tables and no bundle. The stub engine in tests/workflow/test_fan_out.py writes one row per requested point into each table, so a sharded run and an unsharded run of this document can be compared row for row."
   },
   "model": {"key": "gpt2", "revision": "main"},
@@ -9,51 +9,39 @@
     "counterfactual": {"dataset": "weekdays/data#train", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "positions": {
       "tap": {
-        "sweep": [
-          {"index": -1},
-          {"index": -2}
-        ]
+        "sweep": [{"index": -1}, {"index": -2}]
       }
     },
     "sites": {
       "target": {
         "component": "block_output",
-        "layers": {
-          "sweep": [0, 1, 2, 3]
-        }
+        "layers": {"sweep": [0, 1, 2, 3]}
       },
       "lm_head": {"component": "lm_head"}
     },
-    "reads": {
-      "v_cf": {"site": "target", "pos": "tap", "model": "original", "input": "counterfactual"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
-    },
+    "reads": {"v_cf": {"site": "target", "pos": "tap"}, "logits": {"site": "lm_head", "pos": -1}},
     "writes": {
       "patch": {"site": "target", "pos": "tap", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "logit_diff": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
-      {"value": "logit_diff", "model": "patched", "input": "base", "file_path": "logit_diff.json"}
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "logit_diff.json"
+      }
     ]
   }
 }

@@ -1,347 +1,224 @@
-# Writing a demo
+# Writing a tutorial
 
-A demo is one markdown file that answers one research question with documents
-you can run. It is not a tour of the API and it is not a notebook: the
-protocol layer made execution a `causalab run` away, so what a reader needs is
-the *experiment* — the question, the document that encodes it, the design
-choices behind it, and the numbers, in that order.
+This guide gives the format of a tutorial: its sections, header table, voice
+and checklist.
 
-This page is the format. It exists so that four demos written by four people
-read like one document, and so that a demo that has gone stale says so instead
-of quietly lying.
+A tutorial, or demo, tests a research question through a runnable experiment. It states the
+question, explains which intervention answers it, and reports the measured
+result with the conditions that limit the claim. The reader knows Python and
+neural networks and learns each causal concept where the experiment first
+needs it.
 
-Shipped demos: [`demos/`](../demos/).
+The role models are the onboarding tutorials
+[02_ablation_attention](../demos/onboarding_tutorial/02_ablation_attention.md)
+and [05_trace](../demos/onboarding_tutorial/05_trace.md). See the
+[demo index](../demos/README.md) for the current examples.
 
-## 1. What a demo is
+## 1. Layout
 
-**One demo, one question.** If it needs two models or two tasks, it is two
-demos. If it needs four questions that feed each other, it is a *workflow
-demo* (§3) and each question is a step.
+Use these parts in order, keeping each section focused on what this demo adds:
 
-**The document is the thesis.** A demo's centre is the JSON: reading it should
-be enough to know what ran. Prose exists to say why the document says what it
-says, and what the numbers mean. Prose that restates a JSON field is deleted.
+1. A top table with the question and the method.
+2. `## Research question`
+3. `## Method`
+4. `## Execution`
+5. `## Results`
+6. `## Next steps`
 
-**Every claim carries its number, and every number carries its floor.** "IIA is
-high at the answer slot" is not a result. "IIA is 0.92 at the answer slot,
-against a floor of 0.22 set by the pairs whose two answers agree" is.
+Keep Next steps short and include it only when there is a useful follow-up.
+Resolve editorial comments in the text and drop obsolete material. Do not add
+a Manual review section or preserve discarded text as a checklist. The layout
+supports the explanation; it does not require repeating material from earlier
+tutorials.
 
-**A demo is reproducible or it is marked.** The header's `Reproduced` field
-(§2) is not decoration — it is the difference between a record and an
-advertisement.
+## 2. Top table
 
-## 2. Section skeleton
+1. Every demo opens with a two-row table, `**Question**` and `**Method**`.
+   Its header row is `| Overview | |`: the label column carries the title
+   `Overview`, and the value column has no title.
+2. The question is one sentence. It links the model card and the dataset file.
+3. The method is a bold name followed by one sentence that names the input, the
+   write, and the read-out, in that order.
 
-Seven sections, in this order. A section is never silently dropped; an empty
-one says why it is empty.
+## 3. Research question
 
-```markdown
-# <Title — the question, not the method>
+1. When building on an earlier tutorial, open with the concrete finding that
+   motivates the new question: name the component, positions, layers, and
+   tested inputs when relevant. Then state what remains unknown. A first
+   tutorial can open directly with its research question; a generalization
+   tutorial asks whether the earlier finding holds across other examples.
+2. Show representative inputs here. For counterfactual experiments, put each
+   prompt on one line and each base/counterfactual pair on consecutive lines,
+   labelled as in 05_trace. Flatten line breaks for this compact display and
+   link the exact dataset. A population study should show a few varied pairs.
+3. State clean accuracy over the dataset used by the experiment, for both
+   input roles when relevant. One prompt's probability is not a population
+   baseline. Use measured values and link their recorded output.
+4. Cite the task or hypothesis source when it is introduced. Later tutorials
+   can link that introduction.
+5. Define a concept on its first use in the series. Later tutorials build on
+   that explanation and focus on the new addition.
+6. When token positions matter, show their semantic roles alongside indices.
+7. End with a small set of distinct, bold numbered questions, `**Q1 — …**`.
+   Prefer questions about the behavior or mechanism to requests for the
+   maximum score and its coordinates. A population study should distinguish
+   the shared pattern from variation between examples.
+8. Give each question at most one or two sentences of clarification. A demo
+   with one question still calls it Q1.
 
-<the header table>
+## 4. Method
 
-## TL;DR
-## The protocol
-## Run it
-## Experimental design
-## Results
-## Limits
-## Next
-```
+1. Start with the procedure: prompt the model with X, replace Y, and measure
+   Z. Do not repeat the research problem or motivation from the preceding
+   section.
+2. Explain what changes from the previous tutorial. Link familiar concepts
+   and avoid reproducing the same prompts or dataset rows in several sections.
+3. Show an annotated dataset row only when its structure is new or needed to
+   understand the change. Familiar counterfactual pairs need no second display.
+4. State how to interpret the measurement before presenting results. Separate
+   a zero response to this intervention from evidence that no representation
+   exists. Do not treat a dataset's slot balance as a proven causal ceiling.
+5. Inline the intervention specification when it helps explain the new
+   experiment. Comment on new fields; collapse repeated structure. Align
+   comments in one column, as in the role models.
+6. Keep `description` short: say what the document measures. Put numerical
+   baselines beside the results that use them.
+7. A full inlined copy, minus comments, must parse to the same JSON as its
+   linked file. Clearly label partial examples as excerpts or edits.
+8. Explain only the parameters readers need to change for this experiment.
+   Link the reference for established fields; a parameter table or expandable
+   block is optional, not repeated boilerplate.
+9. Use "base" and "counterfactual" for the specification's input roles and
+   explain how they correspond to the experimental inputs.
+10. For interchange interventions, state the expected output supplied by the
+    causal model and how the tested pairs were selected. Build on the dataset
+    design explained earlier in the series.
 
-### The header table
+## 5. Execution
 
-Immediately under the title, before any prose. Every row is mandatory.
+1. The command runs from the repository root. Every flag is on its own line.
+2. A flag or command is explained on its first appearance in the series and
+   not again. 01_ablation_MLP explains `--engine`, `--out`, and `--device`;
+   02_ablation_attention explains `--data-root`; 05_trace explains `explain` and
+   the workflow.
+3. Show the `run` command once. Mention that readers can replace `run` with
+   `validate` to check without loading weights, omitting run-only flags. Do not
+   add repeated `validate` and `explain` command/output blocks unless those
+   commands are themselves the lesson.
+4. Describe a workflow by what it does: run the experiment, then plot its
+   results. Include only steps the questions require. A best-point selection
+   or values file belongs only in a tutorial that uses it. Inline the workflow
+   with a link when useful; keep scheduling internals out of the explanation
+   unless they are the topic.
+5. Resources are stated: forward count, memory, wall time, hardware, and the
+   date the shipped artifacts were produced.
+6. Shipped artifacts are what the command writes. `--out` is the demo's
+   `artifacts/output`, and a workflow's `output_dir` carries the demo's file
+   prefix, so nothing is copied or renamed by hand.
+7. Each demo directory has a `.gitignore` that says which outputs are
+   committed. Commit the inputs, the figures, the values each figure draws,
+   and the small result files the text links. Do not commit per-example
+   tables, superseded attempts (`.attempts/`) or the rest of the run tree. A reader
+   regenerates them with the demo's command. Git keeps every committed version
+   of a file, so a large table stays in the history after its removal.
+   - The paper packages share one `.gitignore` in `demos/papers/`. It ignores
+     every run tree under `artifacts/output/` and keeps the tables under
+     `artifacts/data/` and the figures under `artifacts/figures/`
+     ([the paper replication guide](paper_replications.md#gitignore)):
 
-```markdown
-| | |
-|---|---|
-| **Question** | Where does the model carry the answer symbol? |
-| **Method** | interchange intervention, scored by IIA |
-| **Model** | `meta-llama/Llama-3.2-1B-Instruct` @ `main`, bf16 |
-| **Data** | `mcqa/pairs_n64_s0` — 64 pairs, `different_symbol` design |
-| **Documents** | [`protocols/mcqa_locate_scan.json`](protocols/mcqa_locate_scan.json) |
-| **Cost** | 128 points × 2 forwards; one 16-layer model, minutes on one GPU |
-| **Reproduced** | ⚠ figures carried from the pre-refactor reference run |
-```
+     ```gitignore
+     artifacts/output/
+     __pycache__/
+     workflows/scripts/*/jobs/
+     ```
 
-`Reproduced` takes one of exactly two forms:
+   - The onboarding tutorial ignores the per-example tables of its scan steps
+     (steps named `scan` or ending in `_scan`), every step's `_step.json`,
+     which the run's committed `workflow.json` repeats field for field, and
+     every `.safetensors` file, the harvested activations and fitted
+     featurizers no tutorial links. It commits the rest of its run trees.
 
-| form | means |
-|---|---|
-| `✓ <date>, <engine>, digest <first 8 hex>` | the numbers below came out of the documents above, at that digest |
-| `⚠ <what is stale, in one clause>` | they did not — say which numbers are borrowed and from what |
+   `tests/demos/test_demos.py` fails when a tracked file matches an ignore
+   rule and when a paper package has no `.gitignore`.
 
-Anything else is not a value of this field. A demo whose figures came from a
-retired pipeline is useful; a demo that hides it is not.
+## 6. Results
 
-### TL;DR
+1. The first demo that produces a table shows the raw output file with one
+   comment per field. Later demos show a table or a figure instead.
+2. Give the relevant clean baseline once near the intervention results and
+   make clear when baseline accuracy and the intervention metric target
+   different answers.
+3. Numbers are fractions, `0.522`, not percent.
+4. A figure has a caption naming the quantity, both axes, and the file with
+   the drawn values. Label token positions by semantic role, such as symbol 0,
+   symbol 1, and answer slot. Keep raw indices in the specification or a key.
+   For dense layer scans, label every third layer on the x axis.
+5. Show only plots and tables needed to answer the questions. When a question
+   asks about variation between examples, prefer one clearly defined variance
+   statistic alongside the aggregate plot. State the measured quantity, units,
+   denominator, and exclusions. Add another plot only when it answers something
+   the statistic cannot. First success need not mean persistent success.
+6. Each question gets a `### Qn:` heading whose text is the answer, not the
+   question.
+7. Explain relevant controls and limitations where they inform the answer.
+   Avoid forcing the same control discussion into every subsection.
+8. An answer connects to a previous demo's finding when it can.
+9. Claims stay within the tested inputs and interventions. When this demo
+   tests generalization, report how broadly the earlier finding holds and
+   where it differs. Changing a question requires updating its plots and
+   results discussion, not just its heading.
 
-At most five sentences: the question, the method in one clause, the answer, and
-the one number that carries it. Written last, read first. No forward references
-("as we will see below") — a reader who stops here has the finding.
+## 7. Next steps
 
-### The protocol
+Keep at most one or two follow-ups that arise directly from the results.
+For an experiment, state the concrete edit and the question it would resolve;
+do not predict its outcome as certain. A link to the next tutorial can stand
+alone when it supplies the natural continuation. Omit speculative variations,
+implementation chores, and unrelated paper links.
 
-The **complete, unelided** document, once, in a fenced `json` block, and
-immediately beside it a **link to the file it copies**. Not a fragment, not a
-diff against another demo, and not a reflow: the block is the file's bytes, so
-that pasting it back over the file is a no-op. If it is too long to read, the
-demo is too big.
+## 8. Across sections
 
-Both halves are load-bearing, and neither is redundant. The copy is what a
-reader on GitHub sees without a second click — a demo whose thesis lives in
-another file is a demo nobody reads. The file is what `causalab run` reads, so
-it is the *copy* that can be wrong, and a wrong copy is worse than no copy: the
-prose reads as authoritative while the run uses the other bytes. Two places for
-one fact is precisely the arrangement that needs a check rather than a habit,
-which is why `tests/demos/test_demos.py` fails the moment a block stops matching
-the file it names.
+1. Terms follow the vocabulary census in
+   [the intervention reference](intervention_protocol.md#111-terms):
+   "intervention specification", not "protocol".
+2. Say "model component", or name the component, such as "residual stream" or
+   "attention output". Do not say "cell".
+3. Learned masks are **Desiderata-Based Masking**; the combination with
+   distributed alignment search is **DBM-DAS**.
+4. No `TODO`, unresolved `{{comments}}`, or Manual review section in finished text.
+5. Artifacts carry the demo's file prefix: `05_trace_p_q_grid.png` belongs to
+   `05_trace.md`.
+6. Links are relative to the demo file. Every link resolves.
+7. The voice is first person plural: "we", "let's".
+8. There is no `Reproduced` field. The Execution section states where and
+   when the shipped artifacts were produced.
 
-Then two things, in this order:
+## 9. Checks
 
-1. **A flow chart** of the model graph — which forward reads what, which write
-   consumes it, what the metric reduces. Mermaid, because GitHub renders it and
-   a reader can edit it:
+Run `uv run pytest tests/demos tests/docs`. The docs suite checks links and
+figure references in every demo. The demos suite checks that each document
+validates against its demo's data root, that each inlined JSON copy matches
+its file, and that each quoted digest is current. Review scientific claims
+against the recorded measurements.
 
-   ```mermaid
-   flowchart LR
-     CF["original<br/>on counterfactual"] -->|v_cf| P["patched<br/>on base"]
-     P -->|logits| M["match vs cf_answer"]
-   ```
+`tests/demos/test_demos.py` checks the layout above: the two-row top table,
+exactly the five sections in order, and no `Reproduced` field. A demo in an
+earlier layout fails until it is rewritten; the suite carries no list of
+exceptions. Data resolves under
+`artifacts/data/` when a demo keeps an `artifacts/` directory and under
+`data/` otherwise, with the shipped task tables behind it
+(`tests/_helpers/demos.py`). An inlined specification is compared as JSON
+after its `//` comments are removed; an inlined workflow is compared byte for
+byte.
 
-2. **A reading, section by section**, only where the document is not
-   self-evident. A three-column table (`section` · `says` · `why this and not
-   that`) beats three paragraphs. The third column is the one that earns its
-   place: the reader can see *what* the field says.
-
-A demo that touches no network — a task-design demo — has no intervention
-specification. It puts the **dataset build** in this section instead and says so in
-its first line, because the artifact that fully determines the experiment is
-what this section is for.
-
-### Run it
-
-Three commands, in this order, with their real output pasted in:
+When an experiment document changes, update its embedded copy and digest with:
 
 ```bash
-uv run causalab validate <doc> --data-root <root> --data
-uv run causalab explain  <doc> --data-root <root>
-uv run causalab run      <doc> --data-root <root> --out runs/<name> \
-    --device cuda --dtype bf16
+uv run python scripts/repin_demo_digests.py
+uv run python scripts/repin_demo_digests.py --check
 ```
 
-`validate` and `explain` are pure — no weights, no network, no accelerator — so
-a reader can run the first two on a laptop before deciding to spend a GPU. That
-is the point of pasting them: `explain`'s `points` and `forwards` **are** the
-cost estimate, and the demo must not restate them in prose.
-
-Then one short **hardware** paragraph: how many GPUs, how much memory, roughly
-how long. Say what it was measured on, or say it is an estimate.
-
-### Experimental design
-
-The numbered questions, `Q1 … Qn`, each with:
-
-- **what it asks**, in one sentence;
-- **what would answer it** — the number and where it comes from;
-- **what a null looks like** — the value the number takes if the answer is no.
-
-This is where predictions belong. A prediction stated here and contradicted in
-Results is the most valuable thing a demo can contain; a prediction quietly
-adjusted afterwards is the least.
-
-Design choices that constrain the questions live here too — the counterfactual
-design, why this position and not that one, why this metric. One bold question
-per choice, then the mechanism:
-
-> **Why fixed indices and not named variables?** …
-
-### Results
-
-Exactly one `###` subsection per question, in the same order, with the same
-number and the same heading text. A question with no result gets its
-subsection anyway, saying what is missing and what would produce it.
-
-Each subsection is: the figure or the number, then one paragraph reading it,
-then a one-line **verdict** that answers the question as asked.
-
-Separate the guaranteed from the found. An observation that follows from the
-setup is a sanity check and is marked ✓; only what could have come out
-otherwise is a finding.
-
-> ✓ The embedding row flips at the symbol token — that is where the two
-> prompts differ, so anything else would be a bug.
->
-> **Finding.** The flip leaves that column at L12 and appears at the answer
-> slot from L13 on.
-
-**Figure captions** carry three things and nothing else: what is plotted, which
-run produced it, what to look at.
-
-### Limits
-
-At most five bullets. What the demo does not show, what would falsify it, which
-confound survives. A demo with no limits section has not been read carefully
-enough to have one.
-
-### Next
-
-The demos that follow, one line each, naming what they take from this one.
-
-## 3. Workflow demos
-
-A demo whose question decomposes into questions that feed each other is a
-**workflow demo**. It keeps the same seven sections, with three differences:
-
-- **The protocol** section leads with the *workflow* document, unfolded: the
-  workflow is the thesis, the steps are its sentences. The step documents are
-  inlined too — §2's rule holds for every document a demo runs — but after
-  the step table and each inside a `<details>` block, so the chain stays the
-  thing the section reads as. The `<summary>` names the step and its path;
-  the markdown link in the step table is the cross-reference.
-- The flow chart draws the **derived schedule**, not the model graph. `explain`
-  prints the levels; the chart is that, drawn.
-- **Experimental design** numbers its questions `RQ1 … RQn` and each maps to
-  named steps. `Results` keeps one subsection per RQ, as always.
-
-The handoffs between steps are the interesting part, so say them: which value
-the `select` step emits, which document's `set` consumes it, what happens if
-the earlier step chooses differently.
-
-## 4. Layout
-
-```
-demos/
-├── README.md                  # the index: one line per demo
-└── <demo>/
-    ├── <demo>.md              # the demo, or 01_x.md, 02_y.md for a series
-    ├── protocols/*.json       # every document the demo runs
-    ├── workflows/*.json       # a workflow demo's chain
-    ├── data/<ref>/*.json      # the serialized tables — nothing beside them
-    └── figures/*.png
-```
-
-Documents live **beside** the demo, not in `causalab/configs/`. A demo's
-document is free to be pinned, small, and pedagogically shaped; the shipped
-presets are none of those things, and a demo that edits one to make a point
-breaks the preset.
-
-**Tables are committed** alone — nothing sits beside them (spec §2.2). The
-table is a build product, and the command that built it is in the demo's
-markdown, so a reader who wants to know where 64 rows came from reads the
-command rather than guessing. What holds a demo to its tables is the demo's
-**workflow**, through its `pins` section (workflow spec §7) — the digests of
-every document, script and table the workflow touches, stamped by
-`causalab pin` or by the first `run`, and refused on a later load if any of
-them moved. A demo workflow shipped unpinned is stamped by whoever runs it
-first; one shipped pinned inlines its `pins` like any other section, and a
-demo edit that moves a pinned file re-stamps with `causalab pin`.
-
-**`.png` is the figure format.** `.pdf` only when a vector figure is genuinely
-needed, `.html` only for a figure that must be interactive
-(`causalab.io.plots.figure_format`). A figure carries no record, so a demo
-whose figure matters declares the numbers beside it — the shipped
-`workflow_figures` script writes a `plotted` table for exactly this.
-
-## 4.1 A learned method is two documents
-
-Any featurizer the document *trains* — a `subspace` rotation, a `gate` mask —
-makes the run's own metric tables **train scores**: they are the fit re-scored
-on the split that chose it. A demo may not quote them as a result.
-
-The second document is an **apply**: no `train` section, a `file_path` naming
-the fitted artifact, and any split you like. Its `ArtifactIdentity` — model,
-site, k, parametrization, dtype — is checked on load, so an apply pointed at the
-wrong cell is refused rather than scored.
-
-```json
-"fit":   {"type": "intervention_protocol", "document": "../protocols/das_fit.json"},
-"apply": {"type": "intervention_protocol", "document": "../protocols/das_apply.json"}
-```
-
-The gap is not academic. `demos/onboarding_tutorial/04_subspace.md` measures
-**0.945 train against 0.531 held-out** at k = 16 — the fit's own number is
-nearly twice the real one, and it is worst exactly where a reader is most
-likely to stop reading.
-
-**An apply document does not `validate` on its own**, and that is correct: its
-`file_path` is a *run-tree* path (`"fit/rot.safetensors"`) whose leading segment
-is a step name, which only means something inside the workflow that declares it.
-Standalone it is `[V15] artifact file not found`; validate the workflow.
-`tests/demos/test_demos.py` allows exactly this exception, and only when a
-workflow in the same demo names the document as a step.
-
-## 5. Voice
-
-Distilled from the notebook demos this format replaces; the point is that the
-tone was already right.
-
-**Person and tense.** First person plural, present tense — "we patch every
-cell", not "the cell is patched" and not "you should patch". Second person
-appears in exactly one place: the invitation to change something and re-run.
-
-**Emphasis carries meaning, not volume.** **Bold** marks a term at its first
-use and never again. *Italics* mark the pivotal word in a contrast — *which*
-layer, *one* pair, *many* pairs. Backticks mark anything the reader could type.
-
-**One idea per paragraph, three sentences at most.** A long explanation is a
-table that has not been written yet.
-
-**Say the number in the sentence.** "IIA 0.96 at L0–L2, decaying to 0.14 by
-L13" — not "high early and low late".
-
-**Comments in a document carry the why.** `"description"` is the field for it;
-JSON has no comments, which is the reason the field exists.
-
-**Failure modes are content.** Say what a bad result looks like and what
-causes it, in the same voice as the good one — a reader who gets the bad result
-is exactly the reader who needs the demo.
-
-**Be honest at the point of the claim.** Where a choice is imprecise, a null is
-a mathematical identity rather than a bug, or a figure predates the document
-below it, say so in the sentence that makes the claim — not in a footnote and
-not nowhere.
-
-### Not this
-
-| don't | because |
-|---|---|
-| "simply", "just", "of course" | if it were simple the demo would not exist |
-| "as we can see" | say what is seen |
-| a figure with no claim | a picture is not a finding |
-| a number with no floor | 0.5 is a triumph or a coin flip, and the reader cannot tell |
-| a result with no question | Results mirrors Experimental design, one for one |
-| Python that reimplements a document | the document *is* the experiment; run it |
-
-## 6. Checklist
-
-Before opening the PR:
-
-- [ ] every JSON in the demo passes `causalab validate … --data --data-root <root>`,
-      or, for the second half of a fit→apply pair, its **workflow** does (below)
-- [ ] every `explain` block is pasted output, not typed by hand
-- [ ] every document is inlined verbatim, beside a link to the file it copies
-- [ ] `Results` has one subsection per `Experimental design` question, same order
-- [ ] every number in prose has a floor, a chance level, or a unit
-- [ ] every figure caption says what produced it
-- [ ] the header's `Reproduced` field is true
-- [ ] `Limits` is not empty
-- [ ] **if the method learns anything, the demo ships a fit *and* an apply**,
-      and quotes the apply's number
-
-`tests/demos/test_demos.py` checks the mechanical half of this list — the
-documents, the links, the inlined copies, the quoted digests and the section
-skeleton. The rest is review.
-
-When a change moves a digest — an edited demo document, or a change to what
-the canonical form hashes — the two mechanical checks that break are the
-quoted digests and the inlined copies, and both are repaired mechanically:
-re-pin each quotation to the digest the document has now (`causalab digest
-<document>` prints it), keeping the number of hexits the demo quoted, and
-re-inline any document whose bytes moved. Work out *which* digest a stale
-quotation meant by computing every digest twice, once for the working tree and
-once for the baseline commit — the baseline's files read by the baseline's
-code — so a change that moves every digest without touching a demo file is
-re-pinned as readily as an edited document. A quotation that cannot be placed
-that way is re-pasted from the current `explain` output rather than guessed at.
+The script compares the working tree with `HEAD` by default. Use `--baseline`
+to select an earlier revision when needed. It reports a quotation it cannot
+associate with a document. Updating a digest records the current document;
+results require a corresponding run before their reproduction status changes.

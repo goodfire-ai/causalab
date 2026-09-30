@@ -33,9 +33,11 @@ from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_mode
 from causalab.neural.shared.sites import (
     resolve_site,
 )
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.registry import CAPABILITIES, component_shape, component_width
-from causalab.protocol.schema import SiteSpec
+from causalab.protocol.schema import PROTOCOL_VERSION, SiteSpec
+
+from tests.protocol._docs import saved
 
 from ._drive import base_data_section, executor_for
 from .conftest import TINY_GPT2, TINY_LLAMA
@@ -54,22 +56,14 @@ def _read_doc(component: str, layer: int, *, head: int | None = None) -> dict:
     if head is not None:
         site["head"] = head
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": site},
-            "reads": {
-                "r": {"site": "tap", "pos": "all", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "all"}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 
@@ -132,7 +126,7 @@ def test_a_head_with_no_premix_contributes_nothing(qwen35moe_bundle):
 
     Done here by construction rather than through a write, because the write is
     the thing this component refuses."""
-    from causalab.neural.shared.executor_base import _attention_result
+    from causalab.neural.shared.executor.base import _attention_result
 
     site = resolve_site(
         qwen35moe_bundle,
@@ -158,7 +152,7 @@ def test_the_bias_belongs_to_no_head(qwen35moe_bundle):
     family that does have one would otherwise be wrong by ``H·bias`` and nothing
     in the suite would notice.
     """
-    from causalab.neural.shared.executor_base import _attention_result
+    from causalab.neural.shared.executor.base import _attention_result
 
     site = resolve_site(
         qwen35moe_bundle, SiteSpec(component="attention_result", layers=(QWEN_LAYER,))
@@ -219,7 +213,7 @@ def test_the_result_and_the_premix_share_one_capture(qwen35moe_bundle):
     """They are the same tensor at the same tap, so reading both must not hook
     the module twice — which is what makes the derived read cost one extra
     projection rather than one extra forward."""
-    from causalab.neural.shared.executor_base import tap_key as _tap_key
+    from causalab.neural.shared.executor import tap_key as _tap_key
 
     premix = resolve_site(
         qwen35moe_bundle, SiteSpec(component="attention_premix", layers=(QWEN_LAYER,))
@@ -250,7 +244,7 @@ def test_the_derivation_runs_after_the_position_gather(qwen35moe_bundle):
 
 
 def test_a_write_is_refused_and_the_refusal_names_its_lowering(qwen35moe_bundle):
-    """The refusal policy: a refusal that can name what to do instead, does.
+    """A refusal that can name what to do instead, does.
 
     ``attention_result`` is a linear function of ``attention_premix``, so a
     write to the premix at the same head moves it by exactly the projection of
@@ -258,10 +252,17 @@ def test_a_write_is_refused_and_the_refusal_names_its_lowering(qwen35moe_bundle)
     """
     assert CAPABILITIES["attention_result"].writes is None
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {
                     "component": "attention_result",
@@ -271,29 +272,11 @@ def test_a_write_is_refused_and_the_refusal_names_its_lowering(qwen35moe_bundle)
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": "all"},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {"patch": {"site": "tap", "pos": "all", "do": {"swap": "v_cf"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "p.safetensors",
-                }
-            ],
+            "save": [saved("after", "patched", "p.safetensors")],
         },
     }
     with pytest.raises(ProtocolError) as excinfo:
@@ -304,7 +287,7 @@ def test_a_write_is_refused_and_the_refusal_names_its_lowering(qwen35moe_bundle)
             counterfactual_texts=[CF_TEXT],
         ).read_value("after")
     message = str(excinfo.value)
-    assert "derived, not computed" in message
+    assert "derived from the joint output projection" in message
     assert "attention_premix" in message
 
 

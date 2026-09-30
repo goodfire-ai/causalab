@@ -1,0 +1,43 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "A swept scan with a vocabulary read on a written model and a top_k metric, for tests/_helpers/test_fabricated_outputs.py: save each attention and MLP layer's final-token output, the final residual, the head's unembedding of each output swapped into the final residual, and the model's own logits and top token, for 2 x 36 layers on one prompt of facts/prompt. It is the clean direct-effect scan of McGrath et al. 2023 (arXiv:2307.15771), Figure 1, set on the corpus model, kept here so that the fabricator's tests do not depend on a demo package."
+  },
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main", "dtype": "bf16"},
+  "data": {"base": {"dataset": "facts/prompt", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["a", "z", "logits"]},
+      "unembed": {"input": "base", "reads": ["lens"], "writes": ["inject"]}
+    },
+    "sites": {
+      "probe": {
+        "component": {"sweep": ["attention_output", "mlp_output"]},
+        "layers": {"sweep": {"range": [0, 36]}}
+      },
+      "final": {"component": "block_output", "layers": [35]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "a": {"site": "probe", "pos": -1},
+      "z": {"site": "final", "pos": -1},
+      "logits": {"site": "lm_head", "pos": -1},
+      "lens": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "inject": {"site": "final", "pos": -1, "do": {"swap": "a"}}
+    },
+    "save": [
+      {"read": "a", "model": "original", "file_path": "a.safetensors"},
+      {"read": "z", "model": "original", "file_path": "z.safetensors"},
+      {"read": "lens", "model": "unembed", "file_path": "lens.safetensors"},
+      {"read": "logits", "model": "original", "file_path": "logits.safetensors"},
+      {
+        "read": "logits",
+        "model": "original",
+        "aggregation": {"kind": "top_k", "k": 1, "by": "value"},
+        "file_path": "ml_token.json"
+      }
+    ]
+  }
+}

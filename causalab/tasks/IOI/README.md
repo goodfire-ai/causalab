@@ -4,8 +4,9 @@
 > participate in the smoke + golden tiers (see docs/TESTS.md "Coverage-oriented
 > runners"). The shipped runner is **not scientifically meaningful** —
 > small `n_train` / `n_test`, single template, smallest production model.
-> The pyvene-era `demo.ipynb` (against `gpt2`) was removed — it had been
-> unrunnable since its imports were retired; it lives in git history.
+> The pyvene-era `demo.ipynb` (against `gpt2`) was removed in a deletion
+> sweep — it had been unrunnable since its imports were retired; it lives in
+> git history.
 
 ## Task
 
@@ -69,6 +70,7 @@ but available for ad-hoc work).
 | `data/default.json` | the shipped table: `IOI/data/default` (256 pairs, `split all`); built with `uv run python scripts/build_task_dataset.py --task IOI --n 256 --seed 0 --split all --target-variable IO --out causalab/tasks/IOI/data/default.json` |
 | `sources/{names,objects,places,templates}.json` | Domain vocab |
 
-The pyvene-era `demo.ipynb` (end-to-end walkthrough on `gpt2`) was removed; it
-targeted the retired API and had been unrunnable since its imports were
-retired — recover it from git history if needed.
+The pyvene-era `demo.ipynb` (end-to-end walkthrough on `gpt2`) was removed in
+a deletion sweep; it targeted the retired API and had been
+unrunnable since its imports were retired — recover it from git history if
+needed.

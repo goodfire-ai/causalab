@@ -1,0 +1,98 @@
+{
+  "document": "protocols/weekdays_das_sweep.json",
+  "document_digest": "094a8828acbfe6c561c83eb6c68b6df1d86f79ef5bcae64bed27ff0f4de8691a",
+  "run_digest": "094a8828acbfe6c561c83eb6c68b6df1d86f79ef5bcae64bed27ff0f4de8691a",
+  "ran_as": "workflows/weekdays.json#fit",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "pytorch_hooks",
+  "device": "cuda",
+  "dtype": "bf16",
+  "date": "2026-09-28",
+  "elapsed_s": null,
+  "metrics": {
+    "ce": {
+      "metric": "ce",
+      "unit": "nat",
+      "rows": 270,
+      "eligible_rows": 270,
+      "mean": 0.2812,
+      "cells": 9,
+      "best_cell": {
+        "featurizers.rot.k": 8,
+        "train.seed": 2
+      },
+      "best_mean": 0.5252,
+      "worst_mean": 0.1193
+    },
+    "fit_diagnostics": {
+      "points": 9,
+      "rot": {}
+    },
+    "iia": {
+      "metric": "iia",
+      "unit": "logit",
+      "rows": 270,
+      "eligible_rows": 270,
+      "mean": 5.7492,
+      "cells": 9,
+      "best_cell": {
+        "featurizers.rot.k": 32,
+        "train.seed": 0
+      },
+      "best_mean": 6.9385,
+      "worst_mean": 4.2583
+    },
+    "train_eval": {
+      "metric": "iia",
+      "split": "natural_domains_arithmetic/data/weekdays#test",
+      "selected": "early_stop.best",
+      "points": 9,
+      "best": 0.7467,
+      "best_coords": {
+        "featurizers.rot.k": 32,
+        "train.seed": 0
+      },
+      "worst": -0.4079
+    },
+    "saved_tensors": {
+      "rot.safetensors": {
+        "weight[k=16,seed=0]": [
+          3584,
+          16
+        ],
+        "weight[k=16,seed=1]": [
+          3584,
+          16
+        ],
+        "weight[k=16,seed=2]": [
+          3584,
+          16
+        ],
+        "weight[k=32,seed=0]": [
+          3584,
+          32
+        ],
+        "weight[k=32,seed=1]": [
+          3584,
+          32
+        ],
+        "weight[k=32,seed=2]": [
+          3584,
+          32
+        ],
+        "weight[k=8,seed=0]": [
+          3584,
+          8
+        ],
+        "weight[k=8,seed=1]": [
+          3584,
+          8
+        ],
+        "weight[k=8,seed=2]": [
+          3584,
+          8
+        ]
+      }
+    }
+  }
+}

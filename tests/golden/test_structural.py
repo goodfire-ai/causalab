@@ -18,9 +18,10 @@ from pathlib import Path
 
 import pytest
 
-from causalab.protocol.loader import load
+from causalab.protocol.pipeline import compile_protocol
 
 from tests.golden._env import FIXTURES, GOLDEN_PROTOCOLS, GOLDENS_FILE, build_env
+from tests.protocol._env import steps_of
 
 pytestmark = pytest.mark.unit
 
@@ -52,10 +53,10 @@ def test_every_document_is_pinned_and_every_pin_has_a_document():
     "name", sorted(p.name for p in GOLDEN_PROTOCOLS.glob("*_im.json"))
 )
 def test_document_digests_match_their_pins(name, env):
-    loaded = load(GOLDEN_PROTOCOLS / name, env)
+    loaded = compile_protocol(GOLDEN_PROTOCOLS / name, env=env)
     pin = _pins()[name]
-    assert loaded.document_digest == pin["document"]
-    assert list(loaded.point_digests) == pin["points"]
+    assert loaded.digests.document == pin["document"]
+    assert list(steps_of(loaded, env).digests) == pin["points"]
 
 
 def test_every_golden_value_is_claimed_by_exactly_one_test():

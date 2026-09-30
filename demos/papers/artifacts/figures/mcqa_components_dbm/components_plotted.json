@@ -1,0 +1,3782 @@
+[
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 0,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 1,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 2,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 3,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 4,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 5,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 6,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 7,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 8,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 9,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 10,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 11,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 12,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 13,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 14,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 15,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 16,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 17,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 18,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 19,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 20,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.078125,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.546875,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 24,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 26,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 27,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 0,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 1,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 2,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 3,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 4,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 5,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 6,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 7,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 8,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 9,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 10,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 11,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 12,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 13,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 14,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 15,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 16,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 17,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 18,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 19,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 20,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.03125,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 24,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 26,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 27,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 0,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 1,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 2,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 3,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 4,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 5,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 6,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 7,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 8,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 9,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 10,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 11,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 12,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 13,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 14,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 15,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 16,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 17,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 18,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 19,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 20,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.109375,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.703125,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.796875,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 24,
+    "head": null,
+    "value": 0.78125,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.765625,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 26,
+    "head": null,
+    "value": 0.921875,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "original",
+    "l1": null,
+    "component": "block_output",
+    "layer": 27,
+    "head": null,
+    "value": 0.890625,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 0,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 1,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 2,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 3,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 4,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 5,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 6,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 7,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 8,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 9,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 10,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 11,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 12,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 13,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 14,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 15,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 16,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 17,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 18,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 19,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 20,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.078125,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.46875,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 24,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 26,
+    "head": null,
+    "value": 0.03125,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "attention_output",
+    "layer": 27,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 0,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 1,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 2,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 3,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 4,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 5,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 6,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 7,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 8,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 9,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 10,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 11,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 12,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 13,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 14,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 15,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 16,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 17,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 18,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 19,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 20,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.0625,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.6875,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.75,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 24,
+    "head": null,
+    "value": 0.71875,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.734375,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 26,
+    "head": null,
+    "value": 0.921875,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "block_output",
+    "layer": 27,
+    "head": null,
+    "value": 0.921875,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 0,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 1,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 2,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 3,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 4,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 5,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 6,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 7,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 8,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 9,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 10,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 11,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 12,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 13,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 14,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 15,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 16,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 17,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 18,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 19,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 20,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.046875,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 24,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 26,
+    "head": null,
+    "value": 0.015625,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "scan",
+    "l1": null,
+    "component": "mlp_output",
+    "layer": 27,
+    "head": null,
+    "value": 0.0,
+    "kept": null,
+    "n": 64
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 0,
+    "head": null,
+    "value": 0.0789407342672348,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 1,
+    "head": null,
+    "value": -0.21962787210941315,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 2,
+    "head": null,
+    "value": 0.3157981336116791,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 3,
+    "head": null,
+    "value": 0.35753563046455383,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 4,
+    "head": null,
+    "value": 0.28088340163230896,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 5,
+    "head": null,
+    "value": 0.457246333360672,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 6,
+    "head": null,
+    "value": 0.1820545494556427,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 7,
+    "head": null,
+    "value": 0.15611596405506134,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 8,
+    "head": null,
+    "value": -0.23774150013923645,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 9,
+    "head": null,
+    "value": -0.34699785709381104,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 10,
+    "head": null,
+    "value": 0.26101765036582947,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 11,
+    "head": null,
+    "value": 0.41543468832969666,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 12,
+    "head": null,
+    "value": -0.3457454442977905,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 13,
+    "head": null,
+    "value": -0.2683072090148926,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 14,
+    "head": null,
+    "value": -0.12710221111774445,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 15,
+    "head": null,
+    "value": 0.2992886006832123,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 16,
+    "head": null,
+    "value": 0.48456379771232605,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 17,
+    "head": null,
+    "value": 0.3488042950630188,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 18,
+    "head": null,
+    "value": -0.22509829699993134,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 19,
+    "head": null,
+    "value": 0.5530898571014404,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 20,
+    "head": null,
+    "value": -0.12027441710233688,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.5465093851089478,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.596368134021759,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.6164721846580505,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 24,
+    "head": null,
+    "value": -0.5124242305755615,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.524192214012146,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 26,
+    "head": null,
+    "value": 0.6224880218505859,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "attention_output",
+    "layer": 27,
+    "head": null,
+    "value": 0.49323976039886475,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 0,
+    "head": null,
+    "value": -0.5880701541900635,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 1,
+    "head": null,
+    "value": 0.13687659800052643,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 2,
+    "head": null,
+    "value": -0.214289128780365,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 3,
+    "head": null,
+    "value": -0.4189600348472595,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 4,
+    "head": null,
+    "value": 0.05806564539670944,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 5,
+    "head": null,
+    "value": 0.29835280776023865,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 6,
+    "head": null,
+    "value": -0.08734117448329926,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 7,
+    "head": null,
+    "value": 0.4173346757888794,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 8,
+    "head": null,
+    "value": 0.38375788927078247,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 9,
+    "head": null,
+    "value": 0.1833897829055786,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 10,
+    "head": null,
+    "value": -0.24289505183696747,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 11,
+    "head": null,
+    "value": -0.3262920379638672,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 12,
+    "head": null,
+    "value": 0.14772842824459076,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 13,
+    "head": null,
+    "value": -0.20831863582134247,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 14,
+    "head": null,
+    "value": -0.26022157073020935,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 15,
+    "head": null,
+    "value": 0.3960140645503998,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 16,
+    "head": null,
+    "value": -0.30407804250717163,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 17,
+    "head": null,
+    "value": -0.03553377091884613,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 18,
+    "head": null,
+    "value": 0.39652907848358154,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 19,
+    "head": null,
+    "value": -0.22434569895267487,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 20,
+    "head": null,
+    "value": 0.17196083068847656,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.19304008781909943,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.453130841255188,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.48879045248031616,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 24,
+    "head": null,
+    "value": -0.41652923822402954,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.48969823122024536,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 26,
+    "head": null,
+    "value": -0.09752558916807175,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.01,
+    "component": "mlp_output",
+    "layer": 27,
+    "head": null,
+    "value": -0.5712898373603821,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 0,
+    "head": null,
+    "value": -0.7995541095733643,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 1,
+    "head": null,
+    "value": -0.7274290323257446,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 2,
+    "head": null,
+    "value": -0.7337299585342407,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 3,
+    "head": null,
+    "value": -0.7646655440330505,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 4,
+    "head": null,
+    "value": -0.7255820035934448,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 5,
+    "head": null,
+    "value": -0.25739967823028564,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 6,
+    "head": null,
+    "value": -0.7366523742675781,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 7,
+    "head": null,
+    "value": -0.6922441124916077,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 8,
+    "head": null,
+    "value": -0.6625903844833374,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 9,
+    "head": null,
+    "value": -0.7349419593811035,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 10,
+    "head": null,
+    "value": -0.5121055841445923,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 11,
+    "head": null,
+    "value": -0.4794311821460724,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 12,
+    "head": null,
+    "value": -0.6652457118034363,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 13,
+    "head": null,
+    "value": -0.6337171792984009,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 14,
+    "head": null,
+    "value": -0.6445494890213013,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 15,
+    "head": null,
+    "value": -0.2844923436641693,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 16,
+    "head": null,
+    "value": 0.23662208020687103,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 17,
+    "head": null,
+    "value": -0.49865442514419556,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 18,
+    "head": null,
+    "value": -0.45046910643577576,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 19,
+    "head": null,
+    "value": 0.5059089064598083,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 20,
+    "head": null,
+    "value": -0.13454531133174896,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.5390542149543762,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.5966688990592957,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.6141414046287537,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 24,
+    "head": null,
+    "value": -0.5318648219108582,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.46245673298835754,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 26,
+    "head": null,
+    "value": 0.6217619180679321,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "attention_output",
+    "layer": 27,
+    "head": null,
+    "value": 0.47941112518310547,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 0,
+    "head": null,
+    "value": -0.7958297729492188,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 1,
+    "head": null,
+    "value": -0.7454432249069214,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 2,
+    "head": null,
+    "value": -0.7539156079292297,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 3,
+    "head": null,
+    "value": -0.7789090275764465,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 4,
+    "head": null,
+    "value": -0.6747134923934937,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 5,
+    "head": null,
+    "value": -0.2376919835805893,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 6,
+    "head": null,
+    "value": -0.6388811469078064,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 7,
+    "head": null,
+    "value": -0.49445226788520813,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 8,
+    "head": null,
+    "value": -0.6419999003410339,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 9,
+    "head": null,
+    "value": -0.7104008197784424,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 10,
+    "head": null,
+    "value": -0.6615814566612244,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 11,
+    "head": null,
+    "value": -0.7707876563072205,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 12,
+    "head": null,
+    "value": -0.6802003383636475,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 13,
+    "head": null,
+    "value": -0.6811751127243042,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 14,
+    "head": null,
+    "value": -0.4446862041950226,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 15,
+    "head": null,
+    "value": -0.12018733471632004,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 16,
+    "head": null,
+    "value": -0.6590699553489685,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 17,
+    "head": null,
+    "value": -0.3035045266151428,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 18,
+    "head": null,
+    "value": 0.1558550000190735,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 19,
+    "head": null,
+    "value": -0.6139411330223083,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 20,
+    "head": null,
+    "value": -0.23121708631515503,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 21,
+    "head": null,
+    "value": -0.11384198069572449,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.4225124418735504,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.4810926914215088,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 24,
+    "head": null,
+    "value": -0.4951836168766022,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 25,
+    "head": null,
+    "value": 0.47758662700653076,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 26,
+    "head": null,
+    "value": -0.16783221065998077,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 0.3,
+    "component": "mlp_output",
+    "layer": 27,
+    "head": null,
+    "value": -0.570860743522644,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 0,
+    "head": null,
+    "value": -0.7971726655960083,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 1,
+    "head": null,
+    "value": -0.794589638710022,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 2,
+    "head": null,
+    "value": -0.800179660320282,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 3,
+    "head": null,
+    "value": -0.7981166243553162,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 4,
+    "head": null,
+    "value": -0.8019039630889893,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 5,
+    "head": null,
+    "value": -0.8028634190559387,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 6,
+    "head": null,
+    "value": -0.7962824702262878,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 7,
+    "head": null,
+    "value": -0.7970510125160217,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 8,
+    "head": null,
+    "value": -0.7940223217010498,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 9,
+    "head": null,
+    "value": -0.7951722741127014,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 10,
+    "head": null,
+    "value": -0.7805550694465637,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 11,
+    "head": null,
+    "value": -0.7956041693687439,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 12,
+    "head": null,
+    "value": -0.7933365702629089,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 13,
+    "head": null,
+    "value": -0.7844962477684021,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 14,
+    "head": null,
+    "value": -0.7880753874778748,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 15,
+    "head": null,
+    "value": -0.7854776382446289,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 16,
+    "head": null,
+    "value": -0.7626614570617676,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 17,
+    "head": null,
+    "value": -0.7948290109634399,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 18,
+    "head": null,
+    "value": -0.7566027641296387,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 19,
+    "head": null,
+    "value": -0.4944826364517212,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 20,
+    "head": null,
+    "value": -0.6345373392105103,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 21,
+    "head": null,
+    "value": 0.4939849376678467,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 22,
+    "head": null,
+    "value": 0.6026210784912109,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.5916489958763123,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 24,
+    "head": null,
+    "value": -0.6626200675964355,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 25,
+    "head": null,
+    "value": -0.5839449167251587,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 26,
+    "head": null,
+    "value": 0.6110408306121826,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "attention_output",
+    "layer": 27,
+    "head": null,
+    "value": 0.25120657682418823,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 0,
+    "head": null,
+    "value": -0.796505331993103,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 1,
+    "head": null,
+    "value": -0.7957549095153809,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 2,
+    "head": null,
+    "value": -0.7999511361122131,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 3,
+    "head": null,
+    "value": -0.7999952435493469,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 4,
+    "head": null,
+    "value": -0.7979557514190674,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 5,
+    "head": null,
+    "value": -0.797789454460144,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 6,
+    "head": null,
+    "value": -0.7919018864631653,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 7,
+    "head": null,
+    "value": -0.80405592918396,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 8,
+    "head": null,
+    "value": -0.7957573533058167,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 9,
+    "head": null,
+    "value": -0.8031782507896423,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 10,
+    "head": null,
+    "value": -0.7902662754058838,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 11,
+    "head": null,
+    "value": -0.7949030995368958,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 12,
+    "head": null,
+    "value": -0.7956050634384155,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 13,
+    "head": null,
+    "value": -0.7870053052902222,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 14,
+    "head": null,
+    "value": -0.7718458771705627,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 15,
+    "head": null,
+    "value": -0.7841746807098389,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 16,
+    "head": null,
+    "value": -0.7990453839302063,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 17,
+    "head": null,
+    "value": -0.749915361404419,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 18,
+    "head": null,
+    "value": -0.7844659686088562,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 19,
+    "head": null,
+    "value": -0.7834425568580627,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 20,
+    "head": null,
+    "value": -0.7996916770935059,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 21,
+    "head": null,
+    "value": -0.7816294431686401,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 22,
+    "head": null,
+    "value": -0.22045597434043884,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 23,
+    "head": null,
+    "value": 0.35208725929260254,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 24,
+    "head": null,
+    "value": -0.7064104676246643,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 25,
+    "head": null,
+    "value": -0.2356163114309311,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 26,
+    "head": null,
+    "value": -0.45264220237731934,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "mask",
+    "l1": 3.0,
+    "component": "mlp_output",
+    "layer": 27,
+    "head": null,
+    "value": -0.6017921566963196,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 0,
+    "value": 0.7421099543571472,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 1,
+    "value": -0.7203001379966736,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 2,
+    "value": -0.4592289924621582,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 3,
+    "value": 0.7358877658843994,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 4,
+    "value": 0.7232607007026672,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 5,
+    "value": -0.742871105670929,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 6,
+    "value": 0.7124178409576416,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 7,
+    "value": 0.7045414447784424,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 8,
+    "value": -0.6965876221656799,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 9,
+    "value": 0.6936633586883545,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 10,
+    "value": -0.06902612745761871,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.01,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 11,
+    "value": 0.690251886844635,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 0,
+    "value": 0.7346190214157104,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 1,
+    "value": -0.7871538400650024,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 2,
+    "value": -0.7925108671188354,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 3,
+    "value": 0.5607833862304688,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 4,
+    "value": 0.6863559484481812,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 5,
+    "value": -0.7459213137626648,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 6,
+    "value": 0.6531792879104614,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 7,
+    "value": 0.7043696045875549,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 8,
+    "value": -0.7065110802650452,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 9,
+    "value": 0.6924515962600708,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 10,
+    "value": -0.7086216807365417,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 0.3,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 11,
+    "value": 0.6851359009742737,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 0,
+    "value": -0.2386389672756195,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 1,
+    "value": -0.7959360480308533,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 2,
+    "value": -0.7965848445892334,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 3,
+    "value": -0.8014222979545593,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 4,
+    "value": -0.8084555268287659,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 5,
+    "value": -0.7694373726844788,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 6,
+    "value": -0.8155468106269836,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 7,
+    "value": 0.7050521373748779,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 8,
+    "value": -0.7501773238182068,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 9,
+    "value": 0.6852890253067017,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 10,
+    "value": -0.7977858781814575,
+    "kept": false,
+    "n": null
+  },
+  {
+    "panel": "heads",
+    "l1": 3.0,
+    "component": "attention_premix",
+    "layer": 22,
+    "head": 11,
+    "value": 0.5939943790435791,
+    "kept": true,
+    "n": null
+  },
+  {
+    "panel": "held_out",
+    "l1": 0.01,
+    "component": "mask",
+    "layer": null,
+    "head": null,
+    "value": 0.921875,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "held_out",
+    "l1": 0.3,
+    "component": "mask",
+    "layer": null,
+    "head": null,
+    "value": 0.9375,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "held_out",
+    "l1": 3.0,
+    "component": "mask",
+    "layer": null,
+    "head": null,
+    "value": 0.921875,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "held_out",
+    "l1": 0.01,
+    "component": "heads",
+    "layer": null,
+    "head": null,
+    "value": 0.609375,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "held_out",
+    "l1": 0.3,
+    "component": "heads",
+    "layer": null,
+    "head": null,
+    "value": 0.609375,
+    "kept": null,
+    "n": null
+  },
+  {
+    "panel": "held_out",
+    "l1": 3.0,
+    "component": "heads",
+    "layer": null,
+    "head": null,
+    "value": 0.53125,
+    "kept": null,
+    "n": null
+  }
+]

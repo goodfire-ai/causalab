@@ -1,5 +1,5 @@
-"""The behavioral runner's declarative half (workflow spec §2.7, §5 rule 17)
-— everything decidable without a model.
+"""The behavioral runner's declarative half (workflow spec §2.7, §5 rule 17;
+T8, T9 and the censuses) — everything decidable without a model.
 
 * **The censuses.** The step type is in the closed set; rule 17 is the
   behavioral rule and §5 numbers it (15 and 16 reserved, 18 the conditional
@@ -11,7 +11,7 @@
   no hashed script's closure and of ``SHARED``, and loading a behavioral
   workflow imports no torch — the design is digest-neutral because nothing
   digest-bearing changed.
-* **Refusals, each beside its valid twin**: a missing
+* **Refusals, each beside its valid twin**, so valid work is not refused: a missing
   or mismatched checker (T5's mutation, at load), a free-string split, a
   split that is not the base ref's fragment, a sampled decode without a seed,
   temperature and top_p out of range, non-numeric thresholds, an unknown
@@ -38,15 +38,11 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.code import import_closure
-from causalab.protocol.engine import (
-    CONTINUATIONS_FILE,
-    Engine,
-    ExecutionRequest,
-    RunResult,
-)
+from causalab.protocol.identity import import_closure
+from causalab.protocol.compiled import CompiledProtocol
+from causalab.protocol.engine import CONTINUATIONS_FILE, Engine, RunContext, RunResult
 from causalab.protocol.registry import ENGINES
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.protocol.schema import COMPONENTS
 from causalab.workflow import runner
 from causalab.workflow.behavioral import (
@@ -89,8 +85,6 @@ FIXTURES = Path(__file__).parent / "fixtures" / "behavioral"
 WORKFLOW = FIXTURES / "qualify.json"
 BEHAVIORAL = "causalab/workflow/behavioral.py"
 STEP = "qualify"
-#: the weekdays task's ScoringSpec digest — what the fixture table records
-DIGEST = "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb"
 #: every key a behavioral entry carries and no other entry may (§7)
 BEHAVIORAL_KEYS = ("decoding", "checker", "split", "thresholds", "retain", "decision")
 
@@ -109,7 +103,7 @@ DATA_ONLY = {"data.base.dataset": "qa/data#development"}
 
 def _raw(**step_changes: Any) -> dict[str, Any]:
     """The fixture workflow with ``step_changes`` on its one step; ``None``
-    deletes the key. The model retarget is dropped (:data:`DATA_ONLY`)."""
+    deletes the key. The model retarget is dropped (`DATA_ONLY`)."""
     raw = json.loads(WORKFLOW.read_text())
     step = raw["steps"][STEP]
     step["set"] = dict(DATA_ONLY)
@@ -161,8 +155,8 @@ def _table(header: str) -> list[str]:
 
 
 def test_behavioral_is_the_third_step_type() -> None:
-    """Six kinds: the two control kinds follow (§2.8), then the nested
-    workflow (§2.10)."""
+    """Six kinds: the two control kinds follow (§2.8), then the
+    nested workflow (§2.10)."""
     assert STEP_TYPES == (
         "intervention_protocol",
         "script",
@@ -208,7 +202,7 @@ def test_rule_17_is_the_behavioral_rule_after_qualification_and_equivalence() ->
 
 def test_the_outcome_table_is_the_code_in_precedence_order() -> None:
     assert _table("outcome") == list(OUTCOMES)
-    assert OUTCOMES[0] == "truncated"  # takes precedence (§2.7)
+    assert OUTCOMES[0] == "truncated"  # takes precedence (§2.7, q6)
 
 
 def test_the_decoding_split_and_decision_tables_are_the_code() -> None:
@@ -252,23 +246,27 @@ def test_behavioral_is_in_no_hashed_closure() -> None:
 
 def test_behavioral_reaches_no_engine_module() -> None:
     """Engine-free like document.py: its own import closure stays under
-    protocol/, causal/, tasks/ and workflow/ — never neural/."""
+    protocol/, causal/, tasks/ and workflow/ — the one member under neural/
+    is the torch-free enumerator the workflow layer reads the steps through
+    (``neural/shared/sweep.py``), never an engine."""
     members = import_closure(REPO / BEHAVIORAL, root=REPO)
     assert BEHAVIORAL not in members  # a closure lists what a module reaches
     assert members, "the closure walk found nothing"
-    assert not [m for m in members if m.startswith("causalab/neural/")]
+    assert [m for m in members if m.startswith("causalab/neural/")] == [
+        "causalab/neural/shared/sweep.py"
+    ]
 
 
 _PROBE = """
 import json, sys
 from pathlib import Path
-from causalab.protocol.loader import load_text
+from causalab.io.sources import load_text
 from causalab.workflow.document import parse_workflow
 import causalab.workflow.behavioral
 root = Path(sys.argv[1])
 parsed = parse_workflow(load_text(root / "qualify.json"))
 after_parse = "torch" in sys.modules
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.workflow.document import load_workflow
 env = ResolutionEnv(datasets=FileDatasets(root=root), artifacts=FileArtifacts(root=root))
 loaded = load_workflow(root / "qualify.json", env)
@@ -325,7 +323,6 @@ def test_the_fixture_workflow_loads_with_every_field_in_its_entry() -> None:
     assert entry["checker"] == {
         "task": "natural_domains_arithmetic",
         "task_cfg": {"domain_type": "weekdays"},
-        "scoring_digest": DIGEST,
     }
     assert entry["split"] == "development"
     assert entry["retain"] == {"generations": {"max_rows": 2}}
@@ -371,6 +368,8 @@ def test_explain_names_the_behavioral_step(
     code = main(
         [
             "explain",
+            "--engine",
+            "auto",
             str(root / "qualify.json"),
             "--data-root",
             str(root),
@@ -396,65 +395,43 @@ def test_a_missing_checker_is_refused_at_load() -> None:
     assert "ScoringSpec" in str(err)
 
 
-def test_a_mismatched_scoring_digest_is_refused_naming_both() -> None:
-    wrong = "0" * 64
-    err = _refused(
-        _raw(
-            checker={
-                "task": "natural_domains_arithmetic",
-                "task_cfg": {"domain_type": "weekdays"},
-                "scoring_digest": wrong,
-            }
-        ),
-        path="checker.scoring_digest",
-    )
-    assert wrong[:12] in str(err) and DIGEST[:12] in str(err)
-
-
-def test_a_table_recording_another_digest_is_refused(tmp_path: Path) -> None:
-    """The task's spec and the authored digest agree, but the split's rows
-    were built under another definition of correct: refused naming the
-    table's digest."""
+def test_a_table_recording_another_string_mode_is_refused(tmp_path: Path) -> None:
+    """The checker's task loads, but the split's rows record a ``string_mode``
+    that is not the spec's — the table was built under another definition of
+    correct: refused naming both modes."""
     root = tmp_path / "behavioral"
     shutil.copytree(FIXTURES, root)
     table = root / "qa" / "data.json"
-    other = "f" * 64
     rows = json.loads(table.read_text())
     for row in rows:
-        row["scoring_digest"] = other
+        row["string_mode"] = "prefix"
     table.write_text(json.dumps(rows))
-    err = _refused(_raw(), path="checker.scoring_digest", root=root)
-    assert other[:12] in str(err) and "table" in str(err)
+    err = _refused(_raw(), path="checker.task", root=root)
+    assert "'prefix'" in str(err) and "'exact'" in str(err) and "table" in str(err)
 
 
 def test_an_unknown_task_and_a_config_on_a_singleton_are_refused() -> None:
-    _refused(
-        _raw(checker={"task": "no_such_task", "scoring_digest": DIGEST}),
-        path="checker.task",
-    )
+    _refused(_raw(checker={"task": "no_such_task"}), path="checker.task")
     # a factory task without its config does not load either
-    _refused(
-        _raw(checker={"task": "natural_domains_arithmetic", "scoring_digest": DIGEST}),
-        path="checker.task",
-    )
+    _refused(_raw(checker={"task": "natural_domains_arithmetic"}), path="checker.task")
     # IOI is a singleton: it takes no task_cfg
     _refused(
-        _raw(checker={"task": "IOI", "task_cfg": {"x": 1}, "scoring_digest": DIGEST}),
+        _raw(checker={"task": "IOI", "task_cfg": {"x": 1}}),
         path="checker.task_cfg",
     )
 
 
 def test_a_malformed_checker_is_refused() -> None:
     _refused(_raw(checker="weekdays"), path="checker")
-    _refused(_raw(checker={"task": "IOI"}), path="checker.scoring_digest")
     _refused(
-        _raw(checker={"task": "IOI", "scoring_digest": "abc"}),
-        path="checker.scoring_digest",
+        _raw(checker={"task_cfg": {"domain_type": "weekdays"}}), path="checker.task"
     )
-    _refused(
-        _raw(checker={"task": "IOI", "scoring_digest": DIGEST, "mode": "exact"}),
-        path="checker",
-    )
+    _refused(_raw(checker={"task": ""}), path="checker.task")
+    _refused(_raw(checker={"task": "IOI", "mode": "exact"}), path="checker")
+    # the binding is by task: a singleton whose spec shares the table's
+    # string_mode loads, and the entry records exactly what was authored
+    loaded = _load(_raw(checker={"task": "IOI"}))
+    assert loaded.canonical["steps"][STEP]["checker"] == {"task": "IOI"}
 
 
 def test_a_split_is_one_of_three_values_not_a_free_string() -> None:
@@ -581,22 +558,15 @@ def test_a_document_that_never_decodes_is_refused(tmp_path: Path) -> None:
     doc_path = root / "protocols" / "qa_probe.json"
     doc = json.loads(doc_path.read_text())
     doc["method"]["positions"] = {"last": {"index": -1}}
-    doc["method"]["reads"] = {
-        "steps": {
-            "site": "lm_head",
-            "pos": "last",
-            "model": "original",
-            "input": "base",
-        }
-    }
-    doc["method"]["metrics"] = {
-        "per_step": {"kind": "top_k", "of": "steps", "k": 1, "by": "prob"}
+    doc["method"]["reads"] = {"steps": {"site": "lm_head", "pos": "last"}}
+    doc["method"]["intervened_models"] = {
+        "original": {"input": "base", "reads": ["steps"]}
     }
     doc["method"]["save"] = [
         {
-            "value": "per_step",
+            "read": "steps",
             "model": "original",
-            "input": "base",
+            "aggregation": {"kind": "top_k", "k": 1, "by": "prob"},
             "file_path": "per_step.json",
         }
     ]
@@ -681,12 +651,12 @@ def test_t8_a_development_record_is_never_reused_for_confirmation(
         )
     )
     reused = runner._reusable(  # pyright: ignore[reportPrivateUsage]
-        development, STEP, dev_step, step_dir, True, False, implementation, []
+        development, STEP, dev_step, step_dir, True, False, implementation, None
     )
     assert reused is not None and reused["status"] == "reused"
     assert (
         runner._reusable(  # pyright: ignore[reportPrivateUsage]
-            confirmation, STEP, conf_step, step_dir, True, False, implementation, []
+            confirmation, STEP, conf_step, step_dir, True, False, implementation, None
         )
         is None
     )
@@ -734,7 +704,7 @@ class _Greedy(Engine):
         self.writable_components = frozenset(COMPONENTS)
         self.is_local = True
 
-    def execute(self, request: ExecutionRequest) -> RunResult:
+    def execute(self, compiled: CompiledProtocol, run: RunContext) -> RunResult:
         raise AssertionError(f"{self.name} executed — the refusal came after routing")
 
 
@@ -745,13 +715,32 @@ def test_a_sampled_step_routed_to_a_greedy_engine_is_refused_before_it_loads(
 
     loaded = _load(_raw(decoding={"mode": "sampled", "seed": 7}))
     with pytest.raises(WorkflowError) as err:
-        run_workflow(loaded, _env(), tmp_path, [_Greedy("nnsight")])
+        run_workflow(loaded, _env(), tmp_path, _Greedy("nnsight"))
     assert err.value.rule == BEHAVIORAL_RULE
     assert "nnsight" in str(err.value) and "deterministic" in str(err.value)
     # the twin: a deterministic step reaches the engine (whose execute raises)
     loaded = _load(_raw(decoding={"mode": "deterministic"}))
     with pytest.raises(AssertionError, match="executed"):
-        run_workflow(loaded, _env(), tmp_path / "twin", [_Greedy("nnsight")])
+        run_workflow(loaded, _env(), tmp_path / "twin", _Greedy("nnsight"))
+
+
+def test_a_decoding_step_under_context_parallelism_is_refused_before_it_loads(
+    tmp_path: Path,
+) -> None:
+    """``check_parallel`` (``docs/model_parallelism.md`` §8.4) at the workflow
+    door, as ``run_protocol`` runs it: every rank refuses the decoding step
+    alike, before a model loads, so no rank waits on a collective the others
+    never enter."""
+    from causalab.protocol.parallel import ParallelGeometry
+    from causalab.protocol.rules.errors import ProtocolError
+    from causalab.workflow import run_workflow
+
+    loaded = _load(_raw(decoding={"mode": "deterministic"}))
+    engine = _Greedy("nnsight")
+    engine.parallel = ParallelGeometry(context=2)
+    with pytest.raises(ProtocolError) as err:
+        run_workflow(loaded, _env(), tmp_path, engine)
+    assert err.value.code == "P4" and "decod" in str(err.value)
 
 
 # --------------------------------------------------------------------------- #
@@ -764,7 +753,6 @@ def test_t9_the_population_is_non_empty() -> None:
     documents = [
         path
         for pattern in (
-            "causalab/configs/**/*.json",
             "demos/**/*.json",
             "tests/protocols/*.json",
             "tests/golden/**/*.json",
@@ -790,7 +778,7 @@ def test_t9_every_existing_workflow_loads_with_no_behavioral_key(
 
 
 def test_the_shipped_workflows_carry_no_behavioral_keys(env: Any) -> None:
-    for name in ("mean_ablation.json", "weekdays_8b.json"):
+    for name in ("mean_ablation.json", "weekdays.json"):
         loaded = load_workflow(WORKFLOWS / name, env)
         for step, entry in loaded.canonical["steps"].items():
             assert not set(entry) & set(BEHAVIORAL_KEYS), (name, step)

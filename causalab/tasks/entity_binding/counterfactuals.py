@@ -7,7 +7,7 @@ while keeping the query structure the same.
 
 import random
 
-from causalab.causal.counterfactual_dataset import CounterfactualExample
+from causalab.causal.counterfactuals import CounterfactualExample
 
 from .causal_models import (
     create_positional_entity_causal_model,
@@ -41,17 +41,13 @@ def swap_query_group(
     The counterfactual swaps entity groups but keeps the SAME QUERY ENTITY.
     The positional_answer changes (now points to the new group position of Ann).
 
-    Parameters
-    ----------
-    config : EntityBindingTaskConfig
-        The task configuration
-    change_answer : bool, optional
-        If True, replace the answer entity in the counterfactual with a new entity
-        from the same pool (different from all entities in the sample).
+    Args:
+        config: The task configuration
+        change_answer: If True, replace the answer entity in the counterfactual with a new entity
+            from the same pool (different from all entities in the sample).
 
-    Returns
-    -------
-    CounterfactualExample
+    Returns:
+        CounterfactualExample:
     """
     model = create_positional_entity_causal_model(config)
     input_sample = sample_valid_entity_binding_input(config, model=model)
@@ -62,6 +58,7 @@ def swap_query_group(
     other_groups = [g for g in range(active_groups) if g != query_group]
     if not other_groups:
         import warnings
+
         warnings.warn(
             f"swap_query_group called with only one active group ({active_groups}). "
             "Falling back to random counterfactual sampling."
@@ -79,25 +76,21 @@ def swap_query_group(
     # Swap entities between query_group and swap_group
     entities_per_group = input_sample["entities_per_group"]
     for e in range(entities_per_group):
-        key_query = f"entity_g{query_group}_e{e}"
-        key_swap = f"entity_g{swap_group}_e{e}"
+        key_query = f"entities[{query_group},{e}]"
+        key_swap = f"entities[{swap_group},{e}]"
         cf_dict[key_query], cf_dict[key_swap] = cf_dict[key_swap], cf_dict[key_query]
 
     # Update query_group: the original query entities are now at swap_group
     cf_dict["query_group"] = swap_group
 
-    # Update query_e{e} variables to follow the swapped entities
-    for e in range(entities_per_group):
-        cf_dict[f"query_e{e}"] = cf_dict[f"entity_g{swap_group}_e{e}"]
-
     if change_answer:
         answer_index = cf_dict["answer_index"]
-        answer_key = f"entity_g{swap_group}_e{answer_index}"
+        answer_key = f"entities[{swap_group},{answer_index}]"
 
         used_entities = set()
         for g in range(cf_dict["active_groups"]):
             for e in range(cf_dict["entities_per_group"]):
-                entity = cf_dict.get(f"entity_g{g}_e{e}")
+                entity = cf_dict.get(f"entities[{g},{e}]")
                 if entity:
                     used_entities.add(entity)
 
@@ -108,7 +101,6 @@ def swap_query_group(
         if available:
             new_answer = random.choice(available)
             cf_dict[answer_key] = new_answer
-            cf_dict[f"query_e{answer_index}"] = new_answer
 
     counterfactual = model.new_trace(cf_dict)
     return {"input": input_sample, "counterfactual_inputs": [counterfactual]}
@@ -120,9 +112,8 @@ def random_counterfactual(config: EntityBindingTaskConfig) -> CounterfactualExam
 
     Baseline condition — the counterfactual is unrelated to the input.
 
-    Parameters
-    ----------
-    config : EntityBindingTaskConfig
+    Args:
+        config:
     """
     model = create_positional_entity_causal_model(config)
     input_sample = sample_valid_entity_binding_input(config, model=model)
@@ -167,7 +158,7 @@ def generate_dataset(causal_model, n: int, seed: int) -> list[CounterfactualExam
     counterfactuals where both positional_answer and raw_output differ.
 
     Args:
-        causal_model: The causal model (used for sampling and trace creation)
+        causal_model (CausalModel): The causal model (used for sampling and trace creation)
         n: Number of examples to generate
         seed: Random seed for reproducibility
 

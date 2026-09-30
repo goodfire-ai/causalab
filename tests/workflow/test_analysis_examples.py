@@ -12,7 +12,7 @@ from causalab.cli import main
 from causalab.io.step_io import read_tensor_with_identity, write_table, write_tensor
 from causalab.io.tensor_files import save_file
 from causalab.protocol.bundles import entry_key
-from causalab.protocol.resolve import build_artifact_identity, check_artifact_identity
+from causalab.io.env import build_artifact_identity, check_artifact_identity
 
 pytestmark = pytest.mark.smoke
 
@@ -48,7 +48,10 @@ def _run(path: Path, *extra: str) -> int:
     )
 
 
-def test_sparse_example_pins_labels_and_refuses_stale_resume(tmp_path: Path, capsys):
+def test_sparse_example_reruns_on_resume_when_labels_change(tmp_path: Path, capsys):
+    """A `{"path": …}` input enters the step's identity as its path alone, so
+    the record's `input_digests` is what holds the step to the rows it read:
+    editing them makes `--resume` re-run the step (spec §8)."""
     generator = torch.Generator().manual_seed(7)
     acts = torch.randn(240, 2, 5, generator=generator, dtype=torch.float64)
     write_tensor(tmp_path / "acts.safetensors", acts, slot="acts")
@@ -84,7 +87,6 @@ def test_sparse_example_pins_labels_and_refuses_stale_resume(tmp_path: Path, cap
     path = _document(tmp_path, steps)
     # The CLI runs from the checkout, while relative inputs live beside the document.
     assert _run(path) == 0
-    assert "data/probe_rows.json" in json.loads(path.read_text())["pins"]["files"]
     scores = tmp_path / "runs/run/sparse_probes/scores.json"
     original = scores.read_bytes()
     capsys.readouterr()
@@ -92,14 +94,7 @@ def test_sparse_example_pins_labels_and_refuses_stale_resume(tmp_path: Path, cap
     assert "reused sparse_probes" in capsys.readouterr().out
     rows[-1]["operand_value"] = 1000.0
     write_table(labels, rows)
-    assert _run(path, "--resume") == 1
-    refused = capsys.readouterr().err
-    assert "W21" in refused and "data/probe_rows.json" in refused
-    assert scores.read_bytes() == original
-    # Re-pinning accepts revised data; a fresh execution recomputes its scores.
-    assert main(["pin", str(path)]) == 0
-    capsys.readouterr()
-    assert _run(path) == 0
+    assert _run(path, "--resume") == 0
     assert "completed sparse_probes" in capsys.readouterr().out
     assert scores.read_bytes() != original
 
@@ -138,7 +133,6 @@ def test_projection_example_inherits_selected_bundle_identity(tmp_path: Path):
             "layers": [12],
         }
         assert saved_identity["engine"] == "script"
-        assert saved_identity["produced_by"]
 
 
 def test_fourier_example_and_frozen_apply(tmp_path: Path, capsys):
@@ -192,11 +186,16 @@ def test_fourier_example_and_frozen_apply(tmp_path: Path, capsys):
     )
     check_artifact_identity(saved["identity"], identity, what="Fourier fit")
     torch.testing.assert_close(torch.from_numpy(saved["predictions"]), fit)
-    assert "data/probe_rows.json" in json.loads(path.read_text())["pins"]["files"]
     capsys.readouterr()
     assert _run(path, "--resume") == 0
     assert "reused fourier" in capsys.readouterr().out
+    # the rows are a `{"path": …}` input: their bytes are in the record's
+    # `input_digests`, not the identity, and --resume re-runs on a change —
+    # the edited row is an evaluation row, so the scores move
+    scores = tmp_path / "runs/run/fourier/scores.json"
+    original = scores.read_bytes()
     rows[-1]["operand_value"] += 1
     write_table(labels, rows)
-    assert _run(path, "--resume") == 1
-    assert "W21" in capsys.readouterr().err
+    assert _run(path, "--resume") == 0
+    assert "completed fourier" in capsys.readouterr().out
+    assert scores.read_bytes() != original

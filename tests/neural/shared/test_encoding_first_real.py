@@ -26,7 +26,7 @@ from causalab.neural.shared.encoding import (
     first_real_indices,
     refuse_empty_rows,
 )
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 
 
 def _legacy_first_real(mask: torch.Tensor, row: int) -> int:

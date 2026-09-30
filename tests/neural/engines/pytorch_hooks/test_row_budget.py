@@ -5,7 +5,9 @@ its first member alone as a probe under peak-memory tracking and the bound is
 what the device's free memory holds at that slope; a window that still runs
 out of memory is retried at half the rows. The bound a cohort ran under is
 reported so an author can pin it. CUDA is simulated here through the meter
-seam and the out-of-memory error raised by hand.
+seam — the simulator's scripted ``SimulatedMeter`` (``docs/model_parallelism.md``
+§10.1), one reading per probe, so the number of probes a budget makes is
+pinned by the script's length — and the out-of-memory error raised by hand.
 """
 
 # the cohort suite's builders are reused here
@@ -13,14 +15,14 @@ seam and the out-of-memory error raised by hand.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Sequence
+from typing import Any, Sequence
 
 import pytest
 import torch
 
 from causalab.neural.engines.pytorch_hooks import cohort as cohort_module
 from causalab.neural.engines.pytorch_hooks import train as train_module
-from causalab.neural.engines.pytorch_hooks.budget import MARGIN, RowBudget
+from causalab.neural.engines.pytorch_hooks.budget import MARGIN, Meter, RowBudget
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
 from causalab.neural.engines.pytorch_hooks.train import run_cohort_training
 
@@ -37,25 +39,20 @@ from .test_fit_cohort import (
     _train_doc,
 )
 from .test_train import ANSWERS, BASES, COUNTERFACTUALS
+from tests._helpers.simulated_world import RankMeter, SimulatedMeter
 
 pytestmark = pytest.mark.unit
 
 
-class _FakeMeter:
-    """A device with ``available`` bytes to give and ``per_row`` bytes per row."""
-
-    def __init__(self, per_row: int, available: int, rows: int = 1) -> None:
-        self.per_row = per_row
-        self.available = available
-        self._rows = rows
-
-    def measure(self, run: Callable[[], None]) -> tuple[int, int]:
-        run()
-        return self.per_row * self._rows, self.available
-
-    def expecting(self, rows: int) -> "_FakeMeter":
-        self._rows = rows
-        return self
+def _meter(
+    per_row: int, available: int, *, rows: int = 1, probes: int = 1
+) -> RankMeter:
+    """A device with ``available`` bytes to give and ``per_row`` bytes per
+    row, probed ``probes`` times at ``rows`` rows: the simulator's meter for
+    one rank, its script one ``(peak, available)`` reading per probe. A
+    probe the script has no reading for is the simulator's refusal, so
+    ``probes`` pins how often the budget measures."""
+    return SimulatedMeter({0: [(per_row * rows, available)] * probes}).for_rank(0)
 
 
 def _size(item: tuple[str, int]) -> int:
@@ -64,7 +61,7 @@ def _size(item: tuple[str, int]) -> int:
 
 class TestRowBudget:
     def test_a_fixed_bound_packs_and_never_probes(self) -> None:
-        budget = RowBudget.of(4, meter=_FakeMeter(1, 1))
+        budget = RowBudget.of(4, meter=_meter(1, 1, probes=0))
         assert budget.fixed and not budget.probing and budget.bound == 4
         items = [("a", 2), ("b", 2), ("c", 3), ("d", 2)]
         window, rest = budget.take(items, _size)
@@ -81,7 +78,7 @@ class TestRowBudget:
 
     def test_auto_probes_one_member_then_packs_under_the_measured_bound(self) -> None:
         # 100 bytes a row, 1000 available: 900 usable at the margin → 9 rows
-        meter = _FakeMeter(per_row=100, available=1000).expecting(2)
+        meter = _meter(per_row=100, available=1000, rows=2)
         budget = RowBudget.of(None, meter=meter)
         items = [("a", 2), ("b", 2), ("c", 2), ("d", 2), ("e", 2), ("f", 2)]
         window, rest = budget.take(items, _size)
@@ -100,8 +97,8 @@ class TestRowBudget:
         """Members of 3 and 8 rows, probe 8: 23 rows fit; floored to the
         smallest member (3) the bound is 21, not 16 — a 3-row and an 8-row
         member still share a forward. Without a unit the probe's rows floor it."""
-        meter = _FakeMeter(
-            per_row=100, available=int(23 * 100 / (1 - MARGIN)) + 1, rows=8
+        meter = _meter(
+            per_row=100, available=int(23 * 100 / (1 - MARGIN)) + 1, rows=8, probes=2
         )
         budget = RowBudget.of(None, meter=meter)
         budget.run(8, lambda: None, unit=3)
@@ -111,7 +108,7 @@ class TestRowBudget:
         assert again.bound == 16
 
     def test_the_measured_bound_is_never_below_the_probe(self) -> None:
-        meter = _FakeMeter(per_row=10**9, available=1).expecting(4)
+        meter = _meter(per_row=10**9, available=1, rows=4)
         budget = RowBudget.of(None, meter=meter)
         budget.run(4, lambda: None)
         assert budget.bound == 4
@@ -134,7 +131,7 @@ def bundle() -> ModelBundle:
 def _fit(
     raws: Sequence[dict[str, Any]],
     bundle: ModelBundle,
-    meter: Any,
+    meter: Meter | None,
     *,
     fit_rows: int | None = None,
     batch_rows: int | None = None,
@@ -163,11 +160,12 @@ def _fit(
     return outcomes, sizes
 
 
-def _flat_meter(members: int) -> _FakeMeter:
+def _flat_meter(members: int) -> RankMeter:
     """A device that affords exactly ``members`` members' rows per forward at
-    every slope it is asked about: flat ``per_row``, ``available`` sized so
-    ``members × probe rows`` fit under the margin."""
-    return _FakeMeter(
+    the one slope it is asked about — the cohort's single probe: flat
+    ``per_row``, ``available`` sized so ``members × probe rows`` fit under
+    the margin."""
+    return _meter(
         per_row=100, available=int(100 * members * PAIRS / (1 - MARGIN)) + 1, rows=PAIRS
     )
 
@@ -198,7 +196,10 @@ class TestCohortUnderAutoBudget:
     ) -> None:
         raws = [_train_doc(k=k, epochs=1) for k in (2, 4)]
         outcomes, sizes = _fit(
-            raws, bundle, _FakeMeter(per_row=1, available=10**9), fit_rows=2 * PAIRS
+            raws,
+            bundle,
+            _meter(per_row=1, available=10**9, probes=0),
+            fit_rows=2 * PAIRS,
         )
         assert all(o.fit_rows == 2 * PAIRS for o in outcomes)
         assert sizes.count(2 * PAIRS) == B  # every step batched, none probed

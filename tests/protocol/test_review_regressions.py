@@ -11,16 +11,19 @@ from pathlib import Path
 import pytest
 
 from causalab.protocol.engine import requires_campaign
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ParseError, ProtocolError, ValidationError
-from causalab.protocol.loader import load, load_text
-from causalab.protocol.plan import plan_point
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ParseError, ProtocolError, ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.sources import load_text
+from causalab.neural.shared.plan import plan_point
 from causalab.protocol.schema import parse_document
-from causalab.protocol.sweep import expand, find_axes
+from causalab.neural.shared.sweep import expand
+from causalab.protocol.lowering import find_axes
 
-from tests.protocol._docs import base_doc, in_order
-from tests.protocol._env import ROT_FIXTURE_RELPATH
+from tests.protocol._docs import UNWRITTEN, aggregation, base_doc, in_order, saved, term
+from tests.protocol._env import ROT_FIXTURE_RELPATH, steps_of
 from tests.protocol.test_validation_rules import expect_rule, parse_and_validate
+
 
 pytestmark = pytest.mark.unit
 
@@ -135,6 +138,10 @@ def test_rule_6_affine_matrix_may_not_be_a_read():
 # --------------------------------------------------------------------------- #
 
 
+#: The fit's one aggregation: cross-entropy of the patched logits on ``label``.
+CE = aggregation("cross_entropy", target="label")
+
+
 def _train_doc():
     doc = base_doc()
     doc["method"]["featurizers"] = {
@@ -142,22 +149,14 @@ def _train_doc():
     }
     doc["method"]["reads"]["v_cf"]["featurizer"] = "rot"
     doc["method"]["writes"]["patch"]["featurizer"] = "rot"
-    doc["method"]["metrics"]["ce"] = {
-        "kind": "cross_entropy",
-        "of": "logits",
-        "target": "label",
-        "token_form": "space_prefixed",
-    }
     doc["method"]["train"] = {
-        "objective": [[1.0, "ce"]],
+        "objective": [[1.0, term("logits", "patched", dict(CE))]],
         "params": ["rot"],
         "optimizer": {"name": "adamw", "lr": 1e-3},
         "steps": {"epochs": 1},
         "batch": {"pairs": 2},
     }
-    doc["method"]["save"].append(
-        {"value": "ce", "model": "patched", "input": "base", "file_path": "ce.json"}
-    )
+    doc["method"]["save"].append(saved("logits", "patched", "ce.json", dict(CE)))
     doc["method"]["save"].append(
         {"value": "rot", "site": "tgt", "file_path": "rot.safetensors"}
     )
@@ -167,18 +166,42 @@ def _train_doc():
 @pytest.mark.parametrize(
     "mutate",
     [
-        lambda d: d["method"]["train"].__setitem__("objective", [[1.0, "ghost"]]),
+        lambda d: d["method"]["train"].__setitem__(
+            "objective",
+            [
+                [
+                    1.0,
+                    {
+                        "read": "ghost",
+                        "model": "patched",
+                        "aggregation": {
+                            "kind": "cross_entropy",
+                            "target": "label",
+                        },
+                    },
+                ]
+            ],
+        ),
         lambda d: d["method"]["train"].__setitem__("params", ["ghost"]),
         lambda d: d["method"]["train"].__setitem__(
             "eval",
             {
                 "every": {"epochs": 1},
                 "split": "weekdays/data#test",
-                "metrics": ["ghost"],
+                "aggregations": {
+                    "ghost": {
+                        "read": "ghost",
+                        "model": "patched",
+                        "aggregation": {
+                            "kind": "cross_entropy",
+                            "target": "label",
+                        },
+                    }
+                },
             },
         ),
         lambda d: d["method"]["train"].__setitem__(
-            "early_stop", {"metric": "ghost", "patience": 1, "mode": "max"}
+            "early_stop", {"on": "ghost", "patience": 1, "mode": "max"}
         ),
         lambda d: d["method"]["train"].__setitem__(
             "anneal", {"ghost.theta.temperature": [1, 0, 0.5]}
@@ -205,7 +228,6 @@ def test_rule_4_train_reference_checks(mutate):
 def test_rule_7_im_input_must_be_a_role():
     doc = base_doc()
     doc["method"]["intervened_models"]["patched"]["input"] = "counterfactuals"
-    doc["method"]["reads"]["logits"]["input"] = "counterfactuals"
     with pytest.raises(ValidationError) as err:
         parse_and_validate(doc)
     assert err.value.rule in (5, 7)
@@ -228,12 +250,7 @@ def test_rule_4_im_unknown_write():
 def test_rule_10_saving_a_write_is_not_saveable_not_undeclared():
     doc = base_doc()
     doc["method"]["save"].append(
-        {
-            "value": "patch",
-            "model": "patched",
-            "input": "base",
-            "file_path": "p.json",
-        }
+        {"value": "patch", "site": "tgt", "file_path": "p.json"}
     )
     err = expect_rule(10, doc)
     assert "not saveable" in str(err)
@@ -245,14 +262,7 @@ def test_rule_10_duplicate_file_path():
     # be a rule-4 error of its own, and the duplicate-path check is the first
     # thing _check_save runs, which is what this pins
     doc = base_doc()
-    doc["method"]["save"].append(
-        {
-            "value": "v_cf",
-            "model": "original",
-            "input": "counterfactual",
-            "file_path": "ld.json",
-        }
-    )
+    doc["method"]["save"].append(saved("v_cf", UNWRITTEN, "ld.json"))
     expect_rule(10, doc)
 
 
@@ -264,14 +274,16 @@ def test_rule_10_wrong_extension():
 
 def test_rule_10_trained_featurizer_must_be_saved():
     doc = _train_doc()
-    doc["method"]["save"] = [e for e in doc["method"]["save"] if e["value"] != "rot"]
+    doc["method"]["save"] = [
+        e for e in doc["method"]["save"] if e.get("value") != "rot"
+    ]
     expect_rule(10, doc)
 
 
 def test_rule_10_featurizer_site_cross_checked():
     doc = _train_doc()
     for entry in doc["method"]["save"]:
-        if entry["value"] == "rot":
+        if entry.get("value") == "rot":
             entry["site"] = "lm_head"
     expect_rule(10, doc)
 
@@ -301,18 +313,21 @@ def test_rule_11_dead_param():
 
 def test_rule_11_unread_intervened_model():
     doc = base_doc()
-    doc["method"]["reads"]["v2"] = {
-        "site": "tgt",
-        "pos": 0,
-        "model": "original",
+    doc["method"]["reads"]["v2"] = {"site": "tgt", "pos": 0}
+    doc["method"]["intervened_models"]["original_base"] = {
         "input": "base",
+        "reads": ["v2"],
     }
     doc["method"]["writes"]["patch2"] = {"site": "tgt", "pos": 0, "do": {"swap": "v2"}}
     doc["method"]["intervened_models"]["ghosted"] = {
         "input": "base",
         "writes": ["patch2"],
     }
-    expect_rule(11, doc)
+    # a model nobody reads runs a forward nobody observes: refused at parse
+    # under protocol 4 (§2.9), before the sink rule is reached
+    with pytest.raises(ParseError) as err:
+        parse_and_validate(doc)
+    assert err.value.code == "P2" and "reads" in str(err.value)
 
 
 # --------------------------------------------------------------------------- #
@@ -341,34 +356,34 @@ def test_rule_12_loaded_param_in_train_params():
 def test_artifact_ref_inside_sweep_values_resolves(env):
     doc = base_doc()
     doc["method"]["sites"]["tgt"]["layers"] = {
-        "sweep": [{"artifact": "weekdays/llama31_8b/locate", "key": "best_layer"}, 3]
+        "sweep": [{"artifact": "weekdays/qwen3_8b/locate", "key": "best_layer"}, 3]
     }
-    doc["model"] = {"key": "meta-llama/Llama-3.1-8B", "revision": "main"}
-    loaded = load(in_order(doc), env)
+    doc["model"] = {"key": "Qwen/Qwen3-8B", "revision": "main"}
+    loaded = compile_protocol(in_order(doc), env=env)
     assert [
-        p.raw["method"]["sites"]["tgt"]["layers"] for p in loaded.expansion.points
+        p.raw["method"]["sites"]["tgt"]["layers"] for p in steps_of(loaded, env).points
     ] == [18, 3]
 
 
 def test_malformed_artifact_ref_refuses(env):
     doc = base_doc()
-    doc["method"]["sites"]["tgt"]["layers"] = {"artifact": "weekdays/llama31_8b/locate"}
+    doc["method"]["sites"]["tgt"]["layers"] = {"artifact": "weekdays/qwen3_8b/locate"}
     with pytest.raises(ValidationError) as err:
-        load(in_order(doc), env)
+        compile_protocol(in_order(doc), env=env)
     assert err.value.rule == 15 and "malformed" in str(err.value)
 
 
 def test_nested_artifact_ref_resolves(env, artifacts_root: Path):
     (artifacts_root / "indirect.json").write_text(
         json.dumps(
-            {"hop": {"artifact": "weekdays/llama31_8b/locate", "key": "best_layer"}}
+            {"hop": {"artifact": "weekdays/qwen3_8b/locate", "key": "best_layer"}}
         )
     )
     doc = base_doc()
-    doc["model"] = {"key": "meta-llama/Llama-3.1-8B", "revision": "main"}
+    doc["model"] = {"key": "Qwen/Qwen3-8B", "revision": "main"}
     doc["method"]["sites"]["tgt"]["layers"] = {"artifact": "indirect", "key": "hop"}
-    loaded = load(in_order(doc), env)
-    assert loaded.expansion.points[0].raw["method"]["sites"]["tgt"]["layers"] == 18
+    loaded = compile_protocol(in_order(doc), env=env)
+    assert steps_of(loaded, env).points[0].raw["method"]["sites"]["tgt"]["layers"] == 18
 
 
 def test_artifact_ref_cycle_refuses(env, artifacts_root: Path):
@@ -378,7 +393,7 @@ def test_artifact_ref_cycle_refuses(env, artifacts_root: Path):
     doc = base_doc()
     doc["method"]["sites"]["tgt"]["layers"] = {"artifact": "loop", "key": "self"}
     with pytest.raises(ValidationError) as err:
-        load(in_order(doc), env)
+        compile_protocol(in_order(doc), env=env)
     assert err.value.rule == 15 and "cycle" in str(err.value)
 
 
@@ -389,7 +404,7 @@ def test_artifact_injected_nonfinite_refuses(env, artifacts_root: Path):
         "add_scaled": {"op": "v_cf", "alpha": {"artifact": "bad", "key": "alpha"}}
     }
     with pytest.raises(ProtocolError):
-        load(in_order(doc), env)
+        compile_protocol(in_order(doc), env=env)
 
 
 # --------------------------------------------------------------------------- #
@@ -444,15 +459,16 @@ def test_im_write_order_inside_sweep_digests_identically(env):
 
 def test_params_content_digest_stamped(env):
     doc = base_doc()
-    doc["model"] = {"key": "meta-llama/Llama-3.1-8B", "revision": "main"}
+    doc["model"] = {"key": "Qwen/Qwen3-8B", "revision": "main"}
     doc["method"]["params"] = {"vec": {"file_path": ROT_FIXTURE_RELPATH}}
     doc["method"]["writes"]["patch"]["do"] = {"add_scaled": {"op": "vec", "alpha": 1.0}}
     del doc["method"]["reads"]["v_cf"]
+    del doc["method"]["intervened_models"][UNWRITTEN]
     del doc["data"]["counterfactual"]
     doc["method"]["reads"]["logits"]["dims"] = None
     doc["method"]["reads"]["logits"].pop("dims")
-    loaded = load(in_order(doc), env)
-    stamped = loaded.canonical_document["method"]["params"]["vec"]
+    loaded = compile_protocol(in_order(doc), env=env)
+    stamped = loaded.canonical["method"]["params"]["vec"]
     assert len(stamped["content_digest"]) == 64
 
 
@@ -461,9 +477,10 @@ def test_params_missing_file_refuses(env):
     doc["method"]["params"] = {"vec": {"file_path": "nowhere.safetensors"}}
     doc["method"]["writes"]["patch"]["do"] = {"add_scaled": {"op": "vec", "alpha": 1.0}}
     del doc["method"]["reads"]["v_cf"]
+    del doc["method"]["intervened_models"][UNWRITTEN]
     del doc["data"]["counterfactual"]
     with pytest.raises(ValidationError) as err:
-        load(in_order(doc), env)
+        compile_protocol(in_order(doc), env=env)
     assert err.value.rule == 15
 
 
@@ -478,13 +495,13 @@ def test_counterfactual_data_identity_reaches_the_patched_group():
     two = plan_point(doc, data_identity={"base": "d", "counterfactual": "s2"})
     patched_one = next(g for g in one.groups if g.model == "patched")
     patched_two = next(g for g in two.groups if g.model == "patched")
-    assert patched_one.digest != patched_two.digest
+    assert patched_one.key != patched_two.key
 
 
 def test_model_identity_reaches_every_group():
     a = base_doc()
     b = base_doc()
-    b["model"]["key"] = "meta-llama/Llama-3.1-8B"
+    b["model"]["key"] = "Qwen/Qwen3-8B"
     plans = [
         plan_point(
             parse_document(in_order(d)),
@@ -492,12 +509,10 @@ def test_model_identity_reaches_every_group():
         )
         for d in (a, b)
     ]
-    assert {g.digest for g in plans[0].groups}.isdisjoint(
-        g.digest for g in plans[1].groups
-    )
+    assert {g.key for g in plans[0].groups}.isdisjoint(g.key for g in plans[1].groups)
 
 
-def test_param_operand_spec_reaches_the_group_digest():
+def test_param_operand_spec_reaches_the_group_key():
     def with_param(path: str):
         doc = base_doc()
         doc["method"]["params"] = {"vec": {"file_path": path}}
@@ -505,13 +520,14 @@ def test_param_operand_spec_reaches_the_group_digest():
             "add_scaled": {"op": "vec", "alpha": 1.0}
         }
         del doc["method"]["reads"]["v_cf"]
+        del doc["method"]["intervened_models"][UNWRITTEN]
         del doc["data"]["counterfactual"]
         return parse_document(in_order(doc))
 
     one = plan_point(with_param("a.safetensors"), data_identity={"base": "d"})
     two = plan_point(with_param("b.safetensors"), data_identity={"base": "d"})
     patched = lambda plan: next(g for g in plan.groups if g.model == "patched")  # noqa: E731
-    assert patched(one).digest != patched(two).digest
+    assert patched(one).key != patched(two).key
 
 
 # --------------------------------------------------------------------------- #

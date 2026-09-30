@@ -23,8 +23,8 @@ the same rows the engines' own declarations are generated from:
 📐 The two single-engine sets are not two blind spots: measured on the fixture,
 they name the *same physical tensors* through the two different mechanisms, and
 the registry declares how each pair lines up (``registry.BACKEND_PAIRS``, read
-here as :data:`DELTA_FAMILY_PAIRS`). The other eight DeltaNet tensors carry one
-name served by both engines (:data:`SHARED_LINEAR_ONLY`), which is
+here as `DELTA_FAMILY_PAIRS`). The other eight DeltaNet tensors carry one
+name served by both engines (`SHARED_LINEAR_ONLY`), which is
 ordinary cross-engine agreement for 30 of the target's 40 layers.
 
 ``mlp_activation`` and ``mlp_neuron_output`` are absent from the A3B.
@@ -38,7 +38,7 @@ from typing import Any
 
 import torch
 
-from causalab.protocol.errors import ValidationError
+from causalab.protocol.rules.errors import ValidationError
 from causalab.protocol.registry import (
     BACKEND_PAIRS,
     CAPABILITIES,
@@ -129,10 +129,10 @@ SHARED_ANY_STREAM: tuple[str, ...] = tuple(
 SHARED_FULL_ONLY: tuple[str, ...] = _rows(served=_BOTH, stream="full_attention")
 
 #: Both engines, but only at a Gated DeltaNet layer — 30 of the target's 40:
-#: the DeltaNet module boundaries and kernel boundary under their one name
-#: which the reference engine reaches by hooks and kernel-global swaps and the
-#: nnsight engine by envoys and `.source` lines. Same document, same numbers —
-#: a black-box test, run as ordinary parity.
+#: the DeltaNet module boundaries and kernel boundary under their one name,
+#: which the reference engine reaches by hooks and kernel-global swaps
+#: and the nnsight engine by envoys and `.source` lines. Same document, same
+#: numbers — a black-box test of the shared name, run as ordinary parity.
 SHARED_LINEAR_ONLY: tuple[str, ...] = _rows(served=_BOTH, stream="linear_attention")
 
 #: The reference engine's Gated DeltaNet interior — linear-attention layers only.
@@ -177,10 +177,10 @@ def default_pos(component: str) -> object:
 #: The DeltaNet tensors the two engines reach by **different** captures — the
 #: typed backend pairs of the registry (``registry.BACKEND_PAIRS``), read here
 #: rather than declared: ``(hooks spelling, nnsight spelling, relation)`` for
-#: every pair that is *not* an alias. 📐 Measured on ``tiny-random/qwen3.5-moe``;
-#: the relations and the chunk length are the registry's rows.
+#: every pair that is *not* an alias. 📐 Measured on ``tiny-random/qwen3.5-moe``
+#: (2026-08-28); the relations and the chunk length are the registry's rows.
 #: The eight ``identical`` pairs are one name each and are
-#: exercised as ordinary shared components (:data:`SHARED_LINEAR_ONLY`).
+#: exercised as ordinary shared components (`SHARED_LINEAR_ONLY`).
 DELTA_FAMILY_PAIRS: tuple[tuple[str, str, str], ...] = tuple(
     (pair.hooks, pair.nnsight, pair.relation)
     for pair in BACKEND_PAIRS
@@ -213,22 +213,14 @@ def read_doc(
     if head is not None:
         site["head"] = head
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": site},
-            "reads": {
-                "r": {"site": "tap", "pos": pos, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": pos}},
+            "save": [{"read": "r", "model": "original", "file_path": "a.safetensors"}],
         },
     }
 
@@ -242,34 +234,25 @@ def interchange_doc(
     if layer is not None:
         site["layers"] = layer
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "sites": {"tap": site, "head": {"component": "lm_head"}},
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": pos,
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "logits": {
-                    "site": "head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": pos},
+                "logits": {"site": "head", "pos": -1},
             },
             "writes": {"patch": {"site": "tap", "pos": pos, "do": {"swap": "v_cf"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": "logits",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "l.safetensors",
-                }
+                {"read": "logits", "model": "patched", "file_path": "l.safetensors"}
             ],
         },
     }
@@ -278,7 +261,7 @@ def interchange_doc(
 def make_executor(executor_cls, doc_raw, bundle, *, rows, with_cf: bool):
     """The same document driven through either engine's executor."""
     from causalab.protocol.schema import parse_document
-    from causalab.protocol.validate import validate_document
+    from causalab.protocol.rules.document import validate_document
 
     from tests.protocol._docs import in_order
 

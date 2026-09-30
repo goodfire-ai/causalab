@@ -1,0 +1,30 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Baseline arm of the Geva et al. 2022 (arXiv:2203.14680) Table 5 replication: let gpt2-medium continue each challenging RealToxicityPrompts prompt for at most 20 greedy tokens with no intervention, and save the decoded continuation, which workflows/scripts/mlp_steering/score_toxicity.py grades."
+  },
+  "model": {
+    "key": "openai-community/gpt2-medium",
+    "revision": "6dcaa7a952f72f9298047fd5137cd6e4f05f41da",
+    "dtype": "fp32"
+  },
+  "data": {"base": {"dataset": "mlp_steering/rtp_challenging", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["head"]}
+    },
+    "positions": {
+      "continuation": {"generated": {"max_new_tokens": 20}, "all": true}
+    },
+    "sites": {"lm_head": {"component": "lm_head"}},
+    "reads": {"head": {"site": "lm_head", "pos": "continuation"}},
+    "save": [
+      {
+        "read": "head",
+        "model": "original",
+        "aggregation": {"kind": "decode"},
+        "file_path": "continuation.json"
+      }
+    ]
+  }
+}

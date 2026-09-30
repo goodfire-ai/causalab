@@ -1,4 +1,4 @@
-"""Capture (or refresh) the chat-coherent drift pins on a cuda device.
+"""Capture (or refresh) the chat-coherent drift pins on the canonical GPU.
 
     uv run python tests/golden/drift/update_drift_goldens.py \\
         --device cuda --i-have-reviewed-the-diff
@@ -45,7 +45,7 @@ from tests.golden.drift._extract import (  # noqa: E402
 def _document_dtype() -> str:
     """The dtype the drift documents declare — they agree, and the pins
     record it as the precision the values were measured at."""
-    from causalab.protocol.loader import load_text
+    from causalab.io.sources import load_text
     from causalab.protocol.schema import MODEL_DTYPE_DEFAULT
 
     from tests.golden._env import GOLDEN_PROTOCOLS

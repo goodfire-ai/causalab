@@ -51,7 +51,7 @@ TORCH_TO_HEADER, HEADER_TO_TORCH = _build()
 
 
 def header_dtype(dtype: torch.dtype) -> str:
-    """The header's name for a torch dtype, or :class:`FormatError` naming it."""
+    """The header's name for a torch dtype, or [`FormatError`][] naming it."""
     try:
         return TORCH_TO_HEADER[dtype]
     except KeyError:
@@ -62,7 +62,7 @@ def header_dtype(dtype: torch.dtype) -> str:
 
 
 def torch_dtype(name: str) -> torch.dtype:
-    """The torch dtype for a header name, or :class:`FormatError` naming it."""
+    """The torch dtype for a header name, or [`FormatError`][] naming it."""
     try:
         return HEADER_TO_TORCH[name]
     except KeyError:

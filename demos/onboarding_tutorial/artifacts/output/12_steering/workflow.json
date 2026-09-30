@@ -1,0 +1,408 @@
+{
+  "output_dir": "12_steering",
+  "steps": {
+    "ablate": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "3d565ecbc4f3527b32dd6cc93f327b1cd8822c3375ed987dbcfce7658072f950",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_ablate.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "3d565ecbc4f3527b32dd6cc93f327b1cd8822c3375ed987dbcfce7658072f950",
+      "points": 28,
+      "point_digests": [
+        "eb2e64bce3908a7890de93193983c2f1b5a531306addb5e972292d2ce6972fbb",
+        "592f5c1ff99748964bf6054c15cfa504cf5f49beeb765d5ffd55ca4b5214a32a",
+        "30ea1db382b10a8dc55a90340d80f7e3c7ce444b45c6551c7f4fa2c848b9f96b",
+        "7d150d3967f14a6b8f52ba0b7876154207224c4226a55dfe3701f17f186cf716",
+        "23b328abaf323057ab379ad93d570c81d3396cefccf78c04fff52bf3ee68133d",
+        "54634083a14f4a73950dc004775784a666c88401c0fbd2c2f5306456d538e632",
+        "1ba5d5d8c450fa12531604ea5356a1558add81726ac0bb0860f6d17ba3a4f252",
+        "6214c95d366269e10478227830e9aaf86ac29ed3205cc52e1ea0ab64d5486bd5",
+        "847fb599482e351b31ebe6423fd1f5afbf0c395432c57f471986264665d9cc28",
+        "e9e4953518b9d89f1779456cc478bf6e92fbbf5993f317b3a1a1a0bc20733b0f",
+        "b0fc5772586c4b45735c94e97c40e2691166d0a42bcdf063045b3ff73f899365",
+        "c255072b91d2252a7718b0f26400d140694310527797ee94b8ab51545d4fb797",
+        "cac64896ca38eb37d6cb41be0835bdb543439805d7f6adf8983a865383b95b10",
+        "c9c51aadcccaa1584c05d839dbd346ed5dacce9edbf5aad9f622ad3ef4333f7f",
+        "b75a517fbe489237da1e6de725ce4cbb8520d7514848728a88bf31c0e8b86494",
+        "a3900af8227436b9e2083a7a06b99e8f75e634a9601a3cdace242279dd7e3c46",
+        "b447a999f64ebb2041b0ff052fdcae6231ef3b9870851861e6b3c4644073f09e",
+        "fcf98b0d2d1221d3b5fa2b1c3d739706974cfcd2aff1130293356649a3f98058",
+        "6121c4df8d24e561bfed2f0a231696b4df19b3a104705d6d13014cec198c0a85",
+        "49ab614006ea96a0b6e565c1432cfecd69658c27bf0792378fa44e15329488b4",
+        "939103496af013acb66d75746161bbec0e4cbc8ba6294adc0ec04dc2880dcbd9",
+        "1121ed8638050d794f42c4d550999b18d5702fb805c58144336c5ab3e887509c",
+        "ac390ecf0e4b0ec9ee877f2abcf691f80c8fdb9108601364e4156d751ec109fa",
+        "d92bea5707f6d87014288ae52e9066b4d1707bba473587f840faa36efd3ce5a0",
+        "d8d2b8e25c0e7141b442159992869e67768a036ae84bc85f26e40abfa23dde17",
+        "c2145d7d0753462bcf3f607ea905ddaf97f8b66ee7001aeb3e5380b1e85b60a6",
+        "8a9a68880dd64d31c72c88b5b7ff414cc35963da81f937c29a60d7f2a6ad12c1",
+        "bfb727ed55c472d6416f9a61f2ecdd3098dc72b1dfcd6ecf5219ed44743400be"
+      ],
+      "coords": [
+        {
+          "sites.target.layers": 0
+        },
+        {
+          "sites.target.layers": 1
+        },
+        {
+          "sites.target.layers": 2
+        },
+        {
+          "sites.target.layers": 3
+        },
+        {
+          "sites.target.layers": 4
+        },
+        {
+          "sites.target.layers": 5
+        },
+        {
+          "sites.target.layers": 6
+        },
+        {
+          "sites.target.layers": 7
+        },
+        {
+          "sites.target.layers": 8
+        },
+        {
+          "sites.target.layers": 9
+        },
+        {
+          "sites.target.layers": 10
+        },
+        {
+          "sites.target.layers": 11
+        },
+        {
+          "sites.target.layers": 12
+        },
+        {
+          "sites.target.layers": 13
+        },
+        {
+          "sites.target.layers": 14
+        },
+        {
+          "sites.target.layers": 15
+        },
+        {
+          "sites.target.layers": 16
+        },
+        {
+          "sites.target.layers": 17
+        },
+        {
+          "sites.target.layers": 18
+        },
+        {
+          "sites.target.layers": 19
+        },
+        {
+          "sites.target.layers": 20
+        },
+        {
+          "sites.target.layers": 21
+        },
+        {
+          "sites.target.layers": 22
+        },
+        {
+          "sites.target.layers": 23
+        },
+        {
+          "sites.target.layers": 24
+        },
+        {
+          "sites.target.layers": 25
+        },
+        {
+          "sites.target.layers": 26
+        },
+        {
+          "sites.target.layers": 27
+        }
+      ],
+      "axes": [
+        "sites.target.layers"
+      ],
+      "files": [
+        "accuracy.json",
+        "accuracy_clean.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 29,
+      "digests": {
+        "accuracy.json": "1fcb2466953f430a2460c3b0e99327fdc839b3a91dd00ba9efe082e0dd85201e",
+        "accuracy_clean.json": "278b4f8abab390a688969460c0b5f597a7dc55c78cdc6c1b6c41b471decfbce4"
+      },
+      "checks": {
+        "accuracy.json": "json",
+        "accuracy_clean.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "ablation_curve": {
+      "type": "script",
+      "status": "completed",
+      "identity": "a2d2fc8a687758d8b0d4caec40635c496b913317ba6b6ce36b400c8bd1989c81",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.io.plots.workflow_figures",
+      "script_sha256": "0de1b7ca714ef474db3ab9f3c7a879e000d5d314d214bea4221e88a361cd81a4",
+      "digest": "a2d2fc8a687758d8b0d4caec40635c496b913317ba6b6ce36b400c8bd1989c81",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "ablate/accuracy.json",
+        "plot": "lines",
+        "x": "sites.target.layers"
+      },
+      "input_digests": {
+        "table": "1fcb2466953f430a2460c3b0e99327fdc839b3a91dd00ba9efe082e0dd85201e"
+      },
+      "axes": [],
+      "files": [
+        "12_steering_ablation.json",
+        "12_steering_ablation.png"
+      ],
+      "digests": {
+        "12_steering_ablation.json": "2abd335e71cfe79b087013f4003d8b16f63c3ccc18d8c9b76fc190f7108e4708",
+        "12_steering_ablation.png": "78ae26d9ec8d8ad93f45bb1bca5e86787564b914f0dc8156606062dd1628353b"
+      },
+      "checks": {
+        "12_steering_ablation.json": "json",
+        "12_steering_ablation.png": "png-signature"
+      },
+      "disposition": "accepted"
+    },
+    "harvest": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "635c032dcfed766909899bafe8ac644d5b9f93a5e38e1176ba900108b905b0b2",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_contrast_harvest.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "635c032dcfed766909899bafe8ac644d5b9f93a5e38e1176ba900108b905b0b2",
+      "points": 1,
+      "point_digests": [
+        "635c032dcfed766909899bafe8ac644d5b9f93a5e38e1176ba900108b905b0b2"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "acts_base.safetensors",
+        "acts_cf.safetensors"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "acts_base.safetensors": "112564266eb0b3e1954c5b1c090b1a2f20b534380c607f79b9d113ce38be7953",
+        "acts_cf.safetensors": "6b833766564901a4d06a8e0975a19ebffa33b43171414a31acddc8c9874b8488"
+      },
+      "checks": {
+        "acts_base.safetensors": "safetensors-header",
+        "acts_cf.safetensors": "safetensors-header"
+      },
+      "disposition": "accepted"
+    },
+    "direction": {
+      "type": "script",
+      "status": "completed",
+      "identity": "74e0a041ff3afd9f1dcb0dedb8484806a4119139a51e0f4ed01895c23d1b2564",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.analysis.harvest_difference",
+      "script_sha256": "55c5f8ec26ab83f5387a4f9537ef0797fbbb3ba3fc8de3f5f8e9b5c4491470f5",
+      "digest": "74e0a041ff3afd9f1dcb0dedb8484806a4119139a51e0f4ed01895c23d1b2564",
+      "is_deterministic": true,
+      "inputs": {
+        "positive": "harvest/acts_cf.safetensors",
+        "negative": "harvest/acts_base.safetensors",
+        "normalize": false
+      },
+      "input_digests": {
+        "positive": "6b833766564901a4d06a8e0975a19ebffa33b43171414a31acddc8c9874b8488",
+        "negative": "112564266eb0b3e1954c5b1c090b1a2f20b534380c607f79b9d113ce38be7953"
+      },
+      "axes": [],
+      "files": [
+        "direction.safetensors",
+        "stats.json"
+      ],
+      "digests": {
+        "direction.safetensors": "9e5a5fc9efcd6be683b79aaab931ba2b9b0b63132a0808f2e786f988e4a6eac8",
+        "stats.json": "10a4e2322862c9329cf9c2a25b55ba6c826bb3ebfb9e4ee8117cef10819aaddf"
+      },
+      "checks": {
+        "direction.safetensors": "safetensors-header",
+        "stats.json": "json-table"
+      },
+      "disposition": "accepted"
+    },
+    "steer": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "78f4ced467b3ac02c2d38c59ef70c97587646f4f02d67ce226a13308f75a7f57",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_steer.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "78f4ced467b3ac02c2d38c59ef70c97587646f4f02d67ce226a13308f75a7f57",
+      "points": 11,
+      "point_digests": [
+        "9da3e2ca322935557e9a5c5eecbfa65d63519ab5354eb6a7643e97aa64cf1c82",
+        "37c3f71df10bfd56db9bb7cef9f3b4829ab73d6e4d485796dd8b732db0a6d43e",
+        "3674cfd88498584362d9064aa9670e33758da74884d8f17897e48df2dc95bc4f",
+        "edd11289529e34b1e85cc16c821e6f66b102a91f63c18f2b41b2e5f6be246483",
+        "ef373a7f79f03c0ec93c610d30160aa3e0815eb23c079ad58f84228bfc7c727b",
+        "be18c54b8bf26bae701e39e0ff7c7b07b917ad923374073f4460554e2287d77b",
+        "ca97d602663e0f74dc0b87c83f77cb1c67425178a6c6750a8eb9b027f58bb2bb",
+        "9b5af79c0e0200716afbc3c8480399ca3af19d8924ef2ae0851a5dae2991f5c4",
+        "ff367e2677ffffda332faf3e756801b22515fa1d4734a9d6eb040e70c757ab75",
+        "f3abdef8774b976b91fa5993a16afa220e31f60e93db242543fad5e068bcec05",
+        "c1ea104da2f7c07bc52d79b6d64b191664cb3b00e8ae3bf16bb9f87da15fb93e"
+      ],
+      "coords": [
+        {
+          "writes.push.do.add_scaled.alpha": 0.0
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 0.5
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 1.0
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 1.5
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 2.0
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 3.0
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 4.0
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 6.0
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 8.0
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 12.0
+        },
+        {
+          "writes.push.do.add_scaled.alpha": 16.0
+        }
+      ],
+      "axes": [
+        "writes.push.do.add_scaled.alpha"
+      ],
+      "files": [
+        "accuracy.json",
+        "flipped.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 11,
+      "digests": {
+        "accuracy.json": "d5f15422854178f2b01caaaa6577c391ea74886cb4444bda7a7132ba39eea00b",
+        "flipped.json": "2af5207890d4fb53ba49c6116f6cad0f1b442d61a4a80880c75c496c1940bb89"
+      },
+      "checks": {
+        "accuracy.json": "json",
+        "flipped.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "steer_curve": {
+      "type": "script",
+      "status": "completed",
+      "identity": "caea6e3a8a529d9d0267b2938a4ade0f2c46649d77e6bda9c4d74131bc2cb3a6",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.io.plots.workflow_figures",
+      "script_sha256": "0de1b7ca714ef474db3ab9f3c7a879e000d5d314d214bea4221e88a361cd81a4",
+      "digest": "caea6e3a8a529d9d0267b2938a4ade0f2c46649d77e6bda9c4d74131bc2cb3a6",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "steer/flipped.json",
+        "plot": "lines",
+        "x": "writes.push.do.add_scaled.alpha"
+      },
+      "input_digests": {
+        "table": "2af5207890d4fb53ba49c6116f6cad0f1b442d61a4a80880c75c496c1940bb89"
+      },
+      "axes": [],
+      "files": [
+        "12_steering_steer.json",
+        "12_steering_steer.png"
+      ],
+      "digests": {
+        "12_steering_steer.json": "f5f9ef02d5231f5c6ecef0fb118531be5e79387fd1055b7f068226d2c1012de7",
+        "12_steering_steer.png": "60bfd72c52642615b78513e55a8588f34473092aa199eb32b776aad71338b14b"
+      },
+      "checks": {
+        "12_steering_steer.json": "json",
+        "12_steering_steer.png": "png-signature"
+      },
+      "disposition": "accepted"
+    }
+  }
+}

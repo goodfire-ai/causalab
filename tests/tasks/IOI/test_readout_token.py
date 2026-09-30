@@ -1,40 +1,48 @@
 """Regression guard for the IOI logit-diff readout token (#1).
 
 The path-patching / IOI metrics score a *single* vocab row per answer — the
-correct or distractor name's token id, resolved by
-:func:`causalab.methods.metric.single_token_id`. At the readout position the IOI
-prompt ends ``"... gave a drink to"``, so GPT-2 emits the **leading-space** token
+correct or distractor name's token id. At the readout position the IOI prompt
+ends ``"... gave a drink to"``, so GPT-2 emits the **leading-space** token
 ``" Mary"`` (id 5335), a different BPE id than the bare ``"Mary"`` for ~half of
 the name vocabulary. Reading the bare id silently scores the wrong row and
 contaminates every direct-effect number.
 
-This test pins ``single_token_id`` to the emitted (space-prefixed) id for every
-IOI name. With the pre-fix ordering (bare form first) it fails for 53 of the 99
-names — exactly the bug it guards.
+An answer string is tokenized as written (§2.10), so the guard has two halves:
+the IOI table writes its answers with the leading space
+(``causal_models.raw_output`` is ``" " + IO``), and the resolver returns
+exactly that row for exactly that string, for every IOI name.
 """
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
-from causalab.neural.shared.metrics import column_token_id
-from causalab.tasks.IOI.causal_models import NAMES
+from causalab.protocol.answers import column_token_id
+from causalab.tasks import TASKS_ROOT
 
 pytestmark = pytest.mark.numerical_unit
 
 
-def test_single_token_id_returns_emitted_leading_space_id(gpt2_pipeline) -> None:
+def test_the_table_answer_resolves_to_the_emitted_leading_space_id(
+    gpt2_pipeline,
+) -> None:
     tokenizer = gpt2_pipeline.tokenizer
+    rows = json.loads((TASKS_ROOT / "IOI" / "data" / "default.json").read_text())
+    answers = sorted({row[c] for row in rows for c in ("base_answer", "cf_answer")})
+    assert answers, "the shipped IOI table carries no answers"
     mismatched: list[tuple[str, int, int]] = []
-    for name in NAMES:
-        emitted = tokenizer.encode(" " + name.strip(), add_special_tokens=False)
-        assert len(emitted) == 1, f"{name!r} is not single-token with a leading space"
-        resolved = column_token_id(gpt2_pipeline.tokenizer, name)
+    for answer in answers:
+        assert answer.startswith(" "), f"{answer!r}: the table's form moved"
+        emitted = tokenizer.encode(answer, add_special_tokens=False)
+        assert len(emitted) == 1, f"{answer!r} is not single-token"
+        resolved = column_token_id(tokenizer, answer)
         if resolved != emitted[0]:
-            mismatched.append((name, resolved, emitted[0]))
+            mismatched.append((answer, resolved, emitted[0]))
 
     assert not mismatched, (
-        "single_token_id must return the emitted (leading-space) id for IOI "
-        f"names; {len(mismatched)}/{len(NAMES)} read the wrong vocab row, e.g. "
-        f"{mismatched[:5]}"
+        "column_token_id must return the emitted (leading-space) id for the IOI "
+        f"table's answers; {len(mismatched)}/{len(answers)} read the wrong vocab "
+        f"row, e.g. {mismatched[:5]}"
     )

@@ -1,29 +1,14 @@
-"""An LRU cache keyed on a call's *bound* arguments, not on its spelling.
+"""Cache calls by bound argument values.
 
-``functools.lru_cache`` hashes the call exactly as it was written: ``f("k")``,
-``f(key="k")`` and ``f("k", revision="main")`` are three keys even when the
-function binds all three to the same arguments. For a function whose result is
-expensive and identity-bearing — a model loader, whose bundle is held by every
-executor of a run — that means two spellings of one realization occupy two
-slots of a small cache and construct the model twice.
+``normalized_cache`` binds a call to its signature, applies defaults, and
+orders values by parameter. Equivalent positional and keyword calls share
+one entry. Optional ``keys`` functions produce hashable cache keys while
+the wrapped function receives the original values.
 
-:func:`normalized_cache` binds each call against the function's signature,
-applies the defaults, and keys the cache on the resulting argument values in
-signature order. A parameter whose value is not hashable, or whose equal values
-are not equal as Python objects, names a ``keys`` function that maps it to the
-canonical hashable form used *for the key only*; the function itself receives
-the arguments exactly as the caller passed them. The decorated object keeps
-:func:`functools.lru_cache`'s public surface — ``cache_info()``,
-``cache_clear()``, ``__wrapped__`` — and adds :meth:`NormalizedCache.renewed`,
-an empty cache over the same function for a test that wants isolation.
-
-One function of the spelling problem is enough: the key is built once per call
-from the signature, so a caller cannot reintroduce a second key for one
-realization by rewriting the call. A ``**kwargs`` parameter is refused at
-decoration time — it binds to a ``dict``, which is not hashable and has no
-canonical order — and so is a ``keys`` entry that names no parameter. The
-cache is a plain callable, not a descriptor: it decorates module-level
-functions, not methods (``self`` would never bind).
+The wrapper exposes ``cache_info``, ``cache_clear``, and ``__wrapped__``.
+``renewed`` creates an empty cache over the same function. Decoration
+rejects ``**kwargs`` and key functions for unknown parameters. Use this
+callable wrapper for module-level functions.
 """
 
 from __future__ import annotations
@@ -52,7 +37,7 @@ KeyFunction = Callable[[Any], Hashable]
 
 
 class CacheInfo(NamedTuple):
-    """The counters :func:`functools.lru_cache` reports, in its order."""
+    """The counters `functools.lru_cache` reports, in its order."""
 
     hits: int
     misses: int
@@ -65,14 +50,14 @@ def _identity(value: Any) -> Hashable:
 
 
 class NormalizedCache(Generic[P, R]):
-    """The cached callable :func:`normalized_cache` builds.
+    """The cached callable [`normalized_cache`][] builds.
 
     Least-recently-used eviction at ``maxsize`` entries. Two threads that miss
     on the same key at once both call the function, as with
-    :func:`functools.lru_cache`; the later result replaces the earlier one.
+    `functools.lru_cache`; the later result replaces the earlier one.
     """
 
-    #: what :func:`functools.update_wrapper` carries over from the function
+    #: what `functools.update_wrapper` carries over from the function
     __wrapped__: Callable[P, R]
     __name__: str
     __qualname__: str
@@ -167,7 +152,7 @@ def normalized_cache(
     maxsize: int,
     keys: Mapping[str, KeyFunction] | None = None,
 ) -> Callable[[Callable[P, R]], NormalizedCache[P, R]]:
-    """Decorate ``fn`` with a :class:`NormalizedCache` of ``maxsize`` entries.
+    """Decorate ``fn`` with a [`NormalizedCache`][] of ``maxsize`` entries.
 
     ``keys`` maps a parameter name to the function that turns its value into
     the hashable canonical form the key uses; parameters not named are keyed

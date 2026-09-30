@@ -1,7 +1,7 @@
 """Property-tier invariants for the hierarchical_equality task.
 
 The hierarchical_equality (HE) task casts a pure-symbolic ICL puzzle as a
-:class:`~causalab.causal.causal_model.CausalModel` over four input letters
+[`CausalModel`][causalab.causal.model.CausalModel] over four input letters
 ``var_1..var_4`` with mechanisms ``(var_1, var_2) → left_equality``,
 ``(var_3, var_4) → right_equality``, ``(left_equality, right_equality) →
 result_equality → raw_output`` (``"1"``/``"0"``).
@@ -26,13 +26,13 @@ wires them in or deletes them.
 from __future__ import annotations
 
 import random
-
-import pytest
-from hypothesis import HealthCheck, given, settings, strategies as st
-
 from typing import Any, Callable, cast
 
-from causalab.neural.token_positions import LMPipeline, TokenPosition
+import pytest
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+
+from causalab.tasks.token_positions import LMPipeline, TokenPosition
 from causalab.tasks.hierarchical_equality.causal_models import (
     CAUSAL_MODEL,
     TARGET_VARIABLE,
@@ -115,6 +115,7 @@ class TestHierarchicalEqualityStructureProperty:
             "var_2",
             "var_3",
             "var_4",
+            "icl_seed",
         ]
 
     def test_raw_output_parents(self) -> None:
@@ -194,6 +195,7 @@ class TestHierarchicalEqualityMechanismProperty:
         substituted = CAUSAL_MODEL.new_trace(
             {
                 "template": trace["template"],
+                "icl_seed": trace["icl_seed"],
                 "var_1": sigma[trace["var_1"]],
                 "var_2": sigma[trace["var_2"]],
                 "var_3": sigma[trace["var_3"]],
@@ -215,6 +217,7 @@ class TestHierarchicalEqualityMechanismProperty:
         swapped = CAUSAL_MODEL.new_trace(
             {
                 "template": trace["template"],
+                "icl_seed": trace["icl_seed"],
                 "var_1": trace["var_1"],
                 "var_2": trace["var_2"],
                 "var_3": trace["var_4"],
@@ -398,44 +401,44 @@ class TestHierarchicalEqualityTemplatesProperty:
     @_HYPOTHESIS_SETTINGS
     def test_pattern_AABB(self, seed: int) -> None:
         random.seed(seed)
-        v1, v2, v3, v4 = _sample_pattern_values("AABB")
+        v1, v2, v3, v4 = _sample_pattern_values("AABB", random)
         assert v1 == v2 and v3 == v4
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
     @_HYPOTHESIS_SETTINGS
     def test_pattern_ABCD(self, seed: int) -> None:
         random.seed(seed)
-        v1, v2, v3, v4 = _sample_pattern_values("ABCD")
+        v1, v2, v3, v4 = _sample_pattern_values("ABCD", random)
         assert len({v1, v2, v3, v4}) == 4
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
     @_HYPOTHESIS_SETTINGS
     def test_pattern_ABCC(self, seed: int) -> None:
         random.seed(seed)
-        v1, v2, v3, v4 = _sample_pattern_values("ABCC")
+        v1, v2, v3, v4 = _sample_pattern_values("ABCC", random)
         assert v1 != v2 and v3 == v4
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
     @_HYPOTHESIS_SETTINGS
     def test_pattern_AABC(self, seed: int) -> None:
         random.seed(seed)
-        v1, v2, v3, v4 = _sample_pattern_values("AABC")
+        v1, v2, v3, v4 = _sample_pattern_values("AABC", random)
         assert v1 == v2 and v3 != v4
 
     def test_pattern_unknown_raises(self) -> None:
         with pytest.raises(ValueError):
-            _sample_pattern_values("garbage")
+            _sample_pattern_values("garbage", random)
 
     def test_fill_template_minimal_function_suffix(self) -> None:
         """In the shipped ``minimal_function`` mode the prompt ends with the query."""
         random.seed(0)
-        out = fill_template("minimal_function", "A", "B", "C", "D")
+        out = fill_template("minimal_function", "A", "B", "C", "D", seed=0)
         assert out.endswith("f(A,B,C,D)=")
 
     def test_fill_template_minimal_function_icl_line_count(self) -> None:
         """The prompt contains exactly ``NUM_ICL_EXAMPLES`` ICL lines."""
         random.seed(0)
-        out = fill_template("minimal_function", "A", "B", "C", "D")
+        out = fill_template("minimal_function", "A", "B", "C", "D", seed=0)
         # Split on newline: NUM_ICL_EXAMPLES ICL lines + 1 query line.
         assert out.count("\n") == NUM_ICL_EXAMPLES
 
@@ -508,7 +511,7 @@ class TestHierarchicalEqualityTokenPositionsProperty:
         self, he_tiny_pipeline: LMPipeline
     ) -> None:
         """``last`` resolves to the final token index of the raw input."""
-        from causalab.neural.token_positions import get_last_token_index
+        from causalab.tasks.token_positions import get_last_token_index
 
         random.seed(0)
         trace = sample_balanced_input()

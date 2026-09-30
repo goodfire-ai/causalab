@@ -1,0 +1,50 @@
+{
+  "version": "1",
+  "description": "Figure 1 (e, f, g) of Meng et al. 2022 (arXiv:2202.05262) on GPT-2 XL for one prompt. The knockout extension: zero a ten-layer window of MLP outputs, attention outputs or residual-stream states at one token, one intervened forward per point. The paper's causal tracing: write the reference code's noise draw, numpy RandomState(1), then trace the restoration of every residual-stream state and of every ten-layer MLP and attention window over layer x token position. scripts/rome_fig1/knockout_figure.py draws the three knockout steps, scripts/rome_fig1/fig1_figure.py the two tracing steps.",
+  "output_dir": "rome_fig1",
+  "steps": {
+    "knockout": {
+      "type": "intervention_protocol",
+      "document": "../protocols/rome_fig1_knockout.json"
+    },
+    "knockout_attention": {
+      "type": "intervention_protocol",
+      "document": "../protocols/rome_fig1_knockout.json",
+      "set": {
+        "sites.target.component": "attention_output"
+      }
+    },
+    "knockout_residual": {
+      "type": "intervention_protocol",
+      "document": "../protocols/rome_fig1_knockout.json",
+      "set": {
+        "sites.target.component": "block_output"
+      }
+    },
+    "noise_draw": {
+      "type": "script",
+      "script": {
+        "path": "scripts/rome_fig1/noise_draw.py"
+      },
+      "inputs": {
+        "seed": 1,
+        "samples": 10,
+        "tokens": 4,
+        "width": 1600,
+        "model_key": "gpt2-xl",
+        "model_revision": "15ea56dee5df4983c59b2538573817e1667135e2"
+      },
+      "outputs": {
+        "noise": "noise.safetensors"
+      }
+    },
+    "state": {
+      "type": "intervention_protocol",
+      "document": "../protocols/rome_fig1_trace_state.json"
+    },
+    "window": {
+      "type": "intervention_protocol",
+      "document": "../protocols/rome_fig1_trace_window.json"
+    }
+  }
+}

@@ -1,0 +1,1619 @@
+[
+ {
+  "base_answer": " Tuesday",
+  "base_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "cf_answer": " Tuesday",
+  "cf_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is five days after Thursday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Thursday",
+    "number": "five",
+    "result": "Tuesday"
+   }
+  ],
+  "entity": "Monday",
+  "input": "Q: What day is one days after Monday?\nA:",
+  "label": " Tuesday",
+  "label_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "number": "one",
+  "result": "Tuesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Wednesday",
+  "base_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "cf_answer": " Thursday",
+  "cf_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is seven days after Thursday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Thursday",
+    "number": "seven",
+    "result": "Thursday"
+   }
+  ],
+  "entity": "Monday",
+  "input": "Q: What day is two days after Monday?\nA:",
+  "label": " Thursday",
+  "label_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "number": "two",
+  "result": "Wednesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Thursday",
+  "base_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "cf_answer": " Friday",
+  "cf_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is four days after Monday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Monday",
+    "number": "four",
+    "result": "Friday"
+   }
+  ],
+  "entity": "Monday",
+  "input": "Q: What day is three days after Monday?\nA:",
+  "label": " Friday",
+  "label_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "number": "three",
+  "result": "Thursday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Friday",
+  "base_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "cf_answer": " Sunday",
+  "cf_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is four days after Wednesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Wednesday",
+    "number": "four",
+    "result": "Sunday"
+   }
+  ],
+  "entity": "Monday",
+  "input": "Q: What day is four days after Monday?\nA:",
+  "label": " Sunday",
+  "label_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "number": "four",
+  "result": "Friday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Saturday",
+  "base_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "cf_answer": " Thursday",
+  "cf_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Friday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Friday",
+    "number": "six",
+    "result": "Thursday"
+   }
+  ],
+  "entity": "Monday",
+  "input": "Q: What day is five days after Monday?\nA:",
+  "label": " Thursday",
+  "label_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "number": "five",
+  "result": "Saturday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Sunday",
+  "base_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "cf_answer": " Wednesday",
+  "cf_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is five days after Friday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Friday",
+    "number": "five",
+    "result": "Wednesday"
+   }
+  ],
+  "entity": "Monday",
+  "input": "Q: What day is six days after Monday?\nA:",
+  "label": " Wednesday",
+  "label_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "number": "six",
+  "result": "Sunday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Monday",
+  "base_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "cf_answer": " Wednesday",
+  "cf_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Thursday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Thursday",
+    "number": "six",
+    "result": "Wednesday"
+   }
+  ],
+  "entity": "Monday",
+  "input": "Q: What day is seven days after Monday?\nA:",
+  "label": " Wednesday",
+  "label_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "number": "seven",
+  "result": "Monday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Wednesday",
+  "base_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "cf_answer": " Wednesday",
+  "cf_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is seven days after Wednesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Wednesday",
+    "number": "seven",
+    "result": "Wednesday"
+   }
+  ],
+  "entity": "Tuesday",
+  "input": "Q: What day is one days after Tuesday?\nA:",
+  "label": " Wednesday",
+  "label_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "number": "one",
+  "result": "Wednesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Thursday",
+  "base_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "cf_answer": " Tuesday",
+  "cf_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is four days after Friday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Friday",
+    "number": "four",
+    "result": "Tuesday"
+   }
+  ],
+  "entity": "Tuesday",
+  "input": "Q: What day is two days after Tuesday?\nA:",
+  "label": " Tuesday",
+  "label_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "number": "two",
+  "result": "Thursday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Friday",
+  "base_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "cf_answer": " Sunday",
+  "cf_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is three days after Thursday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Thursday",
+    "number": "three",
+    "result": "Sunday"
+   }
+  ],
+  "entity": "Tuesday",
+  "input": "Q: What day is three days after Tuesday?\nA:",
+  "label": " Sunday",
+  "label_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "number": "three",
+  "result": "Friday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Saturday",
+  "base_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "cf_answer": " Wednesday",
+  "cf_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is four days after Saturday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Saturday",
+    "number": "four",
+    "result": "Wednesday"
+   }
+  ],
+  "entity": "Tuesday",
+  "input": "Q: What day is four days after Tuesday?\nA:",
+  "label": " Wednesday",
+  "label_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "number": "four",
+  "result": "Saturday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Sunday",
+  "base_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "cf_answer": " Thursday",
+  "cf_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is one days after Wednesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Wednesday",
+    "number": "one",
+    "result": "Thursday"
+   }
+  ],
+  "entity": "Tuesday",
+  "input": "Q: What day is five days after Tuesday?\nA:",
+  "label": " Thursday",
+  "label_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "number": "five",
+  "result": "Sunday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Monday",
+  "base_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "cf_answer": " Thursday",
+  "cf_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Friday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Friday",
+    "number": "six",
+    "result": "Thursday"
+   }
+  ],
+  "entity": "Tuesday",
+  "input": "Q: What day is six days after Tuesday?\nA:",
+  "label": " Thursday",
+  "label_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "number": "six",
+  "result": "Monday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Tuesday",
+  "base_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "cf_answer": " Thursday",
+  "cf_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is two days after Tuesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Tuesday",
+    "number": "two",
+    "result": "Thursday"
+   }
+  ],
+  "entity": "Tuesday",
+  "input": "Q: What day is seven days after Tuesday?\nA:",
+  "label": " Thursday",
+  "label_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "number": "seven",
+  "result": "Tuesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Thursday",
+  "base_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "cf_answer": " Tuesday",
+  "cf_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Wednesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Wednesday",
+    "number": "six",
+    "result": "Tuesday"
+   }
+  ],
+  "entity": "Wednesday",
+  "input": "Q: What day is one days after Wednesday?\nA:",
+  "label": " Tuesday",
+  "label_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "number": "one",
+  "result": "Thursday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Friday",
+  "base_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "cf_answer": " Thursday",
+  "cf_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is two days after Tuesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Tuesday",
+    "number": "two",
+    "result": "Thursday"
+   }
+  ],
+  "entity": "Wednesday",
+  "input": "Q: What day is two days after Wednesday?\nA:",
+  "label": " Thursday",
+  "label_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "number": "two",
+  "result": "Friday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Saturday",
+  "base_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "cf_answer": " Monday",
+  "cf_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is seven days after Monday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Monday",
+    "number": "seven",
+    "result": "Monday"
+   }
+  ],
+  "entity": "Wednesday",
+  "input": "Q: What day is three days after Wednesday?\nA:",
+  "label": " Monday",
+  "label_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "number": "three",
+  "result": "Saturday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Sunday",
+  "base_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "cf_answer": " Friday",
+  "cf_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Saturday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Saturday",
+    "number": "six",
+    "result": "Friday"
+   }
+  ],
+  "entity": "Wednesday",
+  "input": "Q: What day is four days after Wednesday?\nA:",
+  "label": " Friday",
+  "label_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "number": "four",
+  "result": "Sunday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Monday",
+  "base_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "cf_answer": " Saturday",
+  "cf_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is three days after Wednesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Wednesday",
+    "number": "three",
+    "result": "Saturday"
+   }
+  ],
+  "entity": "Wednesday",
+  "input": "Q: What day is five days after Wednesday?\nA:",
+  "label": " Saturday",
+  "label_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "number": "five",
+  "result": "Monday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Tuesday",
+  "base_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "cf_answer": " Sunday",
+  "cf_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is one days after Saturday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Saturday",
+    "number": "one",
+    "result": "Sunday"
+   }
+  ],
+  "entity": "Wednesday",
+  "input": "Q: What day is six days after Wednesday?\nA:",
+  "label": " Sunday",
+  "label_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "number": "six",
+  "result": "Tuesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Wednesday",
+  "base_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "cf_answer": " Friday",
+  "cf_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is five days after Sunday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Sunday",
+    "number": "five",
+    "result": "Friday"
+   }
+  ],
+  "entity": "Wednesday",
+  "input": "Q: What day is seven days after Wednesday?\nA:",
+  "label": " Friday",
+  "label_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "number": "seven",
+  "result": "Wednesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Friday",
+  "base_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "cf_answer": " Thursday",
+  "cf_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is five days after Saturday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Saturday",
+    "number": "five",
+    "result": "Thursday"
+   }
+  ],
+  "entity": "Thursday",
+  "input": "Q: What day is one days after Thursday?\nA:",
+  "label": " Thursday",
+  "label_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "number": "one",
+  "result": "Friday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Saturday",
+  "base_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "cf_answer": " Friday",
+  "cf_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is three days after Tuesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Tuesday",
+    "number": "three",
+    "result": "Friday"
+   }
+  ],
+  "entity": "Thursday",
+  "input": "Q: What day is two days after Thursday?\nA:",
+  "label": " Friday",
+  "label_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "number": "two",
+  "result": "Saturday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Sunday",
+  "base_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "cf_answer": " Tuesday",
+  "cf_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Wednesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Wednesday",
+    "number": "six",
+    "result": "Tuesday"
+   }
+  ],
+  "entity": "Thursday",
+  "input": "Q: What day is three days after Thursday?\nA:",
+  "label": " Tuesday",
+  "label_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "number": "three",
+  "result": "Sunday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Monday",
+  "base_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "cf_answer": " Monday",
+  "cf_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is seven days after Monday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Monday",
+    "number": "seven",
+    "result": "Monday"
+   }
+  ],
+  "entity": "Thursday",
+  "input": "Q: What day is four days after Thursday?\nA:",
+  "label": " Monday",
+  "label_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "number": "four",
+  "result": "Monday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Tuesday",
+  "base_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "cf_answer": " Saturday",
+  "cf_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Sunday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Sunday",
+    "number": "six",
+    "result": "Saturday"
+   }
+  ],
+  "entity": "Thursday",
+  "input": "Q: What day is five days after Thursday?\nA:",
+  "label": " Saturday",
+  "label_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "number": "five",
+  "result": "Tuesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Wednesday",
+  "base_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "cf_answer": " Saturday",
+  "cf_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is five days after Monday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Monday",
+    "number": "five",
+    "result": "Saturday"
+   }
+  ],
+  "entity": "Thursday",
+  "input": "Q: What day is six days after Thursday?\nA:",
+  "label": " Saturday",
+  "label_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "number": "six",
+  "result": "Wednesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Thursday",
+  "base_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "cf_answer": " Wednesday",
+  "cf_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is three days after Sunday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Sunday",
+    "number": "three",
+    "result": "Wednesday"
+   }
+  ],
+  "entity": "Thursday",
+  "input": "Q: What day is seven days after Thursday?\nA:",
+  "label": " Wednesday",
+  "label_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "number": "seven",
+  "result": "Thursday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Saturday",
+  "base_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "cf_answer": " Friday",
+  "cf_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is one days after Thursday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Thursday",
+    "number": "one",
+    "result": "Friday"
+   }
+  ],
+  "entity": "Friday",
+  "input": "Q: What day is one days after Friday?\nA:",
+  "label": " Friday",
+  "label_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "number": "one",
+  "result": "Saturday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Sunday",
+  "base_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "cf_answer": " Tuesday",
+  "cf_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is four days after Friday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Friday",
+    "number": "four",
+    "result": "Tuesday"
+   }
+  ],
+  "entity": "Friday",
+  "input": "Q: What day is two days after Friday?\nA:",
+  "label": " Tuesday",
+  "label_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "number": "two",
+  "result": "Sunday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Monday",
+  "base_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "cf_answer": " Monday",
+  "cf_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is two days after Saturday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Saturday",
+    "number": "two",
+    "result": "Monday"
+   }
+  ],
+  "entity": "Friday",
+  "input": "Q: What day is three days after Friday?\nA:",
+  "label": " Monday",
+  "label_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "number": "three",
+  "result": "Monday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Tuesday",
+  "base_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "cf_answer": " Monday",
+  "cf_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is seven days after Monday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Monday",
+    "number": "seven",
+    "result": "Monday"
+   }
+  ],
+  "entity": "Friday",
+  "input": "Q: What day is four days after Friday?\nA:",
+  "label": " Monday",
+  "label_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "number": "four",
+  "result": "Tuesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Wednesday",
+  "base_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "cf_answer": " Saturday",
+  "cf_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is two days after Thursday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Thursday",
+    "number": "two",
+    "result": "Saturday"
+   }
+  ],
+  "entity": "Friday",
+  "input": "Q: What day is five days after Friday?\nA:",
+  "label": " Saturday",
+  "label_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "number": "five",
+  "result": "Wednesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Thursday",
+  "base_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "cf_answer": " Thursday",
+  "cf_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is seven days after Thursday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Thursday",
+    "number": "seven",
+    "result": "Thursday"
+   }
+  ],
+  "entity": "Friday",
+  "input": "Q: What day is six days after Friday?\nA:",
+  "label": " Thursday",
+  "label_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "number": "six",
+  "result": "Thursday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Friday",
+  "base_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "cf_answer": " Wednesday",
+  "cf_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is seven days after Wednesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Wednesday",
+    "number": "seven",
+    "result": "Wednesday"
+   }
+  ],
+  "entity": "Friday",
+  "input": "Q: What day is seven days after Friday?\nA:",
+  "label": " Wednesday",
+  "label_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "number": "seven",
+  "result": "Friday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Sunday",
+  "base_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "cf_answer": " Friday",
+  "cf_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Saturday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Saturday",
+    "number": "six",
+    "result": "Friday"
+   }
+  ],
+  "entity": "Saturday",
+  "input": "Q: What day is one days after Saturday?\nA:",
+  "label": " Friday",
+  "label_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "number": "one",
+  "result": "Sunday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Monday",
+  "base_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "cf_answer": " Saturday",
+  "cf_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is seven days after Saturday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Saturday",
+    "number": "seven",
+    "result": "Saturday"
+   }
+  ],
+  "entity": "Saturday",
+  "input": "Q: What day is two days after Saturday?\nA:",
+  "label": " Saturday",
+  "label_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "number": "two",
+  "result": "Monday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Tuesday",
+  "base_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "cf_answer": " Tuesday",
+  "cf_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is seven days after Tuesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Tuesday",
+    "number": "seven",
+    "result": "Tuesday"
+   }
+  ],
+  "entity": "Saturday",
+  "input": "Q: What day is three days after Saturday?\nA:",
+  "label": " Tuesday",
+  "label_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "number": "three",
+  "result": "Tuesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Wednesday",
+  "base_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "cf_answer": " Sunday",
+  "cf_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is one days after Saturday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Saturday",
+    "number": "one",
+    "result": "Sunday"
+   }
+  ],
+  "entity": "Saturday",
+  "input": "Q: What day is four days after Saturday?\nA:",
+  "label": " Sunday",
+  "label_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "number": "four",
+  "result": "Wednesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Thursday",
+  "base_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "cf_answer": " Monday",
+  "cf_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is three days after Friday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Friday",
+    "number": "three",
+    "result": "Monday"
+   }
+  ],
+  "entity": "Saturday",
+  "input": "Q: What day is five days after Saturday?\nA:",
+  "label": " Monday",
+  "label_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "number": "five",
+  "result": "Thursday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Friday",
+  "base_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "cf_answer": " Saturday",
+  "cf_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is one days after Friday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Friday",
+    "number": "one",
+    "result": "Saturday"
+   }
+  ],
+  "entity": "Saturday",
+  "input": "Q: What day is six days after Saturday?\nA:",
+  "label": " Saturday",
+  "label_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "number": "six",
+  "result": "Friday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Saturday",
+  "base_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "cf_answer": " Thursday",
+  "cf_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Friday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Friday",
+    "number": "six",
+    "result": "Thursday"
+   }
+  ],
+  "entity": "Saturday",
+  "input": "Q: What day is seven days after Saturday?\nA:",
+  "label": " Thursday",
+  "label_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "number": "seven",
+  "result": "Saturday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Monday",
+  "base_answer_forms": [
+   " Monday",
+   "Monday"
+  ],
+  "cf_answer": " Saturday",
+  "cf_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is three days after Wednesday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Wednesday",
+    "number": "three",
+    "result": "Saturday"
+   }
+  ],
+  "entity": "Sunday",
+  "input": "Q: What day is one days after Sunday?\nA:",
+  "label": " Saturday",
+  "label_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "number": "one",
+  "result": "Monday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Tuesday",
+  "base_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "cf_answer": " Friday",
+  "cf_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is four days after Monday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Monday",
+    "number": "four",
+    "result": "Friday"
+   }
+  ],
+  "entity": "Sunday",
+  "input": "Q: What day is two days after Sunday?\nA:",
+  "label": " Friday",
+  "label_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "number": "two",
+  "result": "Tuesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Wednesday",
+  "base_answer_forms": [
+   " Wednesday",
+   "Wednesday"
+  ],
+  "cf_answer": " Sunday",
+  "cf_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is one days after Saturday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Saturday",
+    "number": "one",
+    "result": "Sunday"
+   }
+  ],
+  "entity": "Sunday",
+  "input": "Q: What day is three days after Sunday?\nA:",
+  "label": " Sunday",
+  "label_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "number": "three",
+  "result": "Wednesday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Thursday",
+  "base_answer_forms": [
+   " Thursday",
+   "Thursday"
+  ],
+  "cf_answer": " Tuesday",
+  "cf_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is one days after Monday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Monday",
+    "number": "one",
+    "result": "Tuesday"
+   }
+  ],
+  "entity": "Sunday",
+  "input": "Q: What day is four days after Sunday?\nA:",
+  "label": " Tuesday",
+  "label_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "number": "four",
+  "result": "Thursday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Friday",
+  "base_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "cf_answer": " Sunday",
+  "cf_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is six days after Monday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Monday",
+    "number": "six",
+    "result": "Sunday"
+   }
+  ],
+  "entity": "Sunday",
+  "input": "Q: What day is five days after Sunday?\nA:",
+  "label": " Sunday",
+  "label_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "number": "five",
+  "result": "Friday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Saturday",
+  "base_answer_forms": [
+   " Saturday",
+   "Saturday"
+  ],
+  "cf_answer": " Friday",
+  "cf_answer_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is five days after Sunday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Sunday",
+    "number": "five",
+    "result": "Friday"
+   }
+  ],
+  "entity": "Sunday",
+  "input": "Q: What day is six days after Sunday?\nA:",
+  "label": " Friday",
+  "label_forms": [
+   " Friday",
+   "Friday"
+  ],
+  "number": "six",
+  "result": "Saturday",
+  "split": "all",
+  "string_mode": "exact"
+ },
+ {
+  "base_answer": " Sunday",
+  "base_answer_forms": [
+   " Sunday",
+   "Sunday"
+  ],
+  "cf_answer": " Tuesday",
+  "cf_answer_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "counterfactual_inputs": [
+   "Q: What day is five days after Thursday?\nA:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "entity": "Thursday",
+    "number": "five",
+    "result": "Tuesday"
+   }
+  ],
+  "entity": "Sunday",
+  "input": "Q: What day is seven days after Sunday?\nA:",
+  "label": " Tuesday",
+  "label_forms": [
+   " Tuesday",
+   "Tuesday"
+  ],
+  "number": "seven",
+  "result": "Sunday",
+  "split": "all",
+  "string_mode": "exact"
+ }
+]

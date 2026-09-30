@@ -1,63 +1,20 @@
-"""SiteResolver: the spec's component vocabulary → concrete module taps.
+"""Resolve component names to model taps shared by both engines.
 
-Each site record resolves to ``(module, io side, feature-axis slice)``.
-The map is engine-shared: both engines tap the same modules —
-pytorch_hooks with ``register_forward_hook`` / ``register_forward_pre_hook``,
-the nnsight engine by handing the same tree access to envoys whose
-``.input`` / ``.output`` it reads and assigns in-trace. Writes replace the
-same tensor either way. The table mirrors the hook-oracle reference
-(``tests/neural/activations/hook_oracle.py``) for the two supported
-families:
+Each site identifies a module, input or output side, and feature slice.
+The registry supplies family addresses, shapes, predicates, and write
+policies. Validation checks engine support; ``model_tree`` checks loaded
+module structure.
 
-* **Llama-tree** (Llama/Qwen/Mistral/Gemma): ``model.layers[L]``,
-  separate ``self_attn.{q,k,v,o}_proj``, SwiGLU MLP;
-* **GPT-2-tree**: ``transformer.h[L]``, fused ``attn.c_attn`` (its three
-  ``H·d`` column blocks are the logical q, k and v — addressed as such by
-  the per-family tap table), ``attn.c_proj``.
+``mlp_activation`` follows the family definition: Llama-style models use
+``act(gate_proj(x))``; GPT-2 uses the down-projection input.
+``attention_premix`` selects query-head coordinates at the output
+projection's input. On gated attention this is ``gate * z``, so the tap
+includes the gate's effect.
 
-Two semantics deliberately preserved from the oracle:
-
-* ``mlp_activation`` names *different tensors per family* — Llama taps
-  ``act_fn``'s output (``act(gate_proj(x))``, NOT the down-projection's
-  input), GPT-2 taps ``c_proj``'s input (which IS the down-projection's
-  input). Inherited 1:1 from the pyvene era and pinned by the oracle.
-* the mixer's **interior** is four module boundaries, not four chunk ops
-  (``attention_query_pre_rope``, ``attention_key_pre_rope``,
-  ``attention_value_states``, ``attention_gate``) — see
-  :func:`_attention_interior_site`, which reads *where* each lives on each
-  family off the component rows' per-family addresses (the per-family tap
-  table, ``registry.Capability.overrides``): no family is named in
-  this module;
-* ``attention_premix`` with a ``head`` is the ``[H*d, (H+1)*d]`` column
-  slice of the o-projection's **input** — query-head space (``head_dim``
-  honours a decoupled ``config.head_dim``). 📐 On a **gated** attention
-  family (Qwen3.5/3.6's ``self_attn``, where the mixer multiplies by a
-  learned gate before projecting out) that input is therefore
-  **post-gate**: it is ``gate * z``, not the attention output ``z``. The
-  tap is unchanged and correct — this note exists because "value" reads
-  like the pre-gate tensor, and the two differ by an elementwise factor
-  that a subspace fit will happily absorb without complaining.
-
-Unsupported components refuse with the registry-extension message style. Which
-components those are is per *engine*, and not this module's to say: the map is
-engine-neutral, so it carries tap addresses and leaves capability routing to
-:func:`causalab.protocol.engine.choose_engine`. **Every fact about a component
-that is not an address is read from its capability row**
-(:data:`causalab.protocol.registry.CAPABILITIES`): the mixer stream it needs,
-the architectural predicates it requires (``moe``, ``shared_expert``,
-``grouped_mm``, ``split_qkv``, ``gated_attention`` — this module holds their
-*module-tree probes*, :data:`_PREDICATE_PROBES`), which engines serve its
-ragged ``expert:`` face, and its write policy (applied by the shared executor
-and, at load, by ``validate``). The tables that used to live here — the
-read-only, swap-only and normalized-tap dicts, the three stream sets, the MoE
-and attention-interior sets — were restatements of those rows and are gone.
-In particular ``attention_probs`` is **served**, by both engines
-— the reference one taps inside the eager attention call
-(``engines/pytorch_hooks/attention_interface.py``), the nnsight one through
-``.source``, and both declare ``writable_attention_probs``. Its write is
-swap-only by its row's ``writes`` cell, not by any engine's absence. The MoE
-interior is served too (``engines/pytorch_hooks/experts_interface.py``), with
-``expert_permutation`` routing to the nnsight engine.
+Attention interiors use the registry's family addresses. Both engines serve
+attention-probability writes through the eager attention body, with the
+registry restricting them to swaps. Expert interior support also follows
+the selected engine's capability rows.
 """
 
 from __future__ import annotations
@@ -65,23 +22,32 @@ from __future__ import annotations
 import dataclasses
 from typing import Any, Mapping
 
-from causalab.protocol.errors import ProtocolError
+from causalab.neural.shared.model_tree import (
+    _attn,
+    _blocks,
+    _check_projection_width,
+    _check_requires,
+    _check_stream,
+    _children,
+    _measured_address,
+    adapter_of,
+)
+from causalab.neural.shared.parallel.placement import REPLICATED, Placement
+from causalab.neural.shared.parallel.placements import module_path, site_placement
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol import registry
+from causalab.protocol.parallel import ONE, ParallelGeometry
 from causalab.protocol.registry import (
     ATTENTION_FUNCTION_SLOTS,
     CAPABILITIES,
-    COMPONENT_STREAMS,
     DELTA_KERNEL_SLOTS,
     EXPERTS_FUNCTION_SLOTS,
-    INTERIOR_ROWS,
-    PREDICATES,
     FamilyAdapter,
+    ParallelPlan,
     Tap,
     capability,
     component_shape,
     expert_axis_refusal,
-    family_for,
-    family_in_table,
     head_space_refusal,
     native_shape,
     walk,
@@ -91,7 +57,7 @@ from causalab.protocol.schema import (
     LAYERLESS_COMPONENTS,
     SiteSpec,
 )
-from causalab.protocol.shapes import FeatureShape
+from causalab.protocol.registry.shapes import FeatureShape
 
 
 __all__ = [
@@ -113,11 +79,11 @@ class ResolvedSite:
     module's own tensor shape relates to the executor's ``(batch, position,
     feature)`` contract.
 
-    ``shape`` is never chosen per tap: :func:`resolve_site` reads it from
-    :func:`~causalab.protocol.registry.component_shape`, so the description each
+    ``shape`` is never chosen per tap: [`resolve_site`][] reads it from
+    [`component_shape`][causalab.protocol.registry.components.component_shape], so the description each
     engine converts by and the description the protocol layer validates against
     are the same object. ``tuple_index`` defaults to the historical rule —
-    element 0 of a tuple payload. See :mod:`causalab.neural.shared.layout` for
+    element 0 of a tuple payload. See [`causalab.neural.shared.layout`][] for
     how the conversion is computed from the declared axes.
     """
 
@@ -135,7 +101,7 @@ class ResolvedSite:
     tuple_index: int | None = None
     #: Where inside the attention function this component lives, when it is not
     #: a module boundary at all — see
-    #: :mod:`causalab.neural.pytorch_hooks.attention_interface`.
+    #: [`causalab.neural.engines.pytorch_hooks.attention_interface`][].
     #:
     #: Set together with ``kind == "interface"`` for the four function-interior
     #: components. ``attention_probs`` is the one site that sets it while
@@ -144,57 +110,51 @@ class ResolvedSite:
     #: function.
     interface_slot: str | None = None
     #: Where an input write's delta has to land as well — see
-    #: :class:`Writeback`. Set from the family's declared ``Tap.writeback``;
+    #: [`Writeback`][]. Set from the family's declared ``Tap.writeback``;
     #: ``block_mid`` is the component that has one. Reads ignore this field.
     writeback: "Writeback | None" = None
     #: The head the site named, kept alongside ``feature_slice`` because a
     #: *derived* component slices in a space the raw tensor does not have.
     head: int | None = None
     #: The expert the site named — the ragged face of a routed-interior tap:
-    #: select the (position, slot) pairs the router sent to this
-    #: expert. Carried on the site rather than lowered to a slice, because
-    #: which rows it selects is a *runtime* fact (the routing), not a static
-    #: one.
+    #: select the (position, slot) pairs the router sent to this expert.
+    #: Carried on the site rather than lowered to a slice, because which rows
+    #: it selects is a *runtime* fact (the routing), not a static one.
     expert: int | None = None
     #: Set when the component's value is **computed from** the tapped tensor
     #: rather than being it. Then ``shape`` describes what is captured and
-    #: :func:`~causalab.protocol.registry.component_shape` describes the value —
+    #: [`component_shape`][causalab.protocol.registry.components.component_shape] describes the value —
     #: the one place in the backend where those two differ, and the field exists
     #: so that difference is declared rather than inferred.
     derivation: str | None = None
+    #: Where the tapped tensor lives across ranks
+    #: (``docs/model_parallelism.md`` §4): the executor makes it ``whole``
+    #: before the hook body and ``fragment``\ s the result after, through
+    #: [`causalab.neural.shared.parallel.fragments`][]. Decided at plan time
+    #: from the family's parallel-plan row for the tapped module
+    #: ([`site_placement`][],
+    #: filled by [`resolve_site`][] when the bundle carries a plan and a
+    #: geometry above world 1), never from the value; a module no row names —
+    #: every module at world 1 — is
+    #: [`REPLICATED`][].
+    placement: Placement = REPLICATED
+    #: The routing table this tap carries is this rank's remapped one
+    #: (``EpRouterParallel``'s local ids, §6.3): the executor reconstructs the
+    #: global table before it enters the contract.
+    remapped_routing: bool = False
 
     @property
     def depth(self) -> tuple[int, int]:
         """(layer, intra-order) — matches the protocol planner's ranks."""
-        from causalab.protocol.plan import COMPONENT_RANK, UNRANKED  # one table
+        from causalab.protocol.positions.alignment import (
+            COMPONENT_RANK,
+            UNRANKED,
+        )  # one table
 
         rank = COMPONENT_RANK.get(self.component, UNRANKED)
         if self.component in ("ln_final", "lm_head"):
             return (1_000_000, rank)
         return (self.layer, rank)
-
-
-def adapter_of(bundle: Any) -> FamilyAdapter:
-    """The family plugin serving ``bundle``'s model: the bundle's own
-    (detected once, ``ModelBundle.adapter``) or, for a bundle without the
-    attribute, detected here (``registry.family_for``) — structurally, never
-    off the config."""
-    adapter = getattr(bundle, "adapter", None)
-    return adapter if adapter is not None else family_for(bundle.model)
-
-
-def _blocks(bundle: Any) -> Any:
-    return adapter_of(bundle).blocks_of(bundle.model)
-
-
-def _attn(bundle: Any, layer: int) -> Any:
-    """The mixer at ``layer`` — ``self_attn``, ``attn`` or ``linear_attn``.
-
-    Was ``block.self_attn`` for every non-GPT-2 model, which AttributeErrors on
-    a hybrid tower: 📐 on ``tiny-random/qwen3.5-moe`` three of four layers carry
-    ``linear_attn`` (Gated DeltaNet) and only one carries ``self_attn``. The
-    per-layer answer lives on the bundle (§5.2)."""
-    return bundle.mixer_at(layer)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -346,7 +306,7 @@ def _head_slice(bundle: Any, component: str, head: int | None) -> slice | None:
 #: address (``Capability.overrides``) — the same set as
 #: ``registry.INTERIOR_ROWS``, and a census test holds the two equal.
 #:
-#: 📐 One might expect these to need function-level taps inside the mixer
+#: 📐 These look as if they need function-level taps inside the mixer
 #: forward. Measured on ``tiny-random/qwen3.5-moe``, three of the four are
 #: ordinary ``nn.Module`` outputs: ``Qwen3_5MoeAttention`` runs ``q_norm`` and
 #: ``k_norm`` **before** RoPE, so their outputs *are* the pre-RoPE projections,
@@ -357,145 +317,6 @@ def _head_slice(bundle: Any, component: str, head: int | None) -> slice | None:
 _ATTENTION_INTERIOR: frozenset[str] = frozenset(
     c for c, row in CAPABILITIES.items() if "split_qkv" in row.requires
 )
-
-
-def _projection_width(module: Any) -> int | None:
-    """The output width a projection module declares — ``nn.Linear``'s
-    ``out_features``, GPT-2's ``Conv1D.nf`` — or ``None`` for a module that
-    declares none (a norm: its output has its input's shape, and the layout
-    conversion checks that tensor at hook time)."""
-    for attr in ("out_features", "nf"):
-        width = getattr(module, attr, None)
-        if isinstance(width, int):
-            return width
-    return None
-
-
-def _check_projection_width(
-    bundle: Any, module: Any, address: Mapping[str, Any], component: str, layer: int
-) -> None:
-    """The width rule, by name and before any hook: a projection the row
-    addresses must emit exactly ``splits × (heads · head_dim)`` in the
-    component's own head space (📐 ``H·d = 16`` on llama, ``H·2·d = 512`` on
-    qwen3.5-moe's gated q-projection, ``3·H·d = 96`` on GPT-2's ``c_attn``).
-    The layout conversion would catch the same disagreement at hook time as an
-    internal error; this names the row and the module instead."""
-    out = _projection_width(module)
-    if out is None:
-        return
-    value = component_shape(bundle.info, component)
-    assert value.width is not None  # every interior component has a feature axis
-    splits = int(address.get("splits", 1))
-    if out != splits * value.width:
-        raise ProtocolError(
-            "P4",
-            f"component {component!r} at layer {layer} of {bundle.key!r}: the "
-            f"per-family tap table says {address['module']!r} emits "
-            f"{splits * value.width} features on family {bundle.info.family!r} "
-            f"({splits} × {value.width}, {value.describe()}), but this module "
-            f"emits {out}. The row and the loaded module disagree — re-measure "
-            "the family (causalab/protocol/registry.py, the interior rows' "
-            "overrides) before trusting either.",
-            reason="component_unavailable",
-        )
-
-
-def _declared_modules(component: str, *, packings: frozenset[str]) -> list[str]:
-    """The module names the rows declare for ``component`` under ``packings``,
-    across every family — the vocabulary the measured fallback picks from."""
-    return sorted(
-        {
-            address["module"]
-            for address in capability(component).overrides.values()
-            if address["packing"] in packings
-        }
-    )
-
-
-_UNFUSED: frozenset[str] = frozenset({"flat", "head_axis"})
-
-
-def _has_separate_projections(attn: Any) -> bool:
-    """Measured: for each of q, k and v the mixer carries one of the bare
-    projections some family's row names (📐 ``q_proj``/``k_proj``/``v_proj``
-    on the llama tree). GPT-2's mixer carries none — only ``c_attn``."""
-    return all(
-        any(
-            hasattr(attn, module)
-            for module in _declared_modules(component, packings=frozenset({"flat"}))
-        )
-        for component in INTERIOR_ROWS
-        if component != "attention_gate"
-    )
-
-
-def _measured_address(
-    bundle: Any, attn: Any, component: str, layer: int
-) -> Mapping[str, Any]:
-    """The address of ``component`` on a mixer whose family the per-family tap
-    table has **not** met — today's measured behaviour, kept exactly, but
-    picking among the addresses the rows declare rather than a local table.
-
-    * a norm after the projection wins where the mixer has one (📐 measured on
-      qwen3.5-moe: ``q_norm``/``k_norm`` run before ``apply_rotary_pos_emb``,
-      so their output *is* the pre-RoPE tensor, ``(b, s, H, d)``);
-    * else the bare projection, whose width must be the value's — a projection
-      emitting two splits per head with no norm to tap after it is refused
-      (its output is not the queries alone), as is one of neither width;
-    * a **block order is never inferred**: which contiguous block of a fused
-      ``c_attn`` is q is a family fact only a row can state, so a family with
-      a fused projection and no row is refused (``_probe_split_qkv``).
-    """
-    row = capability(component)
-    present = [
-        address
-        for address in row.overrides.values()
-        if address["packing"] != "fused_blocks" and hasattr(attn, address["module"])
-    ]
-    norms = [a for a in present if a["packing"] == "head_axis"]
-    if norms:
-        return norms[0]
-    if not present:
-        raise ProtocolError(
-            "P4",
-            f"component {component!r} at layer {layer} of {bundle.key!r}: family "
-            f"{bundle.info.family!r} has no row in the per-family tap table, and "
-            f"this mixer (children={_children(attn)}) carries none of the modules "
-            f"the rows declare for it ({_declared_modules(component, packings=_UNFUSED)}). "
-            "Measure the family and add its addresses to the interior rows' "
-            "overrides in causalab/protocol/registry.py.",
-            reason="component_unavailable",
-        )
-    address = present[0]
-    module = getattr(attn, address["module"])
-    value = component_shape(bundle.info, component)
-    assert value.width is not None
-    out = _projection_width(module)
-    splits = int(address.get("splits", 1))
-    if out is not None and out == 2 * value.width and splits == 1:
-        raise ProtocolError(
-            "P4",
-            f"component {component!r} at layer {layer} of {bundle.key!r}: this "
-            f"mixer has no norm after {address['module']!r}, so the projection's "
-            "output would have to be the pre-RoPE tensor — but that projection "
-            "is fused ([q | gate] per head), so its output is not the queries "
-            "alone. Addressing a split of a projection with no norm to tap after "
-            "it is a row of the per-family tap table: measure the "
-            "family and add it.",
-            reason="component_unavailable",
-        )
-    if out is not None and out not in (value.width, 2 * value.width):
-        raise ProtocolError(
-            "P4",
-            f"the projection {address['module']!r} at layer {layer} of "
-            f"{bundle.key!r} emits {out} features, which is neither "
-            f"{value.width} (heads·head_dim) nor {2 * value.width} (a gated "
-            "family's [q | gate] per head). This backend cannot say which columns "
-            f"are the {component!r} — measure the family and add a row to the "
-            "per-family tap table (causalab/protocol/registry.py).",
-            reason="component_unavailable",
-        )
-    return address
 
 
 def _interior_address(
@@ -520,10 +341,9 @@ def _attention_interior_site(
 ) -> ResolvedSite:
     """Resolve one module-boundary tap inside the mixer, from the rows.
 
-    This is the per-family tap table: the family differences —
-    which child of the mixer carries the component, and how that child's
-    tensor packs it — are the ``overrides`` of the four interior rows in
-    :mod:`causalab.protocol.registry`, keyed by the family the loaded config
+    The family differences — which child of the mixer carries the component,
+    and how that child's tensor packs it — are the ``overrides`` of the four interior rows in
+    [`causalab.protocol.registry`][], keyed by the family the loaded config
     declares. No family is named here. The measured three-family table is
     rendered from those rows into ``docs/running_experiments.md`` §5
     (``registry.render_family_table``) and checked against them.
@@ -537,7 +357,7 @@ def _attention_interior_site(
     scatter into the native tensor (``layout.from_contract``).
 
     The ``split_qkv`` and ``gated_attention`` predicates were checked by
-    :func:`_check_requires` before this is reached; a family without a row was
+    `_check_requires` before this is reached; a family without a row was
     served or refused there by measurement.
     """
     feature_slice = _head_slice(bundle, component, head)
@@ -569,307 +389,7 @@ def _attention_interior_site(
 # ``transformers`` computes them within one ``attention_interface(...)`` call,
 # so ``query`` and ``key`` are its arguments (post-RoPE, and for ``key``
 # before ``repeat_kv``), the scores are the softmax's input inside it, and
-# ``z`` is its return. See :mod:`causalab.neural.pytorch_hooks.attention_interface`.
-
-
-#: Components that only exist on a full-attention mixer. A Gated DeltaNet layer
-#: has no attention matrix at all — there is nothing to read and nothing to
-#: write — so naming one at such a layer is an error about the *architecture*,
-#: not a missing feature (§5.3).
-#: 🐞 ``attention_premix`` and ``attention_result`` belong here too, and did not
-#: before. Both are the o-projection's input, and 📐 a Gated DeltaNet layer has
-#: no ``o_proj`` at all — its children are
-#: ``[conv1d, in_proj_a, in_proj_b, in_proj_qkv, in_proj_z, norm, out_proj]`` —
-#: so naming either at such a layer raised a bare
-#: ``AttributeError: 'Qwen3_5MoeGatedDeltaNet' object has no attribute 'o_proj'``
-#: out of the tap table instead of the architectural refusal that says why the
-#: box does not exist there. ``attention_output`` is deliberately *not* here: a
-#: DeltaNet layer does produce a mixer output, and it resolves.
-#: Read off the capability rows' ``stream`` cell (``registry.COMPONENT_STREAMS``
-#: is their view) rather than declared again here, because the canonicalizer
-#: refuses from the same rows against the registry's ``layer_types`` — two
-#: tables would be two answers.
-_FULL_ATTENTION_ONLY: frozenset[str] = frozenset(
-    component
-    for component, stream in COMPONENT_STREAMS.items()
-    if stream == "full_attention"
-)
-
-# The mirror: components that only exist on a Gated DeltaNet mixer.
-# A full-attention layer computes no delta-rule state — its mixer has no
-# ``in_proj_qkv``/``in_proj_z``/``out_proj`` children at all — and a family
-# with no linear stream anywhere (llama, gpt2) hits the same refusal at every
-# layer, which is the architectural refusal by name.
-# The kernel boundary *inside* the DeltaNet forward is
-# ``DELTA_KERNEL_SLOTS`` (the registry's, re-exported). 📐 These are not
-# module boundaries: the forward calls two module-global functions
-# (``causal_conv1d_fn`` and the delta-rule kernel), so the taps swap those
-# globals for the dynamic extent of the tapped mixer's forward; the per-step
-# interior is produced by stepping the library's own recurrent
-# kernel in the chunked call's shadow. See
-# :mod:`causalab.neural.engines.pytorch_hooks.delta_interface`. The nnsight
-# engine lands the same names as ``.source`` lines of the fused forward.
-
-#: The mirror set: the Gated DeltaNet interior only exists on a
-#: linear-attention mixer — a softmax-attention layer has no recurrent state,
-#: no delta kernel and no causal conv, so naming one of these there is the
-#: same architectural error in the other direction. It is the part of the
-#: protocol's linear-attention components the reference engine does **not**
-#: serve (``deltanet_query`` / ``deltanet_key`` / ``deltanet_state``: the
-#: pre-tiling and per-chunk faces, ``.source`` lines inside the fused
-#: forward); ``_LINEAR_ATTENTION_ONLY`` is the part it does — the module and
-#: kernel boundaries, which both engines serve under one name.
-#: Both read off the rows.
-_DELTANET_INTERIOR: frozenset[str] = frozenset(
-    component
-    for component, stream in COMPONENT_STREAMS.items()
-    if stream == "linear_attention"
-    and "pytorch_hooks" not in CAPABILITIES[component].reads
-)
-
-_LINEAR_ATTENTION_ONLY: frozenset[str] = (
-    frozenset(
-        component
-        for component, stream in COMPONENT_STREAMS.items()
-        if stream == "linear_attention"
-    )
-    - _DELTANET_INTERIOR
-)
-
-
-def _check_stream(bundle: Any, component: str, spec: SiteSpec, layer: int) -> None:
-    """Refuse a site whose stream the layer does not carry, before hooking.
-
-    Two ways to get this wrong, and both are caught here rather than as an
-    AttributeError from inside a hook:
-
-    * the site *declares* a ``stream`` the layer does not have — ``stream`` has
-      parsed since ``schema.py`` gained it and nothing read it until now (§5.2);
-    * the site names a full-attention-only component at a linear-attention
-      layer, which no ``stream`` spelling can make true (§5.3).
-    """
-    actual = bundle.stream_at(layer)
-    declared = spec.stream if isinstance(spec.stream, str) else None
-    if declared is not None and declared != actual:
-        raise ProtocolError(
-            "P4",
-            f"site names stream {declared!r} at layer {layer}, but that layer "
-            f"carries {actual!r} — this is a hybrid tower ({', '.join(bundle.streams)}), "
-            "so the stream is a per-layer fact, not a model-wide one",
-            reason="component_unavailable",
-        )
-    if component in _FULL_ATTENTION_ONLY and actual != "full_attention":
-        raise ProtocolError(
-            "P4",
-            f"component {component!r} needs a full-attention mixer, but layer "
-            f"{layer} of {bundle.key!r} carries {actual!r} — a Gated DeltaNet "
-            "block computes no attention matrix, so there is no such tensor at "
-            f"this layer. This tower is ({', '.join(bundle.streams)}).",
-            reason="component_unavailable",
-        )
-    if component in _LINEAR_ATTENTION_ONLY and actual != "linear_attention":
-        raise ProtocolError(
-            "P4",
-            f"component {component!r} needs a Gated DeltaNet (linear-attention) "
-            f"mixer, but layer {layer} of {bundle.key!r} carries {actual!r} — a "
-            "gated-attention mixer computes no delta-rule state, so there is no "
-            f"such tensor at this layer. This tower is "
-            f"({', '.join(bundle.streams)}).",
-            reason="component_unavailable",
-        )
-    if component in _DELTANET_INTERIOR and actual != "linear_attention":
-        raise ProtocolError(
-            "P4",
-            f"component {component!r} needs a Gated DeltaNet mixer, but layer "
-            f"{layer} of {bundle.key!r} carries {actual!r} — a softmax-attention "
-            "block computes no recurrent state and runs no delta kernel, so "
-            "there is no such tensor at this layer. This tower is "
-            f"({', '.join(bundle.streams)}).",
-            reason="component_unavailable",
-        )
-
-
-# --------------------------------------------------------------------------- #
-# the architectural predicates — the module-tree half of `Capability.requires`
-# --------------------------------------------------------------------------- #
-#
-# A row declares what a component *needs* (``registry.PREDICATES``); this is
-# where each predicate is read off the loaded modules, and what the refusal
-# says when it does not hold. The canonicalizer evaluates the ones the registry
-# entry can decide (``moe``, ``shared_expert``) at load; every one is evaluated
-# here at run, so a document arriving unvalidated is refused by the same rows.
-# The texts are the ones the per-branch checks this replaces carried (the
-# refusal snapshot pins them); the three that were ``NotImplementedError`` are
-# protocol refusals now, which is what they always described.
-
-
-def _mlp(bundle: Any, layer: int) -> Any:
-    """The block's MLP child, as the family's tree names it."""
-    block = _blocks(bundle)[layer]
-    mlp = walk(block, adapter_of(bundle).tree.mlp)
-    if mlp is None:
-        raise ProtocolError(
-            "P4",
-            f"layer {layer} of {bundle.key!r}: family {adapter_of(bundle).family!r} "
-            f"names the block's MLP {adapter_of(bundle).tree.mlp!r}, but this block "
-            f"(children={_children(block)}) has no such child",
-            reason="component_unavailable",
-        )
-    return mlp
-
-
-def _children(module: Any) -> list[str]:
-    return sorted(name for name, _ in module.named_children())
-
-
-def _probe_moe(bundle: Any, component: str, layer: int) -> str | None:
-    mlp = _mlp(bundle, layer)
-    if hasattr(mlp, "gate") and hasattr(mlp, "experts"):
-        return None
-    return (
-        f"component {component!r} needs a sparse-MoE block at layer {layer}, "
-        f"but this MLP (children={_children(mlp)}) is not one — extend the tap "
-        "table in pytorch_hooks/sites.py."
-    )
-
-
-def _probe_shared_expert(bundle: Any, component: str, layer: int) -> str | None:
-    if getattr(_mlp(bundle, layer), "shared_expert", None) is not None:
-        return None
-    return (
-        f"component {component!r} needs a shared expert, which this MoE block "
-        f"at layer {layer} does not have."
-    )
-
-
-def _probe_grouped_mm(bundle: Any, component: str, layer: int) -> str | None:
-    # the dispatch pin: the interior tensors these
-    # components name are the *grouped* function's locals. Another
-    # implementation — the "eager" per-expert loop, "batched_mm" — computes
-    # the same block output (📐 to 4.2e-7) by a different factorization,
-    # whose intermediates are different tensors. Same numbers, wrong
-    # provenance: refused by name, naming the knob.
-    impl = _experts_implementation(bundle)
-    if impl == "grouped_mm":
-        return None
-    return (
-        f"component {component!r} taps the interior of the grouped experts "
-        f"dispatch, but this model runs experts_implementation={impl!r} — a "
-        "different factorization whose intermediates are different tensors, "
-        "even though the block's output agrees. Load the model with "
-        "experts_implementation='grouped_mm' (the default), or extend "
-        "experts_interface.py for this implementation."
-    )
-
-
-def _probe_split_qkv(bundle: Any, component: str, layer: int) -> str | None:
-    """The mixer's q, k and v are addressable: the per-family tap table has met
-    the family (its rows address the interior, a fused projection included —
-    GPT-2's ``c_attn`` as three logical column blocks), or, for a family it has
-    not met, the mixer carries separate projections (measured). A fused
-    projection without a row is refused by name: which block is which is a
-    family fact only a row can state."""
-    if family_in_table(bundle.info):
-        return None
-    attn = _attn(bundle, layer)
-    if _has_separate_projections(attn):
-        return None
-    if hasattr(attn, "c_attn"):
-        return (
-            f"component {component!r} needs separate q/k/v projections, and this "
-            f"mixer fuses them into one 'c_attn' (children="
-            f"{_children(attn)}). Splitting a fused qkv projection is the "
-            f"per-family tap table, and family "
-            f"{bundle.info.family!r} has no row in it — measure the family and "
-            "add its addresses to the interior rows' overrides in "
-            "causalab/protocol/registry.py; 'attention_premix' and "
-            "'attention_output' read on this family today."
-        )
-    return (
-        f"component {component!r} needs addressable q/k/v projections, and this "
-        f"mixer (children={_children(attn)}) has neither separate ones nor a row "
-        f"for family {bundle.info.family!r} in the per-family tap table — measure "
-        "the family and add its addresses to the interior rows' overrides in "
-        "causalab/protocol/registry.py."
-    )
-
-
-def _no_gate(bundle: Any, component: str, layer: int) -> str:
-    return (
-        f"component {component!r} at layer {layer} of {bundle.key!r}: this "
-        "mixer computes no output gate. The box exists only on the "
-        "gated-attention family (Qwen3.5/3.6), whose q-projection emits "
-        "[q | gate] per head and which multiplies the mixer's output by "
-        "sigmoid(gate) before projecting out. On this family there is no such "
-        "tensor to read or write."
-    )
-
-
-def _probe_gated_attention(bundle: Any, component: str, layer: int) -> str | None:
-    """The mixer computes an output gate: the row addresses one for the family
-    (the per-family tap table), or, for a family the table has not met, the
-    q-projection measures ``H·2·d`` wide (📐 512 on qwen3.5-moe for H 8, d 32,
-    against ``H·d = 16`` on llama) — the doubled width is the gate."""
-    row = capability(component)
-    if family_in_table(bundle.info):
-        return (
-            None
-            if row.address_on(bundle.info) is not None
-            else _no_gate(bundle, component, layer)
-        )
-    attn = _attn(bundle, layer)
-    value = component_shape(bundle.info, component)
-    assert value.width is not None
-    for module in _declared_modules(component, packings=frozenset({"fused_heads"})):
-        projection = getattr(attn, module, None)
-        if projection is None:
-            continue
-        out = _projection_width(projection)
-        if out == 2 * value.width:
-            return None
-        if out is not None and out != value.width:
-            raise ProtocolError(
-                "P4",
-                f"the q-projection at layer {layer} of {bundle.key!r} emits {out} "
-                f"features, which is neither {value.width} (heads·head_dim) nor "
-                f"{2 * value.width} (a gated family's [q | gate] per head). This "
-                "backend cannot say which columns are the queries — measure the "
-                "family and add a row to the per-family tap table "
-                "(causalab/protocol/registry.py).",
-                reason="component_unavailable",
-            )
-    return _no_gate(bundle, component, layer)
-
-
-#: One probe per predicate in the registry's vocabulary — the shared
-#: module-tree evaluators, which every family uses unless its adapter declares
-#: its own cell for a predicate (``FamilyAdapter.probes``). The census guard
-#: asserts the keys are exactly ``registry.PREDICATES``; a predicate added to a
-#: row without a probe here fails that test, not a document.
-_PREDICATE_PROBES: dict[str, Any] = {
-    "moe": _probe_moe,
-    "shared_expert": _probe_shared_expert,
-    "grouped_mm": _probe_grouped_mm,
-    "split_qkv": _probe_split_qkv,
-    "gated_attention": _probe_gated_attention,
-}
-
-
-def _check_requires(bundle: Any, component: str, layer: int) -> None:
-    """Refuse a component whose row requires an architectural fact the loaded
-    model does not have, in the rows' predicate order (a fused-qkv family is
-    named before its missing gate; a dense MLP before its missing shared
-    expert). Each predicate is evaluated by the family's own cell where its
-    adapter declares one, by the shared module-tree probe otherwise."""
-    row = capability(component)
-    probes = adapter_of(bundle).probes
-    for predicate in PREDICATES:
-        if predicate not in row.requires:
-            continue
-        probe = probes.get(predicate, _PREDICATE_PROBES[predicate])
-        refusal = probe(bundle, component, layer)
-        if refusal is not None:
-            raise ProtocolError("P4", refusal, reason="component_unavailable")
+# ``z`` is its return. See [`causalab.neural.engines.pytorch_hooks.attention_interface`][].
 
 
 #: The MoE surface: every row that requires a sparse-MoE block. The
@@ -887,16 +407,9 @@ _MOE_COMPONENTS: frozenset[str] = frozenset(
 # ``ALL_EXPERTS_FUNCTIONS["grouped_mm"]`` call (its only child is the one
 # shared ``act_fn``, which the wrapper hooks for the duration of that call).
 # The reference engine taps them by wrapping that dispatch
-# (:mod:`causalab.neural.engines.pytorch_hooks.experts_interface`); the
+# ([`causalab.neural.engines.pytorch_hooks.experts_interface`][]); the
 # nnsight engine lands the same components through its `.source` address
 # table — both consume the ``kind="experts"`` resolution below.
-
-
-def _experts_implementation(bundle: Any) -> str:
-    """The experts implementation the loaded model dispatches on — read from
-    the config the modeling code itself reads."""
-    config = getattr(bundle.model.config, "text_config", None) or bundle.model.config
-    return str(getattr(config, "_experts_implementation", "<undeclared>"))
 
 
 def _moe_site(
@@ -927,7 +440,7 @@ def _moe_site(
     have silently handed back the logits for all three.
 
     The ``moe`` / ``shared_expert`` / ``grouped_mm`` predicates were checked by
-    :func:`_check_requires` before this is reached.
+    `_check_requires` before this is reached.
     """
     # The `expert` sub-axis is the ragged face of the routed interior: select
     # the (position, slot) pairs the router sent to one expert. Only the rows
@@ -993,9 +506,9 @@ def _moe_site(
 
 
 def resolve_band(bundle: Any, spec: SiteSpec) -> tuple[ResolvedSite, ...]:
-    """Every module a site addresses, one :class:`ResolvedSite` per layer of
+    """Every module a site addresses, one [`ResolvedSite`][] per layer of
     its band (§2.4 ``layers``), in band order — the one-layer band is the
-    one-tuple of :func:`resolve_site`. The band is fanned out here and the
+    one-tuple of [`resolve_site`][]. The band is fanned out here and the
     resolved record stays scalar (``ResolvedSite.layer``): every engine
     consumer of a resolved site — hooks, address tables, the resume check —
     reasons about one module at a time."""
@@ -1011,7 +524,7 @@ def resolve_band(bundle: Any, spec: SiteSpec) -> tuple[ResolvedSite, ...]:
 def resolve_site(bundle: Any, spec: SiteSpec) -> ResolvedSite:
     """Resolve one site record to its tap, from the family's declared taps.
 
-    The family is the bundle's plugin (:func:`adapter_of`); *where* a component
+    The family is the bundle's plugin ([`adapter_of`][]); *where* a component
     is on it — which module, which side, which function slot — is the
     adapter's tap for the component (``registry.FamilyAdapter.taps``), and a
     component the family does not declare is refused by name. What this
@@ -1019,7 +532,51 @@ def resolve_site(bundle: Any, spec: SiteSpec) -> ResolvedSite:
     address: the stream check, the predicate probes, the head and expert
     sub-axes, the shape and the derivations — the same for every family.
     Refuses honestly on components this engine does not implement yet.
+
+    The site's ``placement`` (``docs/model_parallelism.md`` §4) is read off
+    the family's parallel-plan row for the tapped module and the bundle's
+    geometry (`_placed`); at world 1, or on a bundle carrying no plan,
+    it is [`REPLICATED`][] and
+    nothing else runs.
     """
+    return _placed(bundle, _resolve_unplaced(bundle, spec))
+
+
+def _placed(bundle: Any, site: ResolvedSite) -> ResolvedSite:
+    """The site with its placement filled from the registry entry's plan
+    (``bundle.info.parallel_plan``) **as applied under the geometry** the
+    bundle was loaded under (``bundle.geometry``) — ``ParallelPlan.
+    for_geometry``, the very table ``apply_plan`` sharded the model from,
+    the K/V projections replicated above the KV heads (§6.6). At world 1 —
+    every bundle a test stand-in builds without a geometry too — nothing is
+    read and the site is returned as resolved."""
+    geometry: ParallelGeometry = getattr(bundle, "geometry", ONE)
+    if geometry.world == 1:
+        return site
+    # an entry declaring no plan shards nothing over the tensor and expert
+    # axes (the geometry check refuses those above one), but its positions
+    # are still chunked under context > 1 (§8.4) — so the empty plan
+    plan: ParallelPlan = bundle.info.parallel_plan or ParallelPlan(rows={})
+    placed = site_placement(
+        plan=plan.for_geometry(geometry, bundle.info),
+        geometry=geometry,
+        path=module_path(bundle.model, site.module),
+        prefix=getattr(bundle.model, "base_model_prefix", None),
+        kind=site.kind,
+        component=site.component,
+        layer=site.layer,
+        num_layers=len(_blocks(bundle)),
+        layerless=site.component in LAYERLESS_COMPONENTS,
+        shape=site.shape,
+        slot=site.interface_slot,
+        tuple_index=site.tuple_index,
+    )
+    return dataclasses.replace(
+        site, placement=placed.placement, remapped_routing=placed.remapped_routing
+    )
+
+
+def _resolve_unplaced(bundle: Any, spec: SiteSpec) -> ResolvedSite:
     component = spec.component
     if not isinstance(component, str):
         raise ProtocolError("P2", f"unresolved site component {component!r}")
@@ -1038,7 +595,7 @@ def resolve_site(bundle: Any, spec: SiteSpec) -> ResolvedSite:
     if len(band) > 1:
         # a band is one site across N layers, and a ResolvedSite is one
         # module: the fan-out is `resolve_band`, and an executor lowers a
-        # band to its per-layer members (`plan.lower_bands`) before it asks
+        # band to its per-layer members (`lowering.lower_bands`) before it asks
         # for modules — so a band reaching here is a caller that skipped that
         raise ProtocolError(
             "P2",

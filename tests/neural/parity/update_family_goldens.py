@@ -3,7 +3,7 @@
 Writes ``tests/neural/parity/goldens/<family>.json`` — the family's pinned
 values in the frozen goldens' shape plus the ``certification`` block carrying
 the eight certification fields — by running every case of
-:mod:`tests.neural.parity.family_certification` through the reference engine
+`tests.neural.parity.family_certification` through the reference engine
 and the raw-hook oracle on the family's realization::
 
     HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 uv run python \\

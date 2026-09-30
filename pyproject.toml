@@ -16,53 +16,68 @@ dependencies = [
     "numpy",
     "scikit-learn",
     "seaborn",
-    # 5.16 is the first release carrying models/qwen3_5_moe (Qwen3.6-35B-A3B's
-    # text tower); the hookpoint vocabulary work targets that architecture.
+    # Qwen3.6-35B-A3B needs models/qwen3_5_moe from transformers 5.16.
     "transformers>=5.16",
     "safetensors",
-    # transformers 5 refuses `device_map` without accelerate, and the reference
-    # engine's loader materializes weights on the target device through a
-    # device_map (threaded reads straight to the accelerator) instead of a
-    # CPU load followed by `.to(device)`.
-    # capped: 1.15.0 was released 2026-09-09, the day this was locked; lift the
-    # cap once it has been out a week
+    # The loader uses accelerate's device_map to read weights onto the device.
+    # Verify a newer accelerate release before raising the cap.
     "accelerate>=1.14.0,<1.15",
     "tensorboard",
     "rich",
     "umap-learn>=0.5.0",
     "pot>=0.9.0",
     "datasets>=2.20.0",
-    # the protocol stack's YAML authoring surface (transitive before, via
-    # hydra-core/omegaconf). Metric tables are JSON, so no parquet engine.
+    # Parse YAML experiment documents.
     "pyyaml>=6.0",
-    # transform ops: the t-distribution CDF `paired_ttest@1` needs. Transitive
-    # before (via scikit-learn), but an op's dependency belongs in the record
-    # of what this package requires, not in another library's install tree.
+    # paired_ttest@1 uses the t-distribution CDF.
     "scipy>=1.10",
-    # the interactive HTML figures (`io/plots/receptive_field.py`,
-    # `plot_3d_interactive.py`) import it at module scope, so a wheel without
-    # it cannot import them. Transitive before, through the `notebook` extra's
-    # `dash`, which is why every checkout had it and no `uv pip install` did
-    # (tests/test_declared_dependencies.py is the guard). Not in the extra: it
-    # writes a file, it runs no server.
+    # Interactive HTML figures import plotly at module scope.
     "plotly>=5.0",
 ]
 
 [tool.pytest.ini_options]
 markers = [
-    "smoke: tiny-config end-to-end runner smoke tests; <5 min total wall, no numerical assertions beyond artifact existence",
+    "smoke: tiny-config end-to-end runner smoke tests; <5 min total wall for the pull-request selection (the `measurement_study` and `parallel_world` tests, deselected there, are minutes each), no numerical assertions beyond artifact existence",
     "numerical_unit: pinned-value CPU tests on fixed seeds (losses, metrics, sample outputs)",
-    "golden: value-pinned end-to-end runner goldens on the coherent model; the sole GPU tier (CI runs -m 'not golden' and skips it)",
+    "golden: value-pinned end-to-end runner goldens on the coherent model; the sole GPU tier (CI runs -m 'not golden' and skips it); also the checks that need a gated model's files, such as its tokenizer, and no accelerator",
     "property: invariances/equivariances and determinism",
-    "unit: default tier — pure-function tests, parsers, small utilities",
-    # hardware marker of tests/io/fastersafetensors, orthogonal to the tiers:
-    # skipped by its conftest when there is no CUDA device (the GPUDirect
-    # Storage tests are Rust, crates/fst-cuda/tests/cuda_node.rs, behind
-    # FST_CUDA_TESTS)
+    "unit: default tier for pure functions, parsers, and small utilities",
+    # Tests with this marker skip when CUDA is unavailable.
     "cuda: needs a CUDA device",
+    # Two COST markers, orthogonal to the tiers (a test still declares exactly
+    # one tier): tests that take minutes each on the two-vCPU CI runner. The
+    # pull-request gate deselects both (test.yml, `-m "not golden and not
+    # measurement_study and not parallel_world"`); the nightly CPU job (`-m "not
+    # golden"`) runs them. Nothing infers either: a new module of the same kind
+    # must add the marker to its own `pytestmark`. Measured on the merged tree
+    # 2026-09-22 (one serial CI run, 74 min): the studies 22.6 min, the
+    # twelve parallel_world modules 27.6 min, everything else 11.3 min.
+    #
+    # `measurement_study`: the four end-to-end study modules under
+    # tests/measurement/study/ (test_controller.py, test_distinct_commits.py,
+    # test_workflow_comparison.py, test_workflow_training.py; the directory's
+    # other modules are plain `unit` and stay on the PR gate) — each builds and
+    # installs a source wheel (the Cargo workspace included) and spawns cold
+    # worker processes.
+    "measurement_study: end-to-end measurement studies that build source arms and spawn cold workers; minutes each, so the PR gate deselects them and the nightly CPU job runs them",
+    # `parallel_world`: modules whose tests run a document or a fit across a
+    # spawned multi-rank process world (tp/ep/pp/cp/dp on the tiny fixtures,
+    # up to eight ranks each importing torch) and cost a minute or more
+    # serially; the cost is the deciding half. Same-shape modules under the
+    # threshold stay on the PR gate unmarked (test_sharded_load_cast.py beside
+    # the marked test_sharded_load.py: same helper, one two-rank world, one
+    # test), as do the cheap world suites — the collective, lockstep, mesh and
+    # styles contracts, hundreds of sub-second programs — which are the
+    # parallelism code's per-PR coverage. Only the marked set is checkable
+    # (`--co -m parallel_world`); time a new module before deciding.
+    "parallel_world: end-to-end runs across a spawned multi-rank process world; minutes each, so the PR gate deselects them and the nightly CPU job runs them",
 ]
 testpaths = ["tests"]
 norecursedirs = [".venv", "__pycache__"]
+# An unregistered marker is a collection error, not a warning: the cost marker
+# above is opt-in, so a misspelt `measurment_study` on a new study module would
+# otherwise warn once in a 12 000-test log and land the module on the PR gate.
+addopts = ["--strict-markers"]
 
 [tool.coverage.run]
 omit = [
@@ -84,10 +99,8 @@ exclude_lines = [
 causalab = "causalab.cli:main"
 
 [tool.maturin]
-# causalab is a mixed Rust/Python project: the `causalab/` package beside this
-# file, plus the PyO3 extension `causalab.io.fastersafetensors._core` built from
-# the Cargo workspace at the repository root (crates/; docs/fastersafetensors.md).
-# maturin finds the package by the first component of `module-name`.
+# Build the Python package with the PyO3 extension from crates/.
+# See docs/fastersafetensors.md.
 module-name = "causalab.io.fastersafetensors._core"
 manifest-path = "crates/fst-py/Cargo.toml"
 features = ["extension-module"]
@@ -95,8 +108,7 @@ strip = true
 include = [{ path = "docs/profiles/*.json", format = "sdist" }]
 
 [tool.uv]
-# The project is rebuilt when one of these changes — the Rust sources included,
-# which uv's default keys (pyproject.toml alone) would never see.
+# Rebuild when Python build settings or Rust sources change.
 cache-keys = [
     { file = "pyproject.toml" },
     { file = "Cargo.toml" },
@@ -107,16 +119,8 @@ cache-keys = [
 ]
 
 [project.optional-dependencies]
-# The interactive half: Jupyter, and the Dash/Cytoscape causal-graph views
-# (`causalab.io.plots.causal_graph.build_*_app` / `display_*`). Nothing in
-# causalab/ or tests/ imports the jupyter five at all;
-# dash and dash-cytoscape are imported inside the four functions that build an
-# app, so importing the plots package needs neither (see `_require_dash`).
-#
-# Out of core because a headless install has no use for a jupyter-server stack
-# or a web-app server — a GPU job image that merges causalab into a
-# network-less venv would pay for all of it. The jupyter five moved out first;
-# dash followed once its import went lazy.
+# Jupyter and interactive causal-graph apps. Dash imports occur when an app
+# is built, so headless users can install the base package.
 notebook = [
     "ipywidgets",
     "jupyterlab",
@@ -126,10 +130,7 @@ notebook = [
     "dash",
     "dash-cytoscape",
 ]
-# The nnsight tracing engine (causalab/neural/engines/nnsight_tracing/).
-# Pinned to the 0.8-branch rev the engine was verified against on the real
-# Qwen3.6-35B-A3B: bump deliberately, re-running the address canary, never
-# implicitly.
+# The nnsight tracing engine. Re-run the address canary when changing its pin.
 nnsight = ["nnsight"]
 
 # Optional Linux GPU kernels. Neither is part of the base or dev install.
@@ -142,31 +143,24 @@ flash-linear-attention = [
 ]
 
 [build-system]
-# maturin, because the wheel carries a compiled extension (see [tool.maturin]);
-# a Rust toolchain is required to build, install or `uv sync` this project
-# (`rustup` on PATH; rust-toolchain.toml pins the version, Cargo.toml's
-# `rust-version` is the floor the code needs).
+# The compiled extension requires Rust for builds and uv sync.
+# rust-toolchain.toml pins the toolchain; Cargo.toml sets the minimum version.
 requires = ["maturin>=1.15,<2"]
 build-backend = "maturin"
 
 [dependency-groups]
-# The CI lint job's whole world, deliberately separate from `dev`. Every hook in
-# .pre-commit-config.yaml comes from a remote repo and builds its own isolated
-# env, and nothing the lint job runs imports causalab — so `pre-commit` on PATH
-# is all it needs. It cannot just sync `dev`: `dev` pins nnsight, which drags in
-# the CUDA torch stack, so `--only-group dev` still installs torch (84 of the
-# 147 locked packages, torch among them). `dev` includes this group, so a dev
-# environment is unchanged and `pre-commit` is pinned in exactly one place.
+# CI lint needs pre-commit and its isolated hook environments.
+# Keeping this group separate lets lint run without torch and nnsight.
 lint = [
     "pre-commit>=4.4.0",
 ]
 dev = [
     {include-group = "lint"},
+    {include-group = "docs"},
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",
     "pytest-xdist>=3.6.0",
-    # pinned exactly: formatting is a CI gate, and an unpinned formatter turns
-    # a green tree red on a bystander ruff release
+    # Pin the formatter so local checks and CI produce the same output.
     "ruff==0.14.5",
     "basedpyright",
     "scikit-learn-stubs",
@@ -174,11 +168,7 @@ dev = [
     "scipy-stubs",
     "ipdb>=0.13.13",
     "hypothesis>=6.0",
-    # the interactive causal-graph builders are tested (tests/io/plots/
-    # test_causal_graph.py exercises every `build_*_app`), so the dev
-    # environment carries the two packages they need even though a runtime
-    # install does not. The jupyter half of the extra has no tests and is not
-    # here.
+    # The causal-graph app tests need these optional runtime dependencies.
     "dash",
     "dash-cytoscape",
     # the nnsight engine's parity suite runs in the default dev env (CI uses
@@ -186,10 +176,18 @@ dev = [
     # itself is the optional extra above
     "nnsight",
 ]
+docs = [
+    "griffe>=2.3.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-gen-files>=0.6.1",
+    "mkdocs-literate-nav>=0.6.3",
+    "mkdocs-material>=9.7.7",
+    "mkdocs-section-index>=0.3.12",
+    "mkdocstrings[python]>=1.0.6",
+]
 
 [tool.uv.sources]
-# One source for the extra and the dev group alike — the 0.8-branch rev the
-# engine was verified against (see the optional-dependencies note above).
+# Use the verified revision for both the extra and the dev group.
 nnsight = { git = "https://github.com/ndif-team/nnsight.git", rev = "8c480727" }
 
 [tool.uv.extra-build-dependencies]
@@ -223,7 +221,7 @@ exclude = [
     # Exclude all tasks except MCQA
     "causalab/tasks/entity_binding",
     "causalab/tasks/IOI",
-    # Research-run output dir (generated at runtime, gitignored) — not shipped code
+    # Generated research output.
     "agent_logs",
 ]
 
@@ -242,7 +240,7 @@ exclude = [
     # Exclude all tasks except MCQA
     "causalab/tasks/entity_binding",
     "causalab/tasks/IOI",
-    # Research-run output dir (generated at runtime, gitignored) — not shipped code
+    # Generated research output.
     "agent_logs",
 ]
 # Disable cascading inference rules to avoid untyped code propagating errors
@@ -251,6 +249,110 @@ reportUnknownMemberType = "none"
 reportUnknownArgumentType = "none"
 reportUnknownParameterType = "none"
 reportUnknownLambdaType = "none"
-# Mechanical annotation gaps — don't gate CI on these; correctness rules below stay strict
+# Allow incomplete annotations while retaining the correctness checks below.
 reportMissingParameterType = "none"
 reportMissingTypeArgument = "none"
+
+[tool.mutmut]
+# Mutation pass over the parallelism core (docs/model_parallelism.md §10.7).
+# `uv pip install mutmut==3.7.0` into the venv (not a dependency), clear every
+# `__pycache__` outside `.venv` (mutmut copies the tree with its mtimes, and a
+# stale pytest-rewrite pyc carries the tree's `co_filename`, which breaks the
+# simulator's call-site naming), then `CUDA_VISIBLE_DEVICES= .venv/bin/mutmut run`; `mutmut results` /
+# `mutmut browse` read the verdicts. The gloo subprocess smokes (`*_run.py`,
+# `test_sharded_load.py`, `test_interiors_sharded.py`, the engine's
+# `test_kv_replication.py`) are outside the loop:
+# one mutant costs minutes there, and mutmut's per-test coverage does not see
+# `mp.spawn` children.
+source_paths = ["causalab"]
+only_mutate = [
+    "causalab/protocol/parallel.py",
+    "causalab/protocol/kv_replication.py",
+    "causalab/neural/shared/parallel/agreements.py",
+    "causalab/neural/shared/parallel/autograd.py",
+    "causalab/neural/shared/parallel/collective.py",
+    "causalab/neural/shared/parallel/context.py",
+    "causalab/neural/shared/parallel/fragments.py",
+    "causalab/neural/shared/parallel/launcher.py",
+    "causalab/neural/shared/parallel/mesh.py",
+    "causalab/neural/shared/parallel/placement.py",
+    "causalab/neural/shared/parallel/placements.py",
+    "causalab/neural/engines/pytorch_hooks/budget.py",
+    "causalab/neural/engines/pytorch_hooks/rows.py",
+    "causalab/neural/engines/pytorch_hooks/stages.py",
+    "causalab/neural/engines/pytorch_hooks/kv_replication.py",
+    "causalab/neural/engines/pytorch_hooks/partial_gradient.py",
+    "causalab/neural/engines/pytorch_hooks/shard_read.py",
+    "causalab/neural/engines/pytorch_hooks/styles/__init__.py",
+    "causalab/neural/engines/pytorch_hooks/styles/fragment.py",
+    "causalab/neural/shared/parallel/objects.py",
+    "causalab/neural/shared/parallel/lockstep.py",
+    "causalab/neural/shared/parallel/heartbeat.py",
+    "causalab/neural/shared/parallel/watchdog.py",
+    "causalab/neural/shared/parallel/mismatch.py",
+    "causalab/neural/shared/parallel/memory.py",
+    "causalab/neural/shared/parallel/serving.py",
+    "causalab/neural/shared/parallel/spawn.py",
+    "causalab/neural/shared/parallel/standin.py",
+    "causalab/neural/shared/parallel/taps.py",
+    "causalab/protocol/lockstep.py",
+    "causalab/protocol/parallel_memory.py",
+    "causalab/protocol/publish.py",
+    "causalab/neural/engines/pytorch_hooks/sharding.py",
+    "causalab/neural/engines/pytorch_hooks/residency.py",
+    "causalab/neural/shared/symbol_dispatch.py",
+    "causalab/neural/engines/pytorch_hooks/delta_interface.py",
+    "causalab/neural/engines/pytorch_hooks/experts_interface.py",
+]
+also_copy = ["causalab/io/fastersafetensors", "causalab/configs"]
+pytest_add_cli_args = [
+    "-p", "no:cacheprovider",
+    "-p", "tests._helpers.mutation_plugin",
+    "--hypothesis-seed=0",
+]
+pytest_add_cli_args_test_selection = [
+    "tests/protocol/test_parallel.py",
+    "tests/protocol/test_parallel_context.py",
+    "tests/protocol/test_parallel_plan.py",
+    "tests/protocol/test_parallel_rows.py",
+    "tests/protocol/test_kv_replication.py",
+    "tests/protocol/test_cli_parallel.py",
+    "tests/protocol/test_cli_parallel_rows.py",
+    "tests/neural/shared/parallel",
+    "tests/neural/shared/test_sites_parallel.py",
+    "tests/neural/engines/pytorch_hooks/test_context_parallel.py",
+    "tests/neural/engines/pytorch_hooks/test_context_parallel_train.py",
+    "tests/neural/engines/pytorch_hooks/test_engine_parallel.py",
+    "tests/neural/engines/pytorch_hooks/test_executor_parallel.py",
+    "tests/neural/engines/pytorch_hooks/test_interiors_parallel.py",
+    "tests/neural/engines/pytorch_hooks/test_train_parallel.py",
+    "tests/neural/engines/pytorch_hooks/test_train_pipeline.py",
+    "tests/neural/engines/pytorch_hooks/test_train_sharded.py",
+    "tests/neural/engines/pytorch_hooks/test_shard_read.py",
+    "tests/neural/engines/pytorch_hooks/test_read_plan.py",
+    "tests/neural/engines/pytorch_hooks/test_styles.py",
+    "tests/neural/engines/pytorch_hooks/test_sharded_simulation.py",
+    "tests/neural/engines/pytorch_hooks/test_stages.py",
+    "tests/neural/engines/pytorch_hooks/test_rows.py",
+    "tests/neural/engines/pytorch_hooks/test_row_budget.py",
+    "tests/neural/engines/pytorch_hooks/test_train_rows.py",
+    "tests/neural/engines/pytorch_hooks/test_sharding.py",
+    "tests/neural/engines/pytorch_hooks/test_cuda_graphs.py",
+    "tests/protocol/test_lockstep.py",
+    "tests/protocol/test_parallel_memory.py",
+    "tests/protocol/test_publish.py",
+    "tests/protocol/test_dry_run_memory.py",
+    "tests/protocol/test_checkpoint_census.py",
+    "tests/workflow/test_cli_parallel.py",
+    "tests/workflow/test_lockstep_run.py",
+    "tests/neural/engines/pytorch_hooks/test_pipeline_mismatch.py",
+    "tests/neural/engines/pytorch_hooks/test_residency.py",
+    "tests/neural/engines/pytorch_hooks/test_residency_property.py",
+    "tests/neural/engines/pytorch_hooks/test_memory_preflight.py",
+    "tests/neural/shared/test_symbol_dispatch.py",
+    "tests/neural/engines/pytorch_hooks/test_kernel_layers_interleaved.py",
+    "tests/neural/engines/pytorch_hooks/test_delta_interface.py",
+    "tests/neural/engines/pytorch_hooks/test_experts_interface.py",
+    "tests/neural/engines/pytorch_hooks/test_context_parallel_delta.py",
+    "tests/_helpers/test_simulated_world.py",
+]

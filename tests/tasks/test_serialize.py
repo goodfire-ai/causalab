@@ -11,7 +11,7 @@ import json
 
 import pytest
 
-from causalab.protocol.resolve import FileDatasets
+from causalab.io.env import FileDatasets
 from causalab.tasks.natural_domains_arithmetic.config import NaturalDomainConfig
 from causalab.tasks.serialize import (
     RESERVED_COLUMNS,
@@ -102,7 +102,6 @@ def test_written_table_resolves_through_the_seam(tmp_path):
     assert resolver.rows("weekdays/train") == json.loads(out.read_text())
     assert "label_forms" in resolver.columns("weekdays/train")
     # the table is the whole of what is written: no sidecar beside it (§2.2)
-    # — a workflow pins the table's digest in its own `pins` section
     assert [p.name for p in out.parent.iterdir()] == ["train.json"]
 
 

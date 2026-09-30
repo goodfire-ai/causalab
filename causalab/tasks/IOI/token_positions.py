@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from causalab.neural.token_positions import LMPipeline
-from causalab.neural.token_positions import (
+from causalab.tasks.token_positions import LMPipeline
+from causalab.tasks.token_positions import (
     TokenPosition,
     build_token_positions,
 )
@@ -32,7 +32,7 @@ def create_token_positions(
             so this can be called without a Task wrapper (e.g. from notebooks).
 
     Returns:
-        Dict of position name → :class:`TokenPosition`.
+        Dict of position name → [`TokenPosition`][].
     """
     if template is None:
         template = CANONICAL_TEMPLATE

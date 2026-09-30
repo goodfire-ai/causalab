@@ -1,48 +1,71 @@
-"""Model, tokenizer and tensor-bundle loading for the reference engine.
+"""Load models, tokenizers, and bundles for the hooks engine.
 
-One bundle per load configuration, including attention backend: the HF
-causal-LM, its tokenizer configured for the engine's one padding convention
-(**left**-padded, ``pad = eos``), and the model's static metadata
-registered into the protocol model registry so canonicalization inside a
-run needs no pre-registration.
+The cache key includes model configuration and attention backend.
+Tokenizers use left padding and EOS as a pad token when needed. The loader
+registers static model metadata. Eager attention is the default; documents
+can choose another backend, with temporary eager forwards for interior taps.
 
-Attention defaults to **eager** for the captured goldens, but callers can
-select another Transformers backend. The executor temporarily uses eager
-only for forwards that read or edit attention-function interiors.
-
-Two ways in. :func:`load_model` loads, prepares and caches a model the
-library owns. :meth:`ModelBundle.from_model` wraps a model the **caller**
-owns (spec §9, the ownership contract): it derives the same registry entry
-but mutates nothing — where the loader would prepare the model it *refuses*,
-naming the one call the caller must make, and only where the numbers would
-otherwise differ from a loaded run. A caller bundle never enters the loader's
-cache.
+``load_model`` prepares and caches a library-owned model.
+``ModelBundle.from_model`` wraps a caller-owned model, checks required
+preparation, and names any action the caller must take. Caller bundles
+stay outside the loader cache.
 """
 
 from __future__ import annotations
 
 import dataclasses
 import functools
+import json
+import os
+from pathlib import Path
 from typing import Any, Mapping
 
 import torch
 
-from causalab.neural.engines.pytorch_hooks.weights import load_pretrained
-from causalab.neural.shared import streams
+from causalab.neural.engines.pytorch_hooks.shard_read import LoadReport
+from causalab.neural.engines.pytorch_hooks.sharding import Sharding
+from causalab.neural.engines.pytorch_hooks.residency import Residency
+from causalab.neural.engines.pytorch_hooks.weights import load_planned, load_pretrained
+from causalab.neural.shared import model_tree
 from causalab.neural.shared.compile_cache import configure as configure_compile_cache
+from causalab.neural.shared.devices import DeviceMap
 from causalab.neural.shared.kernels import bind_kernel_path
 from causalab.neural.shared.normalized_cache import normalized_cache
-from causalab.neural.shared.services import BundlePoint, TensorBundle
-from causalab.protocol.errors import ProtocolError
+from causalab.neural.shared.parallel.standin import Shadowed
+from causalab.io.tensor_files import BundlePoint, TensorBundle
+from causalab.protocol.parallel import ONE, ParallelGeometry, format_geometry
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.registry import (
     FamilyAdapter,
     ModelInfo,
     family_for,
     model_info_from_hf_config,
     register_model,
+    walk,
 )
 
-__all__ = ["BundlePoint", "ModelBundle", "TensorBundle", "load_model"]
+__all__ = [
+    "LOAD_REPORT_VARIABLE",
+    "BundlePoint",
+    "DeviceMap",
+    "ModelBundle",
+    "Sharding",
+    "TensorBundle",
+    "load_model",
+    "load_report_path",
+    "write_load_report",
+]
+
+#: Debug output, opt in: a directory into which every **sharded** load
+#: writes its [`LoadReport`][] — the bytes the reader was asked for
+#: against the bytes on disk, per parameter — as
+#: ``load_report.rank<N>.json`` ([`load_report_path`][]), one file per
+#: rank of the world. The fact belongs to one rank's process, which is why
+#: it is not in the run receipt (the joiner's, one per campaign): the
+#: parallel golden reads every rank's file and holds a sharded parameter on
+#: a real checkpoint to exactly ``1 / world`` (``docs/model_parallelism.md``
+#: §5.3, §10.6). Unset, nothing is written.
+LOAD_REPORT_VARIABLE = "CAUSALAB_LOAD_REPORT_DIR"
 
 _DTYPES = {"fp32": torch.float32, "bf16": torch.bfloat16, "fp16": torch.float16}
 
@@ -56,16 +79,32 @@ class ModelBundle:
     model: Any
     tokenizer: Any
     info: ModelInfo
-    #: The device that was **requested**, not necessarily where the weights
-    #: are. On a quantized load the `.to(device)` below is skipped —
-    #: bitsandbytes/accelerate place the weights themselves and moving them
-    #: afterwards is refused — so this records the ask, and the real placement
-    #: is `next(model.parameters()).device`. Kept as the request because it is
-    #: what the executor sends inputs to; a disagreement surfaces as a loud
-    #: device-mismatch at the first forward, never as quiet wrong numbers.
-    device: str
+    #: Where the model's layers are: the device of the embedding, of every
+    #: block and of the head (``shared/devices.py``). On a load this is read
+    #: off the placed parameters with the user's ``--device`` word kept as
+    #: ``requested``; on a caller-owned model it is derived from the model
+    #: alone. A quantized load records the **requested** map instead —
+    #: bitsandbytes places the weights itself and moving them afterwards is
+    #: refused — so a disagreement there surfaces as a loud device mismatch
+    #: at the first forward, never as quiet wrong numbers. Inputs are encoded
+    #: onto ``devices.embedding``; a capture stays where its block produced
+    #: it; a write's operand meets the written tensor on its block's device.
+    devices: DeviceMap
     dtype: str
     quantization: dict[str, Any] | None = None
+    #: The geometry this bundle was loaded under (``docs/model_parallelism.md``
+    #: §2): all ones for a one-process load and for every caller-owned model.
+    #: Above world 1 the sharded parameters are DTensors carrying their own
+    #: placements, so nothing per parameter is recorded here. Execution,
+    #: never identity.
+    geometry: ParallelGeometry = ONE
+    #: What the weight reader was asked for against what is on disk, per
+    #: parameter — recorded by a sharded load (§5.3); ``None`` for a world-1
+    #: load, a quantized one and a caller-owned model.
+    load_report: LoadReport | None = None
+    #: What this rank holds against that report (``residency.py``); ``None``
+    #: at world 1, with the report.
+    residency: Residency | None = None
 
     @functools.cached_property
     def adapter(self) -> FamilyAdapter:
@@ -86,16 +125,41 @@ class ModelBundle:
 
     def stream_at(self, layer: int) -> str:
         """Which mixer stream ``layer`` actually carries — delegated to the
-        shared table (:mod:`causalab.neural.shared.streams`), because the
-        per-layer hybrid answer must never diverge between engines."""
-        return streams.stream_at(
-            self.blocks, layer, key=self.key, mixers=self.adapter.mixers
+        shared table ([`causalab.neural.shared.model_tree`][]), because the
+        per-layer hybrid answer must never diverge between engines. A block
+        another pipeline stage holds is answered from the entry's
+        ``layer_types`` (``docs/model_parallelism.md`` §6.5)."""
+        return model_tree.stream_at(
+            self.blocks,
+            layer,
+            key=self.key,
+            mixers=self.adapter.mixers,
+            layer_types=self.info.layer_types,
         )
 
     def mixer_at(self, layer: int) -> Any:
         """The attention/mixer module at ``layer``, whichever stream it is."""
-        return streams.mixer_at(
-            self.blocks, layer, key=self.key, mixers=self.adapter.mixers
+        return model_tree.mixer_at(
+            self.blocks,
+            layer,
+            key=self.key,
+            mixers=self.adapter.mixers,
+            layer_types=self.info.layer_types,
+        )
+
+    def holds(self, layer: int) -> bool:
+        """Whether this rank holds block ``layer`` — false for the stand-in a
+        pipeline stage keeps for another stage's block
+        (``docs/model_parallelism.md`` §6.5; ``sharding.place_stage``): the
+        shadowing identity, or a bare parameterless identity. A structural
+        fact of the loaded tree; the resume swap's stand-ins for a held
+        block (``executor._resumed``) are neither."""
+        block = self.blocks[layer]
+        if isinstance(block, Shadowed):
+            return False
+        return not (
+            isinstance(block, torch.nn.Identity)
+            and next(iter(block.parameters()), None) is None
         )
 
     @property
@@ -111,31 +175,36 @@ class ModelBundle:
         *,
         key: str,
         revision: str,
-        device: str,
         dtype: str,
         quantization: Mapping[str, Any] | None = None,
     ) -> "ModelBundle":
         """Wrap a model the **caller** owns — the supported way in for a model
         that is already loaded (spec §9, the ownership contract).
 
-        ``info`` is derived exactly as :func:`load_model` derives it
-        (:func:`model_info_from_hf_config` + :func:`register_model`), so the
+        ``info`` is derived exactly as [`load_model`][] derives it
+        ([`model_info_from_hf_config`][causalab.protocol.registry.models.model_info_from_hf_config] + [`register_model`][causalab.protocol.registry.models.register_model]), so the
         engine's tap table reads the same registry row either way. ``key``
         and ``revision`` are the caller's *assertion*: nothing here can check
         them against the weights, and the run receipt stamps them as given.
+        The device map is **not** asserted: it is read off the model's own
+        parameters ([`DeviceMap.of_modules`][]), and a block whose
+        parameters straddle devices is refused by index. A caller model
+        spread over several devices must carry its own crossings (the hooks
+        accelerate's ``device_map`` installs, or the engine's); the bundle
+        installs none, because it mutates nothing.
 
-        Nothing about ``model`` or ``tokenizer`` is mutated. :func:`load_model`
+        Nothing about ``model`` or ``tokenizer`` is mutated. [`load_model`][]
         prepares what it loads — ``.eval()``,
         ``.requires_grad_(False)``, left padding with a pad token — and each
         of those changes the numbers or what the hooks see, so an object that
         lacks one is **refused** with the exact call to make rather than
         quietly re-moded, moved or re-configured behind the caller's back
-        (:func:`_refuse_unprepared`). The bundle is never inserted into
-        :func:`load_model`'s cache.
+        (`_refuse_unprepared`). The bundle is never inserted into
+        [`load_model`][]'s cache.
 
         One thing this method does reach beyond the model: when
         ``CAUSALAB_COMPILE_CACHE`` is set, the process's compiler cache
-        variables are pointed at the shared root here, as :func:`load_model`
+        variables are pointed at the shared root here, as [`load_model`][]
         does for a model it loads (``shared/compile_cache.py``) — a
         caller-owned model compiles its kernels on first use like any other.
 
@@ -159,19 +228,47 @@ class ModelBundle:
         )
         info = model_info_from_hf_config(key, model.config)
         register_model(info)
+        devices = _placement_of(model)
         # a caller-owned model compiles its kernels on first use like a loaded
         # one; the shared cache root applies the same way
-        configure_compile_cache(device)
+        configure_compile_cache(devices.requested)
         return cls(
             key=key,
             revision=revision,
             model=model,
             tokenizer=tokenizer,
             info=info,
-            device=device,
+            devices=devices,
             dtype=dtype,
             quantization=dict(quantization) if quantization is not None else None,
         )
+
+
+def _placement_of(
+    model: Any, requested: str | None = None, *, empty: torch.device | None = None
+) -> DeviceMap:
+    """The map a model realizes, read off its parameters: the family's tree
+    names the embedding, the blocks and the head, and each is on one device
+    or refused by name ([`DeviceMap.of_modules`][]). ``requested`` is the
+    user's spelling to keep for the record; ``None`` keeps the canonical one.
+    ``empty`` is the device a module with no tensors is recorded on — a
+    pipeline stage's identity layers, on the rank's device."""
+    adapter = family_for(model)
+    embedding = walk(model, adapter.tree.embedding)
+    head = walk(model, adapter.tree.lm_head)
+    if embedding is None or head is None:
+        raise ProtocolError(
+            "P4",
+            f"family {adapter.family!r} addresses its embedding at "
+            f"{adapter.tree.embedding!r} and its head at {adapter.tree.lm_head!r}, "
+            f"but this model ({type(model).__name__}) lacks one of them",
+        )
+    placed = DeviceMap.of_modules(
+        embedding, list(adapter.blocks_of(model)), head, empty=empty
+    )
+    if requested is None:
+        return placed
+    return dataclasses.replace(placed, requested=requested)
 
 
 def _refuse_unprepared(
@@ -179,7 +276,7 @@ def _refuse_unprepared(
 ) -> None:
     """Refuse a caller-owned model the loader would have had to prepare.
 
-    One check per preparation :func:`load_model` makes on a model it owns, in
+    One check per preparation [`load_model`][] makes on a model it owns, in
     the loader's own order, each naming the one expression the caller runs
     instead — fail closed on an object the library does not own, and only
     where a loaded run's numbers would differ:
@@ -260,6 +357,7 @@ def load_model(
     device: str = "cpu",
     quantization: Mapping[str, Any] | None = None,
     attn_implementation: str | None = "eager",
+    sharding: Sharding | None = None,
 ) -> ModelBundle:
     """Load (and cache) one model bundle.
 
@@ -268,7 +366,7 @@ def load_model(
     inherited pipeline contract the oracle tests were captured under.
 
     Four bundles stay resident, keyed on the *bound* arguments
-    (:func:`~causalab.neural.shared.normalized_cache.normalized_cache`): an
+    ([`normalized_cache`][]): an
     omitted default and its explicit spelling, positional and keyword, are one
     entry; revision, precision, device, quantization and the attention
     selection are each part of identity, and ``attn_implementation=None`` is
@@ -276,15 +374,32 @@ def load_model(
     ``cache_info()`` manage the cache.
 
     ``quantization`` is the document's materialized ``model.quantization``
-    block; :func:`quantization_key` is the one place its cache identity is
+    block; [`quantization_key`][] is the one place its cache identity is
     defined. The realization is a document fact, not an engine flag (§2.1).
 
     ``attn_implementation`` selects a Transformers attention backend. Eager
     remains the reproducible default; ``None`` uses Transformers' default.
     Interior taps temporarily switch a forward to eager and restore this
     selection afterward.
+
+    ``device`` is one device or a comma list placing the layers across the
+    devices of this process ([`DeviceMap.parse`][]; ``weights.py``). The
+    cache ([`normalized_cache`][],
+    keyed on the bound arguments) holds the string as given —
+    ``DeviceMap.requested`` — so ``cuda`` and ``cuda:0`` are two cache
+    entries of one placement, which the caller-bundle check nonetheless
+    compares as equal.
+
+    ``sharding`` is this rank's place in a geometry above world 1
+    (``docs/model_parallelism.md`` §5.2–5.3): the registry's plan is applied
+    over its meshes and each rank reads its own shard of the weights
+    (``weights.load_planned``). It is part of the cache key by ``(geometry,
+    rank)`` — ``Sharding``'s equality, its meshes outside it; ``None`` is
+    today's one-process load, byte for byte.
     """
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoModelForCausalLM
+
+    from causalab.io.tokenizer import load_tokenizer
 
     # the compilers a CUDA model will use (Triton, TileLang, Inductor) are
     # pointed at the shared cache root, when one is set, before the first
@@ -295,10 +410,46 @@ def load_model(
     # is process-wide (the last call wins)
     configure_compile_cache(device)
 
-    if quantization is None:
-        # weights read straight onto ``device``, several shards at once
+    report: LoadReport | None = None
+    residency: Residency | None = None
+    if sharding is not None and quantization is not None:
+        raise ProtocolError(
+            "P4",
+            f"a geometry above world 1 ({format_geometry(sharding.geometry)}) and "
+            "quantized weights do not compose: bitsandbytes places its own "
+            "weights (docs/model_parallelism.md §6.6, §11)",
+        )
+    if sharding is not None:
+        report_dir = os.environ.get(LOAD_REPORT_VARIABLE)
+        loaded = load_planned(
+            key,
+            revision,
+            dtype=_DTYPES[dtype],
+            device=device,
+            attn_implementation=attn_implementation,
+            sharding=sharding,
+            # the live-tensor census is for the written report alone
+            census=bool(report_dir),
+        )
+        model, report, residency = loaded.model, loaded.report, loaded.residency
+        if report_dir:
+            write_load_report(
+                report,
+                sharding,
+                Path(report_dir),
+                key=key,
+                revision=revision,
+                residency=residency,
+            )
+        # a pipeline stage's identity layers have no tensors: they run on
+        # the rank's one device, which is what the map records for them
+        devices = _placement_of(
+            model, requested=device, empty=DeviceMap.parse(device, 1).single
+        )
+    elif quantization is None:
+        # weights read straight onto their devices, several shards at once
         # (``weights.py``); the stock CPU load + ``.to(device)`` is one
-        # thread end to end, and measured three times slower
+        # thread end to end, and slower for it
         model = load_pretrained(
             key,
             revision,
@@ -306,10 +457,22 @@ def load_model(
             device=device,
             attn_implementation=attn_implementation,
         )
+        devices = _placement_of(model, requested=device)
     else:
         # bitsandbytes quantizes on the way in and places the weights itself;
-        # moving them afterwards is refused, so the requested device is only
-        # recorded (``ModelBundle.device``)
+        # moving them afterwards is refused, so the requested map is only
+        # recorded (``ModelBundle.devices``) — and quantized weights are
+        # single-device (docs/model_parallelism.md §11)
+        devices = DeviceMap.parse(
+            device, model_info_from_hf_config(key, _config_of(key, revision)).num_layers
+        )
+        if devices.single is None:
+            raise ProtocolError(
+                "P4",
+                f"device {device!r} places the layers across several devices, "
+                "and quantized weights are placed by bitsandbytes on one; run a "
+                "quantized document on one device",
+            )
         model = AutoModelForCausalLM.from_pretrained(
             key,
             revision=revision,
@@ -325,14 +488,12 @@ def load_model(
     # only featurizer/free params ever train (§2.11); freezing the network
     # keeps training graphs from accumulating gradients into model weights
     model.requires_grad_(False)
-    # a DeltaNet family's kernel globals follow the device this load put the
-    # weights on: the torch path off CUDA, the installed kernels on it — so a
-    # bare forward of the model works wherever it lives (shared/kernels.py)
-    bind_kernel_path(model)
-    tokenizer = AutoTokenizer.from_pretrained(key, revision=revision)
-    tokenizer.padding_side = "left"
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    # a DeltaNet family's kernel globals follow the devices this load put the
+    # weights on: the torch path off CUDA, the installed kernels on it — one
+    # answer for the tower, since the map refuses mixing — so a bare forward
+    # of the model works wherever it lives (shared/kernels.py)
+    bind_kernel_path(model, on_cuda=devices.is_cuda)
+    tokenizer = load_tokenizer(key, revision)
     info = model_info_from_hf_config(key, model.config)
     register_model(info)
     return ModelBundle(
@@ -341,10 +502,59 @@ def load_model(
         model=model,
         tokenizer=tokenizer,
         info=info,
-        device=device,
+        devices=devices,
         dtype=dtype,
         quantization=dict(quantization) if quantization is not None else None,
+        geometry=ONE if sharding is None else sharding.geometry,
+        load_report=report,
+        residency=residency,
     )
+
+
+def load_report_path(directory: Path, rank: int) -> Path:
+    """Where rank ``rank`` of a sharded load writes its report under
+    [`LOAD_REPORT_VARIABLE`][]."""
+    return directory / f"load_report.rank{rank}.json"
+
+
+def write_load_report(
+    report: LoadReport,
+    sharding: Sharding,
+    directory: Path,
+    *,
+    key: str,
+    revision: str,
+    residency: Residency | None = None,
+) -> Path:
+    """Write one rank's [`LoadReport`][] as JSON ([`LOAD_REPORT_VARIABLE`][]):
+    the model, the geometry, this rank, per parameter the bytes requested,
+    the bytes on disk and the elements requested, and — with ``residency``
+    — what the rank holds against them (``Residency.record``, the block
+    ``residency_problems`` reads) — ``indent=2, sort_keys=True`` and a
+    trailing newline, like every other record this package writes."""
+    directory.mkdir(parents=True, exist_ok=True)
+    target = load_report_path(directory, sharding.rank)
+    record: dict[str, Any] = {
+        "key": key,
+        "revision": revision,
+        "geometry": format_geometry(sharding.geometry),
+        "world": sharding.geometry.world,
+        "rank": sharding.rank,
+        "bytes_requested": dict(report.bytes_requested),
+        "bytes_on_disk": dict(report.bytes_on_disk),
+        "elements_requested": dict(report.elements_requested),
+        "dtype_on_disk": dict(report.dtype_on_disk),
+    }
+    if residency is not None:
+        record.update(residency.record())
+    target.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n")
+    return target
+
+
+def _config_of(key: str, revision: str) -> Any:
+    from transformers import AutoConfig
+
+    return AutoConfig.from_pretrained(key, revision=revision)
 
 
 def _bitsandbytes_config(quantization: dict[str, Any]) -> Any:

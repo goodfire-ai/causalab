@@ -44,7 +44,7 @@ class SubjectObjectRelationsConfig:
     """Configuration for one LRE relation.
 
     Only ``relation`` is required; the remaining fields are populated from the
-    bundled JSON in :meth:`__post_init__` when left empty. Passing them
+    bundled JSON in `__post_init__` when left empty. Passing them
     explicitly (e.g. a trimmed subject list for a smoke run) is honoured.
 
     Attributes:

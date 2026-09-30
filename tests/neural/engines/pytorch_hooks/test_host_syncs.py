@@ -14,7 +14,7 @@ and pins two invariants:
   band spans — with grad enabled there are none at all past the encode;
 * an optimizer step's reads do not grow with the rows of its minibatch.
 
-What is left on the step is named in :func:`test_a_step_pays_a_fixed_number_of_host_reads`.
+What is left on the step is named in `test_a_step_pays_a_fixed_number_of_host_reads`.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ from causalab.neural.engines.pytorch_hooks.train import (
     run_training,
 )
 from causalab.neural.shared.encoding import encode
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA, TINY_QWEN35_MOE
@@ -57,6 +57,7 @@ from tests.neural.engines.pytorch_hooks.test_train import (
     COUNTERFACTUALS,
     das_doc,
 )
+from tests.protocol._docs import saved, term
 
 pytestmark = pytest.mark.unit
 
@@ -297,23 +298,12 @@ def _dbm_doc(pairs: int, *, control: bool) -> dict[str, Any]:
     raw = _expert_dbm_doc()
     method = raw["method"]
     method["sites"]["lm_head"] = {"component": "lm_head"}
-    method["reads"]["logits"] = {
-        "site": "lm_head",
-        "pos": -1,
-        "model": "masked",
-        "input": "base",
-    }
-    method["metrics"] = {
-        "ce": {
-            "kind": "cross_entropy",
-            "of": "logits",
-            "target": "label",
-            "token_form": "space_prefixed",
-        }
-    }
+    method["reads"]["logits"] = {"site": "lm_head", "pos": -1}
+    method["intervened_models"]["masked"]["reads"].append("logits")
+    ce = {"kind": "cross_entropy", "target": "label"}
     method["train"] = {
         "objective": {
-            "fit": {"weight": 1.0, "metric": "ce"},
+            "fit": term("logits", "masked", dict(ce), weight=1.0),
             "sparsity": {"weight": 0.01, "l1": ["routed_gate", "shared_gate"]},
         },
         "params": ["routed_gate", "shared_gate"],
@@ -332,7 +322,7 @@ def _dbm_doc(pairs: int, *, control: bool) -> dict[str, Any]:
             }
         }
     method["save"] += [
-        {"value": "ce", "model": "masked", "input": "base", "file_path": "ce.json"},
+        saved("logits", "masked", "ce.json", dict(ce)),
         {"value": "routed_gate", "site": "routed", "file_path": "routed.safetensors"},
         {"value": "shared_gate", "site": "shared", "file_path": "shared.safetensors"},
     ]
@@ -363,13 +353,15 @@ class TestHybridForwardHostReads:
 
 class TestPromptMasks:
     """The prebuilt mapping is keyed by the layer types the config declares,
-    over the closed :data:`PROMPT_MASK_TYPES`; a family declaring a type the
+    over the closed [`PROMPT_MASK_TYPES`][causalab.neural.engines.pytorch_hooks.executor.PROMPT_MASK_TYPES]; a family declaring a type the
     helper has no mask for is refused by name before any mask is built,
     never handed a mapping its block loop would ``KeyError`` on."""
 
     @staticmethod
     def _inputs(moe: ModelBundle) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        batch = encode(moe.tokenizer, ["one two three", "four"], device=moe.device)
+        batch = encode(
+            moe.tokenizer, ["one two three", "four"], device=str(moe.devices.embedding)
+        )
         return batch.input_ids, batch.attention_mask, batch.position_ids()
 
     def test_the_mapping_covers_exactly_the_declared_layer_types(

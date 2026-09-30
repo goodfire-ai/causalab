@@ -1,63 +1,49 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Which head's CONTRIBUTION carries the answer symbol? attention_premix is the o-projection's input, which is head-shaped: naming a head selects that head's slice, and because the projection is linear a swap there moves the head's addition to the residual stream by exactly the projection of what was written. attention_result -- the addition itself -- is the quantity one wants and is not writable: the model never forms it, it forms the sum by projecting the whole premix at once, so a write there is refused at the plan with premix named as the alternative. This is the companion to mcqa_head_scan.json: the pattern says where a head looks, this says what it delivers, and only one of the two turns out to carry the variable. 4 layers x 32 heads over 64 pairs, at the answer slot."
+    "protocol_version": "4",
+    "description": "Interchange one head's slice of the attention output projection's input at the answer slot, for 12 heads at layers 20 to 27 on 64 MCQA pairs. Save per-pair answer matches and logit differences."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {
     "base": {"dataset": "mcqa/pairs_n64_s0", "field": "input"},
     "counterfactual": {"dataset": "mcqa/pairs_n64_s0", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "positions": {"slot": {"index": -1}},
     "sites": {
       "contribution": {
         "component": "attention_premix",
         "layers": {
-          "sweep": {"range": [12, 16]}
+          "sweep": {"range": [20, 28]}
         },
         "head": {
-          "sweep": {"range": [0, 32]}
+          "sweep": {"range": [0, 12]}
         }
       },
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "v_cf": {
-        "site": "contribution",
-        "pos": "slot",
-        "model": "original",
-        "input": "counterfactual"
-      },
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
+      "v_cf": {"site": "contribution", "pos": "slot"},
+      "logits": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "patch": {"site": "contribution", "pos": "slot", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "logit_diff": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
       {
-        "value": "logit_diff",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
         "file_path": "logit_diff.json"
       }
     ]

@@ -2,9 +2,9 @@
 Test suite for causalab/io/plots — mask/feature-count/heatmap visualizations.
 
 Since the where-unification the mask and feature-count plots consume
-structured :class:`~causalab.io.plots.grid_cells.GridCell` records joined
+structured [`GridCell`][causalab.io.plots.grid_cells.GridCell] records joined
 from a grid's own specs; the unit-id string parsing they used to rely on is
-retired (``causalab/io/plots/unit_id.py`` is gone).
+retired (``causalab/io/plots/unit_id.py`` was deleted).
 """
 
 import pytest

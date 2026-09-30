@@ -32,16 +32,18 @@ from safetensors.torch import load_file, save_file
 from causalab.cli import main
 from causalab.neural.engines.pytorch_hooks.train import _regularizer, fit_diagnostics
 from causalab.neural.shared.featurizers import Gate
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import build_artifact_identity, read_safetensors_metadata
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.env import build_artifact_identity, read_safetensors_metadata
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_QWEN35_MOE
 from tests.protocol._env import FIXTURES, build_env
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR
+
 
 REPO = Path(__file__).resolve().parents[4]
-PROTOCOLS = REPO / "causalab/configs/protocols"
+PROTOCOLS = PROTOCOLS_DIR
 
 TINY = {"model.key": TINY_QWEN35_MOE, "model.dtype": "fp32"}
 #: 📐 fixture numbers: 128 experts, top-10, d_expert 32, shared inner 32
@@ -67,7 +69,6 @@ def _stamped_gate(
     target = root / rel
     target.parent.mkdir(parents=True, exist_ok=True)
     identity = build_artifact_identity(
-        produced_by="0" * 64,
         model_key="Qwen/Qwen3.6-35B-A3B",
         model_revision="main",
         model_dtype="bf16",
@@ -104,8 +105,10 @@ class TestPresetsOffline:
     def test_the_fit_preset_validates_with_the_whole_expert_table(
         self, tmp_path: Path
     ) -> None:
-        loaded = load(PROTOCOLS / "dbm_expert_neuron.json", build_env(tmp_path))
-        featurizers = loaded.canonical_document["method"]["featurizers"]
+        loaded = compile_protocol(
+            PROTOCOLS / "dbm_expert_neuron.json", env=build_env(tmp_path)
+        )
+        featurizers = loaded.canonical["method"]["featurizers"]
         routed = featurizers["routed_gate"]
         assert routed["group"] == "expert_neuron"
         assert routed["width"] == 8 * 512  # Qwen3.6: top-8 slots of d_expert 512
@@ -120,9 +123,11 @@ class TestPresetsOffline:
         self, tmp_path: Path
     ) -> None:
         _stamped_fit(tmp_path)
-        loaded = load(PROTOCOLS / "dbm_expert_neuron_apply.json", build_env(tmp_path))
+        loaded = compile_protocol(
+            PROTOCOLS / "dbm_expert_neuron_apply.json", env=build_env(tmp_path)
+        )
         assert loaded.document.train is None
-        featurizers = loaded.canonical_document["method"]["featurizers"]
+        featurizers = loaded.canonical["method"]["featurizers"]
         assert "content_digest" in featurizers["routed_gate"]
         assert "content_digest" in featurizers["shared_gate"]
 
@@ -139,7 +144,9 @@ class TestPresetsOffline:
             site={"component": "expert_activation", "layers": [19]},
         )
         with pytest.raises(ValidationError) as err:
-            load(PROTOCOLS / "dbm_expert_neuron_apply.json", build_env(tmp_path))
+            compile_protocol(
+                PROTOCOLS / "dbm_expert_neuron_apply.json", env=build_env(tmp_path)
+            )
         assert err.value.rule == 15
         assert "missing 'group'" in str(err.value)
 
@@ -151,9 +158,9 @@ class TestPresetsOffline:
         self, tmp_path: Path, component: str
     ) -> None:
         with pytest.raises(ValidationError) as err:
-            load(
+            compile_protocol(
                 PROTOCOLS / "dbm_expert_neuron.json",
-                build_env(tmp_path),
+                env=build_env(tmp_path),
                 overrides={"sites.routed.component": component},
             )
         assert err.value.rule == 23
@@ -170,9 +177,9 @@ class TestPresetsOffline:
         would refuse the same document one step later; the earlier, more
         specific refusal is the one a user should see."""
         with pytest.raises(ValidationError) as err:
-            load(
+            compile_protocol(
                 PROTOCOLS / "dbm_expert_neuron.json",
-                build_env(tmp_path),
+                env=build_env(tmp_path),
                 overrides={"sites.routed.component": "router_logits"},
             )
         assert err.value.rule == 4
@@ -227,23 +234,30 @@ def _pipeline(component: str = "expert_activation") -> dict:
         "shared": {"component": "shared_expert_activation", "layers": [LAYER]},
         "idx": {"component": "expert_idx", "layers": [LAYER]},
     }
+    # the routing index on each input, read on the un-intervened model of
+    # that input (§2.9): the shipped preset's `original_counterfactual`
+    # takes `idx_cf`; `idx_base` needs the network on base, declared here
     routing_reads = {
-        "idx_base": {"site": "idx", "pos": -1, "model": "original", "input": "base"},
-        "idx_cf": {
-            "site": "idx",
-            "pos": -1,
-            "model": "original",
-            "input": "counterfactual",
+        "idx_base": {"site": "idx", "pos": -1},
+        "idx_cf": {"site": "idx", "pos": -1},
+    }
+    routing_models = {"idx_base": "original_base", "idx_cf": "original_counterfactual"}
+    models = preset["method"]["intervened_models"]
+    routing_ims = {
+        **models,
+        "original_counterfactual": {
+            **models["original_counterfactual"],
+            "reads": [*models["original_counterfactual"]["reads"], "idx_cf"],
         },
+        "original_base": {"input": "base", "reads": ["idx_base"]},
     }
     routing_saves = [
         {
-            "value": name,
-            "model": "original",
-            "input": read["input"],
+            "read": name,
+            "model": routing_models[name],
             "file_path": f"{name}.safetensors",
         }
-        for name, read in routing_reads.items()
+        for name in routing_reads
     ]
     return {
         "version": "1",
@@ -256,6 +270,7 @@ def _pipeline(component: str = "expert_activation") -> dict:
                 "set": {
                     **TINY,
                     "sites": sites,
+                    "intervened_models": routing_ims,
                     "reads": {**preset["method"]["reads"], **routing_reads},
                     "save": [*preset["method"]["save"], *routing_saves],
                     # Pin the tiny fixture for both fitting and evaluation;
@@ -294,6 +309,8 @@ def _run_workflow(base: Path, document: dict) -> tuple[int, Path]:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),

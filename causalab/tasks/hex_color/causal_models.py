@@ -28,7 +28,9 @@ Design notes:
 * **``indigo`` dropped (7 → 6).** The source dataset had seven classes; ``indigo``
   (hue 258°, wedged between blue 235° and purple 285°) is excluded because the
   golden fixture (Qwen3-4B-Instruct) labels indigo swatches "purple"
-  ~0.999-confident, capping 7-colour accuracy at ~0.80 (< the 0.9 golden floor).
+  ~0.999-confident. With every indigo swatch wrong, 7-colour balanced
+  accuracy is at most 6/7 ≈ 0.86 (< the 0.9 accuracy floor of the task's
+  golden check).
   Dropping it both makes the task viable on the fixture *and* removes the only
   multi-token colour (``indigo`` → ``["ind", "igo"]``), which is why no bespoke
   checker is needed.
@@ -44,9 +46,9 @@ from __future__ import annotations
 
 import json
 
-from causalab.causal.causal_model import CausalModel, build_output_tokens
-from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import CausalTrace, Mechanism, input_var
+from causalab.causal import Dom, V, mechanism
+from causalab.causal.model import CausalModel
+from causalab.causal.scoring import ScoringSpec, build_output_tokens
 
 from .config import (
     COLORS,
@@ -55,7 +57,6 @@ from .config import (
     HUE_PERIOD,
     PROMPT_TEMPLATE,
 )
-
 
 # ---------------------------------------------------------------------------
 # Bundled stimulus data
@@ -86,42 +87,17 @@ for _row in STIMULI:
 # ---------------------------------------------------------------------------
 
 
-def _compute_color(t: CausalTrace) -> str:
-    """The perceptual colour label of the stimulus hex."""
-    return HEX_TO_LABEL[t["hex"]]
-
-
-def _fill_template(t: CausalTrace) -> str:
-    """Render ``raw_input`` — the prompt with the stimulus hex substituted."""
-    return PROMPT_TEMPLATE.replace("{hex}", t["hex"])
-
-
-def _compute_raw_output(t: CausalTrace) -> str:
-    """Expected next-token output: a leading space then the colour word."""
-    return " " + t["color"]
-
-
-# ---------------------------------------------------------------------------
-# Causal model
-# ---------------------------------------------------------------------------
+@mechanism
+def equations(hex: Dom(HEXES)):
+    color = V(HEX_TO_LABEL[hex], domain=Dom(COLORS))
+    raw_input = V(PROMPT_TEMPLATE.replace("{hex}", hex), domain=Dom(str))  # noqa: F841
+    raw_output = V(" " + color, domain=Dom(str))  # noqa: F841
+    return color
 
 
 def _build_causal_model() -> CausalModel:
-    mechanisms: dict[str, Mechanism] = {
-        "hex": input_var(HEXES),
-        "color": Mechanism(parents=["hex"], compute=_compute_color),
-        "raw_input": Mechanism(parents=["hex"], compute=_fill_template),
-        "raw_output": Mechanism(parents=["color"], compute=_compute_raw_output),
-    }
-    values: dict[str, list | None] = {
-        "hex": HEXES,
-        "color": COLORS,
-        "raw_input": None,
-        "raw_output": None,
-    }
     return CausalModel(
-        mechanisms,
-        values,
+        equations,
         id="hex_color",
         # The answer is the colour word (``raw_output = " " + color``). Declaring
         # the mechanical ``[" red", "red"]`` forms in the task's ``ScoringSpec``

@@ -1,16 +1,15 @@
 """``attention_probs``: read + write, and the one component `layout` won't describe.
 
-The last of the module-boundary components. The three checks
-at the top are nnterp's, ported to this backend
+The three checks at the top are nnterp's, ported to this backend
 (``nnterp/rename_utils.py`` ``check_source``): the pattern must have shape
 ``(batch, heads, seq, seq)``, its rows must sum to 1, and **writing it must
 change the logits**. The third is the one that matters, because it is the one a
 plausible-looking implementation fails.
 
-The scope here is the whole pattern. Addressing one query row, featurizing, or
+The scope is the whole pattern. Addressing one query row, featurizing, or
 slicing ``dims`` all need the typed feature-shape descriptor — the feature axis
-here *is* a position axis — so each is refused and named as follow-up F1 rather
-than approximated.
+here *is* a position axis — so each is refused by name rather than
+approximated.
 """
 
 from __future__ import annotations
@@ -27,23 +26,24 @@ from causalab.neural.engines.pytorch_hooks.attention_interface import (
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.schema import SiteSpec
 
 from ._drive import base_data_section, executor_for
 from .conftest import TINY_GPT2
+from tests.protocol._docs import UNWRITTEN, saved
 
 pytestmark = pytest.mark.smoke
 
 
 def eager_attention_writes(edits: dict) -> Any:
-    """The pattern-write spelling, over the interface manager.
+    """The pattern-edit spelling, over the attention interface manager.
 
     Kept as a test-local shim because these tests pin the *pattern-write*
     behaviour specifically, and phrasing them in terms of "an in-place edit to
     the pattern for these modules" is what they are about. The manager's own
     contract (hand out a clone, take back a replacement) is exercised by the
-    attention-interior tests.
+    interface manager's own tests.
     """
 
     def as_tap(edit: Any) -> tuple[InterfaceTap, ...]:
@@ -74,22 +74,16 @@ def _read_doc(
     featurizer: bool = False,
     dims: list[int] | None = None,
 ) -> dict:
-    read: dict = {"site": "tap", "pos": pos, "model": "original", "input": "base"}
+    read: dict = {"site": "tap", "pos": pos}
     doc: dict = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": {"component": "attention_probs", "layers": [layer]}},
             "reads": {"r": read},
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
     if featurizer:
@@ -101,50 +95,32 @@ def _read_doc(
 
 
 def _swap_doc(*, layer: int = FULL_ATTENTION_LAYER) -> dict:
+    """The counterfactual's whole pattern (read on the un-intervened network
+    on the counterfactual) swapped into base; the logits before and after,
+    the clean ones off the un-intervened network on base."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "original_base": {"input": "base", "reads": ["clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {"component": "attention_probs", "layers": [layer]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "clean": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": "all"},
+                "clean": {"site": "lm_head", "pos": {"index": -1}},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {"patch": {"site": "tap", "pos": "all", "do": {"swap": "v_cf"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "p.safetensors",
-                },
-                {
-                    "value": "clean",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "c.safetensors",
-                },
+                saved("after", "patched", "p.safetensors"),
+                saved("clean", "original_base", "c.safetensors"),
             ],
         },
     }
@@ -177,7 +153,7 @@ def test_the_pattern_rows_sum_to_one(pattern):
 
 
 def test_writing_the_pattern_changes_the_logits(qwen35moe_bundle):
-    """nnterp check 3, and the reason this component is not a one-line tap.
+    """nnterp check 3, and the reason the pattern write is not a one-line tap.
 
     A ``register_forward_hook`` on the mixer CAN rewrite element 1 of its output
     tuple — and it would change nothing, because ``attn_output`` was computed
@@ -359,12 +335,13 @@ def test_no_edits_installs_nothing(qwen35moe_bundle):
 
 
 def test_the_backend_now_declares_the_capability():
-    """§8 routing refused these documents before; it must accept them now."""
+    """The capability check refused these documents before; it must accept
+    them now."""
     assert "writable_attention_probs" in PytorchHooksEngine.capabilities
 
 
 # --------------------------------------------------------------------------- #
-# refusals: what the pattern tap will not approximate
+# refusals: what this component will not approximate
 # --------------------------------------------------------------------------- #
 
 
@@ -434,28 +411,15 @@ def test_a_generated_frame_read_refuses(llama_bundle):
     and this one has two.
     """
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "positions": {"window": {"generated": {"max_new_tokens": 4}, "all": True}},
             "sites": {"tap": {"component": "attention_probs", "layers": [0]}},
-            "reads": {
-                "r": {
-                    "site": "tap",
-                    "pos": "window",
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "window"}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
     with pytest.raises(ProtocolError) as excinfo:
@@ -467,7 +431,7 @@ def test_a_generated_frame_read_refuses(llama_bundle):
 
 
 def test_a_deltanet_layer_refuses_on_the_architecture(qwen35moe_bundle):
-    """The per-layer stream check still owns this, and it must keep owning it: at a
+    """The stream check still owns this, and it must keep owning it: at a
     Gated DeltaNet layer there is no attention matrix, which stays true now that
     the component is implemented."""
     with pytest.raises(ProtocolError) as excinfo:
@@ -531,8 +495,8 @@ def test_a_family_without_eager_math_refuses_by_name():
 
 
 def test_the_pattern_is_writable_on_a_family_with_no_repeat_kv():
-    """The capability deleting the recompute bought, as a behaviour rather than a
-    grep.
+    """The capability that dropping the recompute bought, as a behaviour
+    rather than a grep.
 
     📐 The recompute this module used to carry needed ``repeat_kv``, and GPT-2's
     modeling file does not export it — it has no GQA, so it has nothing to
@@ -625,7 +589,7 @@ def test_writing_the_pattern_changes_the_logits_on_llama(llama_bundle):
 def test_a_non_swap_pattern_write_is_refused(qwen35moe_bundle):
     """A delta or clamp on the pattern would leave rows that no longer sum
     to 1, and the whole-pattern branch would misread its payload as a
-    replacement anyway — refused by name, pointing at F1."""
+    replacement anyway — refused by name."""
     doc = _swap_doc()
     doc["method"]["writes"]["patch"] = {
         "site": "tap",
@@ -633,6 +597,7 @@ def test_a_non_swap_pattern_write_is_refused(qwen35moe_bundle):
         "do": {"clamp": {"lo": 0.0, "hi": 0.0}},
     }
     del doc["method"]["reads"]["v_cf"]
+    del doc["method"]["intervened_models"][UNWRITTEN]  # nothing reads it now
     with pytest.raises(ProtocolError) as excinfo:
         executor_for(
             doc,

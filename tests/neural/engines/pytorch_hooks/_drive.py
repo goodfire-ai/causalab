@@ -11,24 +11,14 @@ from typing import Any
 
 from causalab.neural.engines.pytorch_hooks.executor import Interning, PointExecutor
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle
-from causalab.protocol.schema import parse_document
-from causalab.protocol.validate import validate_document
-
-from tests.protocol._docs import in_order
 
 
 def bundle_loader(files: dict[str, dict[str, Any]]) -> Any:
-    """A ``load_tensors`` over in-memory bundles: path -> {slot: tensor}.
+    """See ``tests._helpers.engines.bundle_loader``; re-exported so the
+    reference tests keep their import."""
+    from tests._helpers.engines import bundle_loader as _bundle_loader
 
-    Tests that hand-build bundles carry no ``entries`` table, which is the
-    same shape an external (hand-made) artifact has — selection then falls
-    back to the entry keys themselves."""
-    from causalab.neural.engines.pytorch_hooks.loading import TensorBundle
-
-    def load(path: str) -> TensorBundle:
-        return TensorBundle(tensors=files[path], entry_coords={})
-
-    return load
+    return _bundle_loader(files)
 
 
 def executor_for(
@@ -44,28 +34,19 @@ def executor_for(
     interning: Interning | None = None,
     batch_rows: int | None = None,
 ) -> PointExecutor:
-    doc = parse_document(in_order(doc_raw))
-    validate_document(doc, engine_is_local=True)
-    rows: list[dict[str, Any]] = []
-    for i, text in enumerate(base_texts):
-        row: dict[str, Any] = {"input": text}
-        if counterfactual_texts is not None:
-            row["counterfactual_inputs"] = [counterfactual_texts[i]]
-        for column, values in (extra_columns or {}).items():
-            row[column] = values[i]
-        rows.append(row)
-    role_rows: dict[str, list[dict[str, Any]]] = {"base": rows}
-    role_fields = {"base": "input"}
-    if counterfactual_texts is not None:
-        role_rows["counterfactual"] = rows
-        role_fields["counterfactual"] = "counterfactual_inputs[0]"
-    return PointExecutor(
-        doc,
+    """The reference engine's executor over ``doc_raw``: the engine-generic
+    ``tests._helpers.engines.executor_for`` with ``PointExecutor`` filled
+    in, so the parity suite and these tests build rows one way."""
+    from tests._helpers.engines import executor_for as _executor_for
+
+    return _executor_for(
+        PointExecutor,
+        doc_raw,
         bundle,
-        role_rows=role_rows,
-        role_fields=role_fields,
-        load_tensors=load_tensors
-        or (lambda path: (_ for _ in ()).throw(KeyError(path))),
+        base_texts=base_texts,
+        counterfactual_texts=counterfactual_texts,
+        extra_columns=extra_columns,
+        load_tensors=load_tensors,
         load_table=load_table,
         grad_enabled=grad_enabled,
         interning=interning,

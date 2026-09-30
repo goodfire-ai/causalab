@@ -446,11 +446,12 @@ def compute_expected_neighbor_distributions(
         no_backtrack: If True, return a 3D tensor conditioned on (prev, current).
 
     Returns:
-        If ``no_backtrack=False``: (n_nodes, n_nodes) tensor where row i is
-        the expected distribution over next nodes given current node i.
-        If ``no_backtrack=True``: (n_nodes, n_nodes, n_nodes) tensor where
-        dist[prev, current, next] is the expected distribution over next
-        nodes given the walk arrived at ``current`` from ``prev``.
+        (torch.Tensor): If ``no_backtrack=False``, an (n_nodes, n_nodes)
+            tensor where row i is the expected distribution over next nodes
+            given current node i. If ``no_backtrack=True``, an
+            (n_nodes, n_nodes, n_nodes) tensor where dist[prev, current, next]
+            is the expected distribution over next nodes given the walk
+            arrived at ``current`` from ``prev``.
     """
     import torch
 

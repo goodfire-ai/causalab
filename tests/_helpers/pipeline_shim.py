@@ -5,7 +5,7 @@ vocabularies (and their property/numerical tests) only ever used this
 surface of it: a tokenizer, plain-text batch loading with optional offset
 mappings, and the chat-prefix facts (always zero here — the kept tests are
 plain-text). This shim satisfies
-:class:`causalab.neural.token_positions.EncodingPipeline` over the
+[`causalab.tasks.token_positions.EncodingPipeline`][] over the
 reference engine's loader, with the same conventions (left padding,
 ``pad = eos``).
 """

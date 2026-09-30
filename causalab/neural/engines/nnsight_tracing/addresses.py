@@ -1,49 +1,15 @@
-"""Interior addresses over nnsight ``.source`` — the upstreamable half.
+"""Resolve nnsight source addresses for function interiors.
 
-The module-boundary vocabulary needs no table: envoys mirror the module tree,
-so the shared site map addresses them directly. The *interiors* — tensors
-``transformers`` computes inside one function call — are reached through
-nnsight's ``.source``, which names every call and assignment in a forward.
-This module is the table of those names and the matcher that resolves them,
-and deliberately nothing else:
+Tables store module, operation pattern, peel chain, field, fire count,
+and required implementation by stream. Matching uses substrings and
+requires one result, reporting the operation inventory on ambiguity.
+When an assignment and call share a name, the source line identifies the
+call. The executor follows the resolved address inside a trace.
 
-* **the tables are pure data** — ``(module, op pattern, peel chain, field,
-  fires, requires)`` per component, keyed by the stream vocabulary of
-  :mod:`causalab.neural.shared.streams`;
-* **the matcher is pure string logic** — substring match, call-op
-  disambiguation, exactly-one-hit or a refusal carrying the full op
-  inventory;
-* **the navigation lives in the executor** — recursive ``.source`` drilling
-  only works inside a trace, so the ~10 lines that walk a resolved address
-  stay in :mod:`causalab.neural.engines.nnsight_tracing.executor`.
-
-**This module imports nothing from ``causalab``** (enforced by a test): it is
-exactly the hybrid/interior accessor layer nnterp's issue #18 asks for, and
-keeping it protocol-free is what makes "move it upstream later" a file move
-rather than a rewrite. Protocol lowering — SiteSpec resolution, layouts,
-write math, refusal policy — stays in ``neural/shared/`` and never comes here.
-
-Why substring patterns, not exact names
----------------------------------------
-
-``.source`` names ops after the variable or symbol plus a positional suffix
-(``attn_weights_1``), and the suffix moves when a transformers release adds or
-removes a line — that is how transformers 5 broke nnterp's GPT-2 dropout
-address. A pattern matches by substring and *refuses* on zero or multiple
-hits, so a drifted forward fails loudly with the real inventory (the CI
-canary's failure mode) instead of silently reading a neighbouring tensor.
-The one systematic ambiguity — a variable that is first assigned and then
-called, so both ops carry its name — is resolved structurally: the *call* op
-is the hit whose own source line invokes the matched symbol.
-
-📐 The measured facts the tables encode (2026-08-28, transformers 5.16.1,
-verified on the real Qwen3.6-35B-A3B and on ``tiny-random/qwen3.5-moe``):
-``apply_rotary_pos_emb`` returns ``(q, k)`` post-RoPE; inside the eager
-attention function ``attn_weights_1`` is the post-mask softmax input and
-``attn_weights_2`` the softmax output (``softmax(attn_weights_1) ==
-attn_weights_2`` exactly); the interface call's ``output[0]`` is z, already
-transposed back to ``(b, s, H, d)``; and both delta kernels need an
-``implementation_0`` peel (the first entries of the DeltaNet table).
+This module stays independent of causalab imports. Shared execution handles
+protocol sites, layouts, and writes. Addresses identify post-RoPE q/k,
+masked scores, probabilities, and attention output; delta kernel addresses
+include the hub wrapper's ``implementation_0`` call.
 """
 
 from __future__ import annotations
@@ -95,8 +61,8 @@ class SourceAddress:
     #: matched op's own output is the value.
     field: str | None = None
     #: ``(positional_index, keyword)`` into the op's ``inputs`` instead of its
-    #: output — how a kernel's in-place-updated argument is reached (the
-    #: delta kernel's ``initial_state``).
+    #: output — how a kernel's in-place-updated argument is reached (the delta
+    #: kernels' ``initial_state``).
     arg: tuple[int, str] | None = None
     #: Which element of a tuple-valued output the component means.
     tuple_index: int | None = None
@@ -112,7 +78,7 @@ class SourceAddress:
     #: The value's rows are expert rows — ``(batch·position·top_k, …)`` — and
     #: the executor re-packs them token-major to the declared 2-D native
     #: shape ``(batch·position, top_k·…)``. Pure row bookkeeping; the
-    #: declared :class:`FeatureShape` stays the semantic description.
+    #: declared [`FeatureShape`][causalab.protocol.registry.shapes.FeatureShape] stays the semantic description.
     expert_rows: bool = False
     #: Op pattern (same substring rule, matched on the same drilled source as
     #: the value) of the ``torch.sort`` whose ``output[1]`` maps sorted rows →
@@ -209,8 +175,8 @@ FULL_ATTENTION: dict[str, SourceAddress] = {
     ),
 }
 
-#: The Gated DeltaNet interior — 30 of Qwen3.6-35B-A3B's 40 layers, and this
-#: engine's reason to exist: none of these tensors crosses a module boundary.
+#: The Gated DeltaNet interior — 30 of the 40 target layers, and the reason
+#: for source-level addresses: none of these tensors crosses a module boundary.
 #:
 #: 📐 Measured on ``tiny-random/qwen3.5-moe`` and the real A3B (transformers
 #: 5.16.1): the mixer projects ``mixed_qkv`` and the gate ``z`` first, runs the
@@ -230,7 +196,7 @@ FULL_ATTENTION: dict[str, SourceAddress] = {
 #:
 #: (The gate's ``z_reshape_0`` view and the post-norm ``core_attn_out_reshape_1``
 #: flatten used to be addressed here; both are module boundaries — ``in_proj_z``'s
-#: output and ``out_proj``'s input — and land on envoys.)
+#: output and ``out_proj``'s input — and land on envoys now.)
 LINEAR_ATTENTION: dict[str, SourceAddress] = {
     # The three module boundaries of this mixer (`delta_qkv` = in_proj_qkv's
     # output, `delta_gate` = in_proj_z's output, `delta_premix` = out_proj's
@@ -368,7 +334,7 @@ MOE_EXPERTS: dict[str, SourceAddress] = {
     ),
 }
 
-#: Every table, keyed the way :func:`causalab.neural.shared.streams.stream_at`
+#: Every table, keyed the way [`causalab.neural.shared.model_tree.stream_at`][]
 #: answers — the executor's single lookup point.
 ADDRESSES: Mapping[str, Mapping[str, SourceAddress]] = {
     "full_attention": FULL_ATTENTION,

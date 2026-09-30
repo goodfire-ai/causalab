@@ -336,9 +336,9 @@ class TestMakeForwardPassOnloadUnit:
 
     def test_mid_dag_intervention_marks_source_node(self, model):
         inputs = {"A": 0}
-        intervention = {"B": 99}
+        intervention = {"B": 1}
         outputs = model.new_trace(inputs)
-        outputs.intervene("B", 99)
+        outputs.intervene("B", 1)
         outputs_dict = outputs.to_dict()
 
         onload = make_forward_pass_onload(

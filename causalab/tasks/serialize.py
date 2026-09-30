@@ -1,7 +1,7 @@
 """Task packages → serialized dataset tables (spec §2.2).
 
 An intervention specification names a dataset by ref and the resolver reads bytes
-(:class:`causalab.protocol.resolve.FileDatasets`). This module is the other
+([`causalab.io.env.FileDatasets`][]). This module is the other
 half: it turns a task's causal model and counterfactual generator into those
 bytes, *ahead of* the load. Nothing here runs at load or run time — which is
 the point. Resolution stays stdlib-only, and a document's digest never
@@ -25,7 +25,7 @@ fixtures use):
     Each prompt's own answer (``raw_output``).
 ``label``
     The answer *after* the interchange, from
-    :meth:`CausalModel.label_counterfactual_data` — what an IIA metric
+    [`CausalModel.label_counterfactual_data`][] — what an IIA metric
     scores against. It equals ``cf_answer`` only when the intervention
     replaces every variable the answer depends on, so the two are separate
     columns on purpose.
@@ -33,19 +33,16 @@ fixtures use):
     The equivalent surface forms of each answer above, from the causal
     model's ``ScoringSpec`` (its ``forms`` for the ``answer_variable``) — the
     group a ``match`` metric consumes (§2.10).
-``scoring_digest`` / ``string_mode``
-    The task's scoring identity, constant across the table
-    (:mod:`causalab.causal.scoring`): the spec's content digest, and whether a
-    generated string must equal a form or merely start with one. Written into
-    the rows rather than the manifest so the dataset content digest (§2.2)
-    covers it — a table rebuilt under a changed definition of correct is a
-    different dataset — and so a document's ``match`` ``mode`` can be held to
-    it at load and before the first forward (``check_scoring``). A table built
-    before these columns existed is *unrecorded*: it loads and runs as it
-    always did.
+``string_mode``
+    The task's ``string_mode``, constant across the table
+    ([`causalab.causal.scoring`][]): whether a generated string must equal a
+    form or merely start with one. Written into the rows so a document's
+    ``match`` ``mode`` can be held to it at load and before the first forward
+    (``check_scoring``). A table without the column is *unrecorded*: it loads
+    and runs as it always did.
 ``edit_groups``
     **Only when the example declares it** — which spans of the pair move
-    together (:mod:`causalab.causal.pairs`): a list of groups, each a name,
+    together ([`causalab.causal.pair_validation`][]): a list of groups, each a name,
     an ``atomic`` flag and per-side ``[start, end]`` char spans into ``input``
     and ``counterfactual_inputs[0]``, one constituent per span pair. A
     generator attaches it to the example as an ``edit_groups`` key; the row
@@ -53,28 +50,27 @@ fixtures use):
     Every shipped generator declares none, so no shipped or fixture table
     gains the column and a row without it is unrecorded — nothing is held to
     it. An ``atomic`` group is refused when a run addresses one of its
-    constituents without the others (rule 27, ``executor_base.py``).
+    constituents without the others (rule 27, ``executor/base.py``).
 ``split``
     Which split this row belongs to (§2.2). A dataset is **one table** and the
     split is a property of the row, not of the file: a document selects one
     with the ``<ref>#<split>`` fragment, so disjointness is a fact about the
     bytes rather than a claim about how two files were built. Required — see
-    :data:`causalab.tables.SPLIT_COLUMN`.
+    `causalab.tables.SPLIT_COLUMN`.
 ``<variable>``
-    Every causal-model variable of the *base* trace, stringified: the
-    per-row values that ``{"variable": …}`` and ``{"column": …}`` positions
-    resolve (§2.3).
+    Cached variables, the selected scoring answer, and explicitly requested
+    extra variables of the *base* trace, stringified: the per-row values that
+    ``{"variable": …}`` and ``{"column": …}`` positions resolve (§2.3).
 ``counterfactual_inputs_variables``
     The same variables for the counterfactual side, in the per-role
     ``<field>_variables`` convention position resolution reads.
 
 Nothing is written beside the table. The table itself is the content-addressed
-unit (§7): a document's canonical form carries its content digest, and a
-workflow that consumes it pins that digest in its own ``pins`` section
-(workflow spec §7) — the one place a pin lives. The parameters a table was
-built from are the builder's command line, which the table's README or the
-workflow's description records; there is no sidecar, no recipe file and no
-rebuild guard, so a table is exactly the bytes a document names.
+unit (§7): a document's canonical form carries its content digest, so a
+rebuilt table moves the identity of every step that reads it. The parameters a
+table was built from are the builder's command line, which the table's README
+or the workflow's description records; there is no sidecar, no recipe file and
+no rebuild guard, so a table is exactly the bytes a document names.
 """
 
 from __future__ import annotations
@@ -84,15 +80,15 @@ import hashlib
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from causalab.causal.causal_model import CausalModel
-from causalab.causal.pairs import EDIT_GROUPS_COLUMN, EditGroupError, parse_edit_groups
-from causalab.causal.scoring import (
-    SCORING_DIGEST_COLUMN,
-    STRING_MODE_COLUMN,
-    ScoringError,
+from causalab.causal.model import CausalModel
+from causalab.causal.pair_validation import (
+    EDIT_GROUPS_COLUMN,
+    EditGroupError,
+    parse_edit_groups,
 )
+from causalab.causal.scoring import STRING_MODE_COLUMN, ScoringError
+from causalab.protocol.results import EXAMPLE_ID_COLUMN, example_id_defect
 from causalab.tables import SPLIT_COLUMN, table_bytes
-from causalab.protocol.examples import EXAMPLE_ID_COLUMN, example_id_defect
 from causalab.tasks.loader import load_task, load_task_counterfactuals
 
 __all__ = [
@@ -120,7 +116,6 @@ RESERVED_COLUMNS: frozenset[str] = frozenset(
         "label",
         "label_forms",
         SPLIT_COLUMN,
-        SCORING_DIGEST_COLUMN,
         STRING_MODE_COLUMN,
         EDIT_GROUPS_COLUMN,
         EXAMPLE_ID_COLUMN,
@@ -145,7 +140,7 @@ class SerializedDataset:
     n: int
     #: ``None`` when the examples did not come from a seeded generator — an
     #: honest gap is better than a number nothing reproduces
-    #: (:func:`serialize_examples`).
+    #: ([`serialize_examples`][]).
     seed: int | None
     target_variables: tuple[str, ...]
     answer_variable: str | None
@@ -171,6 +166,7 @@ def serialize_counterfactual_dataset(
     generator: str = "generate_dataset",
     answer_variable: str | None = None,
     record_scoring: bool = True,
+    extra_variables: Sequence[str] = (),
 ) -> SerializedDataset:
     """One task's counterfactual dataset as serializable rows.
 
@@ -191,11 +187,13 @@ def serialize_counterfactual_dataset(
         answer_variable: The variable whose declared forms supply the
             answer-form columns. Defaults to the spec's ``answer_variable``;
             a model declaring no scoring means no ``_forms`` columns.
-        record_scoring: Whether the rows carry the ``scoring_digest`` /
-            ``string_mode`` columns (the module docstring). ``True`` for every
-            new table; ``False`` reproduces a table built before the columns
-            existed, which is how a committed unrecorded table stays
-            byte-reproducible from its recipe.
+        record_scoring: Whether the rows carry the ``string_mode`` column
+            (the module docstring). ``True`` for every new table; ``False``
+            reproduces a table built before the column existed, which is how
+            a committed unrecorded table stays byte-reproducible from its
+            recipe.
+        extra_variables: Additional variables to compute and export on both
+            sides of each pair. Other uncached lazy equations are omitted.
 
     Raises:
         ValueError: on a task whose generator produces more than one
@@ -229,6 +227,7 @@ def serialize_counterfactual_dataset(
         n=n,
         seed=seed,
         record_scoring=record_scoring,
+        extra_variables=extra_variables,
     )
 
 
@@ -244,16 +243,16 @@ def serialize_examples(
     n: int | None = None,
     seed: int | None = None,
     record_scoring: bool = True,
+    extra_variables: Sequence[str] = (),
 ) -> SerializedDataset:
     """The same rows, from a causal model and an example list you already have.
 
-    :func:`serialize_counterfactual_dataset` goes through
-    :func:`~causalab.tasks.loader.load_task`, which needs a task **package**
-    inside the library checkout. The causal protocol's step 3 tells an author
-    to write ``models.py`` and ``counterfactuals.py`` in their own working
-    directory — and then had nowhere to go: there was no public path from a
-    hand-authored causal model to a serialized table, so the step dead-ended
-    at "now build the task package".
+    [`serialize_counterfactual_dataset`][] goes through
+    [`load_task`][], which needs a task **package**
+    inside the library checkout. An author who writes ``models.py`` and
+    ``counterfactuals.py`` in their own working directory has no task package,
+    and still needs a public path from that hand-authored causal model to a
+    serialized table.
 
     This is that path, and it is the *same* code: the package entry point
     resolves its task and then calls this, so the two cannot drift.
@@ -261,20 +260,24 @@ def serialize_examples(
     Args:
         model: The causal model the examples were generated from.
         examples: Counterfactual examples — what a generator returns.
-        split: As in :func:`serialize_counterfactual_dataset` — a scalar
+        split: As in [`serialize_counterfactual_dataset`][] — a scalar
             broadcast to every row, or one value per example (what a
             group-disjoint builder passes, having decided the allocation
             per row).
         target_variables: The variables the interchange replaces. Required
             here (there is no package to read a ``TARGET_VARIABLE`` from), and
             what the ``label`` column is computed against.
-        answer_variable: As in :func:`serialize_counterfactual_dataset`.
+        answer_variable: As in [`serialize_counterfactual_dataset`][].
         task_label: What the rows record as their task. Provenance only — no
             package of this name has to exist.
-        generator, n, seed: Recorded on the result. Leave
-            them alone when the examples did not come from a seeded generator;
-            ``None`` is more honest than a number nothing can reproduce.
-        record_scoring: As in :func:`serialize_counterfactual_dataset`.
+        generator: Recorded on the result, like ``n`` and ``seed``. Leave all
+            three alone when the examples did not come from a seeded
+            generator; ``None`` is more honest than a number nothing can
+            reproduce.
+        n: Recorded on the result; see ``generator``.
+        seed: Recorded on the result; see ``generator``.
+        record_scoring: As in [`serialize_counterfactual_dataset`][].
+        extra_variables: As in [`serialize_counterfactual_dataset`][].
     """
     targets = list(target_variables)
     if not targets or targets == [None]:
@@ -282,7 +285,16 @@ def serialize_examples(
             "target_variables is required: it is what the `label` column — the "
             "answer after the interchange — is computed against"
         )
-    from causalab.causal.causal_utils import rederive_trace
+    from causalab.causal.model_comparison import rederive_trace
+
+    if isinstance(extra_variables, str):
+        raise TypeError("extra_variables must be a sequence of variable names")
+    extra_variables = tuple(extra_variables)
+    resolved_answer = _answer_variable(model, answer_variable)
+    forms_of = _forms_lookup(model, answer_variable)
+    setting_variables = extra_variables + (
+        (resolved_answer,) if resolved_answer is not None else ()
+    )
 
     # A pair can originate from another hypothesis's model. Its cached
     # intermediates must not become inputs to this model's intervention.
@@ -297,16 +309,14 @@ def serialize_examples(
         }
         for example in examples
     ]
-    labeled = model.label_counterfactual_data(derived, targets)
-    splits = _row_splits(split, len(labeled))
-    resolved_answer = _answer_variable(model, answer_variable)
-    forms_of = _forms_lookup(model, answer_variable)
-    spec = model.scoring
-    identity = (
-        (spec.digest, spec.string_mode) if record_scoring and spec is not None else None
+    labeled = model.label_counterfactual_data(
+        derived, targets, setting_variables=setting_variables
     )
+    splits = _row_splits(split, len(labeled))
+    spec = model.scoring
+    mode = spec.string_mode if record_scoring and spec is not None else None
     rows = [
-        _row(example, forms_of, task_label, row_split, identity)
+        _row(example, forms_of, task_label, row_split, mode, extra_variables)
         for example, row_split in zip(labeled, splits)
     ]
     # Preserve authored identities so exported hypothesis artifacts can be
@@ -421,7 +431,8 @@ def _row(
     forms_of,
     task_name: str,
     split: str,
-    scoring: tuple[str, str] | None,
+    string_mode: str | None,
+    extra_variables: Sequence[str] = (),
 ) -> dict[str, Any]:
     base = example["input"]
     counterfactuals = example["counterfactual_inputs"]
@@ -446,17 +457,18 @@ def _row(
         row["base_answer_forms"] = base_forms
         row["cf_answer_forms"] = forms_of(counterfactual)
         row["label_forms"] = forms_of(setting)
-    if scoring is not None:
-        # the task's scoring identity, constant per table — inside the bytes
-        # the content digest covers, so a changed definition of correct is a
-        # different dataset (the module docstring)
-        row[SCORING_DIGEST_COLUMN], row[STRING_MODE_COLUMN] = scoring
+    if string_mode is not None:
+        # the task's string_mode, constant per table — what check_scoring
+        # holds a document's match mode to (the module docstring)
+        row[STRING_MODE_COLUMN] = string_mode
     if example.get(EDIT_GROUPS_COLUMN) is not None:
         # only a declaring example writes the column (the module docstring):
         # default-on would rebuild every shipped table's bytes
         row[EDIT_GROUPS_COLUMN] = _edit_groups_column(example, row, task_name)
-    row.update(_variable_columns(base, task_name))
-    row["counterfactual_inputs_variables"] = [_variables(counterfactual)]
+    row.update(_variable_columns(base, task_name, required=extra_variables))
+    row["counterfactual_inputs_variables"] = [
+        _variables(counterfactual, required=extra_variables)
+    ]
     return row
 
 
@@ -478,10 +490,15 @@ def _edit_groups_column(
     return [group.as_row_value() for group in groups]
 
 
-def _variables(trace: Any) -> dict[str, str]:
+def _variables(trace: Any, *, required: Sequence[str] = ()) -> dict[str, str]:
     """A trace's variables as strings — position resolution matches substrings
     of the row's text, so the serialized form is the string form."""
-    values = trace.to_dict() if hasattr(trace, "to_dict") else dict(trace)
+    if hasattr(trace, "snapshot"):
+        values = trace.snapshot(required=required)
+    else:
+        values = dict(trace)
+        for name in required:
+            values[name] = trace[name]
     return {
         name: str(value)
         for name, value in sorted(values.items())
@@ -489,8 +506,10 @@ def _variables(trace: Any) -> dict[str, str]:
     }
 
 
-def _variable_columns(trace: Any, task_name: str) -> dict[str, str]:
-    columns = _variables(trace)
+def _variable_columns(
+    trace: Any, task_name: str, *, required: Sequence[str] = ()
+) -> dict[str, str]:
+    columns = _variables(trace, required=required)
     collisions = sorted(set(columns) & RESERVED_COLUMNS)
     if collisions:
         raise ValueError(
@@ -503,7 +522,7 @@ def _variable_columns(trace: Any, task_name: str) -> dict[str, str]:
 
 def write_dataset_table(rows: Sequence[Mapping[str, Any]], path: Path) -> str:
     """Write a table and return its content digest — the sha256 of exactly
-    the bytes :class:`~causalab.protocol.resolve.FileDatasets` will read
+    the bytes [`FileDatasets`][causalab.io.env.FileDatasets] will read
     back. Nothing is written beside it (the module docstring)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     data = table_bytes(rows)
@@ -518,7 +537,7 @@ def config_class(task_name: str) -> type | None:
     dataclass whose name ends in ``Config`` (``NaturalDomainConfig``,
     ``SubjectObjectRelationsConfig``, …). Singleton tasks have none, and take
     no config. Same convention-over-registry approach as
-    :mod:`causalab.tasks.loader`.
+    [`causalab.tasks.loader`][].
     """
     import importlib
 

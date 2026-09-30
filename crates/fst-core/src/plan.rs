@@ -556,7 +556,7 @@ mod tests {
         .unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(
             many.files_in_flight, 4,
-            "the fixed rule: four local files in flight"
+            "the local-file rule: four local files in flight"
         );
     }
 

@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from causalab.causal.causal_model import CausalModel
+from causalab.causal.model import CausalModel
 from causalab.tasks.subject_object_relations import counterfactuals as cf
 from causalab.tasks.subject_object_relations.causal_models import (
     GET_CYCLIC_VARIABLES,

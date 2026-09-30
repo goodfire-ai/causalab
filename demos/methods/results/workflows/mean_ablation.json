@@ -1,0 +1,31 @@
+{
+  "document": "workflows/mean_ablation.json",
+  "document_digest": "1b6af7741be89aa80c0a1979487edaa557f3a6cbd97b572ff870ab98a1bf10a6",
+  "run_digest": null,
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 18.2,
+  "metrics": {
+    "ablate": {
+      "ld": {
+        "metric": "ld",
+        "unit": "logit",
+        "rows": 19,
+        "eligible_rows": 19,
+        "mean": 0.2365
+      }
+    },
+    "harvest": {
+      "saved_tensors": {
+        "acts.safetensors": {
+          "acts": [
+            3584
+          ]
+        }
+      }
+    }
+  }
+}

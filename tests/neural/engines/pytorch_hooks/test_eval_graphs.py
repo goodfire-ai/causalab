@@ -43,8 +43,8 @@ from causalab.neural.engines.pytorch_hooks.cuda_graphs import (
 )
 from causalab.neural.engines.pytorch_hooks.graph_cohort import EvaluationGraphs
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.resolve import ResolutionEnv
+from causalab.protocol.engine import RunContext
+from causalab.io.env import ResolutionEnv
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
@@ -71,14 +71,9 @@ EVAL = len(EVAL_ROWS)
 SECOND_SPLIT = "inline#eval_b"
 
 
-def _two_split_request() -> ExecutionRequest:
+def _two_split_request() -> RunContext:
     """The eval split beside a second table of the same rows, reversed."""
-    return ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    return RunContext(
         env=ResolutionEnv(
             datasets=_InlineDatasets(
                 {EVAL_SPLIT: EVAL_ROWS, SECOND_SPLIT: list(reversed(EVAL_ROWS))}
@@ -93,6 +88,8 @@ class _FakeReplay:
     """A capture that runs its work eagerly on every call."""
 
     inits: list[Any] = []
+    #: whether each capture asked for a warm-up pass, in ``inits`` order
+    warmups: list[bool] = []
     calls: int = 0
     #: the fit's pool, as the training step saw it (``graphs_on``)
     training_pool: Any = None
@@ -105,8 +102,10 @@ class _FakeReplay:
         device: torch.device,
         parameters: list[torch.nn.Parameter] | None = None,
         pool: Any = None,
+        warmup: bool = True,
     ) -> None:
         type(self).inits.append(pool)
+        type(self).warmups.append(warmup)
         self.work = work
         self.parameters = list(parameters or [])
         self.output = work()
@@ -130,10 +129,11 @@ def graphs_on(monkeypatch: pytest.MonkeyPatch) -> type[_FakeReplay]:
     captured (its training step declining every window, so the steps are
     the eager cohort's and only the eval path differs), the capture faked."""
     _FakeReplay.inits = []
+    _FakeReplay.warmups = []
     _FakeReplay.calls = 0
     _FakeReplay.training_pool = None
     monkeypatch.setattr(
-        cuda_graphs_module, "unsupported_reason", lambda doc, bundle: None
+        cuda_graphs_module, "unsupported_reason", lambda doc, bundle, collective: None
     )
     monkeypatch.setattr(
         train_module, "cohort_graph_reason", lambda executors, fit_rows, pairs: None
@@ -201,7 +201,7 @@ def _fit(
     monkeypatch: pytest.MonkeyPatch,
     *,
     eval_graphs: bool,
-    request: ExecutionRequest | None = None,
+    request: RunContext | None = None,
 ) -> tuple[list[Any], list[Any], list[int], dict[int, list[dict]]]:
     executors = _executors(raws, bundle)
     if not eval_graphs:
@@ -226,7 +226,7 @@ def _docs(epochs: int = 6) -> list[dict[str, Any]]:
             seed=0,
             k=4,
             epochs=epochs,
-            early_stop={"metric": "ce", "patience": 0, "mode": "min"},
+            early_stop={"on": "ce", "patience": 0, "mode": "min"},
         ),
         _train_doc(seed=1, k=2, epochs=epochs),
         _train_doc(seed=2, k=8, epochs=epochs),
@@ -234,6 +234,37 @@ def _docs(epochs: int = 6) -> list[dict[str, Any]]:
 
 
 class TestEvalGraphs:
+    def test_the_eval_capture_skips_the_warmup_and_the_loop_borrows_a_pool(
+        self, bundle: ModelBundle, monkeypatch: pytest.MonkeyPatch, graphs_on
+    ) -> None:
+        """The evaluation graph is captured on the layout's second pass,
+        after the first ran the same forward on the same frame: no warm-up
+        pass. Handed the engine's pool (``graph_pool``), the loop captures
+        the step and the eval graphs into it and leaves it open for the next
+        fit; a closed pool is not borrowed — the loop opens one of its own
+        for the fit and releases it after."""
+        raws = _docs()
+        pool = GraphPool()
+        executors = _executors(raws, bundle)
+        train_module.run_cohort_training(
+            [ex.doc for ex in executors], executors, _request(), graph_pool=pool
+        )
+        assert graphs_on.training_pool is pool
+        assert graphs_on.inits == [pool]
+        assert graphs_on.warmups == [False]
+        assert not pool.closed
+        pool.close()
+        graphs_on.inits.clear()
+        graphs_on.warmups.clear()
+        executors = _executors(raws, bundle)
+        train_module.run_cohort_training(
+            [ex.doc for ex in executors], executors, _request(), graph_pool=pool
+        )
+        own = graphs_on.training_pool
+        assert isinstance(own, GraphPool) and own is not pool
+        assert graphs_on.inits == [own]
+        assert own.closed  # opened by the loop, released with the fit
+
     def test_scores_are_the_eager_passes_and_a_stopped_member_keeps_its_slot(
         self, bundle: ModelBundle, monkeypatch: pytest.MonkeyPatch, graphs_on
     ) -> None:
@@ -374,7 +405,7 @@ class TestEvalGraphs:
 
         monkeypatch.setattr(train_module, "EvaluationGraphs", factory)
         actual, _a, _s, scores = _fit(raws, bundle, monkeypatch, eval_graphs=True)
-        # one capture (the second eval round), replayed until the bound fell; then given
+        # one capture (eval round 2), replayed until the bound fell; then given
         # back, disabled, and never recaptured
         assert isinstance(graphs_on.training_pool, GraphPool)
         assert graphs_on.inits == [graphs_on.training_pool]
@@ -433,13 +464,13 @@ class TestEvalGraphs:
                 seed=0,
                 k=4,
                 epochs=epochs,
-                early_stop={"metric": "ce", "patience": 0, "mode": "min"},
+                early_stop={"on": "ce", "patience": 0, "mode": "min"},
             ),
             _train_doc(
                 seed=1,
                 k=4,
                 epochs=epochs,
-                early_stop={"metric": "ce", "patience": 0, "mode": "min"},
+                early_stop={"on": "ce", "patience": 0, "mode": "min"},
             ),
             _train_doc(seed=2, k=8, epochs=epochs),
         ]
@@ -471,13 +502,13 @@ class TestEvalGraphs:
         not hand it a value shared in from eager code, so the eval round
         enters the replay before it opens its own ``featurizer_cache``
         scope — every ``forward`` call sees no open scope."""
-        from causalab.neural.shared import featurizers
+        from causalab.neural.shared.featurizers import sharing
 
         open_scopes: list[int] = []
         forward = EvaluationGraphs.forward
 
         def watched(self: EvaluationGraphs, members: Any) -> bool:
-            open_scopes.append(featurizers._SCOPE.depth)
+            open_scopes.append(sharing._SCOPE.depth)  # pyright: ignore[reportPrivateUsage]
             return forward(self, members)
 
         monkeypatch.setattr(EvaluationGraphs, "forward", watched)

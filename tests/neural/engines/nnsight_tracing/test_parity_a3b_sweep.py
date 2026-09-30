@@ -9,13 +9,13 @@ without joining the sweep.
 Three claims, one per engine relationship:
 
 1. **shared vocabulary** — the same document through both engines agrees, on
-   the read (:func:`test_read_parity_*`) and on the intervention's downstream
-   effect (:func:`test_write_parity_*`);
+   the read (`test_read_parity_*`) and on the intervention's downstream
+   effect (`test_write_parity_*`);
 2. **single-engine vocabulary** — the ``delta_*`` kernel interior and the
    ``deltanet_*``/``expert_permutation`` fused-forward interiors have no
    same-component counterpart, so agreement is asserted where it actually
    exists: 📐 measured, the two vocabularies name the *same tensors* through
-   two unrelated mechanisms (:func:`test_delta_family_cross_engine_agreement`);
+   two unrelated mechanisms (`test_delta_family_cross_engine_agreement`);
 3. **the seam** — a component only one engine serves refuses by name on the
    other, and refuses with the *same words* where the policy is shared.
 
@@ -36,7 +36,7 @@ from causalab.neural.engines.nnsight_tracing.engine import NnsightEngine
 from causalab.neural.engines.nnsight_tracing.executor import TracePointExecutor
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.schema import COMPONENTS
 
 from tests._helpers import a3b_sweep as sweep
@@ -185,7 +185,8 @@ def test_read_parity_deltanet_interior(hooks_qwen, trace_qwen, layers, component
     unrelated mechanisms, one tensor, one spelling. Was the eight ``identical``
     pairs of the two-vocabulary table."""
     delta_layer, _ = layers
-    _read_both(component, delta_layer, hooks_qwen, trace_qwen)
+    hooked, traced = _read_both(component, delta_layer, hooks_qwen, trace_qwen)
+    sweep.assert_same(hooked, traced, f"read {component!r} @ DeltaNet L{delta_layer}")
 
 
 @pytest.mark.parametrize("component", sweep.write_cases(sweep.SHARED_LINEAR_ONLY))

@@ -19,8 +19,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from causalab.neural.shared.outputs import _reduce_rows
-from causalab.protocol.errors import ProtocolError
+from causalab.neural.shared.results import _reduce_rows
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.schema import SAVE_REDUCTIONS
 
 pytestmark = pytest.mark.numerical_unit
@@ -116,7 +116,7 @@ def test_a_ragged_harvest_reduces_over_its_flat_rows() -> None:
     ``count`` is what makes that legible after the fact — the file says how
     many rows the number came from.
     """
-    from causalab.neural.shared.executor_base import RaggedValue
+    from causalab.neural.shared.executor import RaggedValue
 
     flat = torch.tensor([[1.0, 1.0], [3.0, 3.0], [5.0, 5.0]])
     ragged = RaggedValue(flat=flat, widths=(2, 1))

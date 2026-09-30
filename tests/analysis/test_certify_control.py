@@ -1,23 +1,24 @@
 """``causalab.analysis.certify_control`` — the certification legs of a
-``self_swap`` control (workflow spec §2.2; a bit-exact no-op is **necessary
-but insufficient**).
+``self_swap`` control (``docs/workflow_protocol.md`` §2.2). A bit-exact no-op is
+**necessary but insufficient**.
 
-**T5, the four-leg bar.** The self-swap twin fixture
-(``tests/workflow/fixtures/controls/self_swap_twin.json``) is run on both tiny
+**T5, the four-leg bar.** The self-swap twin of corpus document 02
+(``tests/protocols/02_interchange_im.json``; the twin is
+``tests/workflow/fixtures/controls/self_swap_twin.json``) is run on both tiny
 fixtures through the real CLI and its five saved reads are handed to the
 script the way the runner hands them: (a) the *valid* twin — interchange
 beside its no-op — passes all three legs: identity **bit-exact**
 (``torch.equal``), a positive sender effect, a changed receiver; (b) the
-*vacuous* variant, the operand read on ``base`` (the self-swap that "passes
-for free"), passes leg (i) alone with legs (ii) and (iii) at exactly
+*vacuous* variant, the operand read on ``base`` (a self-swap that
+"passes for free"), passes leg (i) alone with legs (ii) and (iii) at exactly
 ``0.0`` and is ``failed``; (c) the *receiver-unchanged* variant — the write at
-the last layer, the receiver read at the layer above it, legal under the
-intervention protocol spec's rule 21 because the operand is read at the
-write's own depth — has a positive sender effect and a receiver the write
-cannot reach, so leg (iii) alone fails it. That third case is the **mutation witness**: a script that dropped leg
+the last layer, the receiver read at the layer above it, legal under rule 21
+of ``docs/intervention_protocol.md`` §5 because the operand is read at the write's own depth — has a positive
+sender effect and a receiver the write cannot reach, so leg (iii) alone fails
+it. That third case is the **mutation witness**: a script that dropped leg
 (iii) would certify it. Leg (iv), agreement with an independent oracle, is
 checked **here** against ``hook_oracle_lib`` at the oracle suites' tolerance
-and nowhere in shipped code — the spec says so.
+and nowhere in shipped code, as ``docs/workflow_protocol.md`` §2.2 states.
 
 Without the change nothing under ``causalab.analysis`` decides any of this:
 the module does not exist and every test here fails at import.
@@ -59,8 +60,8 @@ def _twin(
     raw["model"]["key"] = model
     method = raw["method"]
     method["sites"]["target"]["layers"] = 1  # tiny-random is two layers deep
-    method["reads"]["v_cf"]["input"] = operand_input
-    method["save"][0]["input"] = operand_input
+    # the operand read is measured on the un-intervened model of its role
+    method["intervened_models"]["original_counterfactual"]["input"] = operand_input
     if receiver_layer is not None:
         method["sites"]["receiver"] = {
             "component": "block_output",
@@ -83,6 +84,8 @@ def _run(raw: dict[str, Any], tmp_path: Path) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(document),
             "--data-root",
             str(FIXTURES / "data"),
@@ -129,7 +132,7 @@ def test_t5_the_valid_twin_passes_all_three_legs(model: str, tmp_path: Path) -> 
 def test_t5_the_vacuous_self_swap_passes_identity_alone_and_fails(
     model: str, tmp_path: Path
 ) -> None:
-    """Claim-1's self-swap that passes for free: the target's operand is its
+    """The self-swap that passes for free: the target's operand is its
     own ``base`` value, so leg (i) is exact and legs (ii)/(iii) are exactly
     zero — the point is ``failed``. A bit-exact no-op is necessary, not
     sufficient. Fails without the change: a certifier reading identity alone

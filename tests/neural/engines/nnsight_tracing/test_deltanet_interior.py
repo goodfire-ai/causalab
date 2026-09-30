@@ -9,7 +9,7 @@ lean on, so correctness rests on identities and causal writes:
 * **the projection chain**: the mixer's own output is
   `out_proj(deltanet_gated_out)`, invoked through the envoy;
 * **the state**: one fire per 64-token chunk (the kernel's own loop count,
-  never the config), and the recurrence's causal signature — zeroing the state after
+  never the config), and the state's causal signature — zeroing the state after
   chunk 0 leaves chunk 0's tokens bit-identical and moves later ones;
 * **fire-axis discipline**: the state's position axis is the chunk index, so
   text anchors refuse, out-of-range fires refuse, and a write past the last
@@ -17,9 +17,8 @@ lean on, so correctness rests on identities and causal writes:
 
 Plus the ownership seams: the reference engine refuses the three faces only
 this engine serves (`deltanet_query`, `deltanet_key`, `deltanet_state`) by
-name, and routing lands such documents here unasked. Since the family
-adapters took ownership of the interior names, the other eight `deltanet_*`
-spellings are aliases of the `delta_*` names both engines
+name, and routing lands such documents here unasked. The other
+eight `deltanet_*` spellings are aliases of the `delta_*` names both engines
 serve; the documents below still author them, which is the alias fold under
 test — each reads through this engine's envoys or `.source` lines and equals
 what the reference engine reads under the same name
@@ -35,14 +34,16 @@ from causalab.neural.engines.nnsight_tracing.engine import NnsightEngine
 from causalab.neural.engines.nnsight_tracing.executor import TracePointExecutor
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
-from causalab.protocol.engine import choose_engine, component_capability
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.schema import COMPONENTS, parse_document
-from causalab.protocol.validate import validate_document
+from causalab.protocol.engine import component_capability, requires
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
+from causalab.protocol.rules.capability import refuse_shortfall
+from causalab.protocol.schema import COMPONENTS, PROTOCOL_VERSION, parse_document
+from causalab.protocol.rules.document import validate_document
 
-from tests.protocol._docs import in_order
+from tests.protocol._docs import in_order, saved
 
 from .test_parity_module_boundaries import ATOL, _data, _executor
+
 
 pytestmark = pytest.mark.smoke
 
@@ -57,40 +58,21 @@ SHORT_TEXT = "the quick brown fox jumps"
 
 def _read_doc(component: str, *, pos: object = -1, extra: dict | None = None) -> dict:
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": {"component": component, "layers": [LAYER]}},
-            "reads": {
-                "r": {"site": "tap", "pos": pos, "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": pos}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
     for name, (site, npos) in (extra or {}).items():
         doc["method"]["sites"][f"{name}_site"] = site
-        doc["method"]["reads"][name] = {
-            "site": f"{name}_site",
-            "pos": npos,
-            "model": "original",
-            "input": "base",
-        }
-        doc["method"]["save"].append(
-            {
-                "value": name,
-                "model": "original",
-                "input": "base",
-                "file_path": f"{name}.safetensors",
-            }
-        )
+        doc["method"]["reads"][name] = {"site": f"{name}_site", "pos": npos}
+        doc["method"]["intervened_models"]["original"]["reads"].append(name)
+        doc["method"]["save"].append(saved(name, "original", f"{name}.safetensors"))
     return doc
 
 
@@ -224,7 +206,7 @@ def test_the_last_chunk_state_is_index_minus_one(trace_qwen):
 
 
 def test_zeroing_the_state_after_chunk_0_moves_only_later_tokens(trace_qwen):
-    """The recurrence's causal signature, as a document: a clamp-to-zero write at
+    """The state's causal signature, as a document: a clamp-to-zero write at
     chunk 0 leaves chunk 0's own tokens bit-identical (the state is applied
     *after* the chunk that produced it) and moves later tokens."""
     clean = _single_row_executor(
@@ -234,22 +216,18 @@ def test_zeroing_the_state_after_chunk_0_moves_only_later_tokens(trace_qwen):
     ).read_value("r")
 
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=False),
         "method": {
+            "intervened_models": {
+                "patched": {"input": "base", "reads": ["out"], "writes": ["zero"]}
+            },
             "sites": {
                 "tap": {"component": "deltanet_state", "layers": [LAYER]},
                 "out_site": {"component": "attention_output", "layers": [LAYER]},
             },
-            "reads": {
-                "out": {
-                    "site": "out_site",
-                    "pos": "all",
-                    "model": "patched",
-                    "input": "base",
-                }
-            },
+            "reads": {"out": {"site": "out_site", "pos": "all"}},
             "writes": {
                 "zero": {
                     "site": "tap",
@@ -257,15 +235,7 @@ def test_zeroing_the_state_after_chunk_0_moves_only_later_tokens(trace_qwen):
                     "do": {"clamp": {"lo": 0.0, "hi": 0.0}},
                 }
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["zero"]}},
-            "save": [
-                {
-                    "value": "out",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "o.safetensors",
-                }
-            ],
+            "save": [saved("out", "patched", "o.safetensors")],
         },
     }
     patched = _single_row_executor(trace_qwen, doc, LONG_TEXT).read_value("out")
@@ -279,12 +249,12 @@ def test_a_write_past_the_last_fire_is_refused_not_skipped(trace_qwen):
     keeps the fires it reached and warns), so the executor must turn the miss
     into a refusal rather than return values from a write that never landed."""
     doc = _state_doc("all")
-    doc["method"]["reads"]["r"]["model"] = "patched"
     doc["method"]["writes"] = {
         "zero": {"site": "tap", "pos": 99, "do": {"clamp": {"lo": 0.0, "hi": 0.0}}}
     }
+    # `r` moves onto the written model: the un-intervened one, read by nobody, goes
     doc["method"]["intervened_models"] = {
-        "patched": {"input": "base", "writes": ["zero"]}
+        "patched": {"input": "base", "reads": ["r"], "writes": ["zero"]}
     }
     doc["method"]["save"][0]["model"] = "patched"
     executor = _single_row_executor(trace_qwen, doc, LONG_TEXT)
@@ -316,40 +286,31 @@ def test_an_out_of_range_chunk_read_is_refused(trace_qwen):
 def test_a_swap_moves_the_logits_and_a_self_swap_does_not(trace_qwen, component):
     def swap_doc() -> dict:
         return {
-            "header": {"protocol_version": "3"},
+            "header": {"protocol_version": PROTOCOL_VERSION},
             "model": {"key": "test", "revision": "main"},
             "data": _data(with_cf=True),
             "method": {
+                "intervened_models": {
+                    "original_counterfactual": {
+                        "input": "counterfactual",
+                        "reads": ["v_cf"],
+                    },
+                    "patched": {
+                        "input": "base",
+                        "reads": ["logits"],
+                        "writes": ["patch"],
+                    },
+                },
                 "sites": {
                     "tap": {"component": component, "layers": [LAYER]},
                     "head": {"component": "lm_head"},
                 },
                 "reads": {
-                    "v_cf": {
-                        "site": "tap",
-                        "pos": -1,
-                        "model": "original",
-                        "input": "counterfactual",
-                    },
-                    "logits": {
-                        "site": "head",
-                        "pos": -1,
-                        "model": "patched",
-                        "input": "base",
-                    },
+                    "v_cf": {"site": "tap", "pos": -1},
+                    "logits": {"site": "head", "pos": -1},
                 },
                 "writes": {"patch": {"site": "tap", "pos": -1, "do": {"swap": "v_cf"}}},
-                "intervened_models": {
-                    "patched": {"input": "base", "writes": ["patch"]}
-                },
-                "save": [
-                    {
-                        "value": "logits",
-                        "model": "patched",
-                        "input": "base",
-                        "file_path": "l.safetensors",
-                    }
-                ],
+                "save": [saved("logits", "patched", "l.safetensors")],
             },
         }
 
@@ -363,7 +324,11 @@ def test_a_swap_moves_the_logits_and_a_self_swap_does_not(trace_qwen, component)
     assert float((moved.dense_value("logits") - clean).abs().max()) > 1e-5, component
 
     self_swap = swap_doc()
-    self_swap["method"]["reads"]["v_cf"]["input"] = "base"
+    # the operand read on the network on base itself: the swap writes back
+    # what was there (the model keeps its name; names are free, §2.9)
+    self_swap["method"]["intervened_models"]["original_counterfactual"]["input"] = (
+        "base"
+    )
     same = _executor(TracePointExecutor, self_swap, trace_qwen, with_cf=True)
     assert float((same.dense_value("logits") - clean).abs().max()) == 0.0, component
 
@@ -382,10 +347,14 @@ def test_the_reference_engine_refuses_by_name(hooks_qwen, component):
         _executor(PointExecutor, doc, hooks_qwen, with_cf=False).run_all()
 
 
-def test_routing_lands_deltanet_documents_here():
+def test_this_engine_serves_deltanet_documents_the_reference_refuses():
+    """Routing between engines is retired: the user pins
+    `--engine nnsight`, and the capability check is what says the reference
+    engine cannot serve the document — by the generated component entry."""
     doc = parse_document(in_order(_read_doc("deltanet_state", pos="all")))
-    chosen = choose_engine(doc, [PytorchHooksEngine(), NnsightEngine()])
-    assert isinstance(chosen, NnsightEngine)
+    refuse_shortfall(requires(doc), NnsightEngine().effective_capabilities)
+    with pytest.raises(ValidationError, match="component:deltanet_state"):
+        refuse_shortfall(requires(doc), PytorchHooksEngine().effective_capabilities)
     assert component_capability("deltanet_state") not in (
         PytorchHooksEngine().effective_capabilities
     )

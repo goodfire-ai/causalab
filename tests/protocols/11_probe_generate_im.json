@@ -1,11 +1,14 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "Exploration probe: greedy-decode 8 tokens under a residual-stream steer, then read the distribution at the last generated token. The continuation is addressed by an ordinary position (the `generated` frame), so it is a read, and an ordinary metric scores it — top_k with k=1 is the greedy continuation itself."
   },
-  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main"},
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
   "data": {"base": {"dataset": "weekdays/data#train", "field": "input"}},
   "method": {
+    "intervened_models": {
+      "probed": {"input": "base", "reads": ["tail"], "writes": ["push"]}
+    },
     "positions": {
       "last_new": {"generated": {"max_new_tokens": 8}, "index": -1}
     },
@@ -13,7 +16,7 @@
       "target": {"component": "block_output", "layers": [18]},
       "lm_head": {"component": "lm_head"}
     },
-    "reads": {"tail": {"site": "lm_head", "pos": "last_new", "model": "probed", "input": "base"}},
+    "reads": {"tail": {"site": "lm_head", "pos": "last_new"}},
     "writes": {
       "push": {
         "site": "target",
@@ -21,10 +24,13 @@
         "do": {"add_scaled": {"op": 1.0, "alpha": 2.0}}
       }
     },
-    "intervened_models": {
-      "probed": {"input": "base", "writes": ["push"]}
-    },
-    "metrics": {"greedy": {"kind": "top_k", "of": "tail", "k": 1, "by": "prob"}},
-    "save": [{"value": "greedy", "model": "probed", "input": "base", "file_path": "probe.json"}]
+    "save": [
+      {
+        "read": "tail",
+        "model": "probed",
+        "aggregation": {"kind": "top_k", "k": 1, "by": "prob"},
+        "file_path": "probe.json"
+      }
+    ]
   }
 }

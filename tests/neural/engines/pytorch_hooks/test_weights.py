@@ -18,6 +18,7 @@ What is held here:
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import json
 import struct
 import threading
@@ -33,16 +34,21 @@ from causalab.neural.engines.pytorch_hooks import weights
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.neural.engines.pytorch_hooks.weights import (
     Prefetch,
+    ReadGroup,
     SafetensorsReader,
     Shard,
     TensorHeader,
     checkpoint_files,
+    group_shards,
     load_pretrained,
     read_header,
     shard_plan,
     wanted_keys,
 )
-from causalab.protocol.errors import ProtocolError
+from causalab.neural.shared.devices import DeviceMap
+from causalab.neural.shared.encoding import encode
+from causalab.protocol.registry import TreeAddress
+from causalab.protocol.rules.errors import ProtocolError
 
 from tests.neural.engines.pytorch_hooks.conftest import (
     TINY_GPT2,
@@ -343,7 +349,9 @@ class TestPlanAndHandOut:
         shards, _ = shard_plan(tables, frozenset(carried))
         reader = _RecordingCheckpointReader(table={n: i for i, n in enumerate(carried)})
         order = data.draw(st.permutations(carried))
-        with Prefetch(shards, reader, torch.device("cpu")) as prefetch:
+        with Prefetch(
+            [ReadGroup(torch.device("cpu"), tuple(shards))], reader
+        ) as prefetch:
             seen = {name: int(prefetch.take(name).item()) for name in order}
             assert seen == reader.table
             assert reader.calls == (1 if carried else 0)
@@ -383,7 +391,9 @@ class TestPlanAndHandOut:
         shards, _ = shard_plan(tables, frozenset(carried))
         reader = _RecordingReader(table={name: i for i, name in enumerate(carried)})
         order = data.draw(st.permutations(carried))
-        with Prefetch(shards, reader, torch.device("cpu")) as prefetch:
+        with Prefetch(
+            [ReadGroup(torch.device("cpu"), tuple(shards))], reader
+        ) as prefetch:
             seen: dict[str, int] = {}
             for name in order:
                 seen[name] = int(prefetch.take(name).item())
@@ -405,7 +415,244 @@ class TestPlanAndHandOut:
         header = {"w": TensorHeader(dtype="F32", shape=(1,))}
         shards = (Shard(path=Path("s"), keys=("w",), headers=header),)
         reader = _RecordingReader(table={"w": 7})
-        with Prefetch(shards, reader, torch.device("cpu")) as prefetch:
+        with Prefetch(
+            [ReadGroup(torch.device("cpu"), tuple(shards))], reader
+        ) as prefetch:
             assert reader.calls == {}
             assert int(prefetch.take("w").item()) == 7
             assert reader.calls == {Path("s"): 1}
+
+
+# ---------------------------------------------------------------------------
+# Loading onto several devices: the wanted keys grouped by target device
+# ---------------------------------------------------------------------------
+
+LLAMA_TREE = TreeAddress(
+    blocks="model.layers", embedding="model.embed_tokens", final_norm="model.norm"
+)
+#: Every parameter of a two-block tower, spread over two files the way a
+#: sharded checkpoint would, with the rotary table (placed by no tree entry)
+#: and the head in the second file.
+_PLACED_TABLES: list[tuple[Path, dict[str, TensorHeader]]] = [
+    (
+        Path("a.safetensors"),
+        {
+            "model.embed_tokens.weight": TensorHeader("F32", (4, 2)),
+            "model.layers.0.mlp.weight": TensorHeader("F32", (2, 2)),
+            "model.layers.1.attn.weight": TensorHeader("F32", (2, 2)),
+        },
+    ),
+    (
+        Path("b.safetensors"),
+        {
+            "model.layers.1.mlp.weight": TensorHeader("F32", (2, 2)),
+            "model.norm.weight": TensorHeader("F32", (2,)),
+            "lm_head.weight": TensorHeader("F32", (4, 2)),
+            "model.rotary_emb.inv_freq": TensorHeader("F32", (1,)),
+        },
+    ),
+]
+#: ``meta`` stands in for a second device on the CPU gate: the grouping and
+#: the hand-out are bookkeeping, and the recording readers never allocate on
+#: the device they are handed.
+_TWO_DEVICES = DeviceMap.parse("cpu,meta", 2)
+_META = torch.device("meta")
+
+#: The single-device load of the tiny Llama before this refactor: the state
+#: dict's bytes, exact on every platform (the loader may change how it gets
+#: the bytes onto the device, never which bytes; a changed fixture shows here
+#: too). The logits of a fixed forward are not pinned as a digest — float
+#: kernels differ between an arm64 laptop and an x86 runner — but compared
+#: in-process against the stock loader's model (``torch.equal``).
+_STATE_DIGEST = "db90c62cd3b8e0c60510e6aa7edb6c93a1a2a4157e13d476c84ff403567246ad"
+_PINNED_TEXTS = ["the quick brown fox jumps", "a slow green turtle sleeps deeply"]
+
+
+@dataclasses.dataclass
+class _DeviceRecordingReader:
+    """A ``ShardReader`` recording which device each shard was read for."""
+
+    table: dict[str, int]
+    concurrency: int = 2
+    calls: list[tuple[Path, torch.device, tuple[str, ...]]] = dataclasses.field(
+        default_factory=list
+    )
+    _lock: threading.Lock = dataclasses.field(default_factory=threading.Lock)
+
+    def read(
+        self, path: Path, keys: Sequence[str], device: torch.device
+    ) -> dict[str, torch.Tensor]:
+        with self._lock:
+            self.calls.append((path, device, tuple(keys)))
+        return {k: torch.tensor([self.table[k]]) for k in keys}
+
+
+@dataclasses.dataclass
+class _DeviceRecordingCheckpointReader:
+    """A ``CheckpointReader`` recording one ``read_all`` per device."""
+
+    table: dict[str, int]
+    calls: list[tuple[torch.device, tuple[tuple[Path, tuple[str, ...]], ...]]] = (
+        dataclasses.field(default_factory=list)
+    )
+    _lock: threading.Lock = dataclasses.field(default_factory=threading.Lock)
+
+    def read_all(
+        self, shards: Sequence[Shard], device: torch.device
+    ) -> dict[str, torch.Tensor]:
+        with self._lock:
+            self.calls.append(
+                (device, tuple((shard.path, shard.keys) for shard in shards))
+            )
+        return {
+            k: torch.tensor([self.table[k]]) for shard in shards for k in shard.keys
+        }
+
+
+def _placement(devices: DeviceMap) -> dict[str, torch.device]:
+    return {
+        name: devices.device_for(name, LLAMA_TREE)
+        for _, table in _PLACED_TABLES
+        for name in table
+    }
+
+
+@pytest.mark.property
+class TestPlacedLoad:
+    def test_group_shards_partitions_the_wanted_keys_by_device(self) -> None:
+        """Every device's group holds exactly the keys placed on it, per file
+        in header order; a file with nothing for a device is not in that
+        device's group; the groups are in the map's device order."""
+        wanted = frozenset(name for _, table in _PLACED_TABLES for name in table)
+        shards, _ = shard_plan(_PLACED_TABLES, wanted)
+        groups = group_shards(shards, _placement(_TWO_DEVICES))
+        assert [group.device for group in groups] == [torch.device("cpu"), _META]
+        by_device = {
+            group.device: {shard.path: shard.keys for shard in group.shards}
+            for group in groups
+        }
+        assert by_device[torch.device("cpu")] == {
+            Path("a.safetensors"): (
+                "model.embed_tokens.weight",
+                "model.layers.0.mlp.weight",
+            ),
+            Path("b.safetensors"): ("model.rotary_emb.inv_freq",),
+        }
+        assert by_device[_META] == {
+            Path("a.safetensors"): ("model.layers.1.attn.weight",),
+            Path("b.safetensors"): (
+                "model.layers.1.mlp.weight",
+                "model.norm.weight",
+                "lm_head.weight",
+            ),
+        }
+        # a shard's headers travel with it, so the lazy stand-ins can answer
+        for group in groups:
+            for shard in group.shards:
+                assert all(name in shard.headers for name in shard.keys)
+
+    def test_a_single_device_map_is_one_group_of_the_same_shards(self) -> None:
+        wanted = frozenset(name for _, table in _PLACED_TABLES for name in table)
+        shards, _ = shard_plan(_PLACED_TABLES, wanted)
+        (group,) = group_shards(shards, _placement(DeviceMap.parse("cpu", 2)))
+        assert group.device == torch.device("cpu")
+        assert group.shards == shards
+
+    def test_the_checkpoint_reader_is_asked_once_per_device(self) -> None:
+        """One planned read per device, each over that device's shards only
+        — so every file is still in flight, and every tensor leaves once."""
+        wanted = frozenset(name for _, table in _PLACED_TABLES for name in table)
+        shards, _ = shard_plan(_PLACED_TABLES, wanted)
+        groups = group_shards(shards, _placement(_TWO_DEVICES))
+        reader = _DeviceRecordingCheckpointReader(
+            table={name: i for i, name in enumerate(sorted(wanted))}
+        )
+        with Prefetch(groups, reader) as prefetch:
+            seen = {name: int(prefetch.take(name).item()) for name in sorted(wanted)}
+            assert seen == reader.table
+            assert sorted(reader.calls, key=lambda c: str(c[0])) == sorted(
+                (
+                    (group.device, tuple((s.path, s.keys) for s in group.shards))
+                    for group in groups
+                ),
+                key=lambda c: str(c[0]),
+            )
+            for name in wanted:
+                with pytest.raises(KeyError):
+                    prefetch.take(name)
+
+    def test_the_threaded_reader_reads_each_device_group_shard_once(self) -> None:
+        wanted = frozenset(name for _, table in _PLACED_TABLES for name in table)
+        shards, _ = shard_plan(_PLACED_TABLES, wanted)
+        groups = group_shards(shards, _placement(_TWO_DEVICES))
+        reader = _DeviceRecordingReader(
+            table={name: i for i, name in enumerate(sorted(wanted))}
+        )
+        with Prefetch(groups, reader) as prefetch:
+            seen = {name: int(prefetch.take(name).item()) for name in sorted(wanted)}
+        assert seen == reader.table
+        assert sorted(reader.calls, key=lambda c: (str(c[1]), str(c[0]))) == sorted(
+            (
+                (shard.path, group.device, shard.keys)
+                for group in groups
+                for shard in group.shards
+            ),
+            key=lambda c: (str(c[1]), str(c[0])),
+        )
+
+    def test_the_single_device_load_is_bit_identical_to_before(self) -> None:
+        """The pre-refactor tiny-Llama load, pinned: the same bytes in every
+        parameter (the digest, exact and platform-stable) and the same
+        logits out of one fixed forward as the stock loader's model gives
+        in this process — the same kernels on the same bytes, so
+        ``torch.equal``, where a digest of the logits would pin one
+        machine's floating point. The stock loader comparison above is the
+        oracle for *what* is loaded; this is the proof the refactor of *how*
+        moved nothing."""
+        bundle = load_model(TINY_LLAMA)
+        assert bundle.devices == DeviceMap.parse("cpu", 2)
+        digest = hashlib.sha256()
+        state = bundle.model.state_dict()
+        for name in sorted(state):
+            tensor = state[name].detach().cpu().contiguous()
+            digest.update(name.encode())
+            digest.update(str(tensor.dtype).encode())
+            digest.update(str(tuple(tensor.shape)).encode())
+            digest.update(tensor.numpy().tobytes())
+        assert digest.hexdigest() == _STATE_DIGEST
+        batch = encode(bundle.tokenizer, _PINNED_TEXTS, device=bundle.devices.embedding)
+        inputs = {
+            "input_ids": batch.input_ids,
+            "attention_mask": batch.attention_mask,
+            "position_ids": batch.position_ids(),
+        }
+        stock = _stock(TINY_LLAMA)
+        with torch.no_grad():
+            ours = bundle.model(**inputs).logits
+            reference = stock(**inputs).logits
+        assert ours.dtype == reference.dtype == torch.float32
+        assert torch.equal(ours, reference)
+
+    def test_a_tied_head_refuses_a_map_over_several_devices(self) -> None:
+        """GPT-2 ties ``lm_head`` to ``wte``: one tensor cannot sit on the
+        first device and the last, so the list is refused by name. The
+        single-device load of the same model is the valid twin."""
+        with pytest.raises(ProtocolError, match="tie") as err:
+            load_pretrained(
+                TINY_GPT2,
+                "main",
+                dtype=torch.float32,
+                device="cpu,meta",
+                attn_implementation="eager",
+            )
+        assert err.value.code == "P4"
+        assert (
+            load_pretrained(
+                TINY_GPT2,
+                "main",
+                dtype=torch.float32,
+                device="cpu",
+                attn_implementation="eager",
+            )
+            is not None
+        )

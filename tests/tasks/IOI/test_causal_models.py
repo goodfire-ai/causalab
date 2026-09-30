@@ -1,6 +1,6 @@
 """Property-tier invariants for the IOI (Indirect Object Identification) task.
 
-IOI is a singleton, pure-symbolic task: a :class:`CausalModel` over
+IOI is a singleton, pure-symbolic task: a [`CausalModel`][causalab.causal.model.CausalModel] over
 JSON-loaded vocab pools (``names``, ``objects``, ``places``,
 ``templates``) whose target variable ``IO`` is the indirect-object name
 the downstream interchange interventions try to recover. Every
@@ -44,7 +44,7 @@ from causalab.tasks.IOI.counterfactuals import (
     random_counterfactual,
 )
 from causalab.tasks.IOI.token_positions import create_token_positions
-from causalab.neural.token_positions import TokenPosition
+from causalab.tasks.token_positions import TokenPosition
 
 
 # Hypothesis settings — same defaults as the MCQA pilot.
@@ -343,7 +343,7 @@ class TestIOICounterfactualGeneratorProperty:
 class TestIOITokenPositionsProperty:
     """Tokenizer-coupled invariants for ``create_token_positions``.
 
-    Driven through a session-scoped ``gpt2`` :class:`LMPipeline` (see
+    Driven through a session-scoped ``gpt2`` [`LMPipeline`][causalab.tasks.token_positions.LMPipeline] (see
     ``conftest.py``) — token positions can only be meaningfully
     validated against a real tokenizer.
     """
@@ -358,7 +358,7 @@ class TestIOITokenPositionsProperty:
     def test_every_value_is_a_token_position_with_matching_id(
         self, gpt2_pipeline
     ) -> None:
-        """Each value is a :class:`TokenPosition` whose ``id`` matches its key."""
+        """Each value is a [`TokenPosition`][causalab.tasks.token_positions.TokenPosition] whose ``id`` matches its key."""
         positions = create_token_positions(gpt2_pipeline)
         for name, pos in positions.items():
             assert isinstance(pos, TokenPosition) and pos.id == name

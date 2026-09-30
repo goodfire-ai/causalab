@@ -1,15 +1,15 @@
 """Named axes — correlated row tuples and dependent axes (spec §3.2).
 
-The two acceptance clauses: three correlated rows × two seeds are exactly six
-points, and ROME's 48-way hand expansion of clipped layer windows collapses to
-one declaration.
+The two acceptance clauses: the `entity` test's three correlated rows × two
+seeds are exactly six points, and the `ROME` replication's 48-way hand
+expansion collapses to one declaration.
 
 * **T1** — three correlated rows × two seeds expand to exactly six points, in
   the asserted order, each point's canonical form and digest equal to the
   hand-written point's; the campaign's canonical form carries the ``axes``
   block and the lowered ``{"sweep": [[8],[9],[10]]}`` column. *Mutation:*
   expand the display form instead of the rows → 54 points.
-* **T2** — ROME's clipped ten-layer windows centred at each of 48 layers,
+* **T2** — ROME: clipped ten-layer windows centred at each of 48 layers,
   twice, on the 48-layer ``gpt2-xl`` registry entry; every member within
   0–47; coordinates and point digests identical across two compiles.
   *Mutation:* drop the clip → rule 4's out-of-range refusal fires.
@@ -17,7 +17,7 @@ one declaration.
   ``fan_out``. *Mutation:* accept unknown kinds and nothing else notices.
 * **T4** — the legitimate campaign: no shipped preset, corpus or workflow
   document declares the group; every corpus and workflow pin holds against
-  the pin *files*; the 32×2 grid is still 64 points in the pinned order.
+  the pin *files*; the 28×2 shipped grid is 56 points and the 32×2 corpus grid 64, in the pinned order.
 
 Around them: the §3.2 refusal table, each refusal beside its valid twin;
 ``--set`` into a row; the stage between ``families`` and ``gate``; the module
@@ -30,46 +30,46 @@ from __future__ import annotations
 
 import copy
 import json
-import re
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from causalab.cli import register_model_key
-from causalab.protocol import compile as compiler
-from causalab.protocol.axes import (
+from causalab.protocol import pipeline
+from causalab.neural.shared.sweep import expand_axes
+from causalab.protocol.lowering import (
     AXES_KEY,
     AXIS_KINDS,
     CLIP_TARGETS,
     RULE_KINDS,
     canonical_axes,
-    expand_axes,
     has_axes,
     lower_axes,
     parse_axes,
 )
-from causalab.protocol.canonical import canonical_bytes, canonicalize, digest
-from causalab.protocol.code import import_closure
-from causalab.protocol.compile import STAGES, compile_protocol
-from causalab.protocol.errors import ParseError, ValidationError
-from causalab.protocol.loader import load
+from causalab.protocol.schema.explicit import canonical_bytes, canonicalize, digest
+from causalab.protocol.identity import import_closure
+from causalab.protocol.pipeline import STAGES, compile_protocol
+from causalab.protocol.rules.errors import ParseError, ValidationError
 from causalab.protocol.registry import get_model_info
-from causalab.protocol.resolve import ResolutionEnv
+from causalab.io.env import ResolutionEnv
 from causalab.protocol.schema import GROUP_ORDER, parse_document
-from causalab.protocol.sweep import AT_ONCE_KEY, coordinate_label
+from causalab.protocol.lowering import AT_ONCE_KEY, coordinate_label
 from causalab.workflow.document import load_workflow
 
-from tests.protocol._docs import base_doc, in_order
-from tests.protocol._env import CORPUS_DIR
+from tests.protocol._docs import LOGIT_DIFF, UNWRITTEN, base_doc, in_order, saved
+from tests.protocol._env import CORPUS_DIR, steps_of
 from tests.protocol.test_protocol_presets import RUN_TREE_ONLY
 from tests.workflow.test_closure_census import SHARED
+from tests._helpers.paths import PROTOCOLS_DIR, WORKFLOWS_DIR
+
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
-PRESETS = REPO / "causalab" / "configs" / "protocols"
-WORKFLOWS = REPO / "causalab" / "configs" / "workflows"
+PRESETS = PROTOCOLS_DIR
+WORKFLOWS = WORKFLOWS_DIR
 CORPUS_PINS = json.loads((Path(__file__).parent / "corpus_digests.json").read_text())
 DAS = CORPUS_DIR / "04_das_im.json"
 
@@ -91,7 +91,7 @@ def _with_axes(doc: dict[str, Any], axes: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-#: Three correlated locations: a (layers, component, pos) tuple per row.
+#: `entity`'s three locations: a (layers, component, pos) tuple per row.
 LOCATIONS: list[dict[str, Any]] = [
     {"layers": 8, "component": "attention_output", "pos": {"index": -1}},
     {"layers": 9, "component": "mlp_output", "pos": {"index": -1}},
@@ -107,7 +107,7 @@ FOLDED_LOCATIONS: list[dict[str, Any]] = [
 
 
 def entity_doc() -> dict[str, Any]:
-    """T1's document: corpus 04 (a DAS fit on Llama-3.1-8B, so ``train.seed``
+    """T1's document: corpus 04 (a DAS fit on Qwen3-8B, so ``train.seed``
     exists) with its target moved onto the ``location`` rows and the seed
     swept."""
     doc: dict[str, Any] = json.loads(DAS.read_text())
@@ -160,7 +160,7 @@ def rome_doc(*, width: int = 10) -> dict[str, Any]:
 
 def _compile(doc: dict[str, Any] | Path, env: ResolutionEnv, **kwargs: Any):
     return compile_protocol(
-        doc, None, None, env.datasets, env.artifacts, None, **kwargs
+        doc, env=env, base_dir=None, overrides=None, engine=None, **kwargs
     )
 
 
@@ -177,7 +177,7 @@ def _refuses(
 
 
 # --------------------------------------------------------------------------- #
-# T1 — three correlated rows × two seeds = exactly six points
+# T1 — entity: three correlated rows × two seeds = exactly six points
 # --------------------------------------------------------------------------- #
 
 
@@ -190,7 +190,8 @@ def test_three_correlated_rows_times_two_seeds_are_six_points(env) -> None:
     the gate (``P3``); fails under the mutation — expanding the display form —
     with 54 points."""
     compiled = _compile(entity_doc(), env)
-    points = compiled.points.points
+    steps = steps_of(compiled, env)
+    points = steps.points
     assert len(points) == 6
     assert [dict(p.coords) for p in points] == [
         {"axes.location": 8, "train.seed": 0},
@@ -200,16 +201,16 @@ def test_three_correlated_rows_times_two_seeds_are_six_points(env) -> None:
         {"axes.location": 10, "train.seed": 0},
         {"axes.location": 10, "train.seed": 1},
     ]
-    assert [axis.id for axis in compiled.points.axes] == ["axes.location", "train.seed"]
-    for point, (row, seed) in zip(
-        points, [(row, seed) for row in LOCATIONS for seed in (0, 1)], strict=True
+    assert [axis.id for axis in compiled.axes] == ["axes.location", "train.seed"]
+    for canonical, (row, seed) in zip(
+        steps.canonical,
+        [(row, seed) for row in LOCATIONS for seed in (0, 1)],
+        strict=True,
     ):
         twin = canonicalize(entity_point(row, seed), env)
-        assert point.canonical == twin
-        assert digest(twin) in compiled.digests.points
-    assert list(compiled.digests.points) == [
-        digest(c) for c in compiled.points.canonical
-    ]
+        assert canonical == twin
+        assert digest(twin) in steps.digests
+    assert list(steps.digests) == [digest(c) for c in steps.canonical]
     # the campaign: the block is in the canonical form, between data and method
     assert list(compiled.canonical) == ["header", "model", "data", "axes", "method"]
     assert compiled.canonical["axes"] == {
@@ -223,17 +224,17 @@ def test_three_correlated_rows_times_two_seeds_are_six_points(env) -> None:
     assert [
         row["layers"] for row in compiled.canonical["axes"]["location"]["rows"]
     ] == (compiled.canonical["method"]["sites"]["target"]["layers"]["sweep"])
-    assert compiled.points.explicit["method"]["sites"]["target"]["component"] == {
+    assert compiled.tree["method"]["sites"]["target"]["component"] == {
         "sweep": ["attention_output", "mlp_output", "block_output"]
     }
-    assert AXES_KEY not in compiled.points.explicit
+    assert AXES_KEY not in compiled.tree
     assert coordinate_label(points[0].coords) == "[axes.location=8,seed=0]"
 
 
 def test_t1_rows_are_recorded_folded(env) -> None:
-    """The fold-up: a rows axis authored ``layers: 8`` and its twin authored
-    ``layers: [8]`` are byte-identical in `canonical_axes`, one campaign
-    digest, and the block's spelling is the display column's.
+    """The fold-up: a rows axis authored ``layers: 8`` and its
+    twin authored ``layers: [8]`` are byte-identical in `canonical_axes`, one
+    campaign digest, and the block's spelling is the display column's.
 
     The axis is keyed on ``component`` here: the key field is a scalar per row,
     so a ``layers``-keyed row may only spell ``8``, and the two spellings exist
@@ -250,15 +251,15 @@ def test_t1_rows_are_recorded_folded(env) -> None:
         "key": "component",
     }
     as_band = _compile(doc, env)
-    assert [p.coords["axes.location"] for p in as_index.points.points] == [
+    assert [p.coords["axes.location"] for p in steps_of(as_index, env).points] == [
         row["component"] for row in LOCATIONS for _ in (0, 1)
     ]
     assert as_index.canonical["axes"] == as_band.canonical["axes"]
     assert canonical_bytes(as_index.canonical) == canonical_bytes(as_band.canonical)
     assert as_index.digests.document == as_band.digests.document
-    assert list(as_index.digests.points) == list(as_band.digests.points)
-    assert [dict(p.coords) for p in as_index.points.points] == [
-        dict(p.coords) for p in as_band.points.points
+    assert list(steps_of(as_index, env).digests) == list(steps_of(as_band, env).digests)
+    assert [dict(p.coords) for p in steps_of(as_index, env).points] == [
+        dict(p.coords) for p in steps_of(as_band, env).points
     ]
     # `axes` and `method` spell the folded field the same way
     assert [
@@ -293,19 +294,19 @@ def test_the_display_forms_cross_product_is_not_the_expansion(env) -> None:
     """The count T1's mutation would produce, stated: the lowered document,
     expanded as the independent axes it looks like, is 3·3·3·2 = 54 points —
     and that is exactly what a compile of the same document is not."""
-    from causalab.protocol.sweep import expand
+    from causalab.neural.shared.sweep import expand
 
     doc = entity_doc()
     lowered = lower_axes(doc, parse_axes(doc, get_model_info))
     assert len(expand(lowered).points) == 54
-    assert len(_compile(doc, env).points.points) == 6
+    assert len(steps_of(_compile(doc, env), env).points) == 6
 
 
 def test_a_rows_axis_without_a_key_is_indexed(env) -> None:
     doc = entity_doc()
     del doc[AXES_KEY]["location"]["key"]
     compiled = _compile(doc, env)
-    assert [p.coords["axes.location"] for p in compiled.points.points] == [
+    assert [p.coords["axes.location"] for p in steps_of(compiled, env).points] == [
         0,
         0,
         1,
@@ -335,7 +336,7 @@ def test_two_identical_rows_are_p2_and_distinct_rows_enumerate(env) -> None:
     assert "'layers': [8]" in str(err)
     twin = entity_doc()
     del twin[AXES_KEY]["location"]["key"]
-    assert len(_compile(twin, env).points.points) == 6
+    assert len(steps_of(_compile(twin, env), env).points) == 6
 
 
 def test_a_rows_axis_crosses_with_a_second_named_axis(env) -> None:
@@ -345,7 +346,7 @@ def test_a_rows_axis_crosses_with_a_second_named_axis(env) -> None:
     doc[AXES_KEY]["k"] = {"values": [4, 8]}
     doc["method"]["featurizers"]["rot"]["k"] = {"axis": "k"}
     compiled = _compile(doc, env)
-    coords = [dict(p.coords) for p in compiled.points.points]
+    coords = [dict(p.coords) for p in steps_of(compiled, env).points]
     assert len(coords) == 12
     assert coords[0] == {"axes.location": 8, "axes.k": 4, "train.seed": 0}
     assert coords[1] == {"axes.location": 8, "axes.k": 4, "train.seed": 1}
@@ -360,17 +361,18 @@ def test_a_rows_axis_crosses_with_a_second_named_axis(env) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_clipped_windows_over_48_centers_twice(env) -> None:
-    """T2: expand clipped ten-layer windows centred at each of 48 layers
-    twice. Every member stays within layers 0 through 47; explicit sites and
-    point order match across loads; digests are stable.
+def test_t2_clipped_windows_over_48_centers_twice(env) -> None:
+    """T2, the acceptance clause: "Expand clipped ten-layer windows centered at each
+    of 48 layers twice. Every member stays within layers 0 through 47;
+    explicit sites and point order match across loads; digests are stable."
 
     Fails under the mutation — dropping the clip — because centre 0's window
     would start at −5 and rule 4 refuses it (`test_dropping_the_clip_…`)."""
     assert get_model_info("gpt2-xl").num_layers == 48
     first = _compile(rome_doc(), env)
     second = _compile(rome_doc(), env)
-    points = first.points.points
+    steps = steps_of(first, env)
+    points = steps.points
     assert len(points) == 48
     bands = [p.raw["method"]["sites"]["tgt"]["layers"] for p in points]
     assert all(0 <= layer <= 47 for band in bands for layer in band)
@@ -379,8 +381,8 @@ def test_clipped_windows_over_48_centers_twice(env) -> None:
     assert bands[24] == list(range(19, 29))
     assert bands[47] == [42, 43, 44, 45, 46, 47]
     assert [dict(p.coords) for p in points] == [{"axes.center": c} for c in range(48)]
-    assert [axis.id for axis in first.points.axes] == ["axes.center"]
-    assert [dict(p.coords) for p in second.points.points] == [
+    assert [axis.id for axis in first.axes] == ["axes.center"]
+    assert [dict(p.coords) for p in steps_of(second, env).points] == [
         dict(p.coords) for p in points
     ]
     assert second.digests == first.digests
@@ -399,14 +401,14 @@ def test_clipped_windows_over_48_centers_twice(env) -> None:
     hand = base_doc()
     hand["model"] = {"key": "gpt2-xl", "revision": "main"}
     hand["method"]["sites"]["tgt"]["layers"] = [42, 43, 44, 45, 46, 47]
-    assert points[47].canonical == canonicalize(hand, env)
+    assert steps.canonical[47] == canonicalize(hand, env)
 
 
 def test_a_window_narrower_than_the_tower_clips_only_at_the_edges(env) -> None:
     doc = rome_doc(width=3)
     bands = [
         p.raw["method"]["sites"]["tgt"]["layers"]
-        for p in _compile(doc, env).points.points
+        for p in steps_of(_compile(doc, env), env).points
     ]
     assert bands[0] == [0, 1]
     assert bands[1] == [0, 1, 2]
@@ -448,10 +450,10 @@ def test_a_per_row_expert_axis_is_refused_at_load_naming_fan_out(env) -> None:
     err = _refuses(
         doc, env, "P4", "axes.window.rule", "routed_experts", "clipped_band", "fan_out"
     )
-    assert "fan_out" in str(err)
+    assert "declare it in the workflow" in str(err)
     assert "pure function of the document" in str(err)
     # the valid twin is T2 itself
-    assert len(_compile(rome_doc(), env).points.points) == 48
+    assert len(steps_of(_compile(rome_doc(), env), env).points) == 48
 
 
 # --------------------------------------------------------------------------- #
@@ -477,12 +479,12 @@ def test_no_corpus_document_declares_axes_and_its_pin_holds(path: Path, env) -> 
     with it and an accidental move fails here."""
     raw = json.loads(path.read_text())
     assert not has_axes(raw)
-    loaded = load(path, env)
+    loaded = compile_protocol(path, env=env)
     pin = CORPUS_PINS[path.name]
-    assert loaded.document_digest == pin["document"]
-    assert list(loaded.point_digests) == pin["points"]
-    assert AXES_KEY not in loaded.canonical_document
-    assert all("axes." not in axis.id for axis in loaded.expansion.axes)
+    assert loaded.digests.document == pin["document"]
+    assert list(steps_of(loaded, env).digests) == pin["points"]
+    assert AXES_KEY not in loaded.canonical
+    assert all("axes." not in axis.id for axis in steps_of(loaded, env).axes)
 
 
 @pytest.mark.parametrize("path", sorted(PRESETS.glob("*.json")), ids=lambda p: p.name)
@@ -496,9 +498,9 @@ def test_a_shipped_preset_compiles_without_the_block_in_its_canonical_form(
 ) -> None:
     raw = json.loads(path.read_text())
     register_model_key(raw)  # the CLI's step: a tiny-fixture key joins the registry
-    loaded = load(path, env)
-    assert AXES_KEY not in loaded.canonical_document
-    assert all("axes." not in axis.id for axis in loaded.expansion.axes)
+    loaded = compile_protocol(path, env=env)
+    assert AXES_KEY not in loaded.canonical
+    assert all("axes." not in axis.id for axis in steps_of(loaded, env).axes)
 
 
 @pytest.mark.parametrize("path", sorted(WORKFLOWS.glob("*.json")), ids=lambda p: p.name)
@@ -508,28 +510,30 @@ def test_no_shipped_workflow_declares_axes(path: Path, env) -> None:
     assert not has_axes(json.loads(path.read_text()))
     loaded = load_workflow(path, env)
     for inner in loaded.inner.values():
-        assert AXES_KEY not in inner.canonical_document
+        assert AXES_KEY not in inner.compiled.canonical
 
 
-def test_the_32_by_2_grid_is_still_64_points_in_the_pinned_order(env) -> None:
+def test_the_layer_by_position_grid_is_still_every_point_in_the_pinned_order(
+    env,
+) -> None:
     """T4's named case: `weekdays_locate_scan`'s two axes, in document order,
-    64 points, `positions.tap` slowest — and corpus 07, the same grid, in the
-    order its pin lists."""
-    loaded = load(PRESETS / "weekdays_locate_scan.json", env)
-    assert [axis.id for axis in loaded.expansion.axes] == [
+    56 points (28 layers x 2 positions), `positions.tap` slowest — and corpus
+    07, the 32-layer grid, in the order its pin lists."""
+    loaded = compile_protocol(PRESETS / "weekdays_locate_scan.json", env=env)
+    assert [axis.id for axis in steps_of(loaded, env).axes] == [
         "positions.tap",
         "sites.target.layers",
     ]
-    assert len(loaded.expansion.points) == 64
-    layers = [p.coords["sites.target.layers"] for p in loaded.expansion.points]
-    assert layers == list(range(32)) * 2
-    corpus = load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env)
-    assert len(corpus.expansion.points) == 64
+    assert len(steps_of(loaded, env).points) == 56  # 28 layers x 2 positions
+    layers = [p.coords["sites.target.layers"] for p in steps_of(loaded, env).points]
+    assert layers == list(range(28)) * 2
+    corpus = compile_protocol(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env)
+    assert len(steps_of(corpus, env).points) == 64
     assert (
-        list(corpus.point_digests)
+        list(steps_of(corpus, env).digests)
         == CORPUS_PINS["07_weekdays_locate_scan_im.json"]["points"]
     )
-    assert [axis.id for axis in corpus.expansion.axes] == [
+    assert [axis.id for axis in steps_of(corpus, env).axes] == [
         "positions.tap",
         "sites.target.layers",
     ]
@@ -543,11 +547,11 @@ def test_a_document_without_the_group_takes_the_plain_path(env) -> None:
     compiled = _compile(doc, env)
     assert not has_axes(doc)
     assert AXES_KEY not in compiled.canonical
-    assert [dict(p.coords) for p in compiled.points.points] == [
+    assert [dict(p.coords) for p in steps_of(compiled, env).points] == [
         {"sites.tgt.layers": 3},
         {"sites.tgt.layers": 4},
     ]
-    assert compiled.digests.document == load(doc, env).document_digest
+    assert compiled.digests.document == compile_protocol(doc, env=env).digests.document
 
 
 # --------------------------------------------------------------------------- #
@@ -557,8 +561,8 @@ def test_a_document_without_the_group_takes_the_plain_path(env) -> None:
 
 def test_the_valid_twins_compile(env) -> None:
     """Every refusal below is a one-edit mutation of one of these two."""
-    assert len(_compile(entity_doc(), env).points.points) == 6
-    assert len(_compile(rome_doc(), env).points.points) == 48
+    assert len(steps_of(_compile(entity_doc(), env), env).points) == 6
+    assert len(steps_of(_compile(rome_doc(), env), env).points) == 48
 
 
 def test_a_row_that_is_not_an_object_is_p2(env) -> None:
@@ -674,10 +678,12 @@ def test_a_mapping_with_a_key_beside_axis_is_a_value(env) -> None:
 
 
 def test_a_wrapper_inside_a_list_is_p2(env) -> None:
+    """A ``save`` entry is addressable by index (``save[0].…``), so the list
+    without a name identity is an authored value list such as ``dims``."""
     doc = rome_doc()
-    doc["method"]["save"][0]["file_path"] = {"axis": "center"}
+    doc["method"]["reads"]["logits"]["dims"] = [{"axis": "center"}]
     doc["method"]["sites"]["tgt"]["layers"] = [3]
-    _refuses(doc, env, "P2", "save.file_path", "no name identity")
+    _refuses(doc, env, "P2", "reads.logits.dims", "no name identity")
 
 
 def test_an_unreferenced_axis_is_p2(env) -> None:
@@ -697,7 +703,7 @@ def test_an_unreferenced_row_field_is_p2_unless_it_is_the_key(env) -> None:
     doc = entity_doc()
     doc["method"]["sites"]["target"]["layers"] = [8]
     compiled = _compile(doc, env)
-    assert [p.coords["axes.location"] for p in compiled.points.points] == [
+    assert [p.coords["axes.location"] for p in steps_of(compiled, env).points] == [
         8,
         8,
         9,
@@ -780,7 +786,7 @@ def test_the_cap_is_taken_over_the_true_count(env) -> None:
         _compile(doc, env)
     assert err.value.rule == 14
     assert "6000 points" in str(err.value) and "4096" in str(err.value)
-    assert len(_compile(doc, env, point_cap=None).points.points) == 6000
+    assert len(steps_of(_compile(doc, env, point_cap=None), env).points) == 6000
 
 
 # --------------------------------------------------------------------------- #
@@ -794,24 +800,22 @@ def test_set_can_address_a_row(env) -> None:
     section, so the path spells it)."""
     compiled = compile_protocol(
         entity_doc(),
-        None,
-        {"axes.location.rows[0].layers": 7},
-        env.datasets,
-        env.artifacts,
-        None,
+        env=env,
+        base_dir=None,
+        overrides={"axes.location.rows[0].layers": 7},
+        engine=None,
     )
-    first = compiled.points.points[0]
+    first = steps_of(compiled, env).points[0]
     assert first.raw["method"]["sites"]["target"]["layers"] == [7]
     assert dict(first.coords) == {"axes.location": 7, "train.seed": 0}
     assert compiled.canonical["axes"]["location"]["rows"][0]["layers"] == [7]
     with pytest.raises(ParseError) as err:
         compile_protocol(
             entity_doc(),
-            None,
-            {"axes.location.rows[3].layers": 7},
-            env.datasets,
-            env.artifacts,
-            None,
+            env=env,
+            base_dir=None,
+            overrides={"axes.location.rows[3].layers": 7},
+            engine=None,
         )
     assert err.value.code == "P2" and "out of range" in str(err.value)
 
@@ -831,38 +835,32 @@ def test_an_axis_wrapper_on_a_family_entry_is_shared_by_every_member(env) -> Non
         "lm_head": {"component": "lm_head"},
     }
     doc["method"]["reads"] = {
-        "v": {
-            "site": "a",
-            "pos": "tap",
-            "model": "original",
-            "input": "counterfactual",
-            "names": "v{layers}",
-        },
-        "logits": {"site": "lm_head", "pos": -1, "model": "band", "input": "base"},
+        "v": {"site": "a", "pos": "tap", "names": "v{layers}"},
+        "logits": {"site": "lm_head", "pos": -1},
     }
     doc["method"]["writes"] = {
         "w": {"site": "a", "pos": "tap", "do": {"swap": "v"}, "names": "w{layers}"}
     }
     doc["method"]["intervened_models"] = {
+        UNWRITTEN: {"input": "counterfactual", "reads": ["v"]},
         "band": {
             "input": "base",
+            "reads": ["logits"],
             "writes": [{"w": {"layers": {"at_once": {"range": [3, 6]}}}}],
-        }
+        },
     }
-    doc["method"]["save"] = [
-        {"value": "ld", "model": "band", "input": "base", "file_path": "ld.json"}
-    ]
+    doc["method"]["save"] = [saved("logits", "band", "ld.json", dict(LOGIT_DIFF))]
     doc = _with_axes(
         doc,
         {"loc": {"rows": [{"component": "block_output"}, {"component": "mlp_output"}]}},
     )
     compiled = _compile(doc, env)
-    points = compiled.points.points
+    points = steps_of(compiled, env).points
     assert [dict(p.coords) for p in points] == [{"axes.loc": 0}, {"axes.loc": 1}]
     for point, component in zip(points, ("block_output", "mlp_output"), strict=True):
         sites = point.raw["method"]["sites"]
         assert [sites[f"a{i}"]["component"] for i in (3, 4, 5)] == [component] * 3
-    assert compiled.points.explicit["method"]["sites"]["a3"]["component"] == {
+    assert compiled.tree["method"]["sites"]["a3"]["component"] == {
         "sweep": ["block_output", "mlp_output"]
     }
 
@@ -871,27 +869,19 @@ def test_the_stage_sits_between_families_and_gate() -> None:
     """After families, so a wrapper on a family entry reaches every member;
     before the gate, which knows the four groups alone."""
     assert STAGES.index("families") < STAGES.index("axes") < STAGES.index("gate")
-    assert compiler._STAGE["axes"] is compiler._axes  # pyright: ignore[reportPrivateUsage]
+    assert pipeline._STAGE["axes"] is pipeline._axes  # pyright: ignore[reportPrivateUsage]
 
 
-def test_the_lowering_module_is_outside_the_hashed_closure() -> None:
-    """The layering premise, stated directly: ``axes.py`` is reached from
-    ``compile.py`` alone, so no SHARED member imports it and no shipped script
-    pulls it into a torch-free load. ``test_closure_census.py`` holds the
-    frozen table."""
-    assert "causalab/protocol/axes.py" not in SHARED
+def test_the_named_axes_live_in_lowering() -> None:
+    """The layering premise, stated directly: the named axes are
+    ``lowering.py``'s — a SHARED member, reached through ``bundles.py``, so
+    every shipped script's torch-free load parses them. Their enumeration
+    (``expand_axes``) is the engine's, ``neural/shared/sweep.py``, which no
+    SHARED member reaches. ``test_closure_census.py`` holds the frozen table."""
+    assert "causalab/protocol/lowering.py" in SHARED
     closure = import_closure(REPO / "causalab/io/step_io.py", root=REPO)
-    assert "causalab/protocol/axes.py" not in closure
-    importers = [
-        path.relative_to(REPO).as_posix()
-        for path in sorted((REPO / "causalab").rglob("*.py"))
-        if re.search(
-            r"^from causalab\.protocol\.axes import|^import causalab\.protocol\.axes",
-            path.read_text(),
-            re.M,
-        )
-    ]
-    assert importers == ["causalab/protocol/compile.py"]
+    assert "causalab/protocol/lowering.py" in closure
+    assert "causalab/neural/shared/sweep.py" not in closure
 
 
 def test_the_gate_never_sees_the_block() -> None:
@@ -948,8 +938,8 @@ def test_a_gaussian_write_beside_a_declared_group_is_not_a_wrapper(env) -> None:
     }
     method["intervened_models"]["patched"]["writes"] = ["corrupt", "patch"]
     compiled = _compile(doc, env)
-    assert len(compiled.points.points) == 48
-    point = compiled.points.points[0].raw["method"]["writes"]["corrupt"]["do"]
+    assert len(steps_of(compiled, env).points) == 48
+    point = steps_of(compiled, env).points[0].raw["method"]["writes"]["corrupt"]["do"]
     assert point == {"gaussian": {"seed": 0, "scale": 0.1, "axis": "tp_duplicated"}}
     # a wrapper inside the payload keeps its identity: an undeclared axis is refused
     doc["method"]["writes"]["corrupt"]["do"]["gaussian"]["scale"] = {"axis": "noise"}

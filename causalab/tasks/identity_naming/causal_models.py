@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from causalab.causal.causal_model import CausalModel
+from causalab.causal import Dom, V, mechanism
+from causalab.causal.compiler import ConfigurationCopier
+from causalab.causal.model import CausalModel
 from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import Mechanism, input_var
 
 from .config import IdentityNamingConfig
-
 
 # ---------------------------------------------------------------------------
 # Factory: create causal model from config
@@ -28,34 +28,19 @@ def create_causal_model(config: IdentityNamingConfig) -> CausalModel:
     templates are used in generate_dataset for prompt variation, but
     phrasing is not a causal variable.
     """
+    config = ConfigurationCopier()(config)
     entities = config.entities
     entity_to_result = config.entity_to_result
     result_values = sorted(set(entity_to_result.values()), key=lambda v: (len(v), v))
     template = config.templates[0]
     output_prefix = config.output_prefix
 
-    values: dict[str, list | None] = {
-        "entity": entities,
-        "result": result_values,
-        "raw_input": None,
-        "raw_output": None,
-    }
-
-    mechanisms = {
-        "entity": input_var(entities),
-        "result": Mechanism(
-            parents=["entity"],
-            compute=lambda t: entity_to_result[t["entity"]],
-        ),
-        "raw_input": Mechanism(
-            parents=["entity"],
-            compute=lambda t: template.format(entity=t["entity"]),
-        ),
-        "raw_output": Mechanism(
-            parents=["result"],
-            compute=lambda t: output_prefix + t["result"],
-        ),
-    }
+    @mechanism
+    def equations(entity: Dom(entities)):
+        result = V(entity_to_result[entity], domain=Dom(result_values))
+        raw_input = V(template.format(entity=entity), domain=Dom(str))  # noqa: F841
+        raw_output = V(output_prefix + result, domain=Dom(str))  # noqa: F841
+        return result
 
     # Build embeddings
     embeddings: dict[str, Callable[[Any], list[float]]] = {}
@@ -81,8 +66,7 @@ def create_causal_model(config: IdentityNamingConfig) -> CausalModel:
     )
 
     model = CausalModel(
-        mechanisms,
-        values,
+        equations,
         id=f"identity_naming_{config.domain_type}",
         embeddings=embeddings,
         scoring=scoring,

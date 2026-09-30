@@ -29,7 +29,6 @@
   ],
   "number": "one",
   "result": "February",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -63,7 +62,6 @@
   ],
   "number": "two",
   "result": "March",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -97,7 +95,6 @@
   ],
   "number": "four",
   "result": "May",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -131,7 +128,6 @@
   ],
   "number": "five",
   "result": "June",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -165,7 +161,6 @@
   ],
   "number": "six",
   "result": "July",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -199,7 +194,6 @@
   ],
   "number": "two",
   "result": "April",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -233,7 +227,6 @@
   ],
   "number": "three",
   "result": "May",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -267,7 +260,6 @@
   ],
   "number": "four",
   "result": "June",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -301,7 +293,6 @@
   ],
   "number": "five",
   "result": "July",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -335,7 +326,6 @@
   ],
   "number": "one",
   "result": "April",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -369,7 +359,6 @@
   ],
   "number": "three",
   "result": "June",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -403,7 +392,6 @@
   ],
   "number": "four",
   "result": "July",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -437,7 +425,6 @@
   ],
   "number": "five",
   "result": "August",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -471,7 +458,6 @@
   ],
   "number": "six",
   "result": "September",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -505,7 +491,6 @@
   ],
   "number": "one",
   "result": "May",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -539,7 +524,6 @@
   ],
   "number": "two",
   "result": "June",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -573,7 +557,6 @@
   ],
   "number": "three",
   "result": "July",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -607,7 +590,6 @@
   ],
   "number": "five",
   "result": "September",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -641,7 +623,6 @@
   ],
   "number": "six",
   "result": "October",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -675,7 +656,6 @@
   ],
   "number": "two",
   "result": "July",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -709,7 +689,6 @@
   ],
   "number": "five",
   "result": "October",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -743,7 +722,6 @@
   ],
   "number": "six",
   "result": "November",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -777,7 +755,6 @@
   ],
   "number": "seven",
   "result": "December",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -811,7 +788,6 @@
   ],
   "number": "two",
   "result": "August",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -845,7 +821,6 @@
   ],
   "number": "three",
   "result": "September",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -879,7 +854,6 @@
   ],
   "number": "seven",
   "result": "January",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -913,7 +887,6 @@
   ],
   "number": "one",
   "result": "August",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -947,7 +920,6 @@
   ],
   "number": "two",
   "result": "September",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -981,7 +953,6 @@
   ],
   "number": "seven",
   "result": "February",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1015,7 +986,6 @@
   ],
   "number": "one",
   "result": "September",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1049,7 +1019,6 @@
   ],
   "number": "four",
   "result": "December",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1083,7 +1052,6 @@
   ],
   "number": "five",
   "result": "January",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1117,7 +1085,6 @@
   ],
   "number": "seven",
   "result": "March",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1151,7 +1118,6 @@
   ],
   "number": "two",
   "result": "November",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1185,7 +1151,6 @@
   ],
   "number": "four",
   "result": "January",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1219,7 +1184,6 @@
   ],
   "number": "five",
   "result": "February",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1253,7 +1217,6 @@
   ],
   "number": "six",
   "result": "March",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1287,7 +1250,6 @@
   ],
   "number": "seven",
   "result": "April",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1321,7 +1283,6 @@
   ],
   "number": "one",
   "result": "November",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1355,7 +1316,6 @@
   ],
   "number": "two",
   "result": "December",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1389,7 +1349,6 @@
   ],
   "number": "three",
   "result": "January",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1423,7 +1382,6 @@
   ],
   "number": "five",
   "result": "March",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1457,7 +1415,6 @@
   ],
   "number": "six",
   "result": "April",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1491,7 +1448,6 @@
   ],
   "number": "seven",
   "result": "May",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1525,7 +1481,6 @@
   ],
   "number": "two",
   "result": "January",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1559,7 +1514,6 @@
   ],
   "number": "three",
   "result": "February",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1593,7 +1547,6 @@
   ],
   "number": "one",
   "result": "January",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1627,7 +1580,6 @@
   ],
   "number": "two",
   "result": "February",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1661,7 +1613,6 @@
   ],
   "number": "four",
   "result": "April",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1695,7 +1646,6 @@
   ],
   "number": "five",
   "result": "May",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1729,7 +1679,6 @@
   ],
   "number": "six",
   "result": "June",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "train",
   "string_mode": "exact"
  },
@@ -1763,7 +1712,6 @@
   ],
   "number": "three",
   "result": "April",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -1797,7 +1745,6 @@
   ],
   "number": "seven",
   "result": "August",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -1831,7 +1778,6 @@
   ],
   "number": "one",
   "result": "March",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -1865,7 +1811,6 @@
   ],
   "number": "six",
   "result": "August",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -1899,7 +1844,6 @@
   ],
   "number": "seven",
   "result": "September",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -1933,7 +1877,6 @@
   ],
   "number": "two",
   "result": "May",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -1967,7 +1910,6 @@
   ],
   "number": "seven",
   "result": "October",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2001,7 +1943,6 @@
   ],
   "number": "four",
   "result": "August",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2035,7 +1976,6 @@
   ],
   "number": "seven",
   "result": "November",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2069,7 +2009,6 @@
   ],
   "number": "one",
   "result": "June",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2103,7 +2042,6 @@
   ],
   "number": "three",
   "result": "August",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2137,7 +2075,6 @@
   ],
   "number": "four",
   "result": "September",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2171,7 +2108,6 @@
   ],
   "number": "one",
   "result": "July",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2205,7 +2141,6 @@
   ],
   "number": "four",
   "result": "October",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2239,7 +2174,6 @@
   ],
   "number": "five",
   "result": "November",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2273,7 +2207,6 @@
   ],
   "number": "six",
   "result": "December",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2307,7 +2240,6 @@
   ],
   "number": "three",
   "result": "October",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2341,7 +2273,6 @@
   ],
   "number": "four",
   "result": "November",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2375,7 +2306,6 @@
   ],
   "number": "five",
   "result": "December",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2409,7 +2339,6 @@
   ],
   "number": "six",
   "result": "January",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2443,7 +2372,6 @@
   ],
   "number": "two",
   "result": "October",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2477,7 +2405,6 @@
   ],
   "number": "three",
   "result": "November",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2511,7 +2438,6 @@
   ],
   "number": "six",
   "result": "February",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2545,7 +2471,6 @@
   ],
   "number": "one",
   "result": "October",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2579,7 +2504,6 @@
   ],
   "number": "three",
   "result": "December",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2613,7 +2537,6 @@
   ],
   "number": "four",
   "result": "February",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2647,7 +2570,6 @@
   ],
   "number": "one",
   "result": "December",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2681,7 +2603,6 @@
   ],
   "number": "four",
   "result": "March",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2715,7 +2636,6 @@
   ],
   "number": "five",
   "result": "April",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2749,7 +2669,6 @@
   ],
   "number": "six",
   "result": "May",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2783,7 +2702,6 @@
   ],
   "number": "seven",
   "result": "June",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2817,7 +2735,6 @@
   ],
   "number": "three",
   "result": "March",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  },
@@ -2851,7 +2768,6 @@
   ],
   "number": "seven",
   "result": "July",
-  "scoring_digest": "fd5b4c2b31de6502d60fa216edfd56066176242378cb26d328f44711b6e8da44",
   "split": "test",
   "string_mode": "exact"
  }

@@ -1,0 +1,1348 @@
+{
+  "population": [
+    {
+      "layer": 0,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 1,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 2,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 3,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 4,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 5,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 6,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 7,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 8,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 9,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 10,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 11,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 12,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 13,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 14,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 15,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 16,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 17,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 18,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 19,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 20,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 21,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 22,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 23,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 24,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 25,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 26,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 27,
+      "position": -11,
+      "role": "Question end",
+      "iia": 0.0
+    },
+    {
+      "layer": 0,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.375
+    },
+    {
+      "layer": 1,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.34375
+    },
+    {
+      "layer": 2,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.28125
+    },
+    {
+      "layer": 3,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.171875
+    },
+    {
+      "layer": 4,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.171875
+    },
+    {
+      "layer": 5,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.171875
+    },
+    {
+      "layer": 6,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.1875
+    },
+    {
+      "layer": 7,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.171875
+    },
+    {
+      "layer": 8,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.171875
+    },
+    {
+      "layer": 9,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.15625
+    },
+    {
+      "layer": 10,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.15625
+    },
+    {
+      "layer": 11,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.15625
+    },
+    {
+      "layer": 12,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.171875
+    },
+    {
+      "layer": 13,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.109375
+    },
+    {
+      "layer": 14,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.109375
+    },
+    {
+      "layer": 15,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.109375
+    },
+    {
+      "layer": 16,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.109375
+    },
+    {
+      "layer": 17,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.109375
+    },
+    {
+      "layer": 18,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.09375
+    },
+    {
+      "layer": 19,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.09375
+    },
+    {
+      "layer": 20,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.046875
+    },
+    {
+      "layer": 21,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.0625
+    },
+    {
+      "layer": 22,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.015625
+    },
+    {
+      "layer": 23,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.015625
+    },
+    {
+      "layer": 24,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.015625
+    },
+    {
+      "layer": 25,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.015625
+    },
+    {
+      "layer": 26,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.015625
+    },
+    {
+      "layer": 27,
+      "position": -10,
+      "role": "Symbol 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 0,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 1,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.03125
+    },
+    {
+      "layer": 2,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.09375
+    },
+    {
+      "layer": 3,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.109375
+    },
+    {
+      "layer": 4,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.125
+    },
+    {
+      "layer": 5,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.109375
+    },
+    {
+      "layer": 6,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.109375
+    },
+    {
+      "layer": 7,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.140625
+    },
+    {
+      "layer": 8,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.125
+    },
+    {
+      "layer": 9,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.125
+    },
+    {
+      "layer": 10,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.125
+    },
+    {
+      "layer": 11,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.140625
+    },
+    {
+      "layer": 12,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.140625
+    },
+    {
+      "layer": 13,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.140625
+    },
+    {
+      "layer": 14,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.140625
+    },
+    {
+      "layer": 15,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.140625
+    },
+    {
+      "layer": 16,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.140625
+    },
+    {
+      "layer": 17,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.140625
+    },
+    {
+      "layer": 18,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.15625
+    },
+    {
+      "layer": 19,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.140625
+    },
+    {
+      "layer": 20,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.09375
+    },
+    {
+      "layer": 21,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.109375
+    },
+    {
+      "layer": 22,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 23,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 24,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 25,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 26,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 27,
+      "position": -9,
+      "role": "Period after symbol 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 0,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 1,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 2,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 3,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 4,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 5,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 6,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 7,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 8,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 9,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 10,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 11,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 12,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 13,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 14,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 15,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 16,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 17,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 18,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 19,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 20,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 21,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 22,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 23,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 24,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 25,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 26,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 27,
+      "position": -8,
+      "role": "Choice 0",
+      "iia": 0.0
+    },
+    {
+      "layer": 0,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.53125
+    },
+    {
+      "layer": 1,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.53125
+    },
+    {
+      "layer": 2,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.53125
+    },
+    {
+      "layer": 3,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.515625
+    },
+    {
+      "layer": 4,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.515625
+    },
+    {
+      "layer": 5,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.5
+    },
+    {
+      "layer": 6,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.5
+    },
+    {
+      "layer": 7,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.5
+    },
+    {
+      "layer": 8,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.484375
+    },
+    {
+      "layer": 9,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.484375
+    },
+    {
+      "layer": 10,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.484375
+    },
+    {
+      "layer": 11,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.515625
+    },
+    {
+      "layer": 12,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.484375
+    },
+    {
+      "layer": 13,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.484375
+    },
+    {
+      "layer": 14,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.484375
+    },
+    {
+      "layer": 15,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.46875
+    },
+    {
+      "layer": 16,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.46875
+    },
+    {
+      "layer": 17,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.46875
+    },
+    {
+      "layer": 18,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.484375
+    },
+    {
+      "layer": 19,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.453125
+    },
+    {
+      "layer": 20,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.390625
+    },
+    {
+      "layer": 21,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.390625
+    },
+    {
+      "layer": 22,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.09375
+    },
+    {
+      "layer": 23,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.0625
+    },
+    {
+      "layer": 24,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.03125
+    },
+    {
+      "layer": 25,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.015625
+    },
+    {
+      "layer": 26,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 27,
+      "position": -6,
+      "role": "Symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 0,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 1,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 2,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 3,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 4,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 5,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 6,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 7,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 8,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 9,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 10,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 11,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 12,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.015625
+    },
+    {
+      "layer": 13,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.015625
+    },
+    {
+      "layer": 14,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.015625
+    },
+    {
+      "layer": 15,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.015625
+    },
+    {
+      "layer": 16,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.015625
+    },
+    {
+      "layer": 17,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.015625
+    },
+    {
+      "layer": 18,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.015625
+    },
+    {
+      "layer": 19,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 20,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 21,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 22,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 23,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 24,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 25,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 26,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 27,
+      "position": -5,
+      "role": "Period after symbol 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 0,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 1,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 2,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 3,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 4,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 5,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 6,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 7,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 8,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 9,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 10,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 11,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 12,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 13,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 14,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 15,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 16,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 17,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 18,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 19,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 20,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 21,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 22,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 23,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 24,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 25,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 26,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 27,
+      "position": -4,
+      "role": "Choice 1",
+      "iia": 0.0
+    },
+    {
+      "layer": 0,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 1,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 2,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 3,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 4,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 5,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 6,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 7,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 8,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 9,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 10,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 11,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 12,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 13,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 14,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 15,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 16,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 17,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 18,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 19,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 20,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.0
+    },
+    {
+      "layer": 21,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.109375
+    },
+    {
+      "layer": 22,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.703125
+    },
+    {
+      "layer": 23,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.796875
+    },
+    {
+      "layer": 24,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.78125
+    },
+    {
+      "layer": 25,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.765625
+    },
+    {
+      "layer": 26,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.921875
+    },
+    {
+      "layer": 27,
+      "position": -1,
+      "role": "Answer slot (:)",
+      "iia": 0.890625
+    }
+  ]
+}

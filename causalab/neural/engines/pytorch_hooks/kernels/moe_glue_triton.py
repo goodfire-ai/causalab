@@ -1,15 +1,11 @@
-"""The Triton kernels of the grouped-experts glue — each the device form of
-one reference in :mod:`.moe_glue_reference`, with the same floating point
-order. Importable without Triton (:func:`available` says whether the kernels
-exist); every launch passes ``enable_fp_fusion=False`` so no multiply-add
-is contracted where ATen's kernels round twice, and the gate kernel uses
-libdevice's ``exp`` and round-to-nearest division, the functions nvcc
-compiles ATen's ``x / (1 + exp(-x))`` to, rather than Triton's approximate
-``exp2``-based ``exp`` and ``div.full``.
+"""Triton implementations of the expert reference operations.
 
-Grids are pure functions of the shapes and no kernel reads a value back to
-the host, so every launch is CUDA-graph capturable once compiled (the
-engine's warm-up pass compiles them before the capture).
+Kernels follow ``moe_glue_reference`` in floating-point order.
+``enable_fp_fusion=False`` preserves separate rounding where ATen requires
+it. Gate math uses libdevice exponentiation and round-to-nearest division.
+
+``available`` reports Triton support. Grids depend on shape and launches
+avoid host reads, allowing CUDA capture after compilation.
 """
 
 from __future__ import annotations
@@ -293,7 +289,7 @@ def _require() -> None:
 def counting_sort(
     expert_ids: torch.Tensor, num_experts: int
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """:func:`.moe_glue_reference.stable_counting_sort` on the device: one
+    """[`.moe_glue_reference.stable_counting_sort`][causalab.neural.engines.pytorch_hooks.kernels.moe_glue_reference.stable_counting_sort] on the device: one
     launch of ``num_experts`` programs."""
     _require()
     ids = expert_ids.contiguous()

@@ -21,7 +21,6 @@ the scan asks about.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -33,13 +32,12 @@ from causalab.cli import main
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
 from tests.protocol._env import FIXTURES, fixture_input_overrides, write_rot_fixture
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.smoke
 
 REPO = Path(__file__).resolve().parents[4]
-METHODS = str(
-    REPO / "causalab/configs/protocols"
-)  # absolute: the workflow file lives in tmp
+METHODS = str(PROTOCOLS_DIR)  # absolute: the workflow file lives in tmp
 
 OUTPUT_DIR = "tiny_weekdays"
 
@@ -144,6 +142,8 @@ def _run(base: Path, artifacts: Path, wf: Path, *extra: str) -> int:
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(wf),
             "--data-root",
             str(FIXTURES / "data"),
@@ -229,7 +229,7 @@ def test_select_chose_the_argmax_cell(pipeline_run):
 def test_fit_consumed_the_selected_cell_and_stamped_it(pipeline_run):
     """The in-run artifact wiring is provable from the fit bundle's
     ArtifactIdentity: the stamped site carries the layer `best` chose."""
-    from causalab.protocol.resolve import read_safetensors_metadata
+    from causalab.io.env import read_safetensors_metadata
 
     out, _, _ = pipeline_run
     chosen = json.loads((out / "best/values.json").read_text())
@@ -253,9 +253,7 @@ def test_apply_scored_the_test_split_through_the_fitted_rotation(pipeline_run):
 def test_locate_table_carries_coordinate_columns(pipeline_run):
     out, _, _ = pipeline_run
     frame = table_frame(out / "locate/iia.json")
-    assert {"sites.target.layers", "positions.tap", "value", "produced_by"} <= set(
-        frame.columns
-    )
+    assert {"sites.target.layers", "positions.tap", "value"} <= set(frame.columns)
     assert len(frame) == 4 * 2  # 4 points x 2 examples
 
 
@@ -306,6 +304,8 @@ def test_explain_reports_the_derived_schedule(pipeline_run, capsys):
     code = main(
         [
             "explain",
+            "--engine",
+            "auto",
             str(wf_dir / "tiny_weekdays.json"),
             "--data-root",
             str(FIXTURES / "data"),
@@ -337,7 +337,7 @@ def test_resume_reuses_a_step_and_a_script_edit_busts_it(
     script.write_text(
         "import json\n"
         "def main(inputs, outputs):\n"
-        "    from causalab.protocol.tables import read_table, write_table\n"
+        "    from causalab.io.tables import read_table, write_table\n"
         "    rows = read_table(inputs['table'])\n"
         "    write_table(outputs['out'], [{'n': len(rows), 'tag': 'first'}])\n"
     )
@@ -373,13 +373,6 @@ def test_resume_reuses_a_step_and_a_script_edit_busts_it(
     assert _run(base, artifacts, wf) == 0
     run_root = base / "runs" / "resume_probe"
     assert table_frame(run_root / "count/count.json")["tag"].iloc[0] == "first"
-    # the first run of an unpinned workflow stamps its pins (spec §7): the
-    # script it ran is now pinned in the document
-    pins = json.loads(wf.read_text())["pins"]
-    assert (
-        pins["scripts"]["scripts/count.py"]
-        == hashlib.sha256(script.read_bytes()).hexdigest()
-    )
 
     # unchanged document + unchanged script: --resume reuses both steps
     assert _run(base, artifacts, wf, "--resume") == 0
@@ -387,25 +380,9 @@ def test_resume_reuses_a_step_and_a_script_edit_busts_it(
     assert manifest["steps"]["count"]["status"] == "reused"
     assert manifest["steps"]["locate"]["status"] == "reused"
 
-    # edit only the SCRIPT: the pinned document refuses to load until the
-    # author re-stamps it (rule 21) — the edit is acknowledged in the
-    # workflow — and then the step digest has moved, so --resume re-runs it
+    # edit only the SCRIPT: `script_sha256` is in the step's identity (§7),
+    # so the step digest has moved and --resume re-runs that step alone
     script.write_text(script.read_text().replace("'first'", "'second'"))
-    assert _run(base, artifacts, wf, "--resume") == 1
-    assert table_frame(run_root / "count/count.json")["tag"].iloc[0] == "first"
-    assert (
-        main(
-            [
-                "pin",
-                str(wf),
-                "--data-root",
-                str(FIXTURES / "data"),
-                "--artifacts-root",
-                str(artifacts),
-            ]
-        )
-        == 0
-    )
     assert _run(base, artifacts, wf, "--resume") == 0
     assert table_frame(run_root / "count/count.json")["tag"].iloc[0] == "second"
     manifest = json.loads((run_root / "workflow.json").read_text())

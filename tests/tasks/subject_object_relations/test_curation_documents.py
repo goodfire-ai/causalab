@@ -20,8 +20,12 @@ from __future__ import annotations
 
 import pytest
 
-from causalab.protocol.loader import check_data_columns, load
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from tests.protocol._env import steps_of
+
+from causalab.protocol.pipeline import compile_protocol
+
+from causalab.protocol.rules.data import check_data_columns
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.tasks.serialize import (
     serialize_counterfactual_dataset,
     write_dataset_table,
@@ -35,7 +39,7 @@ pytestmark = pytest.mark.unit
 #: whose objects are multi-token — the case that needs first-token grading.
 RELATIONS = ["word_first_letter", "name_gender", "country_capital_city"]
 
-MODEL = "meta-llama/Llama-3.1-8B"
+MODEL = "Qwen/Qwen3-8B"
 
 
 def _baseline_document(refs: list[str]) -> dict:
@@ -43,36 +47,25 @@ def _baseline_document(refs: list[str]) -> dict:
     the declared answer forms, swept over one table per relation."""
     return {
         "header": {
-            "protocol_version": "3",
+            "protocol_version": "4",
             "description": "Per-relation base accuracy: the curation sweep as a document.",
         },
         "model": {"key": MODEL, "revision": "main"},
         "data": {"base": {"dataset": {"sweep": refs}, "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["logits"]}},
             "positions": {"answer_tok": {"index": -1}},
             "sites": {"lm_head": {"component": "lm_head"}},
-            "reads": {
-                "logits": {
-                    "site": "lm_head",
-                    "pos": "answer_tok",
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "metrics": {
-                "accuracy": {
-                    "kind": "match",
-                    "of": "logits",
-                    "expected": "base_answer_forms",
-                    "mode": "first_token",
-                    "token_form": "space_prefixed",
-                }
-            },
+            "reads": {"logits": {"site": "lm_head", "pos": "answer_tok"}},
             "save": [
                 {
-                    "value": "accuracy",
+                    "read": "logits",
                     "model": "original",
-                    "input": "base",
+                    "aggregation": {
+                        "kind": "match",
+                        "expected": "base_answer_forms",
+                        "mode": "first_token",
+                    },
                     "file_path": "accuracy.json",
                 }
             ],
@@ -109,19 +102,23 @@ def built(tmp_path_factory) -> tuple[ResolutionEnv, list[str], dict]:
 
 def test_the_swept_baseline_loads_validates_and_expands(built):
     env, refs, _ = built
-    loaded = load(_baseline_document(refs), env)
+    loaded = compile_protocol(_baseline_document(refs), env=env)
     # one point per relation...
-    assert len(loaded.expansion.points) == len(refs)
+    assert len(steps_of(loaded, env).points) == len(refs)
     # ...each stamping its own table's content digest (§2.2), so the points
     # are distinct provenance units rather than one document run three times
-    stamped = {point["data"]["base"]["digest"] for point in loaded.canonical_points}
+    stamped = {
+        point["data"]["base"]["digest"] for point in steps_of(loaded, env).canonical
+    }
     assert len(stamped) == len(refs)
-    assert len(set(loaded.point_digests)) == len(refs)
+    assert len(set(steps_of(loaded, env).digests)) == len(refs)
 
 
 def test_every_column_reference_resolves(built):
     env, refs, _ = built
-    refs_checked = check_data_columns(load(_baseline_document(refs), env), env)
+    refs_checked = check_data_columns(
+        compile_protocol(_baseline_document(refs), env=env), env
+    )
     assert "base_answer_forms" in refs_checked  # the answer-form group column
 
 

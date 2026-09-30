@@ -1,0 +1,90 @@
+[
+  {
+    "input": "The capital of France is",
+    "counterfactual_inputs": [
+      "The capital of Italy is"
+    ],
+    "base_answer": " Paris",
+    "cf_answer": " Rome",
+    "label": " Rome",
+    "split": "train",
+    "id": 0
+  },
+  {
+    "input": "The capital of Italy is",
+    "counterfactual_inputs": [
+      "The capital of France is"
+    ],
+    "base_answer": " Rome",
+    "cf_answer": " Paris",
+    "label": " Paris",
+    "split": "train",
+    "id": 1
+  },
+  {
+    "input": "The capital of Spain is",
+    "counterfactual_inputs": [
+      "The capital of Germany is"
+    ],
+    "base_answer": " Madrid",
+    "cf_answer": " Berlin",
+    "label": " Berlin",
+    "split": "train",
+    "id": 2
+  },
+  {
+    "input": "The capital of Germany is",
+    "counterfactual_inputs": [
+      "The capital of Spain is"
+    ],
+    "base_answer": " Berlin",
+    "cf_answer": " Madrid",
+    "label": " Madrid",
+    "split": "train",
+    "id": 3
+  },
+  {
+    "input": "The capital of Austria is",
+    "counterfactual_inputs": [
+      "The capital of England is"
+    ],
+    "base_answer": " Vienna",
+    "cf_answer": " London",
+    "label": " London",
+    "split": "test",
+    "id": 4
+  },
+  {
+    "input": "The capital of England is",
+    "counterfactual_inputs": [
+      "The capital of Austria is"
+    ],
+    "base_answer": " London",
+    "cf_answer": " Vienna",
+    "label": " Vienna",
+    "split": "test",
+    "id": 5
+  },
+  {
+    "input": "The capital of Greece is",
+    "counterfactual_inputs": [
+      "The capital of Russia is"
+    ],
+    "base_answer": " Athens",
+    "cf_answer": " Moscow",
+    "label": " Moscow",
+    "split": "test",
+    "id": 6
+  },
+  {
+    "input": "The capital of Russia is",
+    "counterfactual_inputs": [
+      "The capital of Greece is"
+    ],
+    "base_answer": " Moscow",
+    "cf_answer": " Athens",
+    "label": " Athens",
+    "split": "test",
+    "id": 7
+  }
+]

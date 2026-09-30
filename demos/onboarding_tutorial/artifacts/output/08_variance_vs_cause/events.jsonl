@@ -1,0 +1,19 @@
+{"schema_version": 1, "event": "phase_started", "seq": 0, "ts": "2026-09-28T12:47:37.450415+00:00", "payload": {"step": "harvest", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 1, "ts": "2026-09-28T12:47:42.982072+00:00", "payload": {"step": "harvest", "files": ["acts.safetensors"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 2, "ts": "2026-09-28T12:47:42.982381+00:00", "payload": {"step": "harvest", "status": "completed", "forwards": 1}}
+{"schema_version": 1, "event": "phase_started", "seq": 3, "ts": "2026-09-28T12:47:42.982554+00:00", "payload": {"step": "pca1", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 4, "ts": "2026-09-28T12:47:43.000765+00:00", "payload": {"step": "pca1", "files": ["basis.safetensors", "spectrum.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 5, "ts": "2026-09-28T12:47:43.000978+00:00", "payload": {"step": "pca1", "status": "completed"}}
+{"schema_version": 1, "event": "phase_started", "seq": 6, "ts": "2026-09-28T12:47:43.001141+00:00", "payload": {"step": "pca32", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 7, "ts": "2026-09-28T12:47:43.017111+00:00", "payload": {"step": "pca32", "files": ["basis.safetensors", "spectrum.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 8, "ts": "2026-09-28T12:47:43.017182+00:00", "payload": {"step": "pca32", "status": "completed"}}
+{"schema_version": 1, "event": "phase_started", "seq": 9, "ts": "2026-09-28T12:47:43.017248+00:00", "payload": {"step": "apply1", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 10, "ts": "2026-09-28T12:47:43.660470+00:00", "payload": {"step": "apply1", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 11, "ts": "2026-09-28T12:47:43.660551+00:00", "payload": {"step": "apply1", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 12, "ts": "2026-09-28T12:47:43.660621+00:00", "payload": {"step": "apply32", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 13, "ts": "2026-09-28T12:47:44.232172+00:00", "payload": {"step": "apply32", "files": ["iia.json", "logit_diff.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 14, "ts": "2026-09-28T12:47:44.232284+00:00", "payload": {"step": "apply32", "status": "completed", "forwards": 2}}
+{"schema_version": 1, "event": "phase_started", "seq": 15, "ts": "2026-09-28T12:47:44.232366+00:00", "payload": {"step": "spectrum_curve", "type": "script"}}
+{"schema_version": 1, "event": "result_committed", "seq": 16, "ts": "2026-09-28T12:47:44.489127+00:00", "payload": {"step": "spectrum_curve", "files": ["08_variance_vs_cause_pca_spectrum.json", "08_variance_vs_cause_pca_spectrum.png"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 17, "ts": "2026-09-28T12:47:44.489186+00:00", "payload": {"step": "spectrum_curve", "status": "completed"}}
+{"schema_version": 1, "event": "campaign_terminal", "seq": 18, "ts": "2026-09-28T12:47:44.489579+00:00", "payload": {"outcome": "completed", "steps": {"harvest": "completed", "pca1": "completed", "pca32": "completed", "apply1": "completed", "apply32": "completed", "spectrum_curve": "completed"}}}

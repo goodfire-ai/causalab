@@ -1,14 +1,14 @@
-"""Module-boundary MoE components: the router, the routed output, and the shared expert.
+"""MoE components: the router, the routed output, and the shared expert.
 
-Nine components, every one a plain module
-output or input (§2.1) — the router is a module returning a 3-tuple and the
-experts are a fused module, so nothing here needs the ragged value shape that
-the per-expert interior does (that is ``expert_output``,
-``test_sites_round3_moe_interior.py``).
+Nine components of the hookpoint vocabulary, every one a plain module output
+or input — the router is a module returning a 3-tuple and the experts are a
+fused module, so nothing here needs the ragged value shape that the
+per-expert interior does (that is ``expert_output``).
 
-Two kinds of assertion, as in the block-level suite. Shapes are 📐 measurements against a real
-``qwen3_5_moe`` checkpoint, so a mismatch is a finding. Identities are stronger:
-they pin that the three router taps are *mutually consistent* — that
+Two kinds of assertion, as in ``test_sites_round1_block.py``. Shapes are 📐
+measurements against a real ``qwen3_5_moe`` checkpoint, so a mismatch is a
+finding. Identities are stronger: they pin that the three router taps are
+*mutually consistent* — that
 ``router_scores`` really is the renormalized top-k of ``softmax(router_logits)``
 gathered at ``expert_idx`` — which no shape assertion could show, and which is
 exactly what a wrong ``tuple_index`` would break.
@@ -24,16 +24,18 @@ import torch
 from causalab.neural.shared.sites import (
     resolve_site,
 )
-from causalab.protocol.errors import ProtocolError, ValidationError
-from causalab.protocol.plan import COMPONENT_RANK
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
+from causalab.protocol.positions.alignment import COMPONENT_RANK
 from causalab.protocol.registry import CAPABILITIES, component_width
-from causalab.protocol.schema import COMPONENTS, SiteSpec
+from causalab.protocol.schema import COMPONENTS, PROTOCOL_VERSION, SiteSpec
+
+from tests.protocol._docs import saved
 
 from ._drive import base_data_section, executor_for
 
 pytestmark = pytest.mark.smoke
 
-#: The nine addressable MoE components (§2 rows 12-20).
+#: The nine addressable MoE components.
 MOE_COMPONENTS = (
     "router_logits",
     "router_scores",
@@ -72,27 +74,16 @@ EXPECTED_WIDTH = {
 
 
 def _doc(component: str, *, layer: int = 0, featurizer: bool = False) -> dict:
-    read: dict = {
-        "site": "tap",
-        "pos": {"index": 1},
-        "model": "original",
-        "input": "base",
-    }
+    read: dict = {"site": "tap", "pos": {"index": 1}}
     doc: dict = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": {"component": component, "layers": [layer]}},
             "reads": {"r": read},
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
     if featurizer:
@@ -147,7 +138,7 @@ def test_the_moe_interior_ranks_inside_the_block():
 
 def test_the_registry_reads_the_moe_numbers_off_the_text_config(qwen35moe_bundle):
     """📐 Both live on ``config.text_config``, not the top-level (heterogeneous)
-    config — the same hazard as ``num_experts`` in §1.3."""
+    config — the same hazard as ``num_experts``."""
     info = qwen35moe_bundle.info
     assert info.num_experts == 128
     assert info.num_experts_per_tok == 10
@@ -176,7 +167,7 @@ def test_each_width_matches_the_tensor_it_describes(
 
 
 def test_expert_idx_refuses_a_width_because_it_is_a_routing_table(qwen35moe_bundle):
-    """§5.4, the same rule ``input_ids`` needs: integer ids, no feature space."""
+    """The same rule ``input_ids`` needs: integer ids, no feature space."""
     with pytest.raises(ValidationError) as excinfo:
         component_width(qwen35moe_bundle.info, "expert_idx")
     assert excinfo.value.rule == 4
@@ -234,7 +225,7 @@ def test_an_expert_sub_axis_refuses(qwen35moe_bundle):
     """None of these tensors is indexed by expert: the router's axes are
     all-experts or top-k, and the shared expert is not a routed one. ``expert``
     parses and nothing read it — refusing beats silently ignoring it, which is
-    the mistake ``stream`` made before dispatch became per-layer."""
+    the mistake ``stream`` made before it was read per layer."""
     with pytest.raises(ProtocolError) as excinfo:
         resolve_site(
             qwen35moe_bundle,
@@ -249,7 +240,7 @@ def test_an_expert_sub_axis_refuses(qwen35moe_bundle):
 
 
 def test_router_probs_recomputed_from_logits_sums_to_one(moe_reads):
-    """The §6 gate. ``router_probs`` is derived, not a component: this
+    """End to end. ``router_probs`` is derived, not a component: this
     is how a user gets it, and it must be a real distribution."""
     probs = torch.softmax(moe_reads["router_logits"].float(), dim=-1)
     torch.testing.assert_close(probs.sum(-1), torch.ones_like(probs.sum(-1)))
@@ -334,7 +325,7 @@ def test_the_mlp_output_is_the_two_branches_combined(qwen35moe_bundle, moe_reads
 
 
 def test_a_featurizer_on_expert_idx_refuses_by_rule_number(qwen35moe_bundle):
-    """The §6 gate's second half."""
+    """The end-to-end check's second half."""
     with pytest.raises(ValidationError) as excinfo:
         executor_for(
             _doc("expert_idx", featurizer=True), qwen35moe_bundle, base_texts=[TEXT]
@@ -343,7 +334,7 @@ def test_a_featurizer_on_expert_idx_refuses_by_rule_number(qwen35moe_bundle):
 
 
 def test_router_scores_columns_are_a_ranking_not_a_basis(qwen35moe_bundle):
-    """⚠️ The open judgement call in #52's description, recorded as evidence.
+    """⚠️ An open design question, recorded as evidence.
 
     ``router_scores`` HAS a width (``num_experts_per_tok``), so a featurizer —
     a ``subspace`` fit across positions — is accepted today. This measures why
@@ -408,48 +399,30 @@ def _swap_doc(component: str, *, layer: int | None = 0, pos: int = 1) -> dict:
     if layer is not None and component not in ("input_ids",):
         site["layers"] = layer
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "original_base": {"input": "base", "reads": ["clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {"tgt": site, "lm_head": {"component": "lm_head"}},
             "reads": {
-                "v_cf": {
-                    "site": "tgt",
-                    "pos": {"index": pos},
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "clean": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tgt", "pos": {"index": pos}},
+                "clean": {"site": "lm_head", "pos": {"index": -1}},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {
                 "patch": {"site": "tgt", "pos": {"index": pos}, "do": {"swap": "v_cf"}}
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "p.safetensors",
-                },
-                {
-                    "value": "clean",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "c.safetensors",
-                },
+                saved("after", "patched", "p.safetensors"),
+                saved("clean", "original_base", "c.safetensors"),
             ],
         },
     }
@@ -478,8 +451,8 @@ def test_every_writable_moe_component_is_causally_checked():
 def test_a_write_through_a_flat_tap_actually_changes_the_logits(
     qwen35moe_bundle, component: str
 ):
-    """The view property, checked causally rather than
-    by aliasing: ``flat_td`` conversion must return a view, or the write lands
+    """The view property, checked causally rather than by aliasing:
+    ``flat_td`` conversion must return a view, or the write lands
     in a discarded copy and the run silently reports the clean numbers.
 
     Swapping the counterfactual value into base at (L0, p1) must move the
@@ -553,12 +526,7 @@ def test_arithmetic_on_the_routing_table_refuses(qwen35moe_bundle, mechanism: st
     # `clamp` names no operand, which would leave `v_cf` dead and trip V11
     # before the rule under test fires — save it so the refusal is what we see
     doc["method"]["save"].append(
-        {
-            "value": "v_cf",
-            "model": "original",
-            "input": "counterfactual",
-            "file_path": "vcf.safetensors",
-        }
+        saved("v_cf", "original_counterfactual", "vcf.safetensors")
     )
     with pytest.raises(ProtocolError) as excinfo:
         executor_for(

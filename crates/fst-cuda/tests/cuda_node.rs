@@ -342,8 +342,8 @@ fn cufile_reads_from_local_xfs_or_fails_typed() {
             }
             assert!(readback(&rt, dev.ptr, 0, GIB) == big_data);
         }
-        // Some block-device layouts (an xfs volume over md RAID, for one):
-        // libcufile 1.15 fails "error getting volume attributes" for the
+        // an H100 host whose /tmp is xfs on md RAID10 (over dm), where
+        // libcufile 1.15 fails "error getting volume attributes" for that
         // block device inside cuFileHandleRegister, so the handle is refused
         // with CU_FILE_HANDLE_NOT_REGISTERED (5027) even in compat mode.
         Err(e @ CudaError::Register { reason, .. }) => {
@@ -356,9 +356,6 @@ fn cufile_reads_from_local_xfs_or_fails_typed() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
-/// The layout this test expects is a `$HOME` on an NFS mount, the other
-/// storage class the reader meets in practice; on a local home it exercises
-/// the local path a second time.
 #[test]
 #[ignore = "needs a CUDA device; FST_CUDA_TESTS=1 cargo test -p fst-cuda -- --ignored"]
 fn cufile_reads_from_nfs_home_or_fails_typed() {

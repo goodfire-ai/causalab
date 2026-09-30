@@ -1,8 +1,8 @@
-"""Block components: the four norm and input taps, and per-layer stream dispatch.
+"""Block components of the hookpoint vocabulary, and per-layer stream dispatch.
 
-Four components join the vocabulary —
-``input_ids``, ``attention_input_norm``, ``block_mid``, ``mlp_input_norm`` — and
-``attention_output`` learns that the mixer is a *per-layer* fact.
+Four block taps — ``input_ids``, ``attention_input_norm``, ``block_mid``,
+``mlp_input_norm`` — and ``attention_output``, which resolves its mixer per
+layer because the mixer is a *per-layer* fact.
 
 The shape assertions here are measurements against a real ``qwen3_5_moe``
 checkpoint, so a mismatch is a finding rather than a stale expectation. The
@@ -24,20 +24,27 @@ from causalab.neural.shared.layout import (
 )
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.errors import ProtocolError, ValidationError
-from causalab.protocol.plan import COMPONENT_RANK
-from causalab.protocol import shapes
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
+from causalab.protocol.positions.alignment import COMPONENT_RANK
+from causalab.protocol.registry import shapes as shapes
 from causalab.protocol.registry import component_width
-from causalab.protocol.schema import COMPONENTS, LAYERLESS_COMPONENTS, SiteSpec
+from causalab.protocol.schema import (
+    COMPONENTS,
+    LAYERLESS_COMPONENTS,
+    PROTOCOL_VERSION,
+    SiteSpec,
+)
+
+from tests.protocol._docs import saved
 
 from ._drive import base_data_section, executor_for
 from .conftest import TINY_LLAMA, TINY_QWEN35_MOE
 
 pytestmark = pytest.mark.smoke
 
-#: The four new components, plus the one whose resolution changed.
+#: The four block taps, plus the one that resolves its mixer per layer.
 NEW_COMPONENTS = ("input_ids", "attention_input_norm", "block_mid", "mlp_input_norm")
-PR2_COMPONENTS = NEW_COMPONENTS + ("attention_output",)
+BLOCK_COMPONENTS = NEW_COMPONENTS + ("attention_output",)
 
 TEXT = "the quick brown fox jumps"
 
@@ -93,7 +100,7 @@ def test_the_four_components_joined_the_closed_vocabulary():
 
 
 def test_input_ids_is_layerless_and_the_others_are_not():
-    """``input_ids`` is the model's *input* (§5.4) — there is no layer at which
+    """``input_ids`` is the model's *input* — there is no layer at which
     to read it, and naming one is a parse error."""
     assert "input_ids" in LAYERLESS_COMPONENTS
     for component in ("attention_input_norm", "block_mid", "mlp_input_norm"):
@@ -132,7 +139,7 @@ def test_the_three_norm_taps_are_residual_width(qwen35moe_bundle):
 
 
 def test_input_ids_refuses_a_width_because_it_is_not_a_feature_space(qwen35moe_bundle):
-    """§5.4: integer ids on a position axis. No featurizer can attach, and the
+    """Integer ids on a position axis. No featurizer can attach, and the
     refusal must say *why* rather than read as a missing table entry."""
     with pytest.raises(ValidationError) as excinfo:
         component_width(qwen35moe_bundle.info, "input_ids")
@@ -140,7 +147,7 @@ def test_input_ids_refuses_a_width_because_it_is_not_a_feature_space(qwen35moe_b
 
 
 # --------------------------------------------------------------------------- #
-# §5.2 — the mixer is a per-layer fact
+# the mixer is a per-layer fact
 # --------------------------------------------------------------------------- #
 
 
@@ -155,7 +162,7 @@ def test_the_fixture_tower_really_is_hybrid(qwen35moe_bundle):
 
 
 def test_attention_output_follows_the_stream_per_layer(qwen35moe_bundle):
-    """The §5.2 fix. ``block.self_attn`` for every non-GPT-2 model raised
+    """The per-layer fix. ``block.self_attn`` for every non-GPT-2 model raised
     AttributeError on 3 of these 4 layers — the tap now asks the layer."""
     for layer, stream in enumerate(qwen35moe_bundle.streams):
         site = resolve_site(qwen35moe_bundle, _spec("attention_output", layer))
@@ -169,8 +176,8 @@ def test_attention_output_follows_the_stream_per_layer(qwen35moe_bundle):
 
 
 def test_a_site_naming_the_wrong_stream_refuses(qwen35moe_bundle):
-    """``stream`` has parsed since schema.py gained it and nothing read it
-    (§5.2). It reads it now, and a contradiction is an error."""
+    """``stream`` has parsed since schema.py gained it and nothing read it.
+    It reads it now, and a contradiction is an error."""
     with pytest.raises(ProtocolError) as excinfo:
         resolve_site(
             qwen35moe_bundle,
@@ -198,7 +205,7 @@ def test_a_block_carrying_both_mixer_kinds_refuses_instead_of_guessing(
 ):
     """A hypothetical block with both children must not resolve silently.
 
-    No family in the box map ships one, so this is a guard rather than
+    No family the box map covers ships one, so this is a guard rather than
     a regression — but `stream_at` answers by probing children, and a fixed
     probe order would call such a block "full_attention" without a word. Every
     per-layer tap would then attach to one of its two mixers and go on
@@ -251,7 +258,7 @@ def test_mixer_at_and_stream_at_never_disagree(qwen35moe_bundle, llama_bundle):
 
 
 # --------------------------------------------------------------------------- #
-# §5.3 — refuse for the permanent reason before the temporary one
+# refuse for the permanent reason before the temporary one
 # --------------------------------------------------------------------------- #
 
 
@@ -259,7 +266,7 @@ def test_attention_probs_at_a_deltanet_layer_refuses_on_the_architecture(
     qwen35moe_bundle,
 ):
     """A Gated DeltaNet block computes no attention matrix, so this is not a
-    missing feature — it stays false now that ``attention_probs`` is served."""
+    missing feature — it stays false now that ``attention_probs`` exists."""
     with pytest.raises(ProtocolError) as excinfo:
         resolve_site(qwen35moe_bundle, _spec("attention_probs", 0))
     message = str(excinfo.value)
@@ -269,8 +276,8 @@ def test_attention_probs_at_a_deltanet_layer_refuses_on_the_architecture(
 
 def test_attention_probs_at_a_full_attention_layer_resolves(qwen35moe_bundle):
     """The other half of the ordering. This test used to assert
-    ``NotImplementedError`` — a roadmap statement, discharged by implementing
-    the component. What must survive is the *asymmetry*: at layer 3
+    ``NotImplementedError`` — a statement about missing work, which stopped
+    holding once the component was implemented. What must survive is the *asymmetry*: at layer 3
     the tensor exists and the tap resolves, while at a DeltaNet layer it refuses
     for a reason that is permanent (the test above)."""
     site = resolve_site(qwen35moe_bundle, _spec("attention_probs", 3))
@@ -334,7 +341,8 @@ def test_the_taps_reproduce_the_residual_algebra(qwen35moe_bundle, layer):
 
 @pytest.mark.parametrize("layer", [0, 3], ids=["deltanet", "full_attention"])
 def test_every_new_block_tap_is_residual_shaped(qwen35moe_bundle, layer):
-    """📐 §3 panel 2: every box in the DecoderLayer panel is ``(1, 6, 8)`` on
+    """📐 Every box in the DecoderLayer panel of
+    ``docs/qwen36-35b-a3b-architecture.html`` is ``(1, 6, 8)`` on
     this fixture — 6 positions of hidden size 8."""
     got = _capture(
         qwen35moe_bundle,
@@ -401,7 +409,7 @@ _BS = shapes.bs(integral=True)
 
 
 def test_a_featureless_tap_round_trips_and_returns_a_view():
-    """The view property: ``to_contract`` must return a view, so an in-place
+    """``to_contract`` must return a view, so an in-place
     edit reaches native storage. ``unsqueeze`` does; ``reshape`` might not."""
     native = torch.arange(12).reshape(3, 4)
     contract = to_contract(native, _BS, batch_size=3)
@@ -427,14 +435,14 @@ def test_a_featureless_tap_refuses_a_shape_it_cannot_mean(bad):
 
 def test_all_five_components_resolve_on_a_non_hybrid_family(llama_bundle):
     assert set(llama_bundle.streams) == {"full_attention"}
-    for component in PR2_COMPONENTS:
+    for component in BLOCK_COMPONENTS:
         site = resolve_site(llama_bundle, _spec(component))
         assert site.module is not None
 
 
 def test_all_five_components_read_on_a_non_hybrid_family(llama_bundle):
-    got = _capture(llama_bundle, {n: _spec(n) for n in PR2_COMPONENTS})
-    assert set(got) == set(PR2_COMPONENTS)
+    got = _capture(llama_bundle, {n: _spec(n) for n in BLOCK_COMPONENTS})
+    assert set(got) == set(BLOCK_COMPONENTS)
     hidden = llama_bundle.info.hidden_size
     for name, tensor in got.items():
         width = 1 if name == "input_ids" else hidden
@@ -479,27 +487,16 @@ def _read_doc(component: str, layer: int | None = None, featurizer: bool = False
     site: dict = {"component": component}
     if layer is not None:
         site["layers"] = layer
-    read: dict = {
-        "site": "tap",
-        "pos": {"index": 1},
-        "model": "original",
-        "input": "base",
-    }
+    read: dict = {"site": "tap", "pos": {"index": 1}}
     doc: dict = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": site},
             "reads": {"r": read},
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
     if featurizer:
@@ -512,7 +509,7 @@ def _read_doc(component: str, layer: int | None = None, featurizer: bool = False
     "component", ["attention_input_norm", "block_mid", "mlp_input_norm"]
 )
 def test_a_document_reads_each_new_norm_component(llama_bundle, component: str):
-    """The §6 gate: a real document, parsed and validated, reads the component."""
+    """End to end: a real document, parsed and validated, reads the component."""
     executor = executor_for(_read_doc(component, 0), llama_bundle, base_texts=[TEXT])
     value = executor.read_value("r")
     assert value.shape == (1, 1, llama_bundle.info.hidden_size)
@@ -534,7 +531,8 @@ def test_a_document_reads_input_ids_even_though_it_has_no_width(llama_bundle):
 
 
 def test_a_featurizer_on_input_ids_still_refuses(llama_bundle):
-    """The other half: §5.4's rule survives the laziness above."""
+    """The other half: the not-a-feature-space rule survives the laziness
+    above."""
     with pytest.raises(ValidationError) as excinfo:
         executor_for(
             _read_doc("input_ids", featurizer=True), llama_bundle, base_texts=[TEXT]

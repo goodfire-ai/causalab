@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from causalab.cli import main
-from causalab.protocol.resolve import read_safetensors_metadata
+from causalab.io.env import read_safetensors_metadata
 
 from tests.protocol._env import CORPUS_DIR, FIXTURES
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
@@ -34,6 +34,8 @@ def _argv(name: str, roots: tuple[Path, Path], out: Path, *extra: str) -> list[s
     data_root, artifacts_root = roots
     return [
         "run",
+        "--engine",
+        "auto",
         str(CORPUS_DIR / name),
         "--data-root",
         str(data_root),
@@ -54,6 +56,8 @@ def _argv_harvest(roots: tuple[Path, Path], out: Path, *extra: str) -> list[str]
     data_root, artifacts_root = roots
     return [
         "run",
+        "--engine",
+        "auto",
         str(CORPUS_DIR / "01_harvest_im.json"),
         "--data-root",
         str(data_root),
@@ -98,6 +102,8 @@ def test_the_documents_dtype_reaches_the_loader(roots, tmp_path, load_spy):
         main(
             [
                 "run",
+                "--engine",
+                "auto",
                 str(document),
                 "--data-root",
                 str(data_root),
@@ -120,7 +126,10 @@ def test_the_documents_dtype_reaches_the_loader(roots, tmp_path, load_spy):
 def test_the_dtype_flag_goes_through_the_document(roots, tmp_path, load_spy):
     """``--dtype`` is ``--set model.dtype`` (§9), so the run receipt shows it."""
     out = tmp_path / "out"
-    assert main(_argv("02_interchange_im.json", roots, out, "--dtype", "bf16")) == 0
+    assert (
+        main(_argv("02_interchange_im.json", roots, out, "--dtype", "bf16", "--record"))
+        == 0
+    )
     assert [call["dtype"] for call in load_spy] == ["bf16"]
     record = json.loads((out / "protocol.json").read_text())
     assert record["canonical"]["model"]["dtype"] == "bf16"
@@ -128,7 +137,7 @@ def test_the_dtype_flag_goes_through_the_document(roots, tmp_path, load_spy):
 
 def test_an_unauthored_document_still_runs_and_records_fp32(roots, tmp_path, load_spy):
     out = tmp_path / "out"
-    assert main(_argv("02_interchange_im.json", roots, out)) == 0
+    assert main(_argv("02_interchange_im.json", roots, out, "--record")) == 0
     assert [call["dtype"] for call in load_spy] == ["fp32"]
     record = json.loads((out / "protocol.json").read_text())
     assert record["canonical"]["model"]["dtype"] == "fp32"
@@ -160,6 +169,8 @@ def test_a_quantized_document_names_what_it_needs(roots, tmp_path, capsys):
     data_root, artifacts_root = roots
     argv = [
         "run",
+        "--engine",
+        "auto",
         str(document),
         "--data-root",
         str(data_root),
@@ -242,6 +253,9 @@ def test_json_attention_backend_reaches_loading_and_artifacts(
                 str(roots[1]),
                 "--out",
                 str(out),
+                # a workflow keeps its own records; the receipt is the
+                # document run's, and only when asked
+                *(() if workflow else ("--record",)),
             ]
         )
         == 0
@@ -285,14 +299,14 @@ def test_backend_sweep_stamps_each_tensor_entry(roots, tmp_path, load_spy):
 
 def test_omitted_backend_records_loaded_implementation(roots, tmp_path):
     out = tmp_path / "out"
-    assert main(_argv_harvest(roots, out, "--engine", "pytorch_hooks")) == 0
+    assert main(_argv_harvest(roots, out, "--engine", "pytorch_hooks", "--record")) == 0
     record = json.loads((out / "protocol.json").read_text())
     assert "attn_implementation" not in record["canonical"]["model"]
     stamped = read_safetensors_metadata(out / "acts_L8_ans.safetensors")
     assert stamped is not None
     entries = json.loads(stamped["entries"])
     assert all(e["loaded_attn_implementation"] == "eager" for e in entries.values())
-    from causalab.protocol.resolve import entry_identity
+    from causalab.io.env import entry_identity
     from causalab.io.step_io import inherited_identity
 
     identities = [entry_identity(stamped, key) for key in entries]

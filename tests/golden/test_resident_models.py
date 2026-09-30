@@ -7,7 +7,7 @@ fixtures rely on the real cache's identity (a hooked ``bundle`` must be the
 object the engine's own ``load_model`` call returns) and clearing it
 mid-session would make an unrelated test flaky. The GPU half — that the
 boundary eviction lets ``test_readout_a3b.py`` fit after the paper goldens —
-is what the golden tier measures.
+is what the golden tier, on a CUDA device, measures.
 """
 
 from __future__ import annotations

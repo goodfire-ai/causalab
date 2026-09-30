@@ -1,13 +1,13 @@
 """Selections: an index over a tensor, as the box the engine reads.
 
 An index — ints, slices, ``Ellipsis``, ``None`` — becomes a
-:class:`Selection`: per dimension the ``[lo, hi)`` range the box covers (a
+`Selection`: per dimension the ``[lo, hi)`` range the box covers (a
 stepped slice covers its first through its last element, an int covers one)
 and the ``view`` that turns a tensor of the box's shape into the result.
 That is all Python decides. Which bytes the box is, how the runs are
 coalesced under the profile's policy for the file's storage, and where each
 piece lands are ``fst_core::select``'s, reached through
-``_core.select_reads`` with the box's ranges; a :class:`Shard` is
+``_core.select_reads`` with the box's ranges; a [`Shard`][causalab.neural.engines.pytorch_hooks.weights.Shard] is
 ``Selection::shard`` through ``_core.shard_ranges``. A stepped slice reads
 its box and is narrowed in torch afterwards; ints and ``None`` only reshape.
 """
@@ -94,7 +94,7 @@ class Selection:
     axes: tuple[Axis, ...]
     """One per dimension of ``shape``."""
     view: tuple[Item, ...]
-    """The index to apply to a tensor of :attr:`box_shape` to get the result:
+    """The index to apply to a tensor of `box_shape` to get the result:
     ``0`` for a squeezed dimension, a slice relative to the box for the
     others, ``None`` where a new axis is inserted."""
 
@@ -156,7 +156,7 @@ class Selection:
 
 
 def select(shape: tuple[int, ...], index: object) -> Selection:
-    """Turn an index over ``shape`` into a :class:`Selection`, raising the
+    """Turn an index over ``shape`` into a `Selection`, raising the
     reference's ``IndexError`` / ``TypeError`` / ``ValueError`` for what the
     reference refuses."""
     items = _expand(index, len(shape))
@@ -190,7 +190,7 @@ def select(shape: tuple[int, ...], index: object) -> Selection:
 class Shard:
     """Shard ``rank`` of ``world`` equal shards along ``dim``; resolved
     against a tensor's shape when the header is known (``Selection::shard``
-    in the core: a dimension that does not divide is a :class:`SelectError`)."""
+    in the core: a dimension that does not divide is a [`SelectError`][])."""
 
     dim: int
     rank: int
@@ -233,7 +233,7 @@ def select_shards(
 
 def resolve(name: str, shape: tuple[int, ...], spec: SelectSpec) -> Selection:
     """The selection ``spec`` names on tensor ``name`` of ``shape``; anything
-    the index machinery refuses becomes a :class:`SelectError` naming the
+    the index machinery refuses becomes a [`SelectError`][] naming the
     tensor."""
     if isinstance(spec, Shard):
         return Selection.from_ranges(shape, spec.ranges(shape))

@@ -50,7 +50,7 @@ the three numbers (``identity_max_abs``, ``sender_effect``,
 statuses back, joins them onto every downstream step's points and holds the
 failure rate to the control's ``stop_after_failure_rate`` (workflow spec §8).
 
-Numerics are imported inside :func:`main`, and the module imports only
+Numerics are imported inside [`main`][], and the module imports only
 ``causalab.io.step_io`` at module level, so its import closure is exactly the
 shared protocol core (``tests/workflow/test_closure_census.py``).
 """
@@ -87,7 +87,7 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
 
     from causalab.io.step_io import entry_table, write_table
     from causalab.protocol.bundles import RAGGED_SUFFIX, parse_entry_key
-    from causalab.protocol.resolve import read_safetensors_metadata
+    from causalab.io.env import read_safetensors_metadata
 
     missing = [name for name in REQUIRED_INPUTS if name not in inputs]
     if missing:

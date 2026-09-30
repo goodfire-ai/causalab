@@ -1,0 +1,27 @@
+{
+  "document": "protocols/weekdays_interchange.json",
+  "document_digest": "5dd324dc6b4f9e8feb19cf7a2e57f3cc57d18393e2e92a3d0c05132a619edc85",
+  "run_digest": "5dd324dc6b4f9e8feb19cf7a2e57f3cc57d18393e2e92a3d0c05132a619edc85",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "bf16",
+  "date": "2026-09-21",
+  "elapsed_s": 32.9,
+  "metrics": {
+    "iia": {
+      "metric": "iia",
+      "unit": "fraction",
+      "rows": 30,
+      "eligible_rows": 30,
+      "mean": 0.8333
+    },
+    "logit_diff": {
+      "metric": "logit_diff",
+      "unit": "logit",
+      "rows": 30,
+      "eligible_rows": 30,
+      "mean": 4.0052
+    }
+  }
+}

@@ -1,108 +1,190 @@
 # Architecture
 
+This guide gives the package layout, the dependency rules between layers,
+and the invariants each layer keeps.
+
 ## 1. Package structure
 
-The [hypothesis comparison guide](hypothesis_analysis.md) describes exact-pair
-export and the CPU comparison of saved neural outputs with symbolic predictions.
+CausaLab expresses causal analysis as protocol and workflow documents. The
+[intervention protocol](intervention_protocol.md) defines the format.
+[Workflow documents](workflow_protocol.md) connect experiments and analysis steps.
+The [intervention protocol internals](intervention_protocol_internals.md) and
+[workflow protocol internals](workflow_protocol_internals.md) define the engine
+and runner contracts that the packages below implement.
 
-| Module | Named for |
+| Package | Responsibility |
 |---|---|
-| `causal/` | causal model primitives |
-| `tasks/` | task definitions (causal models + counterfactual generators) + `serialize.py`, which writes them out as dataset tables; each task ships its table(s) under `<task>/data/` — the bytes alone, nothing beside them; the builder command is in the task's README. `tasks/` is the CLI's default `--data-root` |
-| `protocol/` | the engine-free document layer |
-| `neural/shared/` | the engine-neutral half of the neural layer: the component→tap map and the predicate probes (`sites.py`; the write policy is the registry's), tokenization and position frames (`encoding.py`), the closed `do` set (`mechanisms.py`), featurizer application (`featurizers.py`), metric lowering (`metrics.py`), output writing (`outputs.py`), tensor layouts (`layout.py`), write-set fire counts (`fires.py`), the torch-path binding for a model off CUDA (`kernels.py`), the shared compiler-cache root (`compile_cache.py`), the bound-argument LRU cache both loaders wear (`normalized_cache.py`), plus `execution.py`, `executor_base.py`, `services.py`, `streams.py` |
-| `neural/engines/pytorch_hooks/` | the reference execution engine — raw forward hooks (§3) |
-| `neural/engines/nnsight_tracing/` | the second execution engine — one nnsight trace over an envoy tree (§3) |
-| `neural/token_positions.py` | the legacy declarative char→token position vocabulary the task packages encode against — the protocol-native position service is `neural/shared/encoding.py` |
-| `analysis/` | numerical analysis a workflow `script` step runs: fits, statistics, intervention operands |
-| `workflow/` | the workflow document model, runner, and CLI verbs |
-| `io/` | disk I/O + shared plotting primitives; `io/fastersafetensors/` is the safetensors implementation itself, whose Rust core is the Cargo workspace at the repository root (`crates/`; [`docs/fastersafetensors.md`](fastersafetensors.md)) |
-| `configs/` | shipped documents: `protocols/` (one intervention specification per file, §1), `workflows/` — JSON, not code |
+| `causal/` | Causal models, traces, interventions, scoring, and pair validation |
+| `tasks/` | Task definitions and generators; `serialize.py` builds dataset tables |
+| `protocol/` | Document parsing, validation, identity, and token-position resolution |
+| `neural/shared/` | Planning, sweeps, tensor operations, and execution shared by both engines |
+| `neural/engines/` | Model access through PyTorch hooks or nnsight tracing |
+| `analysis/` | Fits, statistics, controls, and helpers for experiment authors |
+| `workflow/` | Workflow loading, scheduling, execution, and records |
+| `measurement/` | Single-source and before/after studies, isolated workers, captures, comparisons, and deployment |
+| `profiling/` | Profiler adapters and artifact handling |
+| `remote/` | SSH transport and standalone job supervision |
+| `io/` | Dataset and artifact access, event logs, tensor files, and plots |
 
-`analysis/export_dbm.py` exports validated DBM apply results through
-`export(manifest_path, register_from_hf=False)`, which returns the JSON a
-report consumes. Report templates and captions belong to the consuming
-application.
+### Dependencies
 
-**Dependency flow:** `causal/` imports nothing above itself; `tasks/` builds on it (the loader and the serializer read a causal model's `ScoringSpec`), and so — for its two stdlib-only modules, `causal/scoring.py` and `causal/pairs.py` — does `protocol/`'s `validate --data` pass. `protocol/` is torch-free and links against no execution engine — `causalab/cli.py` imports engines lazily, and `--engine` names which. Both engines implement `protocol.engine.Engine`, over the machinery in `neural/shared/`. The shipped step scripts (`analysis/`, `workflow/scripts/`, `io/plots/workflow_figures.py`) keep their numerics inside `main` rather than at module level, so listing the shipped scripts and hashing one cost nothing but stdlib. `validate`, `dry-run` and `digest` **import no numerics**: the script *module* is found and hashed, never imported, and resolving a `{"module": …}` locator imports the target's *parent packages* (`find_spec`'s documented behaviour), so every package that can hold a shipped script is importable without numerics — `io/plots/__init__.py` is lazy (PEP 562) for exactly that reason, since a shipped script lives under it. `tests/protocol/test_load_is_torch_free.py` enforces both halves, the second through a real `validate` of the shipped `weekdays_8b.json`. `workflow/` depends on `protocol/`, drives whichever engines it is handed, and reaches a script's module lazily when it runs a script step; the workflow loader likewise reaches the shipped-script directory through a function-local import, so `protocol/` keeps no module-level edge to anything that executes. `io/` imports `protocol/` and `causal/` and nothing above itself. `tests/test_architecture_layering.py` enforces the static half of all this — its docstring numbers the three invariants — and `tests/protocol/test_load_is_torch_free.py` the behavioural half.
+Keep the causal layer independent of higher layers. Tasks use causal models;
+the protocol data checks also use the standard-library modules `scoring.py`
+and `pair_validation.py`.
+
+The protocol package has no dependency on an execution engine or the workflow
+package. Its imports stay free of torch. The workflow layer consumes compiled
+protocols and receives an engine from the caller. `causalab/cli.py` dispatches
+to the appropriate document layer.
+
+The protocol and I/O packages share the resolution interfaces in `io/env.py`,
+`io/sources.py`, and `io/tables.py`. Lazy package imports prevent cycles.
+Keep numerical imports inside script functions: resolving a module locator
+can import its parent packages during validation.
+
+No module exists only to forward another module's names;
+`tests/docs/test_docs.py` refuses a star-import forwarder under `causalab/`.
+A package root exports the names that callers read through it. `protocol/__init__.py`
+exports `run_protocol`, `RunContext`, and `RUN_RECORD_NAME` through lazy
+imports. Import every other name from its defining module.
+`tests/protocol/test_schema_package.py`,
+`tests/protocol/test_registry_package.py`, and
+`tests/neural/shared/test_featurizers_package.py` pin the exported surfaces
+of those packages.
+
+`tests/test_architecture_layering.py` checks import boundaries.
+`tests/protocol/test_load_is_torch_free.py` checks imports during document
+loading and validation.
+
+### Measurements (`causalab/measurement/`)
+
+The [usage guide](measurement.md) covers single-commit profiling, code comparisons,
+and workflow comparisons. The [developer guide](optimization_experiments_design.md)
+describes isolation, timing, and resume contracts. `Operation` and `collect`
+are the public Python entry points in `causalab.measurement`.
+
+| Location | Responsibility |
+|---|---|
+| `collection.py`, `workflow.py`, `spec.py`, `plan.py` | Operation collection, workflow adaptation, and typed study configuration |
+| `device.py` | Single-device and single-rank guards |
+| `study/` | Study orchestration, scheduling, and crossed evaluation |
+| `runtime/` | Isolated worker bootstrap, execution, observations, probes, and training instrumentation |
+| `capture/` | Profiling runs, capture workers, and named ranges |
+| `analysis/` | Comparisons, stability, summaries, profile analysis, and reports |
+| `deployment/` | Source installation, remote launch, and result transfer |
+| `paths.py` | Controller paths and recursive source identity |
+
+The workflow parser loads `measurement/spec.py` lazily; `workflow/` has no
+module-level measurement imports. Package initializers stay torch-free.
+`tests/measurement/test_workflow_boundary.py` checks the import boundary.
+Measurement deployment and the remote launcher of the speed-of-light (SOL)
+bounds in `causalab/sol/` share `causalab/remote/`.
 
 ### The causal layer (`causalab/causal/`)
 
-| module | owns |
+Causal models are Python functions marked with `@mechanism`. Each `V`
+assignment in the function becomes a variable, and the compiler finds its
+parents from what its equation can read. The [model guide](causal-models.md)
+lists the supported syntax, and the [folder README](../causalab/causal/README.md)
+has a runnable example. Each model declares correctness once through an
+immutable `ScoringSpec`; task graders and serialized answer forms derive from
+that declaration.
+
+| Module | Contents |
 |---|---|
-| `trace.py` | `CausalTrace` and `Mechanism`: a variable's parents and compute rule, and the settings a trace holds |
-| `causal_model.py` | `CausalModel` — variables, values, mechanisms, interchange interventions and counterfactual labelling; `build_output_tokens`, the mechanical `[" v", v]` forms map; the read-only `scoring` / `output_tokens` / `match_modes` views |
-| `scoring.py` | the task's definition of correct, once: the frozen, digested `ScoringSpec` (forms, answer variable, `string_mode` → derived `protocol_mode`, an optional digested `full_string_checker`, the undeclared-value and invalid-output policies, version, digest), its grader and form groups, the `STRING_MODES` → `MATCH_MODES` translation table, and `check_scoring` — a table's recorded identity against a document's `match` modes. Stdlib-only, so the loader, the serializer and `validate --data` all import it |
-| `pairs.py` | the counterfactual pair as a validation layer over the serialized row: `EditGroup` and the optional `edit_groups` column (which spans of a pair move together, `atomic` or not), the six pair-validity checks — answer change, correctness, intended token change, absence of unintended edits (a token-level diff located by char offsets), tokenizer stability, full-set location coverage — and `check_component_wise`, the all-or-none refusal the loader and the executor raise as rule 27; `GRADES`, the per-example `correct` / `incorrect` / `unscored` reading of `ScoringSpec.grade`. Stdlib-only; the tokenizer is a parameter |
-| `causal_utils.py` | model-comparison and interchange-scoring utilities over traces (torch) |
-| `counterfactual_dataset.py` | the `CounterfactualExample` / `LabeledCounterfactualExample` row types |
+| `model.py` | Defines models and stores their graphs in `CausalModel`. Includes `CausalTrace` and `CompiledEquation`. Eager checks run when an intervention is applied. Lazy values are checked when read. |
+| `domains.py` | Allowed values, with checks and bounded enumeration. `Exo` marks explicit noise inputs. |
+| `compiler.py` | Copies configuration, expands equations, and infers domains. It checks which reads are possible before it checks graph cycles. |
+| `counterfactuals.py` | Example records, sampling, and labels from interventions. |
+| `model_comparison.py` | Compares causal predictions and scores saved intervention results. Uses NumPy and PyTorch. |
+| `pair_validation.py` | Checks prompt pairs and groups of edits, including the optional `edit_groups` column. Uses the Python standard library. |
+| `scoring.py` | Answer forms and grading rules in `ScoringSpec`. Includes `build_output_tokens`. Uses the Python standard library. |
+
+The [hypothesis comparison guide](hypothesis_analysis.md) describes how to
+compare saved neural outputs with symbolic predictions on the same pairs.
 
 ## 2. The protocol layer (`causalab/protocol/`)
 
-The normative spec is [`docs/intervention_protocol.md`](intervention_protocol.md); this is the module map.
-
-| module | owns |
+| Module | Responsibility |
 |---|---|
-| `schema.py` | typed document model — `SiteSpec.layers`, the band of layer indices a site spans (§2.4; `[n]` is the one-layer site, a bare index folds to it), `PROTOCOL_VERSION` `"3"` and the `MIGRATABLE_PROTOCOL_VERSIONS` the loader refuses by name; closed vocabularies (components, `do` mechanisms, metric kinds, the gate's `GATE_GROUPS` = `head` \| `expert_neuron` and the axis each groups over, its `GATE_AXES` = `position` (§2.5 `axis`) with `span_length`, the torch-free helper that sizes a position gate from a fixed `span` window, a regularizer's `REGULARIZER_KINDS` = `l1` \| `l2`) and the retired component spellings; `ObjectiveTerm`, one weighted term of `train.objective` in either its positional or its named spelling (§2.11); `DataRole.shuffle` and `DataRole.draw`, the authored-only `shuffle: {seed}` and `draw: {kind, eval?}` verbs of a counterfactual role (§2.2; both refused on `base`; `DRAW_KINDS` closed, and `DataRole.resolved_field` the one spelling of the field a drawn role tokenizes); `WriteSpec.ragged`, the authored-only ragged-window policy of a write (`RAGGED_POLICIES`, §2.8; absent means `refuse`, never swept); §5 rule 1 (strict keys) and rule 2 (section order) |
-| `compile.py` | **the one compiler** (§9.1): `compile_protocol(authored_document, base_directory, overrides, dataset_resolver, artifact_resolver, engine_capabilities) -> CompiledProtocol` — the ordered stage list `STAGES` (read → override → resolve → families → paths → axes → gate → expand → validate → canonicalize → digest → identify → route, the extension seam for later compiler stages — `families`, `paths` and `axes` are the three inserted so far, all before the gate, `paths` before `axes` because the axes stage keeps the tree it parsed and `expand` builds every point from it), the eight outputs (`canonical`, `points`, `data`, `artifacts`, `capabilities`, `digests`, `diagnostics`, plus `lowered`, the derived record of what the `paths` stage lowered), the closed `DIAGNOSTIC_KINDS`; `read_document` is the prefix on its own; `check_engine(compiled, engine_capabilities)` re-enters the engine-aware rules (§5 rules 13 and 30, the capability shortfall) for the engine routing chose, before it loads a model. Every entry point — the CLI, `run_protocol`, the workflow runner, workflow validation — calls it, and nothing else composes the sequence |
-| `loader.py` | the authoring surface a compile reads with: `load_text` (strict JSON / YAML), `apply_overrides` (`--set`, by section-rooted path, §1), the per-point `file_path` identity check (a grouped gate's `group` / `group_map`, a subspace's `init` basis), and the `validate --data` column pass over a compiled result, with rule 25's row-role check (`check_row_roles`, also run by `run.py` before any weights) and rule 4's threshold half (`check_minimum_counts`: a metric's `minimum_count` against the base table's `maximum_eligible_count`, §2.10 "Eligibility"); `load` / `LoadedProtocol` as the loader's original names, a thin view over the compiler |
-| `validate.py` | the §5 checklist over one concrete document — rules 3–13, 16, 17, 21, 24, 26, 27, 29, 31, and 30 when the engine is known, reporting every independent violation rather than the first; rule 4's capability half (an `expert` selector or a write mechanism the component's registry row refuses); `check_engine_support`, the engine-aware pair (rules 13 and 30) the compiler's `check_engine` runs for the routed engine |
-| `errors.py` | the two rejection classes and their machine-readable codes: `ParseError` (`P<n>`, not a well-formed document) and `ValidationError` (`V<n>`, the §5 rule that fired); the closed `REASON_CODES` a component / mechanism / selector refusal carries as `.reason` |
-| `migrate.py` | `causalab migrate`: the pure `protocol_version` 1 → 2 → 3 rewrite of a document (the v2 → v3 step carries the site `layer` → `layers` rename, its `at_once` windows, `names` placeholders and every dotted `sites.<name>.layer` id, in workflows too) and of the fenced examples in a markdown file, and `format_document`, the authoring format the shipped documents are written in |
-| `shapes.py` | `FeatureShape` — a tapped tensor's native axes and which one is features, as data rather than a layout string |
-| `canonical.py` | canonical form + digests (§7); a grouped gate's `params.theta` from its derived map and a position gate's `width` / `params.theta` from its addressed window (`_derived_window`, off the entries that use it rather than off the site), and rule 23 (group legality, §5.23) decided here with no model loaded |
-| `sweep.py` | axis expansion, point cap, coordinate labels, and the value grammar both axis keywords share (§3) |
-| `families.py` | `at_once` expansion: one authored entry to the entries it denotes, all inside one point (§3.1) |
-| `paths.py` | path blocks (§3.2): `method.path_patching` lowered, before the gate, to the sites, reads, writes and intervened models it denotes — the sender swap, the receivers injected together in one intervened model (an ordered set, one joint pass; a one-element set is the scalar document to the byte), the freeze set generated from the `restoration` policy over the layers between sender and receivers, the restorer boundary ordered by (layer, `COMPONENT_RANK`) — and `describe_paths`, the derived record the compiler carries as its eighth output and the run receipt writes as `derived`. Refusals are `P2`/`P3`/`P4` naming `method.path_patching.<field>`; no rule number. Torch-free; imported by `compile.py` alone, so it sits outside the hashed script closure and moves no pin |
-| `axes.py` | named axes (§3.2): the optional top-level `axes` group — correlated row tuples (`rows`), named independent axes (`range` / `values`) and dependent axes (`dependent_on` + a `clipped_band` rule bounded by the registry's layer count) — parsed, lowered before the gate to the display form (every `{"axis": …}` wrapper a `{"sweep": [column]}`, the group removed), expanded as the rows they declare over per-entry `sweep.expand` calls (a named axis is the slowest coordinate, `axes.<name>`; one cap check over the true count, rule 14), and written into the campaign's canonical form when authored. Refusals are `P2`/`P3`/`P4` naming `axes.<name>…` or the wrapper's own path; a per-row expert axis is `P4` naming run-time fan-out, which is the workflow's `fan_out`; no rule number. Torch-free; imported by `compile.py` alone, so it sits outside the hashed script closure and moves no pin |
-| `bundles.py` | addressing one entry inside a saved `.safetensors` bundle: key grammar, coordinate selection (§2.5, §2.6) |
-| `examples.py` | the row label (§2.2): `example_labels`, one `example_id` per row — the author's, or the zero-based index as a string for a table without the column — and `example_id_defect`, why a column cannot label its rows (missing on some rows, empty, repeated), the check `validate --data` (rule 4) and `resolve_roles` (`P2`) both raise. Torch-free |
-| `tables.py` | metric tables on disk — native JSON, an array of row objects. Torch-free and pandas-free, so the engine writes through it and step scripts read through it |
-| `plan.py` | model graph → forward groups, content dedup (§4); `lower_bands`, a band site (§2.4 `layers`) and the reads and writes on it fanned out to per-layer members — the execution form both engines run and `plan_point` plans, with what a band has no member for refused by name; `site_depth` (a band's shallowest member) and `site_depths` (every member, rule 21's pairwise check); a group's digest carries the canonical model realization and, per input role, the content digest of the rows it reads plus the field (§3); `cohort_key` / `fit_cohorts`, which train points may fit together — the same realization, rows and frame (§4, "Cohorts"); `static_alignment`, what the document alone decides about a position's pairing cardinality (§2.3) — the planning caller of `alignment.alignment_of` |
-| `alignment.py` | alignment cardinality as data (§2.3): `alignment_of`, the **one** function planning, execution and metrics call for the observed `one_to_one` \| `one_to_many` \| `many_to_one` \| `absent` \| `ambiguous`; the two unalignable values as §2.4 reason codes (`unalignable` → an `unavailable` cell, `refuse_unalignable` → a typed refusal), the declared-vs-observed check, and the pair-difference validator (`pair_differences`: prompt / teacher-forced prefix / full context, as three separate sets). Torch-free; the tokenizer is an argument |
-| `spans.py` | semantic spans (§2.3): `SpanSpec` — `segment`, `indices`, `union`, `intersection`, `before` / `after` / `between`, `atomic` — accepted wherever a position is; the parse grammar, the load-time helpers (`static_indices`, `constituents`, `walk`) and the resolution algebra as a pure function over one row's frame (the engine supplies the member resolver). Torch-free; derives no cardinality of its own |
-| `segments.py` | the `segments` section (§2.2.1): `frame` (`chat`), the chat segment names, column-sourced `declare`, and rule 27 (`segment_declared`): every `segment` anchor names a declared segment, a `continuation` anchor carries `generated`, an atomic set the document fixes has ≥ 2 members. Location itself is the engine's (`neural/shared/framing.py`) |
-| `ledger.py` | the location ledger (§6): `LedgerRow` / `LocationLedger` — one row per (example, edit group, constituent, side, token index, token id, decoded token) — and its `sha256` digest over the canonical rows, stamped on the run's artifacts as provenance and never compared at load. Torch-free |
-| `engine.py` | `Engine` ABC, `ExecutionRequest`/`RunResult`, capability routing (§8); the three training verbs (`train_free_params`, `train_loss_precision`, `train_eval_updates`) a fit's own fields oblige (`train_capabilities`), routed on and refused by name under rule 30 |
-| `code.py` | in-document code references (§2.8.1): locator → defining module without importing it, `source_sha256` and, for a module that imports siblings outside the `causalab` package, the declared import closure beside it — `import_closure`, a static AST walk that resolves names by filesystem probe under the module's own root (the identity walk, `repository=False`; the repository-wide walk is the suite's layering tool), third-party and the package itself excluded, parents off — as `closure`/`closure_sha256` (both shared with workflow script steps), the static signature and undeclared-read checks |
-| `resolve.py` | `ResolutionEnv`: the `DatasetResolver` contract (digest / columns / rows) with `FileDatasets` (JSON tables; `table_digest` is the whole-table digest a workflow's `pins.datasets` records, fragment ignored — a table is the bytes alone, nothing sits beside it), `FileArtifacts`, `ArtifactIdentity` build/check |
-| `fit_splits.py` | rule 22's fourth refusal (§2.2, §5.22): a fit's training rows and its `train.eval.split` rows share no endpoint when they are two different refs — checked by the `validate --data` pass (`loader.check_data_columns`) and again per point by `neural/shared/execution.py` before an executor exists, so no verb and no engine routes around it; the same ref for both roles is the visible train-equals-test ablation and passes. Its own module, torch-free, because `resolve.py` and `loader.py` sit in every hashed script step's import closure |
-| `registry.py` | **the capability registry** — `CAPABILITIES`, one row per component (which engines serve it, its write policy and refusal text, its mixer stream, the architectural predicates it requires, its ragged `expert:` face, its retired spellings and their deprecation version; §2.4), from which both engines' component sets, the write policy, `COMPONENT_STREAMS` and the docs tables (`render_component_tables`) are generated; **the per-family tap table** — the attention-interior rows' `overrides`, per family (`ModelInfo.family`, the HF `model_type`) the mixer child that carries the component and how it packs it (`OVERRIDE_KEYS`, `PACKINGS`, `native_shape`, `render_family_table`), which also decides `split_qkv`/`gated_attention` offline; **the family plugin contract** (§8) — `FamilyAdapter` (structural detection, `TreeAddress`, mixer children → stream, per-family `Tap`s over the one global vocabulary, `Identity` rows with dtype-keyed tolerances, optional probe cells), `register_family` / `family_for` / `FAMILIES` with the two built-in trees (`LLAMA_TREE`, `GPT2_TREE`) and the three function-slot tables; **the typed backend pairs** (`BACKEND_PAIRS`, `backend_pair`, `alias_would_rebind` — the redirect-not-rebind rule the alias table is held to at import); **the inventory** (`inventory`: per layer the stream, the components present and their mechanisms, from an entry or a loaded bundle); static model metadata (widths per component, the per-layer mixer stream where a family declares one, the `experts_implementation` knob where an entry was adapted from a loaded config); built-in entries for the models the corpus, goldens and shipped workflows name; a grouped gate's map from a declared site (`site_group_map`: the head layout under `head`, the expert table under `expert_neuron`), the one derivation the canonicalizer, the loader and the executor share |
-| `resolution.py` | the resolution triple (§4.1): `Available` / `Unavailable` / `Invalid` as values, the `cell_key` an aggregator counts a result cell under, and `Denominator` — `eligible` of `total` with the excluded cells by reason code — with its row-level twin `Eligibility` (`n_eligible` of `n_considered` over a metric cell's rows, §2.10 "Eligibility"). `unavailable` travels in results and denominators; `invalid` is what a validator raises from and never enters a result |
-| `estimand.py` | estimand identity (§2.10, §7): the closed unit vocabulary `UNITS` and each metric kind's unit `METRIC_UNITS`, the `<estimand>/v<n>` identifier grammar, the admissible reduction identifiers `REDUCTION_ESTIMANDS` (`mean_of_eligible_row_ratios/v1` vs `ratio_of_sums/v1`), the unit-mismatch refusal `compare`, and the report-claim binding `Claim` / `check_claim`. Torch-free; imported by `schema.py`, `neural/shared/outputs.py`, `workflow/reduction.py` and `analysis/paired_ttest.py`, so both layers share one vocabulary |
-| `equivalence.py` | site equivalence of two interventions (workflow spec §2.2, §5 rule 16): the typed `SiteTuple` a write occupies at one expanded point — `component`, `shape`, `layers` (the band a site spans, compared as the set of per-point bands — a band is one site, so a band against a per-layer sweep differs; `_layer_coverage` is the one helper to reverse that to union coverage), `head`, `expert`, `stream` (DeltaNet inclusion from `layer_types`), `routed_rank`, `featurizer` as shapes (never `seed`, `init` or bundle bytes), `dims`, and the coordinate-sharing keys — `coverage` over a document's points, `compare` → the differing fields of the closed `EQUIVALENCE_FIELDS`, `sharing` (`shared` / `distinct`, decided from names within a document and bundles across them), `explain` for the refusal. Torch-free; imported by `workflow/document.py` only, in no script's closure |
-| `run.py` | `run_protocol(...) -> RunResult` — executing a compiled document from Python (a path or a tree is compiled here through `compile.py`), plus the run receipt (with its `execution` block — `batch_rows`, the one recorder of batch geometry, and `ragged`, written by `record_ragged_geometry` only when a write landed a ragged window under a declared policy (§5 rule 19) — and, written by `record_fires` once the campaign has run, its `fires` block) and the `points` shard selector. The **primitive** (§9): the CLI calls it, so there is one run and not two |
-| `dry_run.py` | `causalab dry-run` (§9): `dry_run(document, env, *, engines, shard_size, overrides, check_data) -> DryRunReport` — everything a run decides before weights load, from the compile, the registry entry and, per candidate engine, `check_engine`: the compile facts (composition, data, model, points, forwards, shards, capabilities, readouts, outputs) and the per-site report (`site_report`: availability, shape, width, head space, read / write support, from the entry alone), the `capability_shortfall` diagnostics (this module is their one producer), the refusals it reports rather than raises, and the explicit `undecided` list with its closed topics. Torch-free; never loads weights, never fetches a config — a document that does not compile is re-raised |
-| `cli.py` | `causalab run/validate/explain/dry-run/digest/pin`, dispatching on document type; `--device/--dtype/--engine/--points/--batch-rows/--resume` on `run`; `--engine/--data/--shard-size` on `dry-run`; `pin` and `--resume` are a workflow's and refused on an intervention specification. Argument parsing, printing and exit codes only — the run itself is `run.py`, the dry run `dry_run.py` |
+| `schema/` | Typed records, parsing, defaults, and canonical forms |
+| `compiled.py` | The frozen `CompiledProtocol` shared by all entry points |
+| `pipeline.py` | Build, validate, resolve positions, and run a protocol |
+| `rules/` | Document, dataset, artifact, code, and capability checks |
+| `lowering.py` | Axes, layer bands, and named families |
+| `identity.py`, `bundles.py` | Content digests, code identity, and saved bundle entries |
+| `positions/` | Token frames, spans, alignments, role resolution, and location ledgers |
+| `answers.py` | Metric answers resolved to token ids, shared by the run door and the score |
+| `registry/` | Model metadata, component capabilities, family adapters, and parallel plans |
+| `engine.py` | `Engine.execute(compiled, run)` and its input and result types |
+| `results.py`, `estimand.py` | Availability, eligibility, row labels, units, and estimand identity |
+| `equivalence.py` | Comparison of intervention sites and coordinate sharing |
+| `receipt.py`, `reports.py` | Receipt schema and CLI reports |
+| `migrate.py` | Protocol migration and document formatting |
+| `parallel.py`, `kv_replication.py` | `--parallel` geometry grammar, divisibility checks, and KV-head arithmetic |
+| `publish.py`, `lockstep.py` | Rank ownership and point shards; agreed workflow decisions across ranks |
+| `parallel_memory.py`, `checkpoint_census.py` | Torch-free memory estimates from cached checkpoint headers |
 
-The workflow *document* model — parse, its own load-error checklist, the
-locator+selector reference grammar, the derived schedule, script hashing,
-digests — is not here: it is `causalab/workflow/document.py`, one layer up (§4),
-because a workflow references intervention specifications and not the other way
-round.
+### Compile and run
 
-Documents are pure data. Sweeps expand at load into one compiled intervention per point; the campaign digest names the document, each point's digest is the provenance unit.
+`build` reads the document, applies overrides, resolves references, lowers
+syntax, and computes the campaign identity. `validate` checks one
+representative per axis value, dataset columns, loaded artifacts, and the
+selected engine's capabilities. `compile_protocol` combines these calls.
+
+The engine enumerates concrete points in canonical order and validates each
+selected point before loading weights. This catches failures caused by a
+combination of axis values. Each point is signed with `identity.sign_step`.
+Its digest identifies that intervention in results and saved artifacts.
+
+`run_protocol` creates the run context and calls `handoff`, which validates,
+resolves positions with the tokenizer, and enters `Engine.execute`. The
+engine writes the run receipt and event stream when the run context asks for
+them (`record=True`; the CLI's `--record`). Workflow steps use the same
+compiler and record their execution in `_step.json`.
+
+### Token positions
+
+`validate`, `explain`, `dry-run`, and `digest` use document and dataset
+metadata. Token counts and alignments are resolved at execution through
+`protocol/positions/`, and every metric's answer tokens through
+`protocol/answers.py`, both before the weights load; `validate --tokenizer`
+and `dry-run --tokenizer` run the same two passes. `io/tokenizer.py` supplies
+the tokenizer with left padding and an EOS pad token when needed.
+
+The protocol's `PositionFrame` holds token IDs, masks, offsets, and segment
+locations. The engine wraps it in device tensors through
+`neural/shared/encoding.py`. Continuation positions use the generated tokens
+recorded by `neural/shared/generated.py`. Task-side position helpers live in
+`tasks/token_positions.py`.
+
+### The registry (`causalab/protocol/registry/`)
+
+The registry provides static metadata for validation without a model load.
+`models.py` declares dimensions and layer types; `components.py` declares
+shapes, supported writes, predicates, and family taps. `engines.py` derives
+capabilities from these rows. `families.py` maps a loaded module tree to the
+global component vocabulary and provides its inventory.
+
+Register a family adapter for a new architecture. Keep component policy in
+the registry so validation and both engines use the same rules. A caller can
+explicitly adapt a Hugging Face config with `model_info_from_hf_config`.
 
 ## 3. The engines (`causalab/neural/`)
 
-**Two engines implement the same protocol**, and a document names neither: it
-declares the components it addresses, `requires` derives the capabilities those
-need, and `choose_engine` takes the first engine in the list whose capabilities
-cover them (§8). `--engine` takes `{pytorch_hooks, nnsight, auto}` and on `run` **`auto` is the
-default** — every installed engine with the reference first, so anything the
-reference serves behaves exactly as pinning `pytorch_hooks` would. (`explain`
-takes the same flag but defaults to *not* passing one, which is what keeps it
-torch-free until you ask it to route.)
-`docs/running_experiments.md` §6 is the user-facing version of this table, and
-§5 there tabulates the component vocabulary per engine.
+`--engine` is required for `run`, `validate`, `explain`, and `dry-run`.
+`auto` resolves to `pytorch_hooks`. A capability mismatch raises `[V13]` with
+the missing capability. Only execution constructs an engine.
+
+The [running guide](running_experiments.md) lists components and engine support.
 
 <!-- generated: begin engine-summary -->
 
 | | `pytorch_hooks` (reference) | `nnsight` |
 |---|---|---|
 | how | `register_forward_hook` / pre-hook, plus global swaps for the delta kernel and the experts dispatch | one trace over an envoy tree, `.source` for fused-forward interiors |
-| capabilities | `grad` `paired_forward` `full_logits` `writable_attention_probs` `pytorch_fn_local` `generate` `quantized_weights` | `paired_forward` `full_logits` `writable_attention_probs` `pytorch_fn_local` `generate` |
-| components | 52 of 56 — every component but `deltanet_query`, `deltanet_key`, `deltanet_state` and `expert_permutation` | 51 of 56 — every component but `delta_query`, `delta_key`, `delta_kv_mem`, `delta_state_update` and `delta_state` |
+| capabilities | `grad` `paired_forward` `full_logits` `writable_attention_probs` `pytorch_fn_local` `generate` `generation_writes` `quantized_weights` | `paired_forward` `full_logits` `writable_attention_probs` `pytorch_fn_local` `generate` |
+| components | 52 of 56; unsupported: `deltanet_query`, `deltanet_key`, `deltanet_state` and `expert_permutation` | 51 of 56; unsupported: `delta_query`, `delta_key`, `delta_kv_mem`, `delta_state_update` and `delta_state` |
 | serves alone | the post-tiling `delta_query` / `delta_key` and the per-step `delta_state` (the typed backend pairs), training (a `train` document needs `grad`), quantized weights | the fused-forward faces `deltanet_query` / `deltanet_key` / `deltanet_state` and `expert_permutation` |
 | install | always | `uv sync` (dev group) or the `nnsight` extra |
 
@@ -110,207 +192,164 @@ torch-free until you ask it to route.)
 
 ### The shared layer (`causalab/neural/shared/`)
 
-Everything that is not *how a tensor is reached* lives here, so the two engines
-agree by construction rather than by parity test:
+Both engines use the shared planner, position frames, featurizers, metrics,
+and result writers. `engine_router.py` resolves `--engine` and constructs the
+chosen engine lazily, so it stays torch-free at import. `sites.py` resolves
+family taps after `model_tree.py` checks layer streams and architectural
+predicates. `executor/` handles operand lookup, write math, ragged windows,
+and captures.
 
-| module | service |
-|---|---|
-| `sites.py` | component vocabulary → taps, **from the family plugin** (`resolve_site` is one module — the one-layer band; `resolve_band` fans a multi-layer band out to one `ResolvedSite` per member, the record staying scalar): the bundle's `FamilyAdapter` (`adapter_of`; `registry.family_for` detects it structurally) declares which module, side or function slot each component is on this tree, and a component the family does not declare is refused by name — no family and no module child is named in this module; the shared module-tree probes for the capability rows' predicates (`moe`, `shared_expert`, `grouped_mm`, `split_qkv`, `gated_attention`; a family may override a cell); every other fact about a component — write policy, stream, `expert:` face, and *where* each attention-interior component lives on each measured family (the row's per-family address) — is read from its registry row |
-| `encoding.py` | tokenization, char→token spans, `PositionFrame`, position specs → indices (`prefix_lengths` is 0 in the plain frame and the real chat-prefix count under `segments.frame: chat`, set by `framing.py`); a `variable` / `column` / `segment` value's candidate runs, refused as `absent` / `ambiguous` through `protocol/alignment.py`; the span algebra's engine seam (`resolve_position` hands a `SpanSpec` to `protocol/spans.py` with this row's frame and itself as the member resolver); `EncodedBatch.first_reals`, every row's first real token as a host tuple read off the mask once per frame (`first_real_indices`) and carried by `select` and the cohort's frame concatenation, so position resolution makes no per-row device read; `encode` refuses a row that encodes to no token |
-| `prepared.py` | tokenizer-bound exact token IDs and offsets for prepared fixed sequences; validates text/tokenizer identity before batching without retokenization |
-| `normalized_cache.py` | `normalized_cache(maxsize=, keys=)`: an LRU cache keyed on a call's *bound* arguments — defaults applied, signature order, a per-parameter `keys` function for the canonical hashable form of a value the key needs (the loaders' `quantization_key`) — so positional/keyword and omitted/explicit spellings of one realization are one entry where `functools.lru_cache` made two; keeps `cache_info()` / `cache_clear()` / `__wrapped__`, adds `renewed()` (an empty twin for a test's isolation); refuses `**kwargs` and unknown key names at decoration |
-| `logit_lens.py` | the logit lens over a saved residual harvest: the loaded bundle's actual final normalization and vocabulary head applied in bounded position chunks, no transformer block run; a file input has its `ArtifactIdentity` checked against the bundle first. Needs an executable PyTorch `ModelBundle`, which is why it sits beside `readout.py` and not in `analysis/` |
-| `framing.py` | the frame a row is encoded in (§2.2.1): plain text, or the chat frame rendered through the tokenizer's **own** template (`render_chat`, the one `apply_chat_template` call in the package); every declared segment located as char spans in the rendered text, the `assistant_prefix` as the difference of the renderings with and without the generation prompt; `encode_framed` sets the real `prefix_lengths` from where the user turn was found. No template under `frame: chat` is refused with reason `chat_template_missing` |
-| `location_ledger.py` | the ledger at the engine seam: `point_ledger` (build it from `ExecutorBase.location_ledger` when the document saves one, before any forward), `ledger_identity` (the `location_ledger_sha256` stamp, absent when no ledger), `ledger_records` (the saved table's rows) |
-| `mechanisms.py` | the closed `do` set; absolute-then-additive order per address |
-| `featurizers.py` | featurizer kinds + error-term contract (applying one is engine-neutral tensor math); `Gate.from_theta` is the eval-mode object a DBM apply loads; a `group: head` gate holds one `theta` per head and expands it over the head's coordinates, a `group: expert_neuron` gate holds the `(num_experts, d_expert)` table and looks a token's slots up through the routing table handed in beside the activation — both maps derived from the model and site (`registry.gate_group_map`); a position gate (`axis`) holds one `theta` per addressed token position instead, sized by the window `build_stack` is handed as `position_width`, so one such gate spans sites of different feature widths; `featurizer_cache()` — the scope under which each stage's derived quantity (a `subspace`'s rotation `Q`, a `gate`'s table mask) is evaluated **once** and reused where that changes no bit: every value shared under `no_grad`; under grad a trained `cayley` map, and a gate mask whose graph reaches `theta` by one edge and no other trainable leaf, share their forward while each access gets its own `_Replay` node that replays the quantity's backward for that access's cotangent, so the parameter's gradient accumulates in the standalone order (a shared tensor would sum the cotangents first — `Jᵀ(Σcᵢ)` for `Σ Jᵀcᵢ`, an ulp a bf16 fit turns into a different fit; `parametrize.cached()` is that naive form); a mask with a `leak` or a pool recomputes per grad access. **Invariant:** a scope is valid only between two mutations of its stages' parameters — the loop opens each after the optimizer step, the projection, the anneal and the mode switch — and `isolated=True` swaps in a fresh store so a CUDA-graph capture never sees a value computed outside it |
-| `metrics.py` | metric lowering over one lm_head read; single-token column resolution (explicit IDs share a tokenizer vocabulary bound within each metric call, including added tokens); the answer-form pre-flight (`check_answer_forms`: a bare `token_form` over a space-prefixed answer, refused as `alignment_missing`); `excluded_rows` — a row the table carries no answer for comes back as the typed `unavailable` and the kind is computed over the other rows (§2.10 "Eligibility"); `GATHERED_KINDS` (`logit_diff`, `soft_accuracy`, `token_logit`) with `gathered_metric` / `metric_token_ids` — the kinds that only select the answer entries, scored from one device-side gather of those columns (the ids resolved once per eval executor), `compute_metric`'s CPU numbers to the bit |
-| `readout.py` | the model-family **readout adapter** (final normalization, centered unembedding, declared accumulation dtype): `Readout.from_bundle` walks the family adapter's `tree.final_norm` / `tree.lm_head` and looks the declaration (`ReadoutSpec`: `rmsnorm`/`layernorm`, gain `weight`/`one_plus_weight`, the epsilon attribute, accumulation dtype `fp32`/`fp64`) up in `READOUT_SPECS` by the entry's `ModelInfo.family` (the HF `model_type` — `gpt2`, `llama`, `qwen3_5_moe_text`; `register_readout` from any module); `logits(h)` / `normalize(h)` are the modules called as the model calls them (bit for bit the `lm_head` read), `unembed(z)` the head's own forward in the declared accumulation dtype, `center(logits)` the mean-subtracted readout, `fixed_rms_scale` / `linearized_norm` / `norm_offset` the linearisation a residual decomposition uses, and `certify(x)` holds the declared gain to the module's forward — a wrong convention, a missing declaration or an undeclared dtype is refused by name. Module application, never weight slicing; nothing hashed imports it; not document vocabulary |
-| `outputs.py` | JSON metric tables and safetensors tensor files, coordinate-keyed, identity-stamped, every metric row labelled by the base row's `example_id` (`protocol/examples.py`) and carrying its eligibility record (`eligible`, and `reason_code` on an excluded measurement — §2.10 "Eligibility"); the fit sidecars `train_eval.json`, `fit_diagnostics.json` (per fitted featurizer: a gate's unit counts, a subspace's orthonormality and its verdict) and `routing_mismatch.json` (per write through an expert-keyed gate, layer and example: base slots whose expert the counterfactual side never activated) |
-| `layout.py` | native tensor axes → the executor's `(batch, position, feature)` contract |
-| `gather.py` | the executor's position gather `tensor[row_ids, idx]` with the backward the index can hold: `dense_index` / `flat_index` build a table's `PositionIndex` — the index tensors plus `distinct`, decided from the Python position lists over `(row, position)` pairs with no device round-trip — once per (rows, table, device) and hand the same tensors to every forward (a `torch.tensor(list, device="cuda")` per hook call was a host→device copy the launch queue waited on); `gather_positions` gives a distinct index a non-accumulating scatter for its gradient instead of autograd's sorted `indexing_backward_kernel`, bit-identical, and a table with a repeat (the `padded_masked` pad slot) autograd's accumulating one — the verdict travels with the index, so no caller can pair a repeating table with the sort-free backward; `splice_features` writes a landed slice back without gathering the positions a second time |
-| `fires.py` | per-member fire counts of an installed write set (spec §4 "Fires"): `FireTally` counts each write member's hook firings in one forward against the count its kind declares (once; a `delta_state` write once per addressed step), `check_fires` refuses the point on a mismatch — a member that never fired, the measured `conv1d` shape, named first — with `component_unavailable`, `GroupFires` folds a group's forwards into the layout-invariant `{write: count}` the run receipt records under `fires`, `group_label` is the `<model> on <input>` spelling. Torch-free |
-| `head.py` | the vocabulary head where the document reads it (spec §4 "Elision"): `projects_head` decides, from the document alone, that an `lm_head` read at named positions is served by tapping `ln_final` — the head's input — and running the head module over the gathered `[rows, width, d_model]` (the same weights, dtype and `F.linear`; each logit the same dot product, so the value is the model's to the bit), while a read of the whole sequence (`pos: all`), a continuation read or its group, a model that writes at the head, and a read a gradient flows through (a fit's trained model: the head's backward GEMM at another `M` is another cuBLAS problem, and its bf16 gradient moved on the A3B — so training keeps the head as the model runs it, `CAUSALAB_PROJECT_HEAD_UNDER_GRAD=1` to project there too) keep the head as an ordinary tap; `resolve_read_taps` hands each read its `ReadTap` (the site it names, the site the forward captures, the projection), and `capture_spec` is what the campaign store's tap union (`execution._tap_union`) records, so a shared pass stores `[rows, seq, d_model]` for such a read where it stored the vocabulary |
-| `executor_base.py` | `ExecutorBase`: lazy forward groups, position resolution (framed through `framing.py` when the document declares `segments`), featurizer stacks, class-ordered write math — including rule 19's pre-forward width check (`check_write_widths`), which dispatches on a write's `ragged` policy (§2.8) and records what a landing policy lands under (`ragged_geometry`, the receipt's `execution.ragged`), and the two ragged landings (`_land_ragged`: width buckets over a `RowWindow.bucket`, or one padded gather scattered back under a mask) — and the location ledger (`location_ledger`: every prompt-frame position of every read and write, resolved once through `_positions`) — the part both executors inherit |
-| `execution.py`, `services.py`, `streams.py` | the request/result plumbing, the §8 service surface, and stream constraints — `streams.stream_at` reads the mixer child → stream table every registered family declares (`registry.mixer_children`) and refuses a block carrying children of two streams. `campaign_plans` keys each forward group on the canonical model plus, per input role, the canonical data digest + field (never the ref's name); `services.resolve_roles` pairs a document's role rows by index, a counterfactual role that authors `shuffle: {seed}` permuted first by `shuffle_order` (stdlib `random.Random(seed)` over the indices; §2.2); `execute_request` runs a campaign in two phases — every fit cohort (`plan.fit_cohorts`) is prepared and fitted together, then every point runs its own passes and saves in point order (spec §4, "Cohorts"); `featurizer_identity` stamps a fitted bundle's `ArtifactIdentity`, `trained_on_digest` included; `check_caller_bundle` holds a caller-owned bundle to the document's realization before any forward (both engines' `bundle=`) |
-| `kernels.py` | `torch_kernel_path`: for the duration of one forward, a model whose weights are not on CUDA runs transformers' torch implementations of the DeltaNet kernel globals (`causal_conv1d_fn`, `causal_conv1d_update`, the chunked and recurrent gated delta rules), whatever optional kernel package the environment installed — transformers binds the CUDA kernel at import time with no device check, so the `flash-linear-attention` extra otherwise breaks every CPU forward of a DeltaNet model; both engines wrap their model calls in it, and the DeltaNet taps, entered after it, wrap the implementation that runs |
-| `kernel_options.py` | `MoeGlueOptions` from `CAUSALAB_MOE_GLUE`: which fused MoE glue kernels (`pytorch_hooks/kernels/`) may run — unset every kernel (sort, gather, epilogue, gate — each proven bit-identical on the H100), `off` none, a comma list a subset for a bisection; an unknown name refused. The DeltaNet kernels' knobs need no code here: FLA reads them from its own environment (`docs/attention_backends.md`) |
-| `gdn_short/` | the gated delta rule for a sequence that fits one chunk from a zero state — the training and evaluation forwards' shape (13 tokens), where FLA's chunked kernels pad every tile to 64 rows and run the inter-chunk half of the algorithm (`fwd_h`, `bwd_dhu`, the `h`/`dh` terms) for nothing. `reference.py`: the float32 recurrence (the numerics oracle) and the closed form `A = (I + strict_lower(βk̂k̂ᵀ⊙D))⁻¹, u = A(βv), o = s·(q̂k̂ᵀ⊙D)u` as batched torch, both differentiable; `triton_kernel.py` + `_triton_kernels.py`: one Triton program per (sequence, value head) computing that form — forward, and a backward that recomputes the tiles — in float32 (3×TF32 dots, measured identical to IEEE to four digits; `DOT_PRECISION` knob) with 16- or 32-row tiles, behind FLA's `chunk_gated_delta_rule` signature, no autotuning or host sync (CUDA-graph capture-safe), grouped key heads accepted, the final state a batched matmul over the kernel's `u` when asked for; `options.py`: `ShortSeqKernelOptions`, the one knob — `CAUSALAB_GDN_SHORT_SEQ` is the longest sequence routed to the kernel (default 16 where Triton is importable, `0` disables, at most 32); `binding.py`: `short_seq_kernel_path`, the reference engine's second kernel guard (after `torch_kernel_path`, before the DeltaNet taps) rebinding `torch_chunk_gated_delta_rule` to a dispatcher whose pure decision `selects_single_chunk` (CUDA, `T ≤ threshold`, zero initial state, equal lengths, power-of-two head dims) routes a call to the kernel and every other call to what was bound. Numerics: a documented bf16-level change — FLA rounds q̂/k̂, `A`, `u` and the chunk state to bf16 mid-way, this path rounds only on store, so it sits closer to the float32 oracle than the path it replaces (`tests/neural/shared/gdn_short/test_triton_kernel.py`, a CUDA suite). The nnsight engine does not enter the binding: its address table peels the hub wrapper's shape |
-| `compile_cache.py` | one opt-in root for every compiler a run uses (Triton, TileLang, Inductor) — `CAUSALAB_COMPILE_CACHE=<path>` names it; unset or `""`, every compiler keeps its own default cache — each toolchain under a signature (torch/CUDA/triton/tilelang/FLA/transformers versions, the CPython ABI tag, the GPU) so concurrent jobs share exactly when their artifacts are interchangeable; both loaders call `configure` as a model lands on CUDA; a group-writable root (an operator's `mkdir -m 2770`) is shared across users (directories `2770` and setgid in the root's group, the umask widened once for group writes), any other root is personal and follows the umask; an unusable root is a warning not a failed load; the manifest is written once (a truncated one repaired) |
+`parallel/` holds the distributed primitives: placements and fragments,
+collectives and autograd protocols, meshes and launchers, context-parallel
+frames, agreements, memory preflight, heartbeats, the watchdog and the
+CUDA graph replay deadline. `join.py`
+folds data-parallel shards into one output in point order; `devices.py`
+parses a comma-list device into a `DeviceMap`; `symbol_dispatch.py` layers
+per-thread patches over module globals; `kernels.py` binds the DeltaNet
+kernel path per device.
 
-Two kinds of shim keep the pre-extraction import paths alive **for one
-deprecation beat** — new code imports the shared home. The same-named modules
-inside `engines/pytorch_hooks/` (`encoding`, `sites`, `mechanisms`, `metrics`,
-`outputs`, `featurizers`, `layout`) are 7-line `import *` re-exports.
-`causalab/neural/pytorch_hooks/` is different: it aliases the whole package and
-its submodules through `sys.modules`, so there is never a second copy of a
-module. The one old path it deliberately does **not** serve is
-`…pytorch_hooks.attention_probs`, whose module was deleted — the eager
-pattern-write machinery is `attention_interface.py` now.
+Key execution rules:
+
+- `sweep.py` enumerates points and signs them with the protocol hasher.
+- `plan.py` groups forwards by model realization and input content. Campaign
+  caches share source captures and compatible prefixes.
+- Writes apply absolute operations before additive operations at each address.
+  `fires.py` checks every installed write's expected firing count.
+- Featurizers preserve the base activation's error term and unselected
+  coordinates. Their cache scope ends before a parameter or mode change.
+- Metric rows carry example IDs, units, and eligibility. Excluded rows retain
+  their reason codes and are counted in the denominator record.
 
 ### The reference engine (`causalab/neural/engines/pytorch_hooks/`)
 
-Raw pytorch hooks, CPU or a single accelerator (`device`/`dtype` constructor
-args — `cuda`, `cuda:1`, `mps`):
+`loading.py` prepares frozen models and tokenizers. `weights.py` reads selected
+checkpoint tensors through [fastersafetensors](fastersafetensors.md).
+`executor.py` installs module hooks; the attention, DeltaNet, and expert
+interfaces expose tensors inside fused operations.
 
-| module | service |
-|---|---|
-| `loading.py` | model+tokenizer bundles (left padding, configurable attention with eager as the default, frozen weights); `ModelBundle.from_model` preserves the caller's attention backend and refuses missing preparation settings without mutating the model (spec §9). The executor temporarily uses eager for attention-function interiors and restores the selected backend afterward; prefix caches separate backends |
-| `weights.py` | how the loader gets weights onto the device: the wanted tensors read straight onto it, many shards in flight — one planned Rust read of the whole checkpoint with the GIL released (`FastersafetensorsReader` over `causalab/io/fastersafetensors/`, what `default_reader` returns), or sixteen `safe_open(device=…)` threads when a caller passes `SafetensorsReader` explicitly. The stock CPU load + `.to(device)` is one thread end to end and measured about three times slower. Tensors are handed to transformers through its public `state_dict=` entry so its conversion mapping still runs; the wanted checkpoint keys are decided with transformers' own renamer against a meta-device instance (a multimodal checkpoint's vision tower and MTP head are never read); a parameter the reader did not deliver is refused, never initialized |
-| `executor.py` | one forward group per (model, input) — the whole batch in one forward, or in row windows of at most `batch_rows` with captures concatenated in row order (`--batch-rows`); edit/read hook wiring; an intervened forward resumes from the cached residual entering the first block a write or campaign tap touches, the skipped blocks swapped out of the block list for the call (spec §4, "Resume"); every write member's firings are counted per forward and checked before anything is published — the write set is one transaction — and the counts kept with the campaign store so a served point records the pass that ran (spec §4, "Fires"); `prompt_masks`, the mask(s) a prompt-only forward is handed prebuilt — for a hybrid family the per-layer-type mapping over the closed `PROMPT_MASK_TYPES` (an undeclared type refused `P4` by name), so transformers' per-forward `torch.all` over the padding mask never runs — shared with `cuda_graphs.prepare_batch`; a forward on which nothing taps or writes the head runs **without** it (`_without_head` swaps the module for the call and puts it back — §4 elision for the one module past every block), the positional `lm_head` reads projecting their own gathered rows through it (`shared/head.py`) |
-| `cuda_graphs.py` | optional CUDA capture and replay for supported inference and training; stages inputs, parameters, gradients and gate temperatures in stable storage; one allocator pool per fit for every graph it captures (`GraphPool`), so a training bucket costs its live outputs rather than a working set of its own; `captured_pass` runs every warm-up and capture pass of a `Replay` under its own isolated `featurizer_cache` scope, so a graph evaluates its featurizers inside itself and a value computed outside the capture is never replayed stale |
-| `graph_reuse.py` | request-owned capture cache for compatible fits; validates model, document, data and stage layouts, and releases resources on mismatch or failure |
-| `graph_cohort.py` | a cohort's optimizer step as one CUDA graph on a fixed slot layout: one worker executor per member over `train.batch.pairs` rows, remainders padded with zero-weight rows; the members keep the campaign store, and the graph's constants — source captures, the resume prefix — are copied out of it into graph-owned buffers per replay beside tokens, masks, labels and parameters; caches per-minibatch prepared masks and padded prefixes; the cohort's eval passes are one capture too (`EvaluationGraphs`): the layout's frame prepared once and registered on the lead — the first, eager pass runs on it, the second captures over every member — then replayed for whichever members are still due, a stopped member keeping its slot with its reads never copied out, the capture on the same `GraphPool` as the step graph; the due members' reads scored where they sit (`train._score`) and released before the next replay; falls back to the eager cohort on OOM (releasing the pool when no other graph holds it), an unstageable mask, a set overlapping the layout with a member the capture holds no slot for (a disjoint set — another split's — runs eagerly beside the capture), or a row bound fallen below the layout's group (the capture given back for its pool blocks rather than held for a later, smaller due set) |
-| `attention_interface.py` | the four mixer tensors computed inside one `attention_interface` call, where no forward hook reaches — `attention_probs` writes included |
-| `delta_interface.py` | the Gated DeltaNet kernel boundary: seven boxes that are arguments and returns of two module-global call sites inside the mixer's forward |
-| `experts_interface.py` | the routed-experts interior, reached through the grouped dispatch entry. `expert_neuron_output` captures `act(gate) * up` at the down-projection input; `expert_activation` captures `act(gate)`. Both use token-major rows and expert IDs for grouped gates |
-| `experts_path.py` | the grouped-experts forward this engine runs (`lean_experts_path`, entered before the experts taps and restored after the forward): transformers' `grouped_mm_experts_forward` without the two expert-parallel sentinel masks a single-process model pays two full-tensor `masked_fill` backwards per MoE layer for, and with the un-sort's backward as the permutation gather it is — bit-identical to the library function in output and every gradient (pinned on the tiny MoE), a model under `enable_expert_parallel` handed to the library unchanged; a drift canary on the library's source guards the copy. On CUDA with Triton the glue around its two `_grouped_linear` calls runs as the fused kernels of `kernels/` where each one's plan admits it (`has_default_silu_gate` decides the gate's), the eager lines otherwise. Forward hooks on `act_fn` retain its module call so expert taps remain active |
-| `kernels/` | the Triton kernels of the grouped-experts glue, each bit-identical to the ATen path it replaces in forward and backward. `moe_glue_reference.py` states the ATen orders as order-explicit torch with their sources (torch 2.9 `Sort.cu`, `Indexing.cu`, `Reduce.cuh`, `ActivationSiluKernel.cu`): `torch.sort` is stable above 32 keys; the index backward folds a token's slots in sorted-array order, rounding after every addition at widths above 32 and once below; the slot sum over `top_k` uses four interleaved fp32 accumulators combined left to right; the row sum over the hidden width uses 32 lanes × 4-vectors with four accumulators by vector position and an adjacent-pair warp tree (`row_sum_config` names the launch and refuses a vector tail or a warp split); silu is `x / (1 + exp(-x))` in fp32. `moe_glue_triton.py` is the device form of each (counting sort in one launch replacing sort + `histc` + `cumsum` + the inverse scatter; row gather with the exact index backward; weight · un-sort · slot-sum · cast in one launch each way, the routing weights read in token order; `silu(gate) * up` with libdevice `exp` / `div_rn`), every launch `enable_fp_fusion=False`, grids pure functions of the shapes, so capturable in a CUDA graph. `moe_glue.py` plans per call before any tensor op (empty off CUDA or without Triton; the sort between 33 and 32 768 pairs — linear in pairs × experts, it loses to cub at the 93 600-pair eval batch — the epilogue for one dtype and a 32-lane row sum, the gate for the default silu gate) and wraps the kernels in autograd functions; the gather's forward stays ATen's `index` (faster than a Triton copy), its backward is the fused fold. Held to `torch.equal` against the library on the workflow's shapes by `tests/golden/test_moe_glue_kernels.py` |
-| `train.py` | the `train` loop for trainable featurizers — the reason this engine declares `grad`; fits the points of one cohort together, in lockstep, each member with its own seed, schedule, optimizer and early stop (spec §4, "Cohorts"), the members packed into grad forwards under a `RowBudget`; a regularizer over a list of featurizers is one penalty, the mean over the concatenation of their penalized quantities (§2.11); fit-constant groups are served from the campaign `ForwardCache` under row-sliced keys (spec §4, "Fits"); a minibatch is a row selection of its point's frame (`EncodedBatch.select`); one `featurizer_cache` scope per eager step window, per batched eval round and per single-fit scoring pass, each opened after the optimizer step and the mode switch it follows, the graph paths outside them (a capture scopes itself) |
-| `budget.py` | `RowBudget`: the rows one forward of a fit may cover — a grad forward, and a batched eval pass when `batch_rows` is unauthored (spec §8 `fit_rows`) — an authored bound is fixed; unset, the cohort's first step probes one member under CUDA peak-memory tracking and the bound is what the device's free memory holds at that slope (a tenth held back), a window that still runs out of memory is retried at half the rows, and the bound the cohort ran under is reported (`TrainOutcome.fit_rows`, the receipt's `execution.fit_rows_resolved`) |
-| `cohort.py` | several executors' trained groups as one model call: the members' minibatches concatenated in one frame, one writer per address dispatching to each member on its own rows, the tap union, resume from the deepest prefix every member holds, each member's reads finalized from its own rows (spec §4, "Cohorts"); `batchable` says which groups the cohort forward admits |
-| `control.py` | the closed-loop schedules of `train.control` (§2.11): a PID that moves a hyperparameter every update so a fit signal follows its setpoint ramp — pure Python, tested against a reference PID implementation as the oracle, handed two floats per update by the loop |
-| `engine.py` | `PytorchHooksEngine`: the seven capabilities above; `bundle=` runs a caller-owned model instead of loading, after checking it against each document's realization — `model_source` in the run receipt says which |
+`train.py` fits compatible points in cohorts. Each member keeps its own seed,
+optimizer, schedule, and stopping rule. `budget.py` bounds rows per forward;
+an automatic budget can shrink after an out-of-memory failure. An authored
+bound stays fixed. The receipt records resolved bounds and shrink events.
+
+Desiderata-Based Masking (DBM) uses a trained gate. DBM-DAS combines a gate
+with a learned subspace. `shared/featurizers/` implements their tensor
+operations, including grouped and position gates.
+
+CUDA graphs, kernel options, and compilation caches are described in
+[cuda_graphs.md](cuda_graphs.md) and
+[attention_backends.md](attention_backends.md). A model supplied by the caller
+must match the document's realization. Temporary hooks and backend changes
+are restored after execution, including failures.
+
+Model parallelism is described in [model_parallelism.md](model_parallelism.md).
+`sharding.py` applies the registry's plan through the `styles/`
+implementations; `stages.py` runs pipeline stages; `rows.py` splits fit
+minibatches across data replicas; `shard_read.py`, `checkpoint.py`, and
+`residency.py` plan and audit sharded weight reads; `crossings.py` moves the
+residual stream between devices of one process; `kv_replication.py` and
+`partial_gradient.py` handle replicated KV heads and per-rank sliced outputs.
 
 ### The nnsight engine (`causalab/neural/engines/nnsight_tracing/`)
 
-| module | service |
-|---|---|
-| `loading.py` | wraps `nnsight`'s `TransformersModel` in the same bundle surface (`model`/`tokenizer`/`info`/`blocks`/`stream_at`/`mixer_at`), so the shared site map addresses an envoy tree unchanged |
-| `addresses.py` | the interior address table over nnsight `.source`, plus its matcher — module boundaries need no table, since envoys mirror the module tree |
-| `executor.py` | `TracePointExecutor`: one trace per forward group, writes assigning envoy values |
-| `engine.py` | `NnsightEngine`: the five capabilities above; the same `bundle=` entry as the reference engine, over an `NnsightBundle` |
+`loading.py` wraps a Transformers model in an envoy tree. `executor.py` runs
+one trace per forward group, with `addresses.py` locating function interiors
+through `.source`. It shares the engine contract and accepts caller-owned
+bundles.
 
-The two engines' answers are asserted to agree over the whole shared
-vocabulary, read and written, at both tiers:
-`tests/neural/engines/nnsight_tracing/test_parity_a3b_sweep.py` on the tiny
-fixture and `tests/golden/test_a3b_engine_parity.py` on the real checkpoint.
-
-Known limits (tracked in the intervention-protocol epic), for both engines: one
-device per run (no `device_map` sharding); a forward group runs as one batch
-unless `--batch-rows` bounds it (the reference engine only — the nnsight engine
-always runs one batch per group), and a training minibatch always keeps its
-`train.batch.pairs` rows; no chat-template path. And `--engine` **pins** at the level of a
-run, not a step: `causalab/workflow/cli.py` builds one engine list and hands it
-to the runner, which calls `choose_engine` per protocol step against that list.
-Routing is therefore per step, while the pin is per run — so two steps may land
-on different engines under `auto`, but a workflow cannot ask for one engine at
-`fit` and another at `apply`.
+Parity tests compare reads and writes on tiny fixtures and a real
+Qwen3.6-35B-A3B checkpoint. On the tiny fixtures they also compare mechanisms,
+featurizers, aggregations, positions, receipts, and execution seams. Each of
+these tests runs one document through both engines with
+`tests/_helpers/engines.py`, which lists the accepted differences between the
+engines. The nnsight engine does not serve `writes_during_generation`, and
+routing refuses such a document before any weights load. The CLI refuses
+`--parallel` with `--engine nnsight`. Each run uses one engine. The hooks
+engine supports row bounds, a comma-list `--device` that places layers across
+the devices of one process (`DeviceMap`), and `--parallel` geometries across
+processes (see [model_parallelism.md](model_parallelism.md)); nnsight runs
+each forward group as one batch on one device.
 
 ## 4. The workflow runner (`causalab/workflow/`)
 
-`document.py` is the workflow *document* model — parse, its own load-error
-checklist, the locator+selector reference grammar (§3 there), the derived
-schedule, script hashing (the script's bytes, plus a `{"path": …}` script's
-sibling import closure, through `protocol/code.py`), per-step digests, and the
-controls layer's declarations
-(`control`, `waive`, `stop_after_failure_rate` on a protocol step; the closed
-kind / reason / status vocabularies; rule 14, declared-or-waived, with the
-self-swap predicate and the matched-random pairing checked against the compiled
-inner documents; rule 15, qualify once: the implicit control → target edge the
-schedule derives so a control runs before its target's whole fanout, and one
-realization per control/target pair, refused naming the `model` field; rule 16,
-a `full_component` or `matched_random` control site-equivalent to its target
-over the expanded points of both through `protocol/equivalence.py`, or
-declaring the differing fields in `control.non_equivalence`; spec §2.2, §5),
-and the `workflow` kind's recursive load (a nested document loaded through the
-same function, its steps mounted under `<step>/<inner>`; spec §2.10) — and is
-engine-free like `protocol/`.
-`runner.py` executes a loaded one — and, for the controls layer, records each
-control step's points (a `matched_random` or `shuffled_source` point is
-`passed` when the declared draw ran — a word about running, not a numerical
-verdict), joins a certifying step's `controls.json` onto them by the saved
-bundle header's coordinate spelling (`coords_token`; a point with no row is a
-`ControlFailure`),
-holds the failure rate to the declared bound (a `ControlFailure` is a failed
-attempt, so dependents block) and writes the statuses every downstream
-protocol step inherits by coordinates into its record, beside the identity of
-the qualification they came from (the control's document digest, the
-`tree_digest` of the code that ran it, the engine) and, on every protocol
-step's record and its `phase_completed` line, the forward groups the engine
-ran (spec §4.3, §8); `cli.py` carries the workflow verbs.
+`document.py` loads steps, resolves references, derives dependencies, and
+checks controls. `runner.py` executes the graph in dependency order, with an
+artifact overlay that lets later steps read earlier outputs.
 
-The runner executes workflow documents: topological step order from derived references, per-step output dirs under `<out-root>/<output_dir>/`, an artifact overlay so later steps resolve earlier steps' products, protocol, script, behavioral, decision and conditional steps, a `_step.json` record per step and a `workflow.json` run manifest; a document step's declared fan-out expands into children the runner schedules like any steps and joins under the parent's name (spec §2.9). There is no publication step — the run tree *is* the publication (spec §0). The runner knows only the step graph: device/dtype live in the engines it is handed, and job dispatch is site tooling outside the repo (spec §8, "Execution scale").
-
-Each step is **attempted, verified, then published** (spec §8): its writes go to `.attempts/<step>/<id>/`, every declared output is checked for its format and content-digested into the record, and one rename makes the attempt the step directory — so `<step>/` is a complete unit or absent, and `--resume` reuses it only when the recorded digests still match the bytes **and** the record's `implementation.tree_digest` — `causalab.provenance.runtime_identity()`'s, asked once per run — is the running package's (spec §7; a record without one, or a different package, means silent re-execution; `dirty` alone never refuses). The manifest is written in a `finally` and classifies every step (`completed | reused | failed | blocked | pending | skipped`) — unless the derived status and the runner's memory disagree or the stream cannot be read (spec §4.3), when no manifest is written rather than a wrong one. The vocabulary, layout constants and file writers live in `causalab/workflow/manifest.py`; `runner.py` decides when each is written. Beside the manifest the runner appends the run's event stream (`events.jsonl`, spec §4.3) — a sidecar that is an input to no reuse decision and no identity, and from which the manifest's status words are derived at write time (`causalab/workflow/derived.py`); a manifest that would disagree with the stream is refused rather than written.
-
-**Step scripts.** A `script` step names its code with a locator —
-`{"module": "causalab.analysis.fit_pca"}` or `{"path": "scripts/probe.py"}` — so
-the shipped ones are filed **by subject** rather than in one namespace:
-
-| module | what it holds |
+| Module | Responsibility |
 |---|---|
-| `causalab/analysis/` | numerical analysis: `fit_pca`, `harvest_difference`, `head_stats`, `paired_ttest`, `random_mask`, `subspace_angles`, `certify_control`. Fits, statistics, controls — the size-matched random draw and the three certification legs of a self-swap control (identity bit-exact, positive sender effect, changed receiver; workflow spec §2.2) — and the operands an intervention consumes. Importable and testable without the workflow layer |
-| `causalab/analysis/project_pca.py`, `pca_by_position.py`, `sequence_activations.py` | frozen-mean projection, separate per-position PCA populations, and target gathers from shared all-position harvests |
-| `causalab/analysis/fit_fourier_probe.py`, `apply_fourier_probe.py`, `fourier_artifacts.py` | ridge sine/cosine scans, frozen replay, and validation of native fit files for downstream analysis |
-| `causalab/io/plots/workflow_figures.py` | the heatmap/lines renderer, beside the other 17 plot modules and reusing `figure_format` for the png-over-pdf default |
-| `causalab/workflow/scripts/select.py` | the one script whose purpose *is* wiring: reduce a table to the values a later document's `set` reads |
-| `causalab/workflow/scripts/reduce.py` | the built-in reduction step: a metric table reduced under an authored `reduction` contract (workflow spec §2.6) — one row per group with `value`, the counts, the record's identity (`unit`, `estimand_version`, `produced_by`) and an interval |
-| `causalab/workflow/behavioral.py` | the declarative behavioral runner behind the `behavioral` step type (workflow spec §2.7): the four closed vocabularies (terminal outcomes, decoding modes, split purposes, decision types), the step's parser and rule 17, the load-time binding of `checker` to the task's `ScoringSpec` by content digest and of `split` to the document's ref fragment, the outcome derivation over the engine's `continuations.json`, `outcomes.json` and the typed `decision.json` (the `DecisionRecord`). Engine- and torch-free at module level (the checker binding imports the task package, which pulls the numerics stack through its token-positions module); in no script's import closure; the decode itself is the reference engine's, reached through `ExecutionRequest.decoding` |
-| `causalab/workflow/conditional.py` | the `decision` and `conditional` step types and `requires_receipt` (workflow spec §2.8, rule 18): the closed comparator, scope, receipt-outcome and decision-field vocabularies, the parsers, the derived schedule edges and the load-time check, the `decision.json` a decision step writes over a script step's values object (the second producer of the `DecisionRecord`, `select.py` untouched), the predicate's verdict and the transitive `skipped` set, the receipt check the runner makes before any engine is chosen, and the `--resume` evidence clause. Torch-free; in no script's import closure |
-| `causalab/workflow/fan_out.py` | the declared fan-out and its join (workflow spec §2.9, rule 19): the `over` and `require` vocabularies, the `fan_out` parser, the load-time expansion of a document step into children `<step>@<i>` over its compiled points (one per axis value or per shard) and of a per-child conditional with it, rule 19's checks (controls exclusion, bundle saves, per-child scopes against the producer's axis, `selected` only under a per-child gate), the run-time join keyed by point digest — a missing and a duplicate point as two distinct refusals, the tables re-assembled in point order, one `decision.json` over the summed counts for a behavioral parent — and the `--resume` evidence clause for a join. Torch-free; in no script's import closure |
-| `causalab/workflow/nested.py` | nested reusable workflows behind the `workflow` step type (workflow spec §2.10, rule 20): the nested `set` form and its parser, the recursive inner load with the self-inclusion chain refused by name, the mount of an inner workflow's steps into the outer table under `<step>/<inner>` (references rebased, identities and compiled documents carried over), the longest-prefix producer every run-tree path is resolved by, the fold of a `workflow` step's edges onto its inner roots, rule 20's checks (what may name a `workflow` step, no controls inside), and the runner's locators — which inner workflow owns a flattened name, under which sub-root it executes, how a conditional's skips are spelled across the boundary. Torch-free; in no script's import closure |
-| `causalab/workflow/reduction.py` | the reduction contract itself: the eight declared dimensions and their closed vocabularies, the parser rule 12 and the built-in share, the eight estimators (six scalar; `auc` and `cpr` over a curve — MIB's CPR arithmetic) and the two seeded uncertainty procedures. Numerics function-local, so the document loader imports it for the vocabularies without paying for numpy |
-| `causalab/io/step_io.py` | what a script uses for IO: JSON tables and values objects, safetensors with `slot`/`entry` addressing, the identity a tensor output inherits |
-| `causalab/io/tensor_files.py` | the one import for `save_file` / `load_file` / `safe_open` over the repository's `.safetensors` files: `causalab/io/fastersafetensors/`, the reference library's API and bytes |
-| `causalab/io/fastersafetensors/` | the safetensors implementation itself, developed as a standalone library and inlined here: the `safetensors.torch` API (`save_file`, `load_file`, `load_files`, `safe_open`, `explain`) over the PyO3 extension `_core`, built by maturin from the Cargo workspace at the repository root (`crates/fst-core` the format, storage backends and the pure planner; `crates/fst-cuda` the CUDA runtime and cuFile through `dlopen`; `crates/fst-py` the module). Torch allocates every tensor; Rust fills it with the GIL released, files in flight and the transport chosen from the built-in calibration profile (`Profile::default_measured`; `docs/profiles/` is that profile and a second node's serialized as a measurement record — a test holds the first equal to the built-in, `FASTERSAFETENSORS_PROFILE` optionally selects a JSON override at run time). Design, measurements and rules: [`docs/fastersafetensors.md`](fastersafetensors.md) |
-| `causalab/io/step_record.py` | the `_step.json` format — its writer (used by the runner), its reader, and the shared aggregation rule `select` and `workflow_figures` both call, so a figure and a chosen value never disagree about what a row is |
-| `causalab/io/events.py` | the local append-only event stream (workflow spec §4.3): `events.jsonl` beside `workflow.json` / `protocol.json`, never inside a step directory — the closed seven-event `EVENTS` vocabulary, the line schema with its monotonic `seq`, the `EventLog` writer, the reader, and the `EventSink` seam whose failure becomes a `warning` line and cannot change scientific execution. Stdlib only, in no script's import closure; the runner and `protocol/run.py` (function-locally) are its two writers; `EventLog.opened_at` marks where one run's lines begin, which is what the manifest's status derivation reads |
-| `causalab/workflow/derived.py` | `derive_statuses`: the manifest's per-step status words derived from one run's stream lines (spec §4.3) — `phase_completed` → `completed`/`reused`/`skipped`, `warning attempt_failed` → `failed`, the rest by `manifest.py`'s `classify_unreached` (a skip or a block propagating down a chain) — so `workflow.json` cannot disagree with execution history; `_step.json` is not derived |
-| `causalab/workflow/isolate.py` | the entry point for an isolated (subprocess) step |
-| `causalab/workflow/pins.py` | the workflow's `pins` section (workflow spec §1, §5 rule 21, §7): the closed category vocabulary (`documents`, `scripts`, `datasets`, `code`, `files`), `parse_pins` (shape, rule 1), `collect_pins` — the census of everything a load touched, by the name the document gives it, a table pinned whole with its fragment stripped, a nested workflow by its own digest — `check_pins` (the exact comparison: moved, unpinned, no longer touched, each naming `pins.<category>.<key>`) and `stamp_pins` (the section written last, indent and key order kept, idempotent). Called from `load_workflow` after every inner load, so every verb refuses a stale pin; `cli.py`'s `pin` verb and the first `run` of an unpinned document stamp. Never canonical: the one authored home of a digest, and only a workflow has one |
-| `causalab/workflow/manifest.py` | the run manifest and the attempt bookkeeping beside it: the six-word `StepStatus` vocabulary and the closed `DISPOSITIONS`, the `.attempts/` layout constants, `attempt.json`, the two-rename publish that retains the displaced unit as `<n>.superseded/` (never deletes it) and the temp-then-rename manifest writer |
+| `behavioral.py` | Decoding, task grading, outcomes, and behavioral decisions |
+| `conditional.py` | Typed decisions, conditional execution, and required receipts |
+| `fan_out.py` | Expansion over axes or shards and joins by point identity |
+| `nested.py` | Nested workflows, rebased references, and scoped output paths |
+| `reduction.py`, [reduce script](../causalab/workflow/scripts/reduce.py) | Estimators, uncertainty, and metric reduction |
+| [select script](../causalab/workflow/scripts/select.py) | Values that later steps use in `set` overrides |
+| `manifest.py`, `derived.py` | Publication, retained attempts, and statuses derived from events |
+| `isolate.py` | Execution of a script in a separate process |
 
-A script is one function, `main(inputs, outputs) -> None`, that creates every
-output it declares. The runner verifies they arrived, checks a declared table's
-columns, and stamps ArtifactIdentity on safetensors outputs — so a script cannot
-forget provenance, which is what a later protocol step's identity check depends
-on. A script is **found and hashed, never imported** at load, so `validate`/`digest`
-import no numerics and the hash in the digest is what makes `--resume` correct.
-For a `{"path": …}` script the hash covers its **sibling import closure** too
-(workflow spec §4.2): every module beside the script that it reaches through
-its imports is read, hashed and parsed — never imported — into a `closure`
-manifest beside `script_sha256`, written only when non-empty. The `causalab`
-package is never in it: its bytes are runtime identity, the `tree_digest`
-every step record carries and `--resume` compares, so a `{"module": …}` step
-carries no closure keys and no edit to the `protocol/` core moves a shipped
-workflow's digests. `tests/workflow/test_closure_census.py` still freezes what
-each shipped script reaches in the repository — as a layering census, so a
-torch-free `validate` stays one.
-`importlib.util.find_spec` resolves the module to a file without executing
-*that module* — but it does import the module's **parent packages**, so the
-guarantee needs every package holding a shipped script to be importable without
-numerics too (§1; `tests/protocol/test_load_is_torch_free.py` checks both).
+Controls run before their targets when qualification is required. Each target
+records the control's document digest, implementation identity, engine, and
+status by coordinates. A certification must cover every control point.
+Failure rates above the declared bound block dependent steps. Matched-random
+controls follow the fit when they need its learned size.
 
-**Why two packages.** `protocol/` is the Intervention Protocol format alone and must
-not import the workflow layer — that is what lets someone use it on its own, and
-`tests/test_architecture_layering.py` enforces it. The dependency runs
-`workflow/` → `io/` → `protocol/`, one way, and `causalab/cli.py` sits above
-both, dispatching on the document's `steps` section.
+### Outputs and reuse
+
+A step writes into `.attempts/<step>/<id>/`. The runner verifies each declared
+output and its content digest before publishing the step directory. It retains
+a displaced result as a superseded attempt.
+
+`--resume` reuses a step when its recorded identities and output checksums
+match. The implementation's `tree_digest` is part of that check. Script
+identity includes imported sibling files outside the package.
+
+`events.jsonl` is appended beside the run manifest. Its lines determine the
+statuses in `workflow.json`: `completed`, `reused`, `failed`, `blocked`,
+`pending`, or `skipped`. A disagreement with the runner's status prevents the
+manifest write. Event-sink failures produce warnings while execution continues.
+
+### Step scripts
+
+A script implements `main(inputs, outputs) -> None` and creates every declared
+output. The runner checks table columns and stamps tensor artifacts with their
+identity. `io/step_io.py` supplies table, value, and bundle access;
+`io/step_record.py` supplies the aggregation used by selection and plotting.
+
+Script modules are located and hashed at load time. Their parent packages must
+remain importable without numerical libraries. The script body is imported
+when the step runs.
+
+Numerical scripts live in `analysis/`; plotting lives in
+`io/plots/workflow_figures.py`. Library helpers include `analysis/sequences.py`
+for fixed-sequence documents and `analysis/logit_lens.py` for projecting saved
+residuals through a loaded decoder. See [multi_token_analysis.md](multi_token_analysis.md).
+`analysis/export_dbm.py` exports validated DBM apply results through
+`export(manifest_path, register_from_hf=False)`; `scripts/export_dbm.py` writes
+the JSON for downstream reports.
 
 ## 5. Datasets are build products
 
-`neural/sequences.py` prepares fixed output sequences, pairs and cohorts, and
-authors shared multi-target readouts and method workflows. `neural/shared/prepared.py`
-checks exact-ID input records for both engines. Sequence preparation shares a
-fingerprint within one batch and checks tokenizer mutation before publishing it;
-these snapshots are never process-global. Both engines' `load_model` cache four
-bundles through `neural/shared/normalized_cache.py` (its row above); the hooks
-loader's `quantization_key` is the one definition of a quantization block's
-cache identity, and the engine hands the loader the document's block as is.
-`neural/shared/logit_lens.py` projects
-saved residuals through the loaded PyTorch decoder without transformer forwards.
-See [multi_token_analysis.md](multi_token_analysis.md) for their execution and
-prefix contracts.
+Each task ships tables under `causalab/tasks/<name>/data/`. The task README
+records the builder command. `causalab/tasks/` is the default data root.
 
-A document names a dataset ref; a resolver reads bytes (`protocol/resolve.py`). Nothing generates a table during a load, so `validate` / `explain` / `digest` need no task code, no tokenizer and no network, and a document's digest is a function of committed bytes. `causalab/tasks/serialize.py` + `scripts/build_task_dataset.py` are the other side: task package → deterministic table, and nothing beside it (no manifest, no recipe sidecar; the builder's command line is the record, kept in the task's README). Everything per-row or task-semantic (answer forms, values that place a position per row, the task's scoring identity as the constant `scoring_digest` / `string_mode` columns) is a column written there, never a document-side computation (spec §2.2). A run consumes the table's bytes, and the pin over a table — like every other pin — is the consuming workflow's `pins` section (`workflow/pins.py`, workflow spec §7), never a file beside the table.
+A document resolves a dataset reference by reading the table's bytes. Task
+values, answer forms, scoring mode, and row-specific position anchors belong
+in columns. Building a dataset is a separate command. Its content digest
+enters every consuming document's canonical form, so rebuilding a table
+changes those identities and causes its consumers to run again.
 
 ## 6. Configs are documents
 
-`causalab/configs/protocols/*.json` are the shipped intervention specifications, one file per experiment, in the four groups of spec §1. Three of them are the **method families** — `interchange` (no featurizer, no training), `das` (a trained subspace) and `dbm` (a trained gate) — and their `method` groups are the reusable part: copy one into a document that names another network and another dataset, and a diff of the two files says whether the experiment survived the move. Families are cut by *technique*, and a family's `train` block stays in its own file: `das` and `dbm` do not share one, because a training block factored across families is how one family's regularization default gets reassigned to another's value. The rest are deliberately their own methods — `dbm_apply` (no `train` at all, and a gate loaded from a fit) is a *different* method from `dbm`, and `random_subspace_control` (an untrained subspace, seed swept) a different method from `das`, so folding either into its neighbour's file would be exactly the collapse the sentence before warns about. Each of the three families has a twin in the pinned corpus under `tests/protocols/` (`02_interchange_im`, `04_das_im`, `05_dbm_im`); `weekdays_8b_interchange.json` is the same interchange on Llama-3.1-8B in bf16.
+The shipped method documents live in the repository, not in the package:
+`demos/methods/protocols/` contains intervention specifications;
+`demos/methods/workflows/` connects them. Each method keeps its training
+settings in its own document. The `interchange`, `das`, and `dbm` families
+provide reusable method blocks; apply documents and random controls state
+their own operations.
 
-`causalab/configs/workflows/weekdays_8b.json` is the worked workflow. There is no Python config system: a "config" is a protocol or workflow document, overridden ad hoc with `--set` and promoted into a file when it matters. A `protocol_version` 1 document is rewritten in place by `causalab migrate` (`protocol/migrate.py`).
+Use `--set` for an override and save a document when the experiment should be
+reused. `causalab migrate` updates older protocol versions.
 
 ## 7. Tests
 
-See [`docs/TESTS.md`](TESTS.md) for the tier taxonomy and pinned-artifact discipline.
+See [TESTS.md](TESTS.md) for test tiers, numerical checks, and artifact updates.

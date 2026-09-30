@@ -18,9 +18,9 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.canonical import canonicalize
-from causalab.protocol.errors import RULES, ParseError, ValidationError
-from causalab.protocol.loader import load
+from causalab.protocol.schema.explicit import canonicalize
+from causalab.protocol.rules.errors import RULES, ParseError, ValidationError
+from causalab.protocol.pipeline import compile_protocol
 from causalab.protocol.schema import (
     SCORES_INIT_DEFAULTS,
     SCORES_INIT_KEYS,
@@ -31,6 +31,7 @@ from causalab.protocol.schema import (
 from tests.protocol._docs import base_doc, in_order
 from tests.protocol._env import build_env
 from tests.protocol.test_grouped_gate import GPT2_HEADS, gate_doc
+
 
 pytestmark = pytest.mark.unit
 
@@ -223,9 +224,9 @@ def test_an_authored_default_and_an_omitted_one_digest_identically(scored_env) -
 def test_rule_32_keep_above_the_unit_count_is_refused_at_load(scored_env) -> None:
     assert RULES["scores_init"].number == 32 and RULES["scores_init"].code == "V32"
     with pytest.raises(ValidationError) as err:
-        load(
+        compile_protocol(
             _head_gate({"from_scores": _scores(unit="head", keep=GPT2_HEADS + 1)}),
-            scored_env,
+            env=scored_env,
         )
     assert err.value.rule == 32
     assert err.value.path == "featurizers.g.init.from_scores.keep"
@@ -237,7 +238,7 @@ def test_rule_32_counts_positions_on_a_position_gate(position_scored_env) -> Non
     the window's positions — `keep: 4` on a three-position gate was checked
     against the feature width (768) before this branch and passed."""
     with pytest.raises(ValidationError) as err:
-        load(_position_gate(keep=4), position_scored_env)
+        compile_protocol(_position_gate(keep=4), env=position_scored_env)
     assert (
         err.value.rule == 32 and err.value.path == "featurizers.g.init.from_scores.keep"
     )
@@ -245,20 +246,21 @@ def test_rule_32_counts_positions_on_a_position_gate(position_scored_env) -> Non
 
 
 def test_rule_32_the_whole_position_count_is_a_legal_keep(position_scored_env) -> None:
-    assert load(_position_gate(keep=3), position_scored_env) is not None
+    assert compile_protocol(_position_gate(keep=3), env=position_scored_env) is not None
 
 
 def test_rule_32_the_whole_unit_count_is_a_legal_keep(scored_env) -> None:
-    loaded = load(
-        _head_gate({"from_scores": _scores(unit="head", keep=GPT2_HEADS)}), scored_env
+    loaded = compile_protocol(
+        _head_gate({"from_scores": _scores(unit="head", keep=GPT2_HEADS)}),
+        env=scored_env,
     )
     assert loaded is not None
 
 
 def test_a_missing_table_is_the_artifact_refusal(scored_env) -> None:
     with pytest.raises(ValidationError) as err:
-        load(
+        compile_protocol(
             _head_gate({"from_scores": {"file_path": "nowhere.json", "keep": 1}}),
-            scored_env,
+            env=scored_env,
         )
     assert err.value.rule == 15

@@ -217,9 +217,9 @@ class FigureGenerator:
         Shows only a grey floor plane (xy), hides wall panels and grid lines.
 
         Args:
-            floor_color: Color of the floor (xy) plane.
-            show_axes: If False (default), hide axis labels, ticks, and titles.
-            floor_shadow: If True, project visible scatter points onto the floor.
+            floor_color (str): Color of the floor (xy) plane.
+            show_axes (bool): If False (default), hide axis labels, ticks, and titles.
+            floor_shadow (bool): If True, project visible scatter points onto the floor.
         """
         axis_common = dict(
             showgrid=False,

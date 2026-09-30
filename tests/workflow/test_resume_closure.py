@@ -11,7 +11,7 @@ the reuse check also compares never sees it. Without the closure the third run
 below is ``reused``, and a step whose arithmetic lives in a sibling module is
 skipped as up to date after that module changed.
 
-Valid work rides along: the unchanged tree is reused, and the step record names
+The valid-work twin rides along: the unchanged tree is reused, and the step record names
 the files the identity hashed so a reader can see why a step ran again.
 """
 
@@ -26,7 +26,7 @@ from typing import Any
 import pytest
 
 from causalab.io.step_record import SIDECAR
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 from causalab.workflow.document import load_workflow
 from causalab.workflow.runner import run_workflow
 
@@ -91,7 +91,7 @@ def test_resume_reruns_a_step_whose_imported_module_changed(
 
     try:
         loaded = load_workflow(_document(), env, workflow_dir=wf_dir)
-        first = run_workflow(loaded, env, out, [])
+        first = run_workflow(loaded, env, out, None)
         assert first.manifest["steps"]["count"]["status"] == "completed"
         # the record names what the identity hashed beside the script
         record = json.loads((first.run_root / "count" / SIDECAR).read_text())
@@ -101,12 +101,12 @@ def test_resume_reruns_a_step_whose_imported_module_changed(
             == loaded.canonical["steps"]["count"]["closure_sha256"]
         )
 
-        # valid work: nothing changed, the step is reused
+        # the twin: nothing changed, the step is reused
         again = run_workflow(
             load_workflow(_document(), env, workflow_dir=wf_dir),
             env,
             out,
-            [],
+            None,
             resume=True,
         )
         assert again.manifest["steps"]["count"]["status"] == "reused"
@@ -115,7 +115,7 @@ def test_resume_reruns_a_step_whose_imported_module_changed(
         sys.modules.pop(HELPER_NAME, None)  # the re-run must see the new bytes
         edited = load_workflow(_document(), env, workflow_dir=wf_dir)
         assert edited.step_digests["count"] != loaded.step_digests["count"]
-        third = run_workflow(edited, env, out, [], resume=True)
+        third = run_workflow(edited, env, out, None, resume=True)
         assert third.manifest["steps"]["count"]["status"] == "completed", (
             "a step whose imported module changed was reused as up to date"
         )

@@ -21,16 +21,16 @@ from safetensors.torch import load_file
 
 from causalab.analysis import random_mask
 from causalab.io.step_io import StepError, stamp_tensor, write_tensor
-from causalab.protocol.resolve import (
+from causalab.io.env import (
     build_artifact_identity,
     check_artifact_identity,
     read_safetensors_metadata,
 )
 from tests.step_scripts import run_step
+from tests._helpers.paths import PROTOCOLS_DIR
 
 #: What a gate fit stamps at file level (``execution.featurizer_identity``).
 IDENTITY = {
-    "produced_by": "a" * 64,
     "model_key": "tiny-random/llama",
     "model_revision": "main",
     "model_dtype": "fp32",
@@ -143,7 +143,7 @@ def test_the_draw_is_a_function_of_the_seed_and_the_entry(tmp_path: Path) -> Non
 def test_a_grouped_bundle_is_drawn_in_units_and_keeps_its_group(
     tmp_path: Path,
 ) -> None:
-    """A ``group: head`` fit stores one ``theta`` per head, so the count
+    """A ``group: head`` fit stores one ``theta`` per head (W3), so the count
     matched and the units drawn are heads — 8 entries for 8 heads of 32, never
     256 coordinates — and the ``group`` / ``group_map`` the fit stamped come
     through the header, so the apply document's map check sees the fit's."""
@@ -220,7 +220,7 @@ def test_the_header_survives_verbatim_and_the_runner_can_stamp_it(
     target = _draw(tmp_path, source, "r", seed=0)
     assert read_safetensors_metadata(target) == read_safetensors_metadata(source)
 
-    step_identity = {"produced_by": "b" * 64, "engine": "script"}
+    step_identity = {"engine": "script"}
     stamp_tensor(target, step_identity, what="test")
     stamped = read_safetensors_metadata(target)
     assert stamped is not None
@@ -229,7 +229,7 @@ def test_the_header_survives_verbatim_and_the_runner_can_stamp_it(
         {k: v for k, v in IDENTITY.items() if k not in step_identity},
         what="apply",
     )
-    assert stamped["produced_by"] == "b" * 64
+    assert stamped["engine"] == "script"
     assert json.loads(stamped["entries"]) == json.loads(
         read_safetensors_metadata(source)["entries"]  # type: ignore[index]
     )
@@ -275,7 +275,6 @@ def test_a_missing_bundle_refuses(tmp_path: Path) -> None:
         _draw(tmp_path, tmp_path / "nowhere.safetensors", "r", seed=0)
 
 
-@pytest.mark.unit
 @pytest.mark.numerical_unit
 def test_a_trajectory_with_a_rotation_beside_the_gate_is_drawn_over_its_thetas(
     tmp_path: Path,
@@ -447,10 +446,10 @@ def test_the_apply_document_scores_the_control_at_the_fits_address(
     from tests.protocol._env import FIXTURES, fixture_input_overrides
     from tests.tables import frame as table_frame
 
-    protocols = Path(random_mask.__file__).resolve().parents[1] / "configs/protocols"
+    protocols = PROTOCOLS_DIR
     tiny = {"model.key": TINY_LLAMA, "model.dtype": "fp32", "sites.target.layers": 0}
     # dbm.json names the shipped weekdays table, whose answers tiny-random cannot
-    # spell as single tokens; the fit reads the 4-row fixture instead, as
+    # spell as single tokens ([P2]); the fit reads the 4-row fixture instead, as
     # every tiny-scale run of a shipped document does (tests/protocol/_env.py)
     fixture_inputs = fixture_input_overrides(
         json.loads((protocols / "dbm.json").read_text())
@@ -503,6 +502,8 @@ def test_the_apply_document_scores_the_control_at_the_fits_address(
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(document),
             "--data-root",
             str(FIXTURES / "data"),
@@ -666,3 +667,19 @@ def test_a_bundle_fitted_in_a_pool_is_refused(tmp_path: Path) -> None:
     )
     with pytest.raises(StepError, match="fitted in pool"):
         _draw(tmp_path, per_entry, "pooled2", seed=0, top_k=2)
+
+
+@pytest.mark.unit
+def test_a_boundary_bundle_is_refused_naming_the_learned_rank(tmp_path: Path) -> None:
+    """A `boundary` gate's theta is one boundary fraction over an ordered basis
+    (§2.5), not a unit per entry: there is no set of units to resample, and
+    the control a boundary fit wants is a random basis at the learned rank
+    ⌈θ · width⌉ — the refusal names the fraction and where the rank is."""
+    source = _fitted(
+        tmp_path / "fit.safetensors",
+        {"theta": torch.tensor([0.5])},
+        extra={"parametrization": "boundary"},
+    )
+    with pytest.raises(StepError, match="random basis at the learned rank") as err:
+        _draw(tmp_path, source, "r", seed=0)
+    assert "θ = 0.500" in str(err.value) and "random_subspace_control" in str(err.value)

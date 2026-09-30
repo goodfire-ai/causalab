@@ -1,0 +1,10 @@
+[
+  {
+    "example_id": "0",
+    "metric": "p_seattle",
+    "value": "{\"Seattle\": 0.13062365353107452}",
+    "unit": "fraction",
+    "estimand_version": "class_probs/v1",
+    "eligible": true
+  }
+]

@@ -1,0 +1,557 @@
+{
+  "version": "1",
+  "description": "Figure 3a of Todd et al. 2024 (arXiv:2310.15213) and a DBM extension on GPT-J 6B: harvest every head's mean output over clean 10-shot prompts per task (mean_heads_early, mean_heads_late); put each head's mean alone into shuffled-label prompts (scan_early, scan_late), which scripts/function_vectors_fig3a/fig3a_figure.py averages into the indirect effect of Figure 3a; harvest each layer's mean (mean_L0 to mean_L27); fit one head-grouped gate per layer that sets the selected heads to their means, six tasks per step (dbm_fit_1 to dbm_fit_3, Davies et al. 2023, arXiv:2307.03637), and replay the gates on held-out prompts (dbm_apply_1 to dbm_apply_3).",
+  "output_dir": "function_vectors_fig3a",
+  "steps": {
+    "mean_heads_early": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_heads.json"
+    },
+    "mean_heads_late": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_heads.json",
+      "set": {
+        "sites.target.layers": {
+          "sweep": {
+            "range": [
+              14,
+              28
+            ]
+          }
+        }
+      }
+    },
+    "scan_early": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_scan.json"
+    },
+    "scan_late": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_scan.json",
+      "set": {
+        "sites.target.layers": {
+          "sweep": {
+            "range": [
+              14,
+              28
+            ]
+          }
+        },
+        "params.mu.file_path": "mean_heads_late/mean.safetensors"
+      }
+    },
+    "mean_L0": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json"
+    },
+    "mean_L1": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          1
+        ]
+      }
+    },
+    "mean_L2": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          2
+        ]
+      }
+    },
+    "mean_L3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          3
+        ]
+      }
+    },
+    "mean_L4": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          4
+        ]
+      }
+    },
+    "mean_L5": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          5
+        ]
+      }
+    },
+    "mean_L6": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          6
+        ]
+      }
+    },
+    "mean_L7": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          7
+        ]
+      }
+    },
+    "mean_L8": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          8
+        ]
+      }
+    },
+    "mean_L9": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          9
+        ]
+      }
+    },
+    "mean_L10": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          10
+        ]
+      }
+    },
+    "mean_L11": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          11
+        ]
+      }
+    },
+    "mean_L12": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          12
+        ]
+      }
+    },
+    "mean_L13": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          13
+        ]
+      }
+    },
+    "mean_L14": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          14
+        ]
+      }
+    },
+    "mean_L15": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          15
+        ]
+      }
+    },
+    "mean_L16": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          16
+        ]
+      }
+    },
+    "mean_L17": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          17
+        ]
+      }
+    },
+    "mean_L18": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          18
+        ]
+      }
+    },
+    "mean_L19": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          19
+        ]
+      }
+    },
+    "mean_L20": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          20
+        ]
+      }
+    },
+    "mean_L21": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          21
+        ]
+      }
+    },
+    "mean_L22": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          22
+        ]
+      }
+    },
+    "mean_L23": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          23
+        ]
+      }
+    },
+    "mean_L24": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          24
+        ]
+      }
+    },
+    "mean_L25": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          25
+        ]
+      }
+    },
+    "mean_L26": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          26
+        ]
+      }
+    },
+    "mean_L27": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_mean_layer.json",
+      "set": {
+        "sites.target.layers": [
+          27
+        ]
+      }
+    },
+    "dbm_fit_1": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_dbm_fit.json",
+      "set": {
+        "axes.task.rows": [
+          {
+            "task": "antonym",
+            "fit": "function_vectors_fig3a/fit#antonym",
+            "heldout": "function_vectors_fig3a/heldout#antonym"
+          },
+          {
+            "task": "capitalize",
+            "fit": "function_vectors_fig3a/fit#capitalize",
+            "heldout": "function_vectors_fig3a/heldout#capitalize"
+          },
+          {
+            "task": "capitalize_first_letter",
+            "fit": "function_vectors_fig3a/fit#capitalize_first_letter",
+            "heldout": "function_vectors_fig3a/heldout#capitalize_first_letter"
+          },
+          {
+            "task": "country-capital",
+            "fit": "function_vectors_fig3a/fit#country-capital",
+            "heldout": "function_vectors_fig3a/heldout#country-capital"
+          },
+          {
+            "task": "country-currency",
+            "fit": "function_vectors_fig3a/fit#country-currency",
+            "heldout": "function_vectors_fig3a/heldout#country-currency"
+          },
+          {
+            "task": "english-french",
+            "fit": "function_vectors_fig3a/fit#english-french",
+            "heldout": "function_vectors_fig3a/heldout#english-french"
+          }
+        ]
+      }
+    },
+    "dbm_fit_2": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_dbm_fit.json",
+      "set": {
+        "axes.task.rows": [
+          {
+            "task": "english-german",
+            "fit": "function_vectors_fig3a/fit#english-german",
+            "heldout": "function_vectors_fig3a/heldout#english-german"
+          },
+          {
+            "task": "english-spanish",
+            "fit": "function_vectors_fig3a/fit#english-spanish",
+            "heldout": "function_vectors_fig3a/heldout#english-spanish"
+          },
+          {
+            "task": "landmark-country",
+            "fit": "function_vectors_fig3a/fit#landmark-country",
+            "heldout": "function_vectors_fig3a/heldout#landmark-country"
+          },
+          {
+            "task": "lowercase_first_letter",
+            "fit": "function_vectors_fig3a/fit#lowercase_first_letter",
+            "heldout": "function_vectors_fig3a/heldout#lowercase_first_letter"
+          },
+          {
+            "task": "national_parks",
+            "fit": "function_vectors_fig3a/fit#national_parks",
+            "heldout": "function_vectors_fig3a/heldout#national_parks"
+          },
+          {
+            "task": "park-country",
+            "fit": "function_vectors_fig3a/fit#park-country",
+            "heldout": "function_vectors_fig3a/heldout#park-country"
+          }
+        ]
+      }
+    },
+    "dbm_fit_3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_dbm_fit.json",
+      "set": {
+        "axes.task.rows": [
+          {
+            "task": "person-sport",
+            "fit": "function_vectors_fig3a/fit#person-sport",
+            "heldout": "function_vectors_fig3a/heldout#person-sport"
+          },
+          {
+            "task": "present-past",
+            "fit": "function_vectors_fig3a/fit#present-past",
+            "heldout": "function_vectors_fig3a/heldout#present-past"
+          },
+          {
+            "task": "product-company",
+            "fit": "function_vectors_fig3a/fit#product-company",
+            "heldout": "function_vectors_fig3a/heldout#product-company"
+          },
+          {
+            "task": "sentiment",
+            "fit": "function_vectors_fig3a/fit#sentiment",
+            "heldout": "function_vectors_fig3a/heldout#sentiment"
+          },
+          {
+            "task": "singular-plural",
+            "fit": "function_vectors_fig3a/fit#singular-plural",
+            "heldout": "function_vectors_fig3a/heldout#singular-plural"
+          },
+          {
+            "task": "synonym",
+            "fit": "function_vectors_fig3a/fit#synonym",
+            "heldout": "function_vectors_fig3a/heldout#synonym"
+          }
+        ]
+      }
+    },
+    "dbm_apply_1": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_dbm_apply.json",
+      "set": {
+        "axes.task.rows": [
+          {
+            "task": "antonym",
+            "heldout": "function_vectors_fig3a/heldout#antonym"
+          },
+          {
+            "task": "capitalize",
+            "heldout": "function_vectors_fig3a/heldout#capitalize"
+          },
+          {
+            "task": "capitalize_first_letter",
+            "heldout": "function_vectors_fig3a/heldout#capitalize_first_letter"
+          },
+          {
+            "task": "country-capital",
+            "heldout": "function_vectors_fig3a/heldout#country-capital"
+          },
+          {
+            "task": "country-currency",
+            "heldout": "function_vectors_fig3a/heldout#country-currency"
+          },
+          {
+            "task": "english-french",
+            "heldout": "function_vectors_fig3a/heldout#english-french"
+          }
+        ]
+      }
+    },
+    "dbm_apply_2": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_dbm_apply.json",
+      "set": {
+        "axes.task.rows": [
+          {
+            "task": "english-german",
+            "heldout": "function_vectors_fig3a/heldout#english-german"
+          },
+          {
+            "task": "english-spanish",
+            "heldout": "function_vectors_fig3a/heldout#english-spanish"
+          },
+          {
+            "task": "landmark-country",
+            "heldout": "function_vectors_fig3a/heldout#landmark-country"
+          },
+          {
+            "task": "lowercase_first_letter",
+            "heldout": "function_vectors_fig3a/heldout#lowercase_first_letter"
+          },
+          {
+            "task": "national_parks",
+            "heldout": "function_vectors_fig3a/heldout#national_parks"
+          },
+          {
+            "task": "park-country",
+            "heldout": "function_vectors_fig3a/heldout#park-country"
+          }
+        ],
+        "featurizers.gate_L0.file_path": "dbm_fit_2/gate_L0.safetensors",
+        "featurizers.gate_L1.file_path": "dbm_fit_2/gate_L1.safetensors",
+        "featurizers.gate_L2.file_path": "dbm_fit_2/gate_L2.safetensors",
+        "featurizers.gate_L3.file_path": "dbm_fit_2/gate_L3.safetensors",
+        "featurizers.gate_L4.file_path": "dbm_fit_2/gate_L4.safetensors",
+        "featurizers.gate_L5.file_path": "dbm_fit_2/gate_L5.safetensors",
+        "featurizers.gate_L6.file_path": "dbm_fit_2/gate_L6.safetensors",
+        "featurizers.gate_L7.file_path": "dbm_fit_2/gate_L7.safetensors",
+        "featurizers.gate_L8.file_path": "dbm_fit_2/gate_L8.safetensors",
+        "featurizers.gate_L9.file_path": "dbm_fit_2/gate_L9.safetensors",
+        "featurizers.gate_L10.file_path": "dbm_fit_2/gate_L10.safetensors",
+        "featurizers.gate_L11.file_path": "dbm_fit_2/gate_L11.safetensors",
+        "featurizers.gate_L12.file_path": "dbm_fit_2/gate_L12.safetensors",
+        "featurizers.gate_L13.file_path": "dbm_fit_2/gate_L13.safetensors",
+        "featurizers.gate_L14.file_path": "dbm_fit_2/gate_L14.safetensors",
+        "featurizers.gate_L15.file_path": "dbm_fit_2/gate_L15.safetensors",
+        "featurizers.gate_L16.file_path": "dbm_fit_2/gate_L16.safetensors",
+        "featurizers.gate_L17.file_path": "dbm_fit_2/gate_L17.safetensors",
+        "featurizers.gate_L18.file_path": "dbm_fit_2/gate_L18.safetensors",
+        "featurizers.gate_L19.file_path": "dbm_fit_2/gate_L19.safetensors",
+        "featurizers.gate_L20.file_path": "dbm_fit_2/gate_L20.safetensors",
+        "featurizers.gate_L21.file_path": "dbm_fit_2/gate_L21.safetensors",
+        "featurizers.gate_L22.file_path": "dbm_fit_2/gate_L22.safetensors",
+        "featurizers.gate_L23.file_path": "dbm_fit_2/gate_L23.safetensors",
+        "featurizers.gate_L24.file_path": "dbm_fit_2/gate_L24.safetensors",
+        "featurizers.gate_L25.file_path": "dbm_fit_2/gate_L25.safetensors",
+        "featurizers.gate_L26.file_path": "dbm_fit_2/gate_L26.safetensors",
+        "featurizers.gate_L27.file_path": "dbm_fit_2/gate_L27.safetensors"
+      }
+    },
+    "dbm_apply_3": {
+      "type": "intervention_protocol",
+      "document": "../protocols/function_vectors_fig3a_dbm_apply.json",
+      "set": {
+        "axes.task.rows": [
+          {
+            "task": "person-sport",
+            "heldout": "function_vectors_fig3a/heldout#person-sport"
+          },
+          {
+            "task": "present-past",
+            "heldout": "function_vectors_fig3a/heldout#present-past"
+          },
+          {
+            "task": "product-company",
+            "heldout": "function_vectors_fig3a/heldout#product-company"
+          },
+          {
+            "task": "sentiment",
+            "heldout": "function_vectors_fig3a/heldout#sentiment"
+          },
+          {
+            "task": "singular-plural",
+            "heldout": "function_vectors_fig3a/heldout#singular-plural"
+          },
+          {
+            "task": "synonym",
+            "heldout": "function_vectors_fig3a/heldout#synonym"
+          }
+        ],
+        "featurizers.gate_L0.file_path": "dbm_fit_3/gate_L0.safetensors",
+        "featurizers.gate_L1.file_path": "dbm_fit_3/gate_L1.safetensors",
+        "featurizers.gate_L2.file_path": "dbm_fit_3/gate_L2.safetensors",
+        "featurizers.gate_L3.file_path": "dbm_fit_3/gate_L3.safetensors",
+        "featurizers.gate_L4.file_path": "dbm_fit_3/gate_L4.safetensors",
+        "featurizers.gate_L5.file_path": "dbm_fit_3/gate_L5.safetensors",
+        "featurizers.gate_L6.file_path": "dbm_fit_3/gate_L6.safetensors",
+        "featurizers.gate_L7.file_path": "dbm_fit_3/gate_L7.safetensors",
+        "featurizers.gate_L8.file_path": "dbm_fit_3/gate_L8.safetensors",
+        "featurizers.gate_L9.file_path": "dbm_fit_3/gate_L9.safetensors",
+        "featurizers.gate_L10.file_path": "dbm_fit_3/gate_L10.safetensors",
+        "featurizers.gate_L11.file_path": "dbm_fit_3/gate_L11.safetensors",
+        "featurizers.gate_L12.file_path": "dbm_fit_3/gate_L12.safetensors",
+        "featurizers.gate_L13.file_path": "dbm_fit_3/gate_L13.safetensors",
+        "featurizers.gate_L14.file_path": "dbm_fit_3/gate_L14.safetensors",
+        "featurizers.gate_L15.file_path": "dbm_fit_3/gate_L15.safetensors",
+        "featurizers.gate_L16.file_path": "dbm_fit_3/gate_L16.safetensors",
+        "featurizers.gate_L17.file_path": "dbm_fit_3/gate_L17.safetensors",
+        "featurizers.gate_L18.file_path": "dbm_fit_3/gate_L18.safetensors",
+        "featurizers.gate_L19.file_path": "dbm_fit_3/gate_L19.safetensors",
+        "featurizers.gate_L20.file_path": "dbm_fit_3/gate_L20.safetensors",
+        "featurizers.gate_L21.file_path": "dbm_fit_3/gate_L21.safetensors",
+        "featurizers.gate_L22.file_path": "dbm_fit_3/gate_L22.safetensors",
+        "featurizers.gate_L23.file_path": "dbm_fit_3/gate_L23.safetensors",
+        "featurizers.gate_L24.file_path": "dbm_fit_3/gate_L24.safetensors",
+        "featurizers.gate_L25.file_path": "dbm_fit_3/gate_L25.safetensors",
+        "featurizers.gate_L26.file_path": "dbm_fit_3/gate_L26.safetensors",
+        "featurizers.gate_L27.file_path": "dbm_fit_3/gate_L27.safetensors"
+      }
+    }
+  }
+}

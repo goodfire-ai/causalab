@@ -20,7 +20,7 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.errors import (
+from causalab.protocol.rules.errors import (
     RULES,
     RULES_BY_NUMBER,
     ParseError,
@@ -31,18 +31,42 @@ from causalab.protocol.errors import (
     lookup_rule,
     rule_registry,
 )
-from causalab.protocol.loader import load
-from causalab.protocol.schema import parse_document
-from causalab.protocol.sweep import expand
-from causalab.protocol.validate import validate_document
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.schema import GATE_MAPS, parse_document
+from causalab.neural.shared.sweep import expand
+from causalab.protocol.rules.document import validate_document
 
-from tests.protocol._docs import base_doc, in_order
+from tests.protocol._docs import (
+    LOGIT_DIFF,
+    UNWRITTEN,
+    base_doc,
+    in_order,
+    saved,
+    term,
+)
+
 
 pytestmark = pytest.mark.unit
 
 
 def parse_and_validate(raw: dict[str, Any], **kwargs: Any) -> None:
     validate_document(parse_document(in_order(raw)), **kwargs)
+
+
+def _ld(**extra: Any) -> dict[str, Any]:
+    """``base_doc``'s logit difference as an objective (or eval) term: the
+    ``ld`` the ancestor's ``[w, "ld"]`` named, bound where it is consumed
+    (§2.11)."""
+    return term("logits", "patched", dict(LOGIT_DIFF), **extra)
+
+
+def _without_the_counterfactual_read(doc: dict[str, Any]) -> dict[str, Any]:
+    """Drop ``v_cf`` and, with it, the un-intervened model that existed only
+    to take it: a model nobody reads is refused at parse (§2.9), so the two
+    go together whenever a test replaces the swap's operand."""
+    del doc["method"]["reads"]["v_cf"]
+    del doc["method"]["intervened_models"][UNWRITTEN]
+    return doc
 
 
 def expect_rule(rule: int, raw: dict[str, Any], **kwargs: Any) -> ValidationError:
@@ -112,9 +136,7 @@ def test_rule_2_section_order_warns_and_parses():
 def test_rule_2_save_not_last_warns_and_parses():
     doc = base_doc()
     save = doc["method"].pop("save")
-    metrics = doc["method"].pop("metrics")
-    doc["method"]["save"] = save
-    doc["method"]["metrics"] = metrics
+    doc["method"] = {"save": save, **doc["method"]}
     with pytest.warns(ProtocolWarning, match="recommended"):
         parse_document(doc)
 
@@ -129,7 +151,7 @@ def test_rule_2_the_warning_names_the_recommended_order():
     with pytest.warns(ProtocolWarning) as caught:
         parse_document(doc)
     message = str(caught[0].message)
-    assert "recommended ['sites'" in message
+    assert "recommended ['intervened_models'" in message
     assert message.rstrip().endswith("(§5 rule 2)")
 
 
@@ -153,27 +175,19 @@ def test_a_missing_save_is_still_refused():
 
 def test_rule_3_duplicate_name_across_sections():
     doc = base_doc()
-    doc["method"]["reads"]["tgt"] = {
-        "site": "tgt",
-        "pos": -1,
-        "model": "original",
+    doc["method"]["reads"]["tgt"] = {"site": "tgt", "pos": -1}
+    doc["method"]["intervened_models"]["original_base"] = {
         "input": "base",
+        "reads": ["tgt"],
     }
-    doc["method"]["save"].append(
-        {
-            "value": "tgt",
-            "model": "original",
-            "input": "base",
-            "file_path": "t.safetensors",
-        }
-    )
+    doc["method"]["save"].append(saved("tgt", "original_base", "t.safetensors"))
     expect_rule(3, doc)
 
 
 def test_rule_3_reserved_name():
     doc = base_doc()
-    doc["method"]["positions"] = {"original": {"index": -1}}
-    doc["method"]["reads"]["v_cf"]["pos"] = "original"
+    doc["method"]["positions"] = {"base": {"index": -1}}
+    doc["method"]["reads"]["v_cf"]["pos"] = "base"
     expect_rule(3, doc)
 
 
@@ -196,7 +210,7 @@ def test_rule_4_unknown_site():
 
 def test_rule_4_metric_on_non_lm_head_read():
     doc = base_doc()
-    doc["method"]["metrics"]["ld"]["of"] = "v_cf"
+    doc["method"]["save"][0].update(read="v_cf", model=UNWRITTEN)
     expect_rule(4, doc)
 
 
@@ -206,24 +220,20 @@ def test_rule_4_metric_on_non_lm_head_read():
         {
             "kind": "class_probs",
             "groups": {"days": ["Monday"]},
-            "token_form": "space_prefixed",
         },
         {
             "kind": "token_logits",
             "tokens": ["Monday", "Friday"],
-            "token_form": "space_prefixed",
         },
         {
             "kind": "token_logit",
             "token": "cf_answer",
-            "token_form": "space_prefixed",
         },
         {
             "kind": "cross_entropy",
             "target": "cf_answer",
-            "token_form": "space_prefixed",
         },
-        {"kind": "match", "expected": "cf_answer", "token_form": "space_prefixed"},
+        {"kind": "match", "expected": "cf_answer"},
     ],
 )
 def test_rule_4_still_binds_the_token_space_kinds_to_lm_head(spec):
@@ -231,15 +241,7 @@ def test_rule_4_still_binds_the_token_space_kinds_to_lm_head(spec):
     these resolves an authored string to a token id, which only an
     ``lm_head`` read can be indexed by."""
     doc = base_doc()
-    doc["method"]["metrics"]["m"] = {"of": "v_cf", **spec}
-    doc["method"]["save"].append(
-        {
-            "value": "m",
-            "model": "original",
-            "input": "counterfactual",
-            "file_path": "m.json",
-        }
-    )
+    doc["method"]["save"].append(saved("v_cf", UNWRITTEN, "m.json", spec))
     expect_rule(4, doc)
 
 
@@ -247,19 +249,10 @@ def test_rule_4_top_k_binds_to_a_read_at_any_component():
     """The point of the change: a top-k over a wide read is the reduction that
     keeps the wide tensor off disk, so it must be expressible."""
     doc = base_doc()
-    doc["method"]["metrics"]["tk"] = {
-        "kind": "top_k",
-        "of": "v_cf",
-        "k": 4,
-        "by": "abs_value",
-    }
     doc["method"]["save"].append(
-        {
-            "value": "tk",
-            "model": "original",
-            "input": "counterfactual",
-            "file_path": "tk.json",
-        }
+        saved(
+            "v_cf", UNWRITTEN, "tk.json", {"kind": "top_k", "k": 4, "by": "abs_value"}
+        )
     )
     parse_and_validate(doc)
 
@@ -268,19 +261,8 @@ def test_rule_4_top_k_by_prob_off_lm_head_is_refused():
     """A softmax across a residual stream normalizes over an axis that is not
     an event space — the resulting numbers are probabilities of nothing."""
     doc = base_doc()
-    doc["method"]["metrics"]["tk"] = {
-        "kind": "top_k",
-        "of": "v_cf",
-        "k": 4,
-        "by": "prob",
-    }
     doc["method"]["save"].append(
-        {
-            "value": "tk",
-            "model": "original",
-            "input": "counterfactual",
-            "file_path": "tk.json",
-        }
+        saved("v_cf", UNWRITTEN, "tk.json", {"kind": "top_k", "k": 4, "by": "prob"})
     )
     err = expect_rule(4, doc)
     assert "prob" in str(err)
@@ -288,14 +270,8 @@ def test_rule_4_top_k_by_prob_off_lm_head_is_refused():
 
 def test_rule_4_top_k_by_prob_on_lm_head_is_legal():
     doc = base_doc()
-    doc["method"]["metrics"]["tk"] = {
-        "kind": "top_k",
-        "of": "logits",
-        "k": 4,
-        "by": "prob",
-    }
     doc["method"]["save"].append(
-        {"value": "tk", "model": "patched", "input": "base", "file_path": "tk.json"}
+        saved("logits", "patched", "tk.json", {"kind": "top_k", "k": 4, "by": "prob"})
     )
     parse_and_validate(doc)
 
@@ -304,13 +280,8 @@ def _lm_head_read_through(**extra: object) -> dict[str, Any]:
     """A doc with a second lm_head read that does NOT hand the projection on
     unchanged — the site says vocabulary, the read's value is not."""
     doc = base_doc()
-    doc["method"]["reads"]["flogits"] = {
-        "site": "lm_head",
-        "pos": -1,
-        "model": "patched",
-        "input": "base",
-        **extra,
-    }
+    doc["method"]["reads"]["flogits"] = {"site": "lm_head", "pos": -1, **extra}
+    doc["method"]["intervened_models"]["patched"]["reads"].append("flogits")
     return doc
 
 
@@ -323,14 +294,8 @@ def test_rule_4_top_k_by_prob_over_a_featurized_lm_head_read_is_refused():
     doc["method"]["featurizers"] = {
         "f": {"kind": "subspace", "k": 4, "parametrization": "cayley"}
     }
-    doc["method"]["metrics"]["tk"] = {
-        "kind": "top_k",
-        "of": "flogits",
-        "k": 2,
-        "by": "prob",
-    }
     doc["method"]["save"].append(
-        {"value": "tk", "model": "patched", "input": "base", "file_path": "tk.json"}
+        saved("flogits", "patched", "tk.json", {"kind": "top_k", "k": 2, "by": "prob"})
     )
     err = expect_rule(4, doc)
     assert "featurizer" in str(err)
@@ -340,14 +305,8 @@ def test_rule_4_top_k_by_prob_over_a_dims_sliced_lm_head_read_is_refused():
     """`dims` re-indexes a slice, so entry j is no longer token j — the same
     hole as the featurizer, through the other read transform."""
     doc = _lm_head_read_through(dims=[0, 1, 2])
-    doc["method"]["metrics"]["tk"] = {
-        "kind": "top_k",
-        "of": "flogits",
-        "k": 2,
-        "by": "prob",
-    }
     doc["method"]["save"].append(
-        {"value": "tk", "model": "patched", "input": "base", "file_path": "tk.json"}
+        saved("flogits", "patched", "tk.json", {"kind": "top_k", "k": 2, "by": "prob"})
     )
     err = expect_rule(4, doc)
     assert "dims" in str(err)
@@ -361,14 +320,8 @@ def test_rule_4_top_k_by_value_over_a_featurized_lm_head_read_is_legal():
     doc["method"]["featurizers"] = {
         "f": {"kind": "subspace", "k": 4, "parametrization": "cayley"}
     }
-    doc["method"]["metrics"]["tk"] = {
-        "kind": "top_k",
-        "of": "flogits",
-        "k": 2,
-        "by": "value",
-    }
     doc["method"]["save"].append(
-        {"value": "tk", "model": "patched", "input": "base", "file_path": "tk.json"}
+        saved("flogits", "patched", "tk.json", {"kind": "top_k", "k": 2, "by": "value"})
     )
     parse_and_validate(doc)
 
@@ -381,26 +334,29 @@ def test_rule_4_a_token_space_kind_over_a_featurized_lm_head_read_is_refused():
     doc["method"]["featurizers"] = {
         "f": {"kind": "subspace", "k": 4, "parametrization": "cayley"}
     }
-    doc["method"]["metrics"]["m"] = {
-        "kind": "match",
-        "of": "flogits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed",
-    }
     doc["method"]["save"].append(
-        {"value": "m", "model": "patched", "input": "base", "file_path": "m.json"}
+        saved(
+            "flogits",
+            "patched",
+            "m.json",
+            {"kind": "match", "expected": "cf_answer"},
+        )
     )
     err = expect_rule(4, doc)
     assert "featurizer" in str(err)
 
 
 def _token_logits_over(read: str) -> dict[str, Any]:
-    return {
-        "kind": "token_logits",
-        "of": read,
-        "tokens": ["Monday", "Friday"],
-        "token_form": "space_prefixed",
-    }
+    """A save entry tabulating two answer logits of ``read`` on ``patched``."""
+    return saved(
+        read,
+        "patched",
+        "a.json",
+        {
+            "kind": "token_logits",
+            "tokens": ["Monday", "Friday"],
+        },
+    )
 
 
 def test_rule_4_token_logits_over_a_featurized_lm_head_read_is_refused():
@@ -412,20 +368,14 @@ def test_rule_4_token_logits_over_a_featurized_lm_head_read_is_refused():
     doc["method"]["featurizers"] = {
         "f": {"kind": "subspace", "k": 4, "parametrization": "cayley"}
     }
-    doc["method"]["metrics"]["answers"] = _token_logits_over("flogits")
-    doc["method"]["save"].append(
-        {"value": "answers", "model": "patched", "input": "base", "file_path": "a.json"}
-    )
+    doc["method"]["save"].append(_token_logits_over("flogits"))
     err = expect_rule(4, doc)
     assert "featurizer" in str(err)
 
 
 def test_rule_4_token_logits_over_a_dims_sliced_lm_head_read_is_refused():
     doc = _lm_head_read_through(dims=[0, 1, 2])
-    doc["method"]["metrics"]["answers"] = _token_logits_over("flogits")
-    doc["method"]["save"].append(
-        {"value": "answers", "model": "patched", "input": "base", "file_path": "a.json"}
-    )
+    doc["method"]["save"].append(_token_logits_over("flogits"))
     err = expect_rule(4, doc)
     assert "dims" in str(err)
 
@@ -433,35 +383,37 @@ def test_rule_4_token_logits_over_a_dims_sliced_lm_head_read_is_refused():
 def test_rule_4_token_logits_over_a_plain_lm_head_read_is_legal():
     """Anti-vacuity for the two refusals above."""
     doc = base_doc()
-    doc["method"]["metrics"]["answers"] = _token_logits_over("logits")
-    doc["method"]["save"].append(
-        {"value": "answers", "model": "patched", "input": "base", "file_path": "a.json"}
-    )
+    doc["method"]["save"].append(_token_logits_over("logits"))
     parse_and_validate(doc)
 
 
 # rule 5 — read bindings ------------------------------------------------------ #
 
 
-def test_rule_5_read_input_contradicts_im():
+def test_rule_5_save_entry_names_a_model_that_does_not_list_the_read():
+    """A save entry's ``{"read", "model"}`` is a binding, and the model it
+    names has to take the read (§2.9)."""
     doc = base_doc()
-    doc["method"]["reads"]["logits"]["input"] = "counterfactual"
-    expect_rule(5, doc)
+    doc["method"]["save"][0]["model"] = "original_counterfactual"
+    err = expect_rule(5, doc)
+    assert "'logits'" in str(err) and "'original_counterfactual'" in str(err)
 
 
 def test_rule_5_read_model_undeclared():
     doc = base_doc()
-    doc["method"]["reads"]["logits"]["model"] = "ghost"
-    expect_rule(5, doc)
+    doc["method"]["save"][0]["model"] = "ghost"
+    err = expect_rule(5, doc)
+    assert "'ghost'" in str(err)
 
 
 # rule 6 — operands are reads, params, or literal scalars --------------------- #
 
 
-def test_rule_6_operand_names_a_metric():
+def test_rule_6_operand_names_a_site():
     doc = base_doc()
-    doc["method"]["writes"]["patch"]["do"] = {"swap": "ld"}
-    expect_rule(6, doc)
+    doc["method"]["writes"]["patch"]["do"] = {"swap": "tgt"}
+    err = expect_rule(6, doc)
+    assert "names a sites entry" in str(err)
 
 
 # rule 7 — membership + acyclicity -------------------------------------------- #
@@ -479,27 +431,18 @@ def test_rule_7_write_in_no_im():
 
 def test_rule_7_model_graph_cycle():
     doc = base_doc()
-    doc["method"]["reads"]["r_a"] = {
-        "site": "tgt",
-        "pos": -1,
-        "model": "im_a",
-        "input": "base",
-    }
-    doc["method"]["reads"]["r_b"] = {
-        "site": "tgt",
-        "pos": -1,
-        "model": "im_b",
-        "input": "base",
-    }
+    del doc["method"]["reads"]["v_cf"]
+    doc["method"]["reads"]["r_a"] = {"site": "tgt", "pos": -1}
+    doc["method"]["reads"]["r_b"] = {"site": "tgt", "pos": -1}
     doc["method"]["writes"] = {
         "e_a": {"site": "tgt", "pos": -1, "do": {"swap": "r_b"}},
         "e_b": {"site": "tgt", "pos": -1, "do": {"swap": "r_a"}},
     }
     doc["method"]["intervened_models"] = {
-        "im_a": {"input": "base", "writes": ["e_a"]},
-        "im_b": {"input": "base", "writes": ["e_b"]},
+        "im_a": {"input": "base", "reads": ["r_a", "logits"], "writes": ["e_a"]},
+        "im_b": {"input": "base", "reads": ["r_b"], "writes": ["e_b"]},
     }
-    doc["method"]["reads"]["logits"]["model"] = "im_a"
+    doc["method"]["save"][0]["model"] = "im_a"
     expect_rule(7, doc)
 
 
@@ -614,26 +557,15 @@ def test_rule_9_disjoint_dims_absolutes_are_legal():
 # rule 10 — the save manifest --------------------------------------------------- #
 
 
-def test_rule_10_metric_not_saved():
-    # the read is saved plain (a dims slice on an lm_head read feeding a
-    # token-space metric is now a rule-4 error of its own); the point here is
-    # only that the declared metric never appears in `save`
+def test_rule_10_a_raw_read_alone_is_a_complete_manifest():
+    """An aggregation lives on the entry that consumes it (§2.10), so a
+    manifest that saves the bound read plain and aggregates nothing has
+    nothing left unsaved."""
     doc = base_doc()
     doc["method"]["save"] = [
-        {
-            "value": "logits",
-            "model": "patched",
-            "input": "base",
-            "file_path": "l.safetensors",
-        }
+        {"read": "logits", "model": "patched", "file_path": "l.safetensors"}
     ]
-    expect_rule(10, doc)
-
-
-def test_rule_10_binding_mismatch():
-    doc = base_doc()
-    doc["method"]["save"][0]["model"] = "original"
-    expect_rule(10, doc)
+    parse_and_validate(doc)
 
 
 def test_rule_10_untrained_featurizer_not_saveable():
@@ -664,7 +596,7 @@ def test_rule_10_reduce_on_a_featurizer_bundle_refused():
     doc["method"]["reads"]["v_cf"]["featurizer"] = "rot"
     doc["method"]["writes"]["patch"]["featurizer"] = "rot"
     doc["method"]["train"] = {
-        "objective": [[1.0, "ld"]],
+        "objective": [[1.0, _ld()]],
         "params": ["rot"],
         "optimizer": {"name": "adam", "lr": 0.001},
         "steps": {"epochs": 1},
@@ -678,19 +610,17 @@ def test_rule_10_reduce_on_a_featurizer_bundle_refused():
             "reduce": "mean",
         }
     )
-    expect_rule(10, doc)
+    # a featurizer bundle's entry has no `reduce` field at all: refused as an
+    # unknown key at parse (§2.12: `reduce` applies to read entries)
+    with pytest.raises(ParseError) as err:
+        parse_document(in_order(doc))
+    assert err.value.code == "P3" and "reduce" in str(err.value)
 
 
 def test_a_reduced_read_is_a_valid_save():
     doc = base_doc()
     doc["method"]["save"].append(
-        {
-            "value": "v_cf",
-            "model": "original",
-            "input": "counterfactual",
-            "reduce": "mean",
-            "file_path": "mean.safetensors",
-        }
+        saved("v_cf", UNWRITTEN, "mean.safetensors", reduce="mean")
     )
     parse_and_validate(doc)
 
@@ -735,11 +665,10 @@ def test_a_featurizer_may_not_rename_its_slots():
 
 def test_rule_11_dead_read():
     doc = base_doc()
-    doc["method"]["reads"]["extra"] = {
-        "site": "tgt",
-        "pos": -1,
-        "model": "original",
+    doc["method"]["reads"]["extra"] = {"site": "tgt", "pos": -1}
+    doc["method"]["intervened_models"]["original_base"] = {
         "input": "base",
+        "reads": ["extra"],
     }
     expect_rule(11, doc)
 
@@ -765,22 +694,15 @@ def test_rule_12_loaded_featurizer_trained():
     }
     doc["method"]["reads"]["v_cf"]["featurizer"] = "rot"
     doc["method"]["writes"]["patch"]["featurizer"] = "rot"
-    doc["method"]["metrics"]["ce"] = {
-        "kind": "cross_entropy",
-        "of": "logits",
-        "target": "label",
-        "token_form": "space_prefixed",
-    }
+    ce = {"kind": "cross_entropy", "target": "label"}
     doc["method"]["train"] = {
-        "objective": [[1.0, "ce"]],
+        "objective": [[1.0, term("logits", "patched", ce)]],
         "params": ["rot"],
         "optimizer": {"name": "adamw", "lr": 1e-3},
         "steps": {"epochs": 1},
         "batch": {"pairs": 2},
     }
-    doc["method"]["save"].append(
-        {"value": "ce", "model": "patched", "input": "base", "file_path": "ce.json"}
-    )
+    doc["method"]["save"].append(saved("logits", "patched", "ce.json", dict(ce)))
     doc["method"]["save"].append(
         {"value": "rot", "site": "tgt", "file_path": "rot.safetensors"}
     )
@@ -876,7 +798,8 @@ def test_rule_13_pytorch_fn_on_non_local_engine():
         "relu": {"locator": "tests.protocol._code_under_test.scale"}
     }
     doc["method"]["writes"]["patch"]["do"] = {"pytorch_fn": {"code": "relu"}}
-    del doc["method"]["reads"]["v_cf"]  # no longer an operand; would trip the sink rule
+    # no longer an operand; would trip the sink rule
+    _without_the_counterfactual_read(doc)
     expect_rule(13, doc, engine_is_local=False)
     parse_and_validate(doc, engine_is_local=True)  # a local engine may run it
 
@@ -891,7 +814,7 @@ def test_rule_24_locator_naming_no_python_source():
     doc = base_doc()
     doc["method"]["code"] = {"corrupt": {"locator": "no_such_package_anywhere.corrupt"}}
     doc["method"]["writes"]["patch"]["do"] = {"pytorch_fn": {"code": "corrupt"}}
-    del doc["method"]["reads"]["v_cf"]
+    _without_the_counterfactual_read(doc)
     expect_rule(24, doc)
 
 
@@ -909,7 +832,7 @@ def test_rule_25_row_roles_need_the_resolved_data():
         }
     }
     doc["method"]["writes"]["patch"]["do"] = {"pytorch_fn": {"code": "corrupt"}}
-    del doc["method"]["reads"]["v_cf"]
+    _without_the_counterfactual_read(doc)
     parse_and_validate(doc)
 
 
@@ -943,26 +866,26 @@ def test_rule_15_missing_artifact(env):
         "key": "best_layer",
     }
     with pytest.raises(ValidationError) as err:
-        load(in_order(doc), env)
+        compile_protocol(in_order(doc), env=env)
     assert err.value.rule == 15
 
 
 def test_rule_15_artifact_identity_mismatch(env):
     doc = base_doc()
-    doc["model"] = {"key": "meta-llama/Llama-3.1-8B", "revision": "main"}
+    doc["model"] = {"key": "Qwen/Qwen3-8B", "revision": "main"}
     doc["method"]["sites"]["tgt"] = {"component": "block_output", "layers": [18]}
     doc["method"]["featurizers"] = {
         "rot": {
             "kind": "subspace",
             "k": 16,  # the fixture bundle was fitted with k=8
             "parametrization": "cayley",
-            "file_path": "artifacts/weekdays/llama31_8b/subspace/rot_k8.safetensors",
+            "file_path": "artifacts/weekdays/qwen3_8b/subspace/rot_k8.safetensors",
         }
     }
     doc["method"]["reads"]["v_cf"]["featurizer"] = "rot"
     doc["method"]["writes"]["patch"]["featurizer"] = "rot"
     with pytest.raises(ValidationError) as err:
-        load(in_order(doc), env)
+        compile_protocol(in_order(doc), env=env)
     assert err.value.rule == 15
     assert "ArtifactIdentity" in str(err.value)
 
@@ -971,7 +894,7 @@ def test_rule_15_artifact_identity_match_passes(env):
     doc = copy.deepcopy(base_doc())
     # the fixture bundle is stamped bf16, as corpus 09 declares
     doc["model"] = {
-        "key": "meta-llama/Llama-3.1-8B",
+        "key": "Qwen/Qwen3-8B",
         "revision": "main",
         "dtype": "bf16",
     }
@@ -981,12 +904,12 @@ def test_rule_15_artifact_identity_match_passes(env):
             "kind": "subspace",
             "k": 8,
             "parametrization": "cayley",
-            "file_path": "artifacts/weekdays/llama31_8b/subspace/rot_k8.safetensors",
+            "file_path": "artifacts/weekdays/qwen3_8b/subspace/rot_k8.safetensors",
         }
     }
     doc["method"]["reads"]["v_cf"]["featurizer"] = "rot"
     doc["method"]["writes"]["patch"]["featurizer"] = "rot"
-    load(in_order(doc), env)
+    compile_protocol(in_order(doc), env=env)
 
 
 def _write_gate_bundle(root, rel: str, *, theta_len: int, **identity) -> None:
@@ -995,18 +918,16 @@ def _write_gate_bundle(root, rel: str, *, theta_len: int, **identity) -> None:
     import json
     import struct
 
-    from causalab.protocol.resolve import build_artifact_identity
+    from causalab.io.env import build_artifact_identity
 
     target = root / rel
     target.parent.mkdir(parents=True, exist_ok=True)
     stamp = build_artifact_identity(
-        produced_by="0" * 64,
         model_key="Qwen/Qwen3.6-35B-A3B",
         model_revision="main",
         model_dtype="bf16",
         dtype="fp32",
         trained_on="weekdays/train",
-        trained_on_digest="0" * 64,
         engine="pytorch_hooks",
         commit="fixture",
         **identity,
@@ -1058,7 +979,9 @@ def head_gate_env(tmp_path):
 
 def test_rule_15_a_head_grouped_gate_reloads_at_its_own_address(head_gate_env):
     _, env = head_gate_env
-    load(_head_gate_apply_doc("attention_premix", 19, group="head"), env)
+    compile_protocol(
+        _head_gate_apply_doc("attention_premix", 19, group="head"), env=env
+    )
 
 
 def test_rule_15_a_head_grouped_gate_refuses_another_component(head_gate_env):
@@ -1067,7 +990,9 @@ def test_rule_15_a_head_grouped_gate_refuses_another_component(head_gate_env):
     disagrees."""
     _, env = head_gate_env
     with pytest.raises(ValidationError) as err:
-        load(_head_gate_apply_doc("delta_premix", 18, group="head"), env)
+        compile_protocol(
+            _head_gate_apply_doc("delta_premix", 18, group="head"), env=env
+        )
     assert err.value.rule == 15
     assert "ArtifactIdentity mismatch on 'site'" in str(err.value)
 
@@ -1087,9 +1012,9 @@ def test_rule_15_a_head_grouped_gate_refuses_another_group_map(tmp_path):
         group_map=[8, 512],
     )
     with pytest.raises(ValidationError) as err:
-        load(
+        compile_protocol(
             _head_gate_apply_doc("attention_premix", 19, group="head"),
-            build_env(tmp_path),
+            env=build_env(tmp_path),
         )
     assert err.value.rule == 15
     assert "ArtifactIdentity mismatch on 'group_map'" in str(err.value)
@@ -1101,7 +1026,9 @@ def test_rule_15_a_head_grouped_gate_refuses_a_per_coordinate_document(head_gate
     coordinates of a 4096-wide site; the refusal says which it was fitted as."""
     _, env = head_gate_env
     with pytest.raises(ValidationError) as err:
-        load(_head_gate_apply_doc("attention_premix", 19, group=None), env)
+        compile_protocol(
+            _head_gate_apply_doc("attention_premix", 19, group=None), env=env
+        )
     assert err.value.rule == 15
     assert "fitted with group 'head'" in str(err.value)
 
@@ -1116,9 +1043,9 @@ def test_rule_15_a_grouped_document_refuses_a_per_coordinate_bundle(tmp_path):
         site={"component": "attention_premix", "layers": [19]},
     )
     with pytest.raises(ValidationError) as err:
-        load(
+        compile_protocol(
             _head_gate_apply_doc("attention_premix", 19, group="head"),
-            build_env(tmp_path),
+            env=build_env(tmp_path),
         )
     assert err.value.rule == 15
     assert "missing 'group'" in str(err.value)
@@ -1150,20 +1077,18 @@ def test_anchor_ref_takes_one_of_variable_or_column():
 
 def test_unknown_match_mode_is_a_closed_enum_error():
     doc = base_doc()
-    doc["method"]["metrics"]["m"] = {
-        "kind": "match",
-        "of": "logits",
-        "expected": "label",
-        "token_form": "space_prefixed",
-        "mode": "prefix",  # the task-side spelling; the metric's is first_token
-    }
     doc["method"]["save"].append(
-        {
-            "value": "m",
-            "model": "patched",
-            "input": "base",
-            "file_path": "m.json",
-        }
+        saved(
+            "logits",
+            "patched",
+            "m.json",
+            {
+                "kind": "match",
+                "expected": "label",
+                # the task-side spelling; the aggregation's is first_token
+                "mode": "prefix",
+            },
+        )
     )
     with pytest.raises(ParseError) as err:
         parse_and_validate(doc)
@@ -1176,12 +1101,8 @@ def test_rule_8_column_positions_are_conservatively_overlapping():
     the absolute-write rule refuses rather than assuming disjointness."""
     doc = base_doc()
     doc["method"]["positions"] = {"a": {"column": "entity"}, "b": {"column": "number"}}
-    doc["method"]["reads"]["v2"] = {
-        "site": "tgt",
-        "pos": "a",
-        "model": "original",
-        "input": "counterfactual",
-    }
+    doc["method"]["reads"]["v2"] = {"site": "tgt", "pos": "a"}
+    doc["method"]["intervened_models"][UNWRITTEN]["reads"] = ["v_cf", "v2"]
     doc["method"]["writes"] = {
         "patch": {"site": "tgt", "pos": "a", "do": {"swap": "v_cf"}},
         "patch2": {"site": "tgt", "pos": "b", "do": {"swap": "v2"}},
@@ -1215,7 +1136,7 @@ def test_rule_16_write_at_a_generated_position():
     doc = _reads_the_continuation(base_doc())
     doc["method"]["writes"]["patch"]["pos"] = "tail"
     err = expect_rule(16, doc)
-    assert "prefill-only" in str(err)
+    assert "addressed in the prompt frame" in str(err)
 
 
 def test_rule_16_write_at_an_inline_generated_position():
@@ -1229,6 +1150,75 @@ def test_rule_16_write_at_an_inline_generated_position():
     expect_rule(16, doc)
 
 
+def _writes_during_generation(doc: dict[str, Any]) -> dict[str, Any]:
+    """The positive shape for §2.9's flag: the patched model is decoded, its
+    one write sits at ``pos: -1`` with a literal operand, and the read the
+    swap used to consume is gone (rule 11 would otherwise refuse the
+    now-unconsumed read)."""
+    doc = _reads_the_continuation(doc)
+    doc["method"]["writes"]["patch"]["do"] = {"swap": 0.0}
+    _without_the_counterfactual_read(doc)
+    doc["method"]["intervened_models"]["patched"]["writes_during_generation"] = True
+    return doc
+
+
+def test_writes_during_generation_is_legal_at_the_decode_step_forms():
+    """The positive control for the flag: a decoded model whose writes sit at
+    ``{"index": -1}`` (and, below, at ``all``) with literal operands."""
+    parse_and_validate(_writes_during_generation(base_doc()))
+    doc = _writes_during_generation(base_doc())
+    doc["method"]["writes"]["patch"]["pos"] = "all"
+    parse_and_validate(doc)
+
+
+def test_writes_during_generation_false_is_the_absent_field():
+    doc = base_doc()
+    doc["method"]["intervened_models"]["patched"]["writes_during_generation"] = False
+    parse_and_validate(doc)
+
+
+def test_writes_during_generation_is_a_bool():
+    doc = base_doc()
+    doc["method"]["intervened_models"]["patched"]["writes_during_generation"] = "yes"
+    with pytest.raises(ParseError):
+        parse_document(in_order(doc))
+
+
+def test_rule_16_writes_during_generation_needs_a_decoded_model():
+    """A field that governs nothing may not be declared: no read decodes the
+    model, so there is no step for the writes to fire in."""
+    doc = base_doc()
+    doc["method"]["writes"]["patch"]["do"] = {"swap": 0.0}
+    _without_the_counterfactual_read(doc)
+    doc["method"]["intervened_models"]["patched"]["writes_during_generation"] = True
+    err = expect_rule(16, doc)
+    assert "no read decodes it" in str(err)
+
+
+def test_rule_16_writes_during_generation_refuses_a_prompt_position():
+    """``{"index": 2}`` names a prompt token; a decode step has none."""
+    doc = _writes_during_generation(base_doc())
+    doc["method"]["writes"]["patch"]["pos"] = {"index": 2}
+    err = expect_rule(16, doc)
+    assert "one token per row" in str(err)
+
+
+def test_rule_16_writes_during_generation_refuses_a_read_operand():
+    doc = _reads_the_continuation(base_doc())
+    doc["method"]["intervened_models"]["patched"]["writes_during_generation"] = True
+    err = expect_rule(16, doc)
+    assert "as an operand" in str(err)
+
+
+def test_rule_16_writes_during_generation_refuses_gaussian():
+    doc = _writes_during_generation(base_doc())
+    doc["method"]["writes"]["patch"]["do"] = {
+        "gaussian": {"seed": 0, "scale": 0.1, "axis": "tp_duplicated"}
+    }
+    err = expect_rule(16, doc)
+    assert "gaussian" in str(err)
+
+
 def test_rule_16_train_with_a_generated_position():
     """A greedy decode is an argmax chain: there is no gradient path from a
     continuation read back to a featurizer's parameters."""
@@ -1236,7 +1226,7 @@ def test_rule_16_train_with_a_generated_position():
     doc["method"]["featurizers"] = {"rot": {"kind": "subspace", "k": 2}}
     doc["method"]["reads"]["v_cf"]["featurizer"] = "rot"
     doc["method"]["train"] = {
-        "objective": [[1.0, "ld"]],
+        "objective": [[1.0, _ld()]],
         "params": ["rot"],
         "optimizer": {"name": "adamw", "lr": 0.001},
         "steps": {"epochs": 1},
@@ -1253,8 +1243,8 @@ def test_rule_16_train_with_a_generated_position():
 
 SPEC = Path(__file__).resolve().parents[2] / "docs" / "intervention_protocol.md"
 TESTS = Path(__file__).resolve().parents[1]
-#: the fixed spelling of a §5 item head: ``22. **split_declaration** — Split …``
-SPEC_ITEM = re.compile(r"^(\d+)\. \*\*([a-z][a-z0-9_]*)\*\* — (.*)$", re.M)
+#: A numbered rule with its slug and title.
+SPEC_ITEM = re.compile(r"^(\d+)\. \*\*([a-z][a-z0-9_]*)\*\*\s*[:;]\s*(.*)$", re.M)
 #: the fixed spelling of an entry in ``RULES`` — so a slug appears in one
 #: shape here, in the spec and in the code (a stricter check than "no spaces")
 SLUG = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -1406,14 +1396,8 @@ def test_rule_4_decode_over_a_prompt_frame_read():
     """``decode`` reduces tokens a decode produced; in the prompt frame there
     are none — only tokens that were given."""
     doc = base_doc()
-    doc["method"]["metrics"] = {"said": {"kind": "decode", "of": "logits"}}
     doc["method"]["save"] = [
-        {
-            "value": "said",
-            "model": "patched",
-            "input": "base",
-            "file_path": "said.json",
-        }
+        saved("logits", "patched", "said.json", {"kind": "decode"})
     ]
     err = expect_rule(4, doc)
     assert "generated" in str(err)
@@ -1421,14 +1405,8 @@ def test_rule_4_decode_over_a_prompt_frame_read():
 
 def test_decode_over_a_continuation_read_is_legal():
     doc = _reads_the_continuation(base_doc())
-    doc["method"]["metrics"] = {"said": {"kind": "decode", "of": "logits"}}
     doc["method"]["save"] = [
-        {
-            "value": "said",
-            "model": "patched",
-            "input": "base",
-            "file_path": "said.json",
-        }
+        saved("logits", "patched", "said.json", {"kind": "decode"})
     ]
     parse_and_validate(doc)
 
@@ -1454,18 +1432,15 @@ def _three_unrelated_violations() -> dict[str, Any]:
         **doc["model"],
         "quantization": {"scheme": "int8", "double_quant": True},
     }
-    # rule 10 — a metric that is never saved
-    doc["method"]["metrics"]["unsaved"] = {
-        "kind": "token_logit",
-        "of": "logits",
-        "token": "cf_answer",
-        "token_form": "space_prefixed",
-    }
+    # rule 10 — two entries write one file
+    doc["method"]["save"].append(
+        {"read": "logits", "model": "patched", "file_path": "ld.json"}
+    )
     return in_order(doc)
 
 
 def test_three_unrelated_violations_are_reported_together():
-    """Three problems, three refusals, three paths.
+    """The acceptance: three problems, three refusals, three paths.
 
     The docstring of `validate_document` used to promise "the first
     violation", and a document with three problems cost three edit-and-rerun
@@ -1530,7 +1505,7 @@ def test_collecting_never_hides_a_crash():
     """Only ValidationError is collected. Anything else propagates, because a
     collector that swallowed a KeyError would turn a bug in the validator into
     a silently partial validation."""
-    import causalab.protocol.validate as validate_module
+    import causalab.protocol.rules.document as validate_module
 
     doc = parse_document(base_doc())
     boom = KeyError("a bug in a check, not a bad document")
@@ -1562,15 +1537,11 @@ def _two_site_doc(
     doc = base_doc()
     doc["method"]["sites"]["src"] = read_site
     doc["method"]["sites"]["dst"] = write_site
-    doc["method"]["reads"]["v_src"] = {
-        "site": "src",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-    }
+    doc["method"]["reads"]["v_src"] = {"site": "src", "pos": -1}
     # base_doc's own target read and site are replaced wholesale here, and an
     # unreferenced read or site is rule 11 — which would mask rule 20.
     doc["method"]["reads"].pop("v_cf")
+    doc["method"]["intervened_models"][UNWRITTEN]["reads"] = ["v_src"]
     doc["method"]["sites"].pop("tgt")
     doc["method"]["writes"] = {
         "patch": {
@@ -1638,10 +1609,9 @@ def test_rule_21_lm_head_sorts_after_every_block():
     doc["method"]["reads"]["v_logits"] = {
         "site": "lm_head",
         "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
         "dims": list(range(768)),  # gpt2 hidden, so the widths agree
     }
+    doc["method"]["intervened_models"][UNWRITTEN]["reads"] = ["v_logits"]
     doc["method"]["writes"] = {
         "patch": {
             "site": "tgt",
@@ -1664,7 +1634,7 @@ def test_rule_21_ignores_params_and_literal_operands():
             "do": {"add_scaled": {"op": "bias", "alpha": 1.0}},
         }
     }
-    doc["method"]["reads"].pop("v_cf")
+    _without_the_counterfactual_read(doc)
     parse_and_validate(doc)
 
 
@@ -1673,13 +1643,8 @@ def test_rule_21_constrains_the_alpha_slot_too():
     downstream is as unattributable as a downstream value."""
     doc = base_doc()
     doc["method"]["sites"]["deep"] = {"component": "block_output", "layers": [9]}
-    doc["method"]["reads"]["k"] = {
-        "site": "deep",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-        "dims": [0],
-    }
+    doc["method"]["reads"]["k"] = {"site": "deep", "pos": -1, "dims": [0]}
+    doc["method"]["intervened_models"][UNWRITTEN]["reads"] = ["v_cf", "k"]
     doc["method"]["writes"] = {
         "patch": {
             "site": "tgt",
@@ -1703,7 +1668,7 @@ def test_the_whole_corpus_is_upstream_or_equal():
     """
     import json
 
-    from causalab.protocol.plan import COMPONENT_RANK, UNRANKED
+    from causalab.protocol.positions.alignment import COMPONENT_RANK, UNRANKED
 
     from tests.protocol._env import CORPUS_DIR
 
@@ -1762,13 +1727,8 @@ def _two_gate_fit(objective, params=("g0", "g1")) -> dict[str, Any]:
     doc["method"]["sites"]["tgt2"] = {"component": "block_output", "layers": [2]}
     doc["method"]["featurizers"] = {"g0": {"kind": "gate"}, "g1": {"kind": "gate"}}
     doc["method"]["reads"]["v_cf"]["featurizer"] = "g0"
-    doc["method"]["reads"]["v2"] = {
-        "site": "tgt2",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": "g1",
-    }
+    doc["method"]["reads"]["v2"] = {"site": "tgt2", "pos": -1, "featurizer": "g1"}
+    doc["method"]["intervened_models"][UNWRITTEN]["reads"] = ["v_cf", "v2"]
     doc["method"]["writes"]["patch"]["featurizer"] = "g0"
     doc["method"]["writes"]["patch2"] = {
         "site": "tgt2",
@@ -1794,7 +1754,7 @@ def _two_gate_fit(objective, params=("g0", "g1")) -> dict[str, Any]:
 def _one_gate_at_two_sites_fit() -> dict[str, Any]:
     """``_two_gate_fit`` with one declared gate named from both sites: one
     parameter set at two addresses (§2.5, one name at several sites)."""
-    doc = _two_gate_fit([[1.0, "ld"]], params=("g0",))
+    doc = _two_gate_fit([[1.0, _ld()]], params=("g0",))
     doc["method"]["featurizers"] = {"g0": {"kind": "gate"}}
     doc["method"]["reads"]["v2"]["featurizer"] = "g0"
     doc["method"]["writes"]["patch2"]["featurizer"] = "g0"
@@ -1817,11 +1777,11 @@ def test_one_gate_named_at_two_sites_is_one_parameter_set_to_every_rule():
 
 
 def test_a_regularizer_list_over_two_trained_gates_validates():
-    parse_and_validate(_two_gate_fit([[1.0, "ld"], [0.01, {"l1": ["g0", "g1"]}]]))
+    parse_and_validate(_two_gate_fit([[1.0, _ld()], [0.01, {"l1": ["g0", "g1"]}]]))
     parse_and_validate(
         _two_gate_fit(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _ld(weight=1.0),
                 "sparsity": {"weight": 0.01, "l1": ["g0", "g1"]},
             }
         )
@@ -1829,17 +1789,17 @@ def test_a_regularizer_list_over_two_trained_gates_validates():
 
 
 def test_rule_4_regularizer_list_unknown_name():
-    err = expect_rule(4, _two_gate_fit([[1.0, "ld"], [0.01, {"l1": ["g0", "ghost"]}]]))
+    err = expect_rule(4, _two_gate_fit([[1.0, _ld()], [0.01, {"l1": ["g0", "ghost"]}]]))
     assert "ghost" in str(err) and err.path == "train.objective[1]"
 
 
 def test_rule_4_regularizer_list_names_featurizers_not_slots():
     err = expect_rule(
-        4, _two_gate_fit([[1.0, "ld"], [0.01, {"l1": ["g0", "g1.theta"]}]])
+        4, _two_gate_fit([[1.0, _ld()], [0.01, {"l1": ["g0", "g1.theta"]}]])
     )
     assert "g1.theta" in str(err)
     # the single-name form still takes a dotted slot
-    parse_and_validate(_two_gate_fit([[1.0, "ld"], [0.01, {"l1": "g1.theta"}]]))
+    parse_and_validate(_two_gate_fit([[1.0, _ld()], [0.01, {"l1": "g1.theta"}]]))
 
 
 def test_rule_4_l0_names_a_gate_not_a_rotation():
@@ -1853,7 +1813,7 @@ def test_rule_4_l0_names_a_gate_not_a_rotation():
     doc["method"]["reads"]["v_cf"]["featurizer"] = "rot"
     doc["method"]["writes"]["patch"]["featurizer"] = "rot"
     doc["method"]["train"] = {
-        "objective": [[1.0, "ld"], [0.01, {"l0": "rot"}]],
+        "objective": [[1.0, _ld()], [0.01, {"l0": "rot"}]],
         "params": ["rot"],
         "optimizer": {"name": "adamw", "lr": 1e-3},
         "steps": {"epochs": 1},
@@ -1873,7 +1833,7 @@ def test_rule_4_costs_keys_are_the_terms_own_targets():
     err = expect_rule(
         4,
         _two_gate_fit(
-            [[1.0, "ld"], [0.01, {"l1": ["g0"], "costs": {"g1": 0.5}}]],
+            [[1.0, _ld()], [0.01, {"l1": ["g0"], "costs": {"g1": 0.5}}]],
             params=("g0", "g1"),
         ),
     )
@@ -1882,7 +1842,7 @@ def test_rule_4_costs_keys_are_the_terms_own_targets():
         4,
         _two_gate_fit(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _ld(weight=1.0),
                 "sparsity": {"weight": 0.01, "l1": ["g0", "g1"], "costs": {"g2": 1.0}},
             }
         ),
@@ -1891,19 +1851,19 @@ def test_rule_4_costs_keys_are_the_terms_own_targets():
     parse_and_validate(
         _two_gate_fit(
             [
-                [1.0, "ld"],
+                [1.0, _ld()],
                 [0.01, {"l1": ["g0", "g1"], "costs": {"g0": 1.0, "g1": 0.25}}],
             ]
         )
     )
     parse_and_validate(
         _two_gate_fit(
-            [[1.0, "ld"], [0.01, {"l1": ["g0", "g1"], "costs": "parameter_count"}]]
+            [[1.0, _ld()], [0.01, {"l1": ["g0", "g1"], "costs": "parameter_count"}]]
         )
     )
     parse_and_validate(
         _two_gate_fit(
-            [[1.0, "ld"], [0.01, {"l1": "g1.theta", "costs": {"g1.theta": 2.0}}]]
+            [[1.0, _ld()], [0.01, {"l1": "g1.theta", "costs": {"g1.theta": 2.0}}]]
         )
     )
 
@@ -1917,7 +1877,7 @@ def test_rule_4_a_constraint_holds_a_gates_density_and_has_no_weight_to_schedule
     parse_and_validate(
         _two_gate_fit(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _ld(weight=1.0),
                 "density": {"l1": ["g0", "g1"], "constraint": constraint},
             }
         )
@@ -1930,7 +1890,7 @@ def test_rule_4_a_constraint_holds_a_gates_density_and_has_no_weight_to_schedule
     doc["method"]["writes"]["patch"]["featurizer"] = "rot"
     doc["method"]["train"] = {
         "objective": {
-            "fit": {"weight": 1.0, "metric": "ld"},
+            "fit": _ld(weight=1.0),
             "density": {"l1": "rot", "constraint": constraint},
         },
         "params": ["rot"],
@@ -1945,7 +1905,7 @@ def test_rule_4_a_constraint_holds_a_gates_density_and_has_no_weight_to_schedule
     assert "not a gate" in str(err) and err.path == "train.objective.density.constraint"
     scheduled = _two_gate_fit(
         {
-            "fit": {"weight": 1.0, "metric": "ld"},
+            "fit": _ld(weight=1.0),
             "density": {"l1": ["g0", "g1"], "constraint": constraint},
         }
     )
@@ -1956,7 +1916,7 @@ def test_rule_4_a_constraint_holds_a_gates_density_and_has_no_weight_to_schedule
     assert "dual pair" in str(err)
     hard = _two_gate_fit(
         {
-            "fit": {"weight": 1.0, "metric": "ld"},
+            "fit": _ld(weight=1.0),
             "density": {"l0": "g0", "constraint": constraint},
         }
     )
@@ -2032,14 +1992,14 @@ def test_rule_4_regularizer_target_not_in_train_params():
     """A penalty on a featurizer the fit never moves is a dead declaration,
     in either form, and used to surface as a KeyError inside the loop."""
     err = expect_rule(
-        4, _two_gate_fit([[1.0, "ld"], [0.01, {"l1": ["g0", "g1"]}]], params=("g0",))
+        4, _two_gate_fit([[1.0, _ld()], [0.01, {"l1": ["g0", "g1"]}]], params=("g0",))
     )
     assert "train.params" in str(err) and "g1" in str(err)
     err = expect_rule(
         4,
         _two_gate_fit(
             {
-                "fit": {"weight": 1.0, "metric": "ld"},
+                "fit": _ld(weight=1.0),
                 "sparsity": {"weight": 0.01, "l2": "g1"},
             },
             params=("g0",),
@@ -2048,16 +2008,18 @@ def test_rule_4_regularizer_target_not_in_train_params():
     assert err.path == "train.objective.sparsity"
 
 
-def test_rule_4_named_objective_metric_undeclared():
-    err = expect_rule(4, _two_gate_fit({"fit": {"weight": 1.0, "metric": "ghost"}}))
-    assert err.path == "train.objective.fit"
+def test_rule_4_named_objective_read_undeclared():
+    doc = _two_gate_fit({"fit": _ld(weight=1.0)})
+    doc["method"]["train"]["objective"]["fit"]["read"] = "ghost"
+    err = expect_rule(4, doc)
+    assert err.path == "train.objective.fit.read"
 
 
 # rule 27 — a segment anchor names a declared segment; a span is well-formed --- #
 
 
 def test_rule_27_undeclared_segment_anchor():
-    """The pure half (`test_segments.py`, `test_spans.py`) holds every
+    """The pure half of segments and spans (`test_segments.py`, `test_spans.py`) holds every
     variant; this is the checklist's one-failing-document-per-rule entry."""
     doc = base_doc()
     doc["method"]["segments"] = {"frame": "chat"}
@@ -2105,14 +2067,14 @@ def test_rule_4_l0_pairs_with_a_sampled_mask_and_l1_with_a_deterministic_one():
     gate penalizes a mask its training forward never uses; both are refused,
     naming the spelling that was meant."""
     err = expect_rule(
-        4, _gate_fit({"kind": "gate"}, [[1.0, "ld"], [0.01, {"l0": "gate"}]])
+        4, _gate_fit({"kind": "gate"}, [[1.0, _ld()], [0.01, {"l0": "gate"}]])
     )
     assert "'l1'" in str(err) and "deterministic" in str(err)
     err = expect_rule(
         4,
         _gate_fit(
             {"kind": "gate", "parametrization": "clamp"},
-            [[1.0, "ld"], [0.01, {"l0": "gate"}]],
+            [[1.0, _ld()], [0.01, {"l0": "gate"}]],
         ),
     )
     assert "'l1'" in str(err)
@@ -2120,7 +2082,7 @@ def test_rule_4_l0_pairs_with_a_sampled_mask_and_l1_with_a_deterministic_one():
         4,
         _gate_fit(
             {"kind": "gate", "parametrization": "hard_concrete"},
-            [[1.0, "ld"], [0.01, {"l1": "gate"}]],
+            [[1.0, _ld()], [0.01, {"l1": "gate"}]],
         ),
     )
     assert "'l0'" in str(err) and "never uses" in str(err)
@@ -2132,7 +2094,7 @@ def test_rule_4_l0_pairs_with_a_sampled_mask_and_l1_with_a_deterministic_one():
     ):
         validate_document(
             parse_document(
-                in_order(_gate_fit(featurizer, [[1.0, "ld"], [0.01, {kind: "gate"}]]))
+                in_order(_gate_fit(featurizer, [[1.0, _ld()], [0.01, {kind: "gate"}]]))
             ),
             engine_is_local=True,
         )
@@ -2151,7 +2113,7 @@ def test_rule_4_a_swept_parametrization_is_refused_when_any_arm_mismatches():
                 "kind": "gate",
                 "parametrization": {"sweep": ["sigmoid", "hard_concrete"]},
             },
-            [[1.0, "ld"], [0.01, {"l0": "gate"}]],
+            [[1.0, _ld()], [0.01, {"l0": "gate"}]],
         ),
     )
     assert "'sigmoid'" in str(err) and "one arm of the sweep" in str(err)
@@ -2162,7 +2124,7 @@ def test_rule_4_a_swept_parametrization_is_refused_when_any_arm_mismatches():
                 "kind": "gate",
                 "parametrization": {"sweep": ["sigmoid", "hard_concrete"]},
             },
-            [[1.0, "ld"], [0.01, {"l1": "gate"}]],
+            [[1.0, _ld()], [0.01, {"l1": "gate"}]],
         ),
     )
     assert "hard_concrete" in str(err) and "one arm of the sweep" in str(err)
@@ -2174,7 +2136,7 @@ def test_rule_4_a_swept_parametrization_is_refused_when_any_arm_mismatches():
                         "kind": "gate",
                         "parametrization": {"sweep": ["sigmoid", "clamp"]},
                     },
-                    [[1.0, "ld"], [0.01, {"l1": "gate"}]],
+                    [[1.0, _ld()], [0.01, {"l1": "gate"}]],
                 )
             )
         ),
@@ -2194,11 +2156,11 @@ def test_rule_4_a_temperature_anneal_stays_positive():
             featurizer["parametrization"] = parametrization
             kind = "l0"
         for schedule in ([1.0, 0.0, 0.5], [1.0, -1.0, 0.5], [0.0, 0.5, 0.5]):
-            doc = _gate_fit(dict(featurizer), [[1.0, "ld"], [0.01, {kind: "gate"}]])
+            doc = _gate_fit(dict(featurizer), [[1.0, _ld()], [0.01, {kind: "gate"}]])
             doc["method"]["train"]["anneal"] = {"gate.theta.temperature": schedule}
             err = expect_rule(4, doc)
             assert "positive" in str(err)
-        doc = _gate_fit(dict(featurizer), [[1.0, "ld"], [0.01, {kind: "gate"}]])
+        doc = _gate_fit(dict(featurizer), [[1.0, _ld()], [0.01, {kind: "gate"}]])
         doc["method"]["train"]["anneal"] = {"gate.theta.temperature": [1.0, 0.01, 0.5]}
         validate_document(parse_document(in_order(doc)), engine_is_local=True)
 
@@ -2209,7 +2171,7 @@ def test_rule_4_an_authored_temperature_beside_its_anneal_is_refused():
     one silently win."""
     doc = _gate_fit(
         {"kind": "gate", "parametrization": "hard_concrete", "temperature": 0.5},
-        [[1.0, "ld"], [0.01, {"l0": "gate"}]],
+        [[1.0, _ld()], [0.01, {"l0": "gate"}]],
     )
     doc["method"]["train"]["anneal"] = {"gate.theta.temperature": [0.5, 0.2, 0.5]}
     err = expect_rule(4, doc)
@@ -2225,11 +2187,11 @@ def test_rule_4_a_dead_rule_needs_a_fit_that_trains_the_gate():
     a document with no ``train`` at all; a trained gate takes either rule."""
     for dead in ({"freeze_after": 3}, {"leak": 0.05}):
         doc = _gate_fit(
-            {"kind": "gate", "dead": dead}, [[1.0, "ld"], [0.01, {"l1": "gate"}]]
+            {"kind": "gate", "dead": dead}, [[1.0, _ld()], [0.01, {"l1": "gate"}]]
         )
         validate_document(parse_document(in_order(doc)), engine_is_local=True)
         # the gate exists and is read through, but a second featurizer is trained
-        doc = _gate_fit({"kind": "gate", "dead": dead}, [[1.0, "ld"]])
+        doc = _gate_fit({"kind": "gate", "dead": dead}, [[1.0, _ld()]])
         doc["method"]["featurizers"]["rot"] = {"kind": "subspace", "k": 2}
         doc["method"]["train"]["params"] = ["rot"]
         doc["method"]["save"][-1] = {
@@ -2242,7 +2204,7 @@ def test_rule_4_a_dead_rule_needs_a_fit_that_trains_the_gate():
             err
         )
         # no fit at all
-        doc = _gate_fit({"kind": "gate", "dead": dead}, [[1.0, "ld"]])
+        doc = _gate_fit({"kind": "gate", "dead": dead}, [[1.0, _ld()]])
         del doc["method"]["train"]
         doc["method"]["save"] = doc["method"]["save"][:-1]
         err = expect_rule(4, doc)
@@ -2278,14 +2240,14 @@ def test_rule_4_a_budget_gate_takes_no_penalty_no_anneal_and_is_no_signal():
     }
     for penalty in ("l1", "l0"):
         err = expect_rule(
-            4, _gate_fit(budget, [[1.0, "ld"], [0.01, {penalty: "gate"}]])
+            4, _gate_fit(budget, [[1.0, _ld()], [0.01, {penalty: "gate"}]])
         )
         assert "budget" in str(err) and "penalty" in str(err)
-    doc = _gate_fit(budget, [[1.0, "ld"]])
+    doc = _gate_fit(budget, [[1.0, _ld()]])
     doc["method"]["train"]["anneal"] = {"gate.theta.temperature": [1.0, 0.1, 0.5]}
     err = expect_rule(4, doc)
-    assert "no temperature" in str(err)
-    doc = _gate_fit(budget, {"fit": {"weight": 1.0, "metric": "ld"}})
+    assert GATE_MAPS["budget"].no_temperature_because in str(err)
+    doc = _gate_fit(budget, {"fit": _ld(weight=1.0)})
     doc["method"]["train"]["control"] = {
         "train.objective.fit.weight": {
             "kind": "pid",
@@ -2296,7 +2258,7 @@ def test_rule_4_a_budget_gate_takes_no_penalty_no_anneal_and_is_no_signal():
     }
     err = expect_rule(4, doc)
     assert "budget gate" in str(err) and "k_schedule.eval" in str(err)
-    parse_and_validate(_gate_fit(budget, [[1.0, "ld"]]))
+    parse_and_validate(_gate_fit(budget, [[1.0, _ld()]]))
 
 
 def test_rule_4_a_budget_pool_does_not_mix_split_and_unsplit_members():
@@ -2305,7 +2267,7 @@ def test_rule_4_a_budget_pool_does_not_mix_split_and_unsplit_members():
     must compare `forward` too — one member thresholding its share of the
     pooled mask at ½ breaks "one pool, one ranking on one scale"."""
     budget = {"parametrization": "budget", "k_schedule": {"kind": "fixed", "k": 2}}
-    doc = _two_gate_fit([[1.0, "ld"]])
+    doc = _two_gate_fit([[1.0, _ld()]])
     doc["method"]["featurizers"]["g0"] = {"kind": "gate", **budget, "pool": "p"}
     doc["method"]["featurizers"]["g1"] = {
         "kind": "gate",
@@ -2346,3 +2308,87 @@ def test_rule_4_a_position_gate_named_at_two_sites_is_held_to_one_window():
     assert "one gate, one window" in str(err) and err.path == "featurizers.pg.axis"
     method["writes"]["patch2"]["pos"] = {"span": [0, 3]}
     parse_and_validate(doc)
+
+
+# §2.5 `parametrization: boundary` — rule 4's chain half, rule 10's rank save - #
+
+
+def _boundless_fit(
+    *, chain=("rot", "bnd"), objective=None, extra: dict | None = None
+) -> dict:
+    """A Boundless DAS fit on the base document: a rotation with a boundary
+    gate behind it, both trained, `l1` on the gate unless told otherwise."""
+    doc = base_doc()
+    featurizers: dict = {
+        "bnd": {"kind": "gate", "parametrization": "boundary", **(extra or {})}
+    }
+    if "rot" in chain:
+        featurizers["rot"] = {"kind": "subspace", "k": 4, "parametrization": "cayley"}
+    if "g" in chain:
+        featurizers["g"] = {"kind": "gate"}
+    if "pca" in chain:
+        featurizers["pca"] = {
+            "kind": "pca",
+            "k": 4,
+            "file_path": "pca/basis.safetensors",
+        }
+    doc["method"]["featurizers"] = featurizers
+    doc["method"]["reads"]["v_cf"]["featurizer"] = list(chain)
+    doc["method"]["writes"]["patch"]["featurizer"] = list(chain)
+    trained = [n for n in chain if n in ("rot", "bnd", "g")]
+    doc["method"]["train"] = {
+        "objective": objective or [[1.0, _ld()], [0.05, {"l1": "bnd"}]],
+        "params": trained,
+        "optimizer": {"name": "adamw", "lr": 1e-3},
+        "steps": {"epochs": 1},
+        "batch": {"pairs": 2},
+    }
+    doc["method"]["save"] += [
+        {"value": n, "site": "tgt", "file_path": f"{n}.safetensors"} for n in trained
+    ]
+    return doc
+
+
+def test_a_boundary_gate_behind_an_ordered_basis_validates_with_l1_anneal_and_control():
+    """The legitimate spellings: behind a `subspace` or a `pca`, `l1` on the
+    gate, its temperature annealed, and its kept count (`⌈β⌉`) as a control
+    signal — all fall out of the `GateMap` row (rule 4 reads it)."""
+    doc = _boundless_fit()
+    doc["method"]["train"]["anneal"] = {"bnd.theta.temperature": [1.0, 0.01, 0.5]}
+    parse_and_validate(doc)
+    parse_and_validate(_boundless_fit(chain=("pca", "bnd")))
+    controlled = _boundless_fit(objective={"fit": _ld(weight=1.0)})
+    controlled["method"]["train"]["control"] = {
+        "train.objective.fit.weight": {
+            "kind": "pid",
+            "signal": {"hard_mask_size": "bnd"},
+            "setpoint": {"ramp": [2, 0, 0.5]},
+            "gains": {"kp": 0.1, "ki": 0.01},
+        }
+    }
+    parse_and_validate(controlled)
+
+
+def test_rule_4_a_boundary_gate_directly_follows_a_subspace_or_pca():
+    err = expect_rule(4, _boundless_fit(chain=("bnd",)))
+    assert "first in its chain" in str(err) and "ordered" in str(err)
+    assert err.path == "reads.v_cf.featurizer"
+    err = expect_rule(4, _boundless_fit(chain=("g", "bnd")))
+    assert "behind 'g' (gate)" in str(err)
+    # one stage between the basis and the boundary is one too many (v1)
+    err = expect_rule(4, _boundless_fit(chain=("rot", "g", "bnd")))
+    assert "behind 'g' (gate)" in str(err)
+
+
+def test_rule_4_l0_is_refused_on_a_boundary_gate():
+    err = expect_rule(
+        4, _boundless_fit(objective=[[1.0, _ld()], [0.05, {"l0": "bnd"}]])
+    )
+    assert "'l1'" in str(err) and "deterministic" in str(err)
+
+
+def test_rule_10_a_rank_save_is_refused_beside_a_boundary_gate():
+    doc = _boundless_fit()
+    doc["method"]["save"].append({"kind": "rank", "file_path": "rank.json"})
+    err = expect_rule(10, doc)
+    assert "no units to order" in str(err) and "'bnd'" in str(err)

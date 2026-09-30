@@ -1,7 +1,7 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Chat-coherent drift tier, layer scan: interchange IIA over six block_output layers of Qwen3-4B on the raw-completion weekday task - the protocol-native analogue of the old tier's scores_per_layer pins. One shared source harvest across the six points (compute-sharing falls out of content dedup). Values captured by tests/golden/drift/update_drift_goldens.py on cuda."
+    "protocol_version": "4",
+    "description": "Chat-coherent drift tier, layer scan: interchange IIA over six block_output layers of Qwen3-4B on the raw-completion weekday task - the protocol-native analogue of the old tier's scores_per_layer pins. One shared source harvest across the six points (compute-sharing falls out of content dedup). Values captured by tests/golden/drift/update_drift_goldens.py on the canonical GPU."
   },
   "model": {"key": "Qwen/Qwen3-4B-Instruct-2507", "revision": "main", "dtype": "bf16"},
   "data": {
@@ -9,6 +9,10 @@
     "counterfactual": {"dataset": "drift/weekdays", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_src"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "sites": {
       "target": {
         "component": "block_output",
@@ -18,24 +22,17 @@
       },
       "lm_head": {"component": "lm_head"}
     },
-    "reads": {
-      "v_src": {"site": "target", "pos": -1, "model": "original", "input": "counterfactual"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
-    },
+    "reads": {"v_src": {"site": "target", "pos": -1}, "logits": {"site": "lm_head", "pos": -1}},
     "writes": {
       "patch": {"site": "target", "pos": -1, "do": {"swap": "v_src"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
       }
-    },
-    "save": [{"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"}]
+    ]
   }
 }

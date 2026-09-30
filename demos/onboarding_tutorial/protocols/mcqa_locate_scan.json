@@ -1,14 +1,18 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Locate the answer-symbol variable across the population: the same interchange as the single-pair trace, over 64 pairs, scored by IIA at a 16-layer x 8-position grid. Positions are fixed negative indices, not names: every prompt this task template emits is 22 tokens with the same tail, so counting back from the end resolves to the same token in every row -- which a symbol *letter* does not (a row whose symbol is 'W' has a second 'W' inside 'What')."
+    "protocol_version": "4",
+    "description": "Interchange residual-stream activations across 64 MCQA pairs at 28 layers and eight token positions. Save per-pair answer matches and logit differences to compare the population pattern with variation between pairs."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {
     "base": {"dataset": "mcqa/pairs_n64_s0", "field": "input"},
     "counterfactual": {"dataset": "mcqa/pairs_n64_s0", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "positions": {
       "tap": {
         "sweep": [
@@ -27,42 +31,26 @@
       "target": {
         "component": "block_output",
         "layers": {
-          "sweep": {"range": [0, 16]}
+          "sweep": {"range": [0, 28]}
         }
       },
       "lm_head": {"component": "lm_head"}
     },
-    "reads": {
-      "v_cf": {"site": "target", "pos": "tap", "model": "original", "input": "counterfactual"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
-    },
+    "reads": {"v_cf": {"site": "target", "pos": "tap"}, "logits": {"site": "lm_head", "pos": -1}},
     "writes": {
       "patch": {"site": "target", "pos": "tap", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "logit_diff": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
       {
-        "value": "logit_diff",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
         "file_path": "logit_diff.json"
       }
     ]

@@ -16,6 +16,7 @@ import torch
 
 from causalab.neural.engines.pytorch_hooks import train
 from causalab.neural.engines.pytorch_hooks.cuda_graphs import (
+    graph_device,
     GraphExecutor,
     Replay,
     make_executor,
@@ -23,15 +24,17 @@ from causalab.neural.engines.pytorch_hooks.cuda_graphs import (
 from causalab.neural.engines.pytorch_hooks.executor import ForwardCache, Interning
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.neural.shared.featurizers import Gate
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.resolve import FileArtifacts, ResolutionEnv
+from causalab.protocol.engine import RunContext
+from causalab.io.env import FileArtifacts, ResolutionEnv
 from tests.neural.engines.pytorch_hooks._drive import executor_for
+from tests.protocol._docs import saved
 from tests.neural.engines.pytorch_hooks.test_train import (
     ANSWERS,
     BASES,
     COUNTERFACTUALS,
     das_doc,
     dbm_doc,
+    ce_term,
 )
 
 pytestmark = [
@@ -52,21 +55,14 @@ def document(method):
     raw = dbm_doc() if method == "dbm" else das_doc()
     raw["model"].update(key=MODEL, dtype="bf16")
     raw["method"]["sites"]["tgt"]["layers"] = [18]
-    for name, model in (("base_act", "original"), ("patched_act", "patched")):
-        raw["method"]["reads"][name] = {
-            "site": "tgt",
-            "pos": {"index": -1},
-            "model": model,
-            "input": "base",
-        }
-        raw["method"]["save"].append(
-            {
-                "value": name,
-                "model": model,
-                "input": "base",
-                "file_path": name + ".safetensors",
-            }
-        )
+    # the target activation on base, un-intervened and patched (§2.9): the
+    # network on base is a model of its own, declared here
+    models = raw["method"]["intervened_models"]
+    models["original_base"] = {"input": "base", "reads": []}
+    for name, model in (("base_act", "original_base"), ("patched_act", "patched")):
+        raw["method"]["reads"][name] = {"site": "tgt", "pos": {"index": -1}}
+        models[model]["reads"].append(name)
+        raw["method"]["save"].append(saved(name, model, name + ".safetensors"))
     return raw
 
 
@@ -153,11 +149,11 @@ def test_inference_replay_preserves_outputs_and_forward_cache(bundle, method):
     assert all(replay.replays >= 1 for replay, _ in actual._inference_graphs.values())
 
     cache = ForwardCache()
-    digests = {
-        (str(r.model), str(r.input)): f"{r.model}/{r.input}"
-        for r in actual.doc.reads.values()
+    keys = {
+        (name, str(m.input)): f"{name}/{m.input}"
+        for name, m in actual.doc.intervened_models.items()
     }
-    interning = Interning(digests=digests, cache=cache)
+    interning = Interning(keys=keys, cache=cache)
     first = executor(
         raw,
         bundle,
@@ -216,10 +212,10 @@ def test_production_fit_matches_eager_updates_and_eval(
     raw["method"]["train"]["eval"] = {
         "split": "eval",
         "every": {"epochs": 1},
-        "metrics": ["ce"],
+        "aggregations": {"ce": ce_term()},
     }
     raw["method"]["train"]["early_stop"] = {
-        "metric": "ce",
+        "on": "ce",
         "mode": "min",
         "patience": 1,
     }
@@ -245,12 +241,7 @@ def test_production_fit_matches_eager_updates_and_eval(
         )
         assert not torch.equal(encoded.input_ids[:2], encoded.input_ids[2:])
     answers = ANSWERS + ANSWERS[:3]
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=Datasets(), artifacts=FileArtifacts(tmp_path)),
         output_dir=tmp_path,
     )
@@ -277,8 +268,9 @@ def test_production_fit_matches_eager_updates_and_eval(
             if torch.cuda.is_current_stream_capturing():
                 # Larger than physical VRAM: a real allocator OOM inside the
                 # capture, without allocating the rest of the device.
-                total = torch.cuda.get_device_properties(bundle.device).total_memory
-                torch.empty(total + 1, device=bundle.device, dtype=torch.uint8)
+                device = graph_device(bundle)
+                total = torch.cuda.get_device_properties(device).total_memory
+                torch.empty(total + 1, device=device, dtype=torch.uint8)
             return result
 
         replay_init(self, failing_work, *args, **kwargs)
@@ -449,8 +441,10 @@ def test_first_capture_oom_falls_back_with_exact_gradients(
             if torch.cuda.is_current_stream_capturing() == (failure_phase == "capture"):
                 # Larger than physical VRAM: a real allocator OOM without
                 # allocating the rest of the device or affecting other jobs.
-                total = torch.cuda.get_device_properties(bundle.device).total_memory
-                torch.empty(total + 1, device=bundle.device, dtype=torch.uint8)
+                total = torch.cuda.get_device_properties(
+                    graph_device(bundle)
+                ).total_memory
+                torch.empty(total + 1, device=graph_device(bundle), dtype=torch.uint8)
             return result
 
         original(self, failing_work, *args, **kwargs)
@@ -480,7 +474,7 @@ def test_captured_gate_temperature_matches_eager_scalar_division(temperature):
 
 
 # --------------------------------------------------------------------------- #
-# one pool per fit (docs/cuda_graphs.md "One pool per fit")
+# one pool per fit's graphs (docs/cuda_graphs.md "One pool per engine")
 
 THREE_LENGTHS = (
     ["the fox", BASES[0], BASES[1] + " under a bright red autumn moon"],
@@ -562,7 +556,7 @@ def test_three_buckets_share_one_pool_and_replay_out_of_capture_order(bundle, me
         assert [r.replays for r in replays] == [4, 4, 4]
         pool_ids = {tuple(r.graph.pool()) for r in replays}
         assert len(pool_ids) == 1, "three buckets, one pool"
-        handle = bank.pool.handle(torch.device(bundle.device))
+        handle = bank.pool.handle(graph_device(bundle))
         assert handle is not None and pool_ids == {tuple(handle)}
     finally:
         bank.close()
@@ -609,11 +603,18 @@ def test_three_buckets_on_one_pool_reserve_less_than_three_private_pools(bundle)
             f"({', '.join(f'{b / 2**20:.0f}' for b in numbers['each'])} MiB each), "
             f"process reserved +{numbers['process_delta'] / 2**20:.0f} MiB"
         )
-    shared, private = reserved["shared"]["pools"], reserved["private"]["pools"]
-    assert 0 < shared < private
+    shared, private = reserved["shared"], reserved["private"]
     # one working set plus the other two graphs' live outputs, not three
-    # working sets: within half again of the largest private pool
-    assert shared <= 1.5 * max(reserved["private"]["each"])
+    # working sets: fewer segments in the graphs' pools than three private
+    # pools hold
+    assert 0 < shared["pools"] < private["pools"]
+    # and less device memory held by the process as a whole (the line this
+    # test prints read +122 MiB shared, +370 MiB for three private pools on
+    # an H100). The shared pool also
+    # keeps the warm-up's allocations (the cuBLAS workspaces of the main and
+    # autograd threads among them), which a private-pool capture leaves
+    # outside any pool, so the pool's own size is not the comparison.
+    assert shared["process_delta"] < private["process_delta"]
 
 
 def test_a_fit_with_three_buckets_matches_eager_without_fallback(bundle, tmp_path):
@@ -627,7 +628,7 @@ def test_a_fit_with_three_buckets_matches_eager_without_fallback(bundle, tmp_pat
     raw["method"]["train"]["eval"] = {
         "split": "eval",
         "every": {"epochs": 1},
-        "metrics": ["ce"],
+        "aggregations": {"ce": ce_term()},
     }
     base = (
         BASES[:2]
@@ -643,12 +644,7 @@ def test_a_fit_with_three_buckets_matches_eager_without_fallback(bundle, tmp_pat
         + ["cold mountains", COUNTERFACTUALS[1], COUNTERFACTUALS[0]]
     )
     answers = ANSWERS + ANSWERS[:3]
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    request = RunContext(
         env=ResolutionEnv(datasets=Datasets(), artifacts=FileArtifacts(tmp_path)),
         output_dir=tmp_path,
     )

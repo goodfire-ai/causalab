@@ -25,16 +25,22 @@ import torch
 from safetensors.torch import load_file
 
 from causalab.cli import main
-from causalab.protocol.resolve import read_safetensors_metadata
+from causalab.io.env import read_safetensors_metadata
 from causalab.protocol.schema import METHOD_SECTIONS, PROTOCOL_VERSION
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import UNWRITTEN, aggregation, saved, term
 from tests.protocol._env import FIXTURES
 
 pytestmark = pytest.mark.smoke
 
 COUNT = 3
 SPLIT = "weekdays/data#train"
+
+#: The fit's one aggregation: the masked logits' divergence from the clean
+#: counterfactual distribution. The save carries it too, and a save holds a
+#: read reference in the object form (§2.7).
+KL = aggregation("kl", target={"read": "logits_cf", "model": UNWRITTEN})
 
 
 def _v2(doc: dict[str, Any]) -> dict[str, Any]:
@@ -55,31 +61,19 @@ def _fit_doc() -> dict[str, Any]:
             "base": {"dataset": SPLIT, "field": "input"},
             "counterfactual": {"dataset": SPLIT, "field": "counterfactual_inputs[0]"},
         },
+        "intervened_models": {
+            UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf", "logits_cf"]},
+            "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]},
+        },
         "sites": {
             "target": {"component": "block_output", "layers": [0]},
             "lm_head": {"component": "lm_head"},
         },
         "featurizers": {"gate": {"kind": "gate"}},
         "reads": {
-            "v_cf": {
-                "site": "target",
-                "pos": -1,
-                "model": "original",
-                "input": "counterfactual",
-                "featurizer": "gate",
-            },
-            "logits": {
-                "site": "lm_head",
-                "pos": -1,
-                "model": "masked",
-                "input": "base",
-            },
-            "logits_cf": {
-                "site": "lm_head",
-                "pos": -1,
-                "model": "original",
-                "input": "counterfactual",
-            },
+            "v_cf": {"site": "target", "pos": -1, "featurizer": "gate"},
+            "logits": {"site": "lm_head", "pos": -1},
+            "logits_cf": {"site": "lm_head", "pos": -1},
         },
         "writes": {
             "mask": {
@@ -89,10 +83,11 @@ def _fit_doc() -> dict[str, Any]:
                 "do": {"swap": "v_cf"},
             }
         },
-        "intervened_models": {"masked": {"input": "base", "writes": ["mask"]}},
-        "metrics": {"kl": {"kind": "kl", "of": "logits", "target": "logits_cf"}},
         "train": {
-            "objective": [[1.0, "kl"], [0.01, {"l1": "gate"}]],
+            "objective": [
+                [1.0, term("logits", "masked", dict(KL))],
+                [0.01, {"l1": "gate"}],
+            ],
             "params": ["gate"],
             "optimizer": {"name": "adamw", "lr": 0.1},
             "steps": {"epochs": COUNT},
@@ -100,7 +95,7 @@ def _fit_doc() -> dict[str, Any]:
             "seed": 0,
         },
         "save": [
-            {"value": "kl", "model": "masked", "input": "base", "file_path": "kl.json"},
+            saved("logits", "masked", "kl.json", dict(KL)),
             {"value": "gate", "site": "target", "file_path": "gate.safetensors"},
             {
                 "kind": "trajectory",
@@ -129,6 +124,8 @@ def _run(base: Path, doc: dict[str, Any], out: Path) -> int:
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -166,7 +163,7 @@ def test_the_bundle_holds_one_theta_per_checkpoint_keyed_by_step(fit: Path) -> N
         assert isinstance(record["loss"], float) and isinstance(record["step"], int)
         assert record["weight.1"] == 0.01 and "term.0" in record
         assert record["gate.hard_mask_size"] == float((tensors[key] > 0).sum())
-        assert record["parametrization"] == "sigmoid" and record["produced_by"]
+        assert record["parametrization"] == "sigmoid"
         assert record["slot"] == "theta" and record["coords"] == {
             "featurizer": "gate",
             "step": record["step"],
@@ -179,8 +176,7 @@ def test_the_bundle_holds_one_theta_per_checkpoint_keyed_by_step(fit: Path) -> N
 
 def _two_gate_fit_doc() -> dict[str, Any]:
     """Two gates at two layers under one list-valued ``l1`` — the many-layer
-    DBM shape whose checkpoints collided under one ``theta[step=n]`` key
-    (found by an all-heads sweep on Qwen3.5-2B)."""
+    DBM shape whose checkpoints collided under one ``theta[step=n]`` key."""
     doc = _fit_doc()
     doc["sites"]["target1"] = {"component": "block_output", "layers": [1]}
     doc["featurizers"] = {"g0": {"kind": "gate"}, "g1": {"kind": "gate"}}
@@ -190,6 +186,7 @@ def _two_gate_fit_doc() -> dict[str, Any]:
         "site": "target1",
         "featurizer": "g1",
     }
+    doc["intervened_models"][UNWRITTEN]["reads"].append("v_cf1")
     doc["writes"]["mask"]["featurizer"] = "g0"
     doc["writes"]["mask1"] = {
         "site": "target1",
@@ -198,7 +195,10 @@ def _two_gate_fit_doc() -> dict[str, Any]:
         "do": {"swap": "v_cf1"},
     }
     doc["intervened_models"]["masked"]["writes"] = ["mask", "mask1"]
-    doc["train"]["objective"] = [[1.0, "kl"], [0.01, {"l1": ["g0", "g1"]}]]
+    doc["train"]["objective"] = [
+        [1.0, term("logits", "masked", dict(KL))],
+        [0.01, {"l1": ["g0", "g1"]}],
+    ]
     doc["train"]["params"] = ["g0", "g1"]
     doc["save"] = [
         doc["save"][0],

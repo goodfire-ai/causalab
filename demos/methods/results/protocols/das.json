@@ -1,0 +1,47 @@
+{
+  "document": "protocols/das.json",
+  "document_digest": "3e53b18fb7e7a14bea5a00c5bf5cdb65aad68366769884e6ba9e9dbdf9b79768",
+  "run_digest": "3e53b18fb7e7a14bea5a00c5bf5cdb65aad68366769884e6ba9e9dbdf9b79768",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "bf16",
+  "date": "2026-09-21",
+  "elapsed_s": 44.6,
+  "metrics": {
+    "ce": {
+      "metric": "ce",
+      "unit": "nat",
+      "rows": 30,
+      "eligible_rows": 30,
+      "mean": 0.4079
+    },
+    "fit_diagnostics": {
+      "points": 1,
+      "rot": {}
+    },
+    "iia": {
+      "metric": "iia",
+      "unit": "logit",
+      "rows": 30,
+      "eligible_rows": 30,
+      "mean": 4.7521
+    },
+    "train_eval": {
+      "metric": "iia",
+      "split": "natural_domains_arithmetic/data/weekdays#test",
+      "selected": "early_stop.best",
+      "points": 1,
+      "best": -0.0526,
+      "passes": 10
+    },
+    "saved_tensors": {
+      "rot.safetensors": {
+        "weight": [
+          3584,
+          8
+        ]
+      }
+    }
+  }
+}

@@ -18,7 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from protocol._env import CORPUS_DIR, FIXTURES, build_env, write_rot_fixture  # noqa: E402
 
-from causalab.protocol.loader import load  # noqa: E402
+from tests.protocol._env import steps_of  # noqa: E402
+from causalab.protocol.pipeline import compile_protocol  # noqa: E402
 
 
 def main() -> None:
@@ -28,10 +29,10 @@ def main() -> None:
     env = build_env(tmp)
     pins: dict[str, dict[str, object]] = {}
     for path in sorted(CORPUS_DIR.glob("*_im.json")):
-        loaded = load(path, env)
+        loaded = compile_protocol(path, env=env)
         pins[path.name] = {
-            "document": loaded.document_digest,
-            "points": list(loaded.point_digests),
+            "document": loaded.digests.document,
+            "points": list(steps_of(loaded, env).digests),
         }
     out = Path(__file__).parent / "corpus_digests.json"
     out.write_text(json.dumps(pins, indent=2) + "\n")

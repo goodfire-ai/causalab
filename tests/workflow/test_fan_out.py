@@ -1,5 +1,5 @@
-"""Declared fan-out and joins (workflow spec §2.9, §5 rule 19) — on CPU, with
-a stub engine.
+"""Declared fan-out and joins (workflow spec §2.9, §5 rule 19;
+T15–T18 and the censuses) — on CPU, with a stub engine.
 
 * **The censuses.** `MAX_RULE` is 20 and §5 numbers it; the two closed
   vocabularies — what a fan-out is declared `over`, what a join may `require`
@@ -20,21 +20,22 @@ a stub engine.
   row, never appended out of order; a digest one child declares twice is a
   duplicate naming the child; a digest no child declared is a foreign point;
   a side table keyed by a digest-valued ``point`` joins in point order. A
-  fanned-out **behavioral** step's joined
-  ``continuations.json`` and ``outcomes.json`` are byte-identical to the
-  unsharded run's — a ``continuations.json`` row's int ``point`` is re-based
-  beside the ``point_digest`` that places it — and a row whose ``point`` index
-  and ``point_digest`` disagree is refused; a ``produced_by`` row's columns
-  are open, so an int column named ``point`` on a metric row is a coordinate
-  the join never touches.
+  fanned-out **behavioral** step's joined ``continuations.json`` and
+  ``outcomes.json`` are byte-identical to the unsharded run's — a
+  ``continuations.json`` row's int ``point`` is re-based beside the
+  ``point_digest`` that places it — and a row whose ``point`` index and
+  ``point_digest`` disagree is refused; a metric row's columns are open and it
+  is placed by its coordinate columns first, so an int column named ``point``
+  on a metric row is a coordinate the join never touches.
 * **T16 — missing vs selected.** A row or a digest deleted from a child
   before the join is a **missing** refusal with a distinct message — the join
   ``failed``, its dependents ``blocked``, the attempt retained; a
   ``require: selected`` join under a ``per_target`` conditional publishes the
   children the verdicts left and names the skipped child by
   ``evidence_identity``; a ``global`` conditional over a fanned-out step skips
-  the parent and every child. Only ``produced_by`` / ``point_digest``
-  promise a row per point: a side table placed by a digest-valued ``point``
+  the parent and every child. Only a coordinate-placed metric row and a
+  ``point_digest`` row promise a row per point: a side table placed by a
+  digest-valued ``point``
   that one child published sparsely and another not at all joins without a
   missing refusal. The sparse save files are **declared**
   (``_SPARSE_FILES``, censused against ``outputs.py``'s three side tables and
@@ -64,24 +65,28 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, Callable, Mapping, cast
 
 import pytest
 
 from causalab.cli import main as cli_main
 from causalab.io.events import EVENTS_FILE, read_events, terminal
 from causalab.io.step_record import SIDECAR
-from causalab.protocol.code import import_closure
+from causalab.neural.shared.sweep import signed_steps
+from causalab.protocol.identity import import_closure
+from causalab.protocol.compiled import CompiledProtocol
 from causalab.protocol.engine import (
     CONTINUATIONS_FILE,
     Engine,
-    ExecutionRequest,
+    RunContext,
     RunResult,
+    StepRecord,
 )
 from causalab.protocol.estimand import IDENTITY_COLUMNS
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.lowering import point_count
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.protocol.schema import COMPONENTS
-from causalab.protocol.tables import write_table
+from causalab.io.tables import write_table
 from causalab.tasks import TASKS_ROOT
 from causalab.workflow import fan_out
 from causalab.workflow import manifest as mf
@@ -141,12 +146,13 @@ SECTION_29 = "### 2.9 `fan_out` — a declared fan-out and its join"
 #: and no existing entry may (§7)
 FAN_OUT_KEYS = ("fan_out", "shard", "join")
 LAYERS = "sites.target.layers"
+#: the scan fixture's axes, in expansion order
+SCAN_AXES = ("positions.tap", LAYERS)
 PROBE_LAYERS = "sites.probe.layers"
 SAID = "positions.said_answer"
 CHECKER = {
     "task": "natural_domains_arithmetic",
     "task_cfg": {"domain_type": "weekdays"},
-    "scoring_digest": "961fabc779af7766d806961664dbf346bf54e932690c14d15b664a840b6adfdb",
 }
 
 
@@ -185,7 +191,7 @@ def _load(root: Path, raw: dict[str, Any] | None = None) -> LoadedWorkflow:
 
 
 def _run(loaded: LoadedWorkflow, root: Path, out: Path, **kw: Any) -> Any:
-    return run_workflow(loaded, _env(root), out, [_Rows()], **kw)
+    return run_workflow(loaded, _env(root), out, _Rows(), **kw)
 
 
 def _refused(
@@ -220,10 +226,25 @@ def _plain(value: Any) -> Any:
     )
 
 
+def _axes(loaded: LoadedWorkflow, step: str) -> list[str]:
+    return [axis.id for axis in loaded.inner[step].expansion.axes]
+
+
+def _parent_index(loaded: LoadedWorkflow, step: str, row: Mapping[str, Any]) -> int:
+    """The parent's point index a metric row's coordinate columns name — the
+    join's placement rule, restated over the expansion for the tests."""
+    axes = _axes(loaded, step)
+    key = tuple(_plain(row[axis]) for axis in axes)
+    for index, point in enumerate(loaded.inner[step].expansion.points):
+        if tuple(_plain(point.coords[axis]) for axis in axes) == key:
+            return index
+    raise AssertionError(f"no point of {step!r} at {key}")
+
+
 class _Rows(Engine):
     """A stub engine serving the fixture documents: one metric row per
     requested point and example into each of the document's save tables —
-    `produced_by` the point digest, the coordinates as columns — and, for a
+    the coordinates as columns, no digest on the row — and, for a
     decoding request, a `continuations.json` whose text says the answer at
     layer 0 of the swept `probe` site and says nothing at layer 1, so the
     children of a `sites.probe.layers` fan-out decide pass and fail."""
@@ -236,41 +257,47 @@ class _Rows(Engine):
         self.components = frozenset(COMPONENTS)
         self.writable_components = frozenset(COMPONENTS)
         self.is_local = True
-        self.requests: list[ExecutionRequest] = []
+        self.runs: list[tuple[CompiledProtocol, RunContext]] = []
 
-    def execute(self, request: ExecutionRequest) -> RunResult:
-        self.requests.append(request)
+    def execute(self, compiled: CompiledProtocol, run: RunContext) -> RunResult:
+        self.runs.append((compiled, run))
         files: dict[str, Path] = {}
-        saves = request.points[0]["method"]["save"]
+        # the engine's sweep: the steps `run` selects, enumerated and signed
+        steps = signed_steps(
+            compiled, run.env, indices=run.indices(point_count(compiled.axes))
+        )
+        points = [step.raw for step in steps]
+        digests = [step.digest for step in steps]
+        coords_by_point = [step.coords for step in steps]
+        saves = points[0]["method"]["save"]
         n_examples = 2
         rows_by_file: dict[str, list[dict[str, Any]]] = {
             str(entry["file_path"]): [] for entry in saves
         }
         for point, (raw, digest, coords) in enumerate(
-            zip(request.points, request.digests, request.coords)
+            zip(points, digests, coords_by_point)
         ):
             for entry in saves:
                 for example in range(n_examples):
                     rows_by_file[str(entry["file_path"])].append(
                         {
                             "example_id": str(example),
-                            "metric": entry["value"],
+                            "metric": str(entry["file_path"])
+                            .rsplit("/", 1)[-1]
+                            .rsplit(".", 1)[0],
                             "value": _value(digest, example),
                             **{axis: _plain(v) for axis, v in coords.items()},
-                            "produced_by": digest,
                         }
                     )
         for rel, rows in rows_by_file.items():
-            target = request.output_dir / rel
+            target = run.output_dir / rel
             write_table(target, rows)
             files[rel] = target
-        if request.decoding is not None:
-            ref = request.points[0]["data"]["base"]["dataset"]
-            table = request.env.datasets.rows(ref)
+        if run.decoding is not None:
+            ref = points[0]["data"]["base"]["dataset"]
+            table = run.env.datasets.rows(ref)
             lines: list[dict[str, Any]] = []
-            for point, (digest, coords) in enumerate(
-                zip(request.digests, request.coords)
-            ):
+            for point, (digest, coords) in enumerate(zip(digests, coords_by_point)):
                 says = coords.get(PROBE_LAYERS, 0) == 0
                 for example, row in enumerate(table):
                     lines.append(
@@ -288,10 +315,10 @@ class _Rows(Engine):
                             "offsets": [],
                         }
                     )
-            target = request.output_dir / "continuations.json"
+            target = run.output_dir / "continuations.json"
             write_table(target, lines)
             files["continuations.json"] = target
-        return RunResult(files=files)
+        return RunResult(files=files, steps=tuple(step.record for step in steps))
 
 
 def _behavioral_raw(
@@ -404,7 +431,7 @@ def _payload_keys(run_root: Path, event: str) -> set[str]:
 
 
 def test_rule_19_is_the_fan_out_rule_and_the_last() -> None:
-    # rule 20, the nested workflow's (§2.10), follows; the ceiling is
+    # §2.10: rule 20, the nested workflow's, follows; the ceiling is
     # pinned exactly by the last rule's own suite (test_nested.py), so a later
     # rule raises it without editing this one; the sixth kind is its; a fan-out
     # is still a field on the two document kinds
@@ -477,17 +504,27 @@ def test_fan_out_is_in_no_hashed_closure() -> None:
         assert MODULE not in _closure(module), module
 
 
+#: The torch-free enumerator — the one module under ``neural/`` the
+#: workflow layer's engine-free modules reach.
+ENUMERATOR = "causalab/neural/shared/sweep.py"
+
+
 def test_fan_out_reaches_no_engine_module() -> None:
+    """Engine-free: the one member under ``neural/`` is the torch-free
+    enumerator the workflow layer reads the steps through
+    (``neural/shared/sweep.py``, pinned torch-free in a subprocess by
+    ``tests/neural/shared/test_sweep.py``) — never an engine, never
+    numerics."""
     members = import_closure(REPO / MODULE, root=REPO)
     assert members, "the closure walk found nothing"
-    assert not [m for m in members if m.startswith("causalab/neural/")]
+    assert [m for m in members if m.startswith("causalab/neural/")] == [ENUMERATOR]
 
 
 _PROBE = """
 import json, sys
 from pathlib import Path
 import causalab.workflow.fan_out
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.tasks import TASKS_ROOT
 from causalab.workflow.document import load_workflow
 root = Path(sys.argv[1]); data = Path(sys.argv[2])
@@ -529,10 +566,10 @@ def test_the_sparse_save_files_and_the_row_shapes_are_the_writers(
     (a) ``_SPARSE_FILES`` is exactly the three side tables ``write_outputs``
     writes only when there is something to write; neither dense behavioral
     file is in it. (b) The row shapes the join places by, against the real
-    writers on CPU: a metric row (``MetricTable``) carries ``produced_by`` and
-    neither ``point_digest`` nor a fixed ``point`` column — its open columns
-    are the coordinates alone, so a coordinate named ``point`` lands as a
-    ``point`` column beside ``produced_by``; a
+    writers on CPU: a metric row (``MetricTable``) carries no digest key at
+    all — neither ``point_digest`` nor a fixed ``point`` column — its open
+    columns are the coordinates alone (what places it), so a coordinate named
+    ``point`` lands as a plain ``point`` column; a
     ``continuations.json`` row (the engine's ``_write_continuations``) carries
     an int ``point`` beside its ``point_digest``; a ``train_eval.json`` record
     (``TrainEvalScore.as_record``) carries a ``str`` ``point`` and neither
@@ -545,7 +582,8 @@ def test_the_sparse_save_files_and_the_row_shapes_are_the_writers(
     import torch
 
     from causalab.neural.engines.pytorch_hooks import engine as hooks_engine
-    from causalab.neural.shared import outputs
+    from causalab.io import results_io
+    from causalab.neural.shared import results as outputs
     from causalab.neural.shared.encoding import Continuation
     from causalab.neural.shared.execution import TrainEvalScore
 
@@ -553,38 +591,40 @@ def test_the_sparse_save_files_and_the_row_shapes_are_the_writers(
     dense = fan_out._DENSE_KEYS  # pyright: ignore[reportPrivateUsage]
     # (a) the declaration is the writers' three side tables, and nothing else
     assert set(sparse) == {
-        outputs.TRAIN_EVAL_FILE,
-        outputs.FIT_DIAGNOSTICS_FILE,
-        outputs.ROUTING_MISMATCH_FILE,
+        results_io.TRAIN_EVAL_FILE,
+        results_io.FIT_DIAGNOSTICS_FILE,
+        results_io.ROUTING_MISMATCH_FILE,
     }
     assert len(sparse) == 3
     assert {CONTINUATIONS_FILE, OUTCOMES_FILE}.isdisjoint(sparse)
-    assert set(dense) == {"produced_by", "point_digest"}
+    assert set(dense) == {"point_digest"}
     digest = "ab" * 32
     identity = {column: "x" for column in IDENTITY_COLUMNS}
     root = _tree(tmp_path)
-    # (b) a metric row: `produced_by`, no `point_digest`, no fixed `point`
+    # (b) a metric row: the coordinates as columns, no digest key, no fixed
+    # `point`
     table = outputs.MetricTable()
-    table.add("iia", [0.5], {"sites.target.layers": 3}, digest, identity=identity)
+    table.add("iia", [0.5], {"sites.target.layers": 3}, identity=identity)
     (metric,) = table.rows
-    assert metric["produced_by"] == digest
-    assert "point_digest" not in metric and "point" not in metric
+    assert metric["sites.target.layers"] == 3
+    assert {"point_digest", "point"}.isdisjoint(metric)
     fixed = outputs.MetricTable()
-    fixed.add("iia", [0.5], {}, digest, identity=identity)
+    fixed.add("iia", [0.5], {}, identity=identity)
     assert set(fixed.rows[0]) == {
         "example_id",
         "metric",
         "value",
         *IDENTITY_COLUMNS,
         outputs.ELIGIBLE_COLUMN,
-        "produced_by",
     }
     # ... and its open columns are the coordinates: a coordinate named `point`
-    # is a `point` column beside `produced_by`, which the join must not touch
+    # is a plain `point` column, which the join must not touch
     coordinate = outputs.MetricTable()
-    coordinate.add("iia", [0.5], {"point": 3}, digest, identity=identity)
+    coordinate.add("iia", [0.5], {"point": 3}, identity=identity)
     assert coordinate.rows[0]["point"] == 3
-    assert coordinate.rows[0]["produced_by"] == digest
+    # the writer's coordinate serialization is the join's (`fan_out._plain`)
+    for value in (3, 0.5, "x", True, [1, 2], {"b": 1, "a": 2}):
+        assert fan_out._plain(value) == outputs._plain(value)  # pyright: ignore[reportPrivateUsage]
 
     # a continuations row: int `point` (the index into the request) beside
     # `point_digest`, written by the real engine writer over one decoded batch
@@ -608,27 +648,18 @@ def test_the_sparse_save_files_and_the_row_shapes_are_the_writers(
                 )
             }
 
-    request = ExecutionRequest(
-        points=({},),
-        canonical=({},),
-        digests=(digest,),
-        coords=({},),
-        document_digest="d",
-        env=_env(root),
-        output_dir=tmp_path / "engine",
-    )
+    run = RunContext(output_dir=tmp_path / "engine", env=_env(root))
     path = hooks_engine._write_continuations(  # pyright: ignore[reportPrivateUsage]
-        request, cast("list[Any]", [_Decoded()])
+        run, cast("list[Any]", [_Decoded()]), steps=(StepRecord(0, {}, digest),)
     )
     (continuation,) = json.loads(path.read_text())
     assert continuation["point"] == 0 and continuation["point_digest"] == digest
-    assert "produced_by" not in continuation
     # the side tables: a `str` `point`, neither dense key
     evaluation = TrainEvalScore(
         split="development", metrics={"acc": 1.0}, passes=1
     ).as_record(point=digest, coords={"sites.target.layers": 3})
     assert evaluation["point"] == digest
-    assert {"produced_by", "point_digest"}.isdisjoint(evaluation)
+    assert "point_digest" not in evaluation
     source = (REPO / "causalab" / "neural" / "shared" / "execution.py").read_text()
     for writer in ("train_evals", "fit_diagnostics", "routing_mismatch"):
         assert source.count(f"{writer}.append(") == 1, writer
@@ -646,7 +677,7 @@ def test_the_sparse_save_files_and_the_row_shapes_are_the_writers(
     assert sorted(literals) == ["fit_diagnostics", "routing_mismatch"]
     for body in literals.values():
         assert '"point": point_digest,' in body
-        assert '"produced_by"' not in body and '"point_digest"' not in body
+        assert '"point_digest"' not in body
     # an outcomes row: int `point`, neither dense key — the real behavioral
     # writer over the stub's continuations
     plain = _run(_load(root, _lone_behavioral_raw(root)), root, tmp_path / "plain")
@@ -654,7 +685,7 @@ def test_the_sparse_save_files_and_the_row_shapes_are_the_writers(
     assert outcomes
     for row in outcomes:
         assert isinstance(row["point"], int)
-        assert {"produced_by", "point_digest"}.isdisjoint(row)
+        assert "point_digest" not in row
     # (c) the load-time refusal's name set IS `_SPARSE_FILES`:
     # `check_fan_out` reads the tuple and
     # restates no name — each is spelled exactly once in `fan_out.py`, in
@@ -668,27 +699,14 @@ def test_the_sparse_save_files_and_the_row_shapes_are_the_writers(
 
 
 def test_section_2_9_names_exactly_the_sparse_side_tables_the_code_declares() -> None:
-    """§2.9 spells the three sparse side tables out, so the set lives in the
-    code, the gate's comment, the prose and the census — and nothing pinned
-    the prose. Located the way the
-    tree's other spec censuses are (`_section` on the workflow spec; the
-    paragraph by a stable anchor, the sentence by its boundary), the
-    file-presence sentence names every member of ``_SPARSE_FILES`` and no
-    other ``.json`` file, so a fourth side table declared in the code fails
-    here until §2.9 says so too."""
+    """The spec names every sparse side table and permits missing child files."""
     sparse = fan_out._SPARSE_FILES  # pyright: ignore[reportPrivateUsage]
-    prose = " ".join(_section(SECTION_29).split())
-    anchor = (
-        "A file some child did not publish is missing unless it is one of those "
-        "three side tables"
+    paragraph = next(
+        p for p in _section(SECTION_29).split("\n\n") if "`train_eval.json`" in p
     )
-    assert prose.count(anchor) == 1, anchor
-    start = prose.index(anchor)
-    end = prose.index(". ", start)  # the sentence boundary
-    sentence = prose[start : end + 1]
-    named = re.findall(r"[\w./-]+\.json", sentence)
-    assert sorted(named) == sorted(sparse), sentence
-    assert len(sparse) == 3  # "those three side tables" — the prose counts them
+    named = re.findall(r"[\w./-]+\.json", paragraph)
+    assert sorted(named) == sorted(sparse), paragraph
+    assert "sparse" in paragraph and "absent from individual children" in paragraph
 
 
 # --------------------------------------------------------------------------- #
@@ -796,6 +814,7 @@ def test_t15_a_fan_out_joins_row_for_row_to_the_unsharded_run(
     joined, single = _record(fanned.run_root, "scan"), _record(plain.run_root, "scan")
     assert joined["axes"] == single["axes"] == ["positions.tap", LAYERS]
     assert joined["point_digests"] == single["point_digests"]
+    assert joined["coords"] == single["coords"]
     assert joined["points"] == single["points"] == 8
     assert joined["document_digest"] == single["document_digest"]
     assert "method" not in joined and "method" not in single  # no method digest
@@ -820,6 +839,11 @@ def test_t15_a_fan_out_joins_row_for_row_to_the_unsharded_run(
         assert record["identity"] == fanned_loaded.step_digests[child]
         assert record["shard"] == fanned_loaded.document.steps[child].shard
         assert record["points"] == len(record["shard"]["points"])
+        assert len(record["coords"]) == len(record["point_digests"])
+        assert record["coords"] == [
+            dict(fanned_loaded.inner["scan"].expansion.points[i].coords)
+            for i in record["shard"]["points"]
+        ]
         assert "engine" in record and "execution" in record
     assert joined["join"]["n_points"] == 8
     assert joined["join"]["n_missing"] == 0 and joined["join"]["n_duplicate"] == 0
@@ -857,7 +881,7 @@ def test_t15_a_fan_out_joins_row_for_row_to_the_unsharded_run(
 def _tamper_at(step: str, edit: Callable[[Path], None]) -> Callable[[Any], None]:
     """An event sink that edits a child's published unit the instant its
     `phase_completed` line is written — after the child published, before the
-    join runs (the tamper tests' injection point)."""
+    join runs (the injection point of the duplicate and missing mutations)."""
 
     def sink(line: Any) -> None:
         if line["event"] == "phase_completed" and line["payload"]["step"] == step:
@@ -870,9 +894,13 @@ RUN_ROOT: list[Path] = [Path(".")]
 
 
 def _run_tampered(
-    root: Path, out: Path, step: str, edit: Callable[[Path], None]
+    root: Path,
+    out: Path,
+    step: str,
+    edit: Callable[[Path], None],
+    raw: dict[str, Any] | None = None,
 ) -> tuple[WorkflowError, Path]:
-    loaded = _load(root)
+    loaded = _load(root, raw)
     run_root = out / loaded.document.output_dir
     RUN_ROOT[0] = run_root
     with pytest.raises(WorkflowError) as err:
@@ -883,10 +911,10 @@ def _run_tampered(
 def test_t15_mutation_a_duplicate_point_is_refused_one_point_one_child(
     tmp_path: Path,
 ) -> None:
-    """A row of another child's point injected into a child's published
-    table after that child published — the join refuses it as a duplicate by
-    digest; without the check the joined table carries N+1 rows and nothing
-    else notices."""
+    """The duplicate mutation: a row of another child's point injected into a
+    child's published table after that child published — the join refuses it
+    as a duplicate by digest; without the check the joined table carries N+1
+    rows and nothing else notices."""
     root = _tree(tmp_path)
 
     def inject(run_root: Path) -> None:
@@ -909,11 +937,11 @@ def test_t15_mutation_a_duplicate_point_is_refused_one_point_one_child(
 def test_a_row_the_join_cannot_place_is_refused_naming_the_file_and_the_row(
     tmp_path: Path,
 ) -> None:
-    """The fail-closed half: a row naming no point (no
-    `produced_by`, no `point_digest`, no `point`) and a row whose `point`
+    """The unplaceable row, the fail-closed half: a row naming no point (no
+    coordinate columns, no `point_digest`, no `point`) and a row whose `point`
     index is outside its child's points are each a rule-19 refusal naming the
-    file, the row and the child — without this check both landed at the end
-    of the joined table and the per-file missing check never saw them."""
+    file, the row and the child — an earlier join appended both at the end of
+    the joined table and the per-file missing check never saw them."""
     root = _tree(tmp_path)
 
     def rogue(run_root: Path) -> None:
@@ -949,22 +977,29 @@ def test_a_row_the_join_cannot_place_is_refused_naming_the_file_and_the_row(
 def test_a_digest_valued_point_column_places_a_row_in_point_order(
     tmp_path: Path,
 ) -> None:
-    """The ordering half: the engine's side tables
+    """The unplaceable row, the ordering half: the engine's side tables
     (`train_eval.json`, `fit_diagnostics.json`, `routing_mismatch.json`) name
-    their point in a `point` column holding the digest string, not
-    `produced_by`; the join places such a row by that digest. Over an axis
-    the children interleave the parent's points, so a join that ignored the
-    column came out grouped by child."""
+    their point in a `point` column holding the digest string, and carry no
+    coordinate columns; the join places such a row by that digest. Over an
+    axis the children interleave the parent's points, so a join that ignored
+    the column came out grouped by child. The rows here are the stub's metric
+    rows re-shaped into that form: the coordinate columns stripped and the
+    digest the child's record declares at the row's point put in `point`."""
     root = _tree(tmp_path)
     plain = _run(_load(root, _unfanned(_raw(root))), root, tmp_path / "plain")
     loaded = _load(root, _fanned(_raw(root), "scan", {"axis": LAYERS}))
     fanned = _run(loaded, root, tmp_path / "fanned")
+    axes = _axes(loaded, "scan")
     by_child: list[str] = []
     for child in loaded.children["scan"]:
+        record = _record(fanned.run_root, child)
         table = fanned.run_root / child / "iia.json"
         rows = json.loads(table.read_text())
         for row in rows:
-            row["point"] = row.pop("produced_by")
+            local = record["shard"]["points"].index(_parent_index(loaded, "scan", row))
+            row["point"] = record["point_digests"][local]
+            for axis in axes:
+                del row[axis]
             by_child.append(row["point"])
         table.write_text(json.dumps(rows))
     step = loaded.document.steps["scan"]
@@ -976,7 +1011,7 @@ def test_a_digest_valued_point_column_places_a_row_in_point_order(
     )
     joined = [row["point"] for row in json.loads((attempt / "iia.json").read_text())]
     expected = [
-        row["produced_by"]
+        loaded.inner["scan"].point_digests[_parent_index(loaded, "scan", row)]
         for row in json.loads((plain.run_root / "scan" / "iia.json").read_text())
     ]
     assert joined == expected
@@ -1044,7 +1079,7 @@ def test_t15_a_fanned_out_behavioral_step_joins_continuations_byte_for_byte(
 def test_a_row_whose_point_index_and_point_digest_disagree_is_refused(
     tmp_path: Path,
 ) -> None:
-    """The fail-closed half: a `continuations.json` row whose `point`
+    """The two-key row, the fail-closed half: a `continuations.json` row whose `point`
     index names one of the child's points and whose `point_digest` names
     another is a rule-19 refusal naming the file, the row, the child, both
     indices and the digest — never re-based silently to either; an index
@@ -1101,18 +1136,19 @@ def test_a_row_whose_point_index_and_point_digest_disagree_is_refused(
 
 
 @pytest.mark.parametrize("value", ["local_index", 99], ids=["in_range", "out_of_range"])
-def test_a_produced_by_row_keeps_an_int_column_named_point(
+def test_a_coordinate_placed_row_keeps_an_int_column_named_point(
     tmp_path: Path, value: Any
 ) -> None:
     """The re-base is gated on the
     `point_digest` pairing, not on "an int column named `point`". A metric
-    row's columns are open — `outputs.py:299` splats the point's coordinates
-    in as columns and nothing reserves a name — so a `produced_by` row
-    carrying an int `point` is a row with a coordinate named `point`: the join
-    places it by `produced_by` and publishes the column value for value the
-    child's, whether the value falls inside the child's shard (an earlier
-    version silently rewrote it to the parent's index) or outside it (which
-    it refused as "the row's two keys"). Twin:
+    row's columns are open — `outputs.py` splats the point's coordinates in
+    as columns and nothing reserves a name — so a metric row carrying an int
+    `point` is a row with a coordinate named `point`: the join places it by
+    its coordinate columns (that rule dispatches first) and publishes the
+    column value for value the
+    child's, whether the value falls inside the child's shard (an earlier join
+    silently rewrote it to the parent's index) or outside it (an earlier join
+    refused it as "the row's two keys"). Twin:
     `test_t15_a_fanned_out_behavioral_step_joins_continuations_byte_for_byte`,
     where the int `point` sits beside a `point_digest` and IS re-based."""
     root = _tree(tmp_path)
@@ -1120,11 +1156,11 @@ def test_a_produced_by_row_keeps_an_int_column_named_point(
     fanned = _run(loaded, root, tmp_path / "fanned")
     child = loaded.children["scan"][1]
     record = _record(fanned.run_root, child)
-    digests, own = record["point_digests"], record["shard"]["points"]
+    own = record["shard"]["points"]
     table = fanned.run_root / child / "iia.json"
     rows = json.loads(table.read_text())
     for row in rows:
-        local = digests.index(row["produced_by"])
+        local = own.index(_parent_index(loaded, "scan", row))
         row["point"] = local if value == "local_index" else value
         assert row["point"] != own[local]  # were it re-based, it would change
     table.write_text(json.dumps(rows))
@@ -1137,9 +1173,11 @@ def test_a_produced_by_row_keeps_an_int_column_named_point(
     )
     assert joined_record["status"] == "completed"
     joined = json.loads((attempt / "iia.json").read_text())
-    ours = [row for row in joined if row["produced_by"] in set(digests)]
+    ours = [row for row in joined if _parent_index(loaded, "scan", row) in set(own)]
     assert ours == rows  # the child's rows, the `point` column included
-    theirs = [row for row in joined if row["produced_by"] not in set(digests)]
+    theirs = [
+        row for row in joined if _parent_index(loaded, "scan", row) not in set(own)
+    ]
     assert theirs and all("point" not in row for row in theirs)
     assert (attempt / "logit_diff.json").read_bytes() == (
         fanned.run_root / "scan" / "logit_diff.json"
@@ -1156,7 +1194,8 @@ def test_a_sparse_side_table_one_child_published_joins_without_a_missing_refusal
     incomplete run: the join places the rows by their digest-valued `point`,
     in the parent's order, and holds neither the file-presence check nor the
     per-file completeness check against it. The twin at the end: a dense table
-    (`produced_by`) a child did not publish IS the missing-file refusal."""
+    (a coordinate-placed metric table) a child did not publish IS the
+    missing-file refusal."""
     root = _tree(tmp_path)
     loaded = _load(root, _fanned(_raw(root), "scan", {"axis": LAYERS}))
     fanned = _run(loaded, root, tmp_path / "fanned")
@@ -1191,7 +1230,7 @@ def test_a_sparse_side_table_one_child_published_joins_without_a_missing_refusal
     assert (attempt / "iia.json").read_bytes() == (
         fanned.run_root / "scan" / "iia.json"
     ).read_bytes()
-    # a metric table (`produced_by`) is dense: absent from one child, missing
+    # a metric table (coordinate-placed) is dense: absent from one child, missing
     record_b = _record(fanned.run_root, b)
     record_b["files"] = [rel for rel in record_b["files"] if rel != "iia.json"]
     (fanned.run_root / b / SIDECAR).write_text(json.dumps(record_b))
@@ -1211,8 +1250,8 @@ def test_a_sparse_side_table_one_child_published_joins_without_a_missing_refusal
 def test_an_empty_dense_table_beside_a_child_that_omitted_it_is_missing(
     tmp_path: Path,
 ) -> None:
-    """Density is the writer's, not the data's. An earlier version read it
-    off the rows found, so a dense table one
+    """Density is the writer's, not
+    the data's. An earlier join read it off the rows found, so a dense table one
     child published EMPTY and another omitted from `files` tallied zero dense
     rows, passed the file-presence gate, short-circuited the per-file check on
     the same emptiness and joined `completed` with an empty table. Declared
@@ -1249,9 +1288,9 @@ def test_an_empty_dense_table_beside_a_child_that_omitted_it_is_missing(
 def test_a_point_declared_twice_by_one_child_is_a_duplicate_refusal(
     tmp_path: Path,
 ) -> None:
-    """One child's `point_digests` repeating a digest has
+    """A repeated digest: one child's `point_digests` repeating a digest has
     one owner in the cross-child check and fills two slots of the parent's
-    list, so without this check it was neither duplicate nor missing and the
+    list, so an earlier join counted it neither duplicate nor missing and the
     receipt carried the repeat."""
     root = _tree(tmp_path)
 
@@ -1273,27 +1312,178 @@ def test_a_point_declared_twice_by_one_child_is_a_duplicate_refusal(
 def test_a_foreign_point_is_refused_naming_what_the_children_declared(
     tmp_path: Path,
 ) -> None:
-    """The join's point list is the children's own
-    `point_digests` (a deferred document has no load-time list), so a row
-    naming a digest no child declared is refused saying exactly that — not
-    "not a point of the parent (N compiled points)"."""
+    """A foreign point, over the two row shapes that name a point by
+    something the join looks up: a metric row whose coordinate columns name
+    a point no child published is refused naming those coordinates, and a
+    side-table row naming a digest no child declared is refused saying
+    exactly that (the join's point list is the children's own `point_digests`
+    and `coords`; a deferred document has no load-time list) — never "not a
+    point of the parent (N compiled points)"."""
     root = _tree(tmp_path)
+
+    def relocate(run_root: Path) -> None:
+        table = run_root / "scan@1" / "iia.json"
+        rows = json.loads(table.read_text())
+        rows[0][LAYERS] = 99  # no layer of the sweep
+        table.write_text(json.dumps(rows))
+
+    err, _ = _run_tampered(root, tmp_path / "runs", "scan@1", relocate)
+    assert err.rule == FAN_OUT_RULE
+    assert "row 0 of 'iia.json' in 'scan@1' names coordinates" in str(err)
+    assert f"'{LAYERS}': 99" in str(err)
+    assert "which no child of 'scan' published" in str(err)
+    assert "compiled points" not in str(err) and "expansion" not in str(err)
+    assert "one point, one child" not in str(err)
+
     foreign = "f" * 64
 
     def rename(run_root: Path) -> None:
+        # a side-table row: no coordinate columns, a digest-valued `point`
         table = run_root / "scan@1" / "iia.json"
         rows = json.loads(table.read_text())
-        rows[0]["produced_by"] = foreign
+        rows.append({"metric": "iia", "value": 0.5, "point": foreign})
         table.write_text(json.dumps(rows))
 
-    err, _ = _run_tampered(root, tmp_path / "runs", "scan@1", rename)
-    assert err.rule == FAN_OUT_RULE
+    err2, _ = _run_tampered(
+        _tree(tmp_path / "again"), tmp_path / "digest", "scan@1", rename
+    )
+    assert err2.rule == FAN_OUT_RULE
     assert (
         f"point {foreign}, named by a row 'scan@1' published, is no point any "
         "child of 'scan' declared as its own"
-    ) in str(err)
-    assert "compiled points" not in str(err)
-    assert "one point, one child" not in str(err)
+    ) in str(err2)
+    assert "compiled points" not in str(err2)
+
+
+PICK = """
+import json
+from pathlib import Path
+
+
+def main(inputs, outputs):
+    Path(outputs["values"]).write_text(json.dumps({"layers": inputs["layers"]}))
+"""
+
+
+def _deferred_sweep_raw(root: Path, emitted: list[int]) -> dict[str, Any]:
+    """The scan fixture with its layer sweep fed by a script step: `pick`
+    emits `layers` as ``emitted`` and declares the representative ``[0, 1]``,
+    so the load-time compile sees layers 0 and 1 and the run-time compile
+    sees ``emitted`` — the same number of points at other coordinates."""
+    (root / "scripts" / "pick.py").write_text(PICK)
+    raw = _raw(root)
+    scan = dict(raw["steps"]["scan"])
+    scan["set"] = {LAYERS: {"sweep": {"artifact": "pick", "key": "layers"}}}
+    raw["steps"] = {
+        "pick": {
+            "type": "script",
+            "script": {"path": "scripts/pick.py"},
+            "inputs": {"layers": list(emitted)},
+            "outputs": {"values": {"file": "values.json", "keys": {"layers": [0, 1]}}},
+        },
+        "scan": scan,
+        "best": raw["steps"]["best"],
+    }
+    return raw
+
+
+def test_a_deferred_sweep_joins_on_the_run_time_coordinates(tmp_path: Path) -> None:
+    """A fanned-out document whose sweep values come from a step's
+    `values.json`, with a representative that differs from the emitted value:
+    the children's rows carry the run-time coordinates (layers 2 and 3), the
+    load-time expansion knows only the representative (layers 0 and 1), and
+    the join places every row — through the coordinates the children
+    published, never the load-time compile — to the same tables an unfanned
+    run writes."""
+    root = _tree(tmp_path)
+    emitted = [2, 3]
+    fanned_loaded = _load(
+        root, _fanned(_deferred_sweep_raw(root, emitted), "scan", {"shards": 2})
+    )
+    load_time = {p.coords[LAYERS] for p in fanned_loaded.inner["scan"].expansion.points}
+    assert load_time == {0, 1}  # the representative, not the emitted value
+    fanned = _run(fanned_loaded, root, tmp_path / "fanned")
+    plain = _run(
+        _load(root, _unfanned(_deferred_sweep_raw(root, emitted))),
+        root,
+        tmp_path / "plain",
+    )
+    assert _statuses(fanned) == {
+        "pick": "completed",
+        "scan@0": "completed",
+        "scan@1": "completed",
+        "scan": "completed",
+        "best": "completed",
+    }
+    for rel in ("iia.json", "logit_diff.json"):
+        assert (fanned.run_root / "scan" / rel).read_bytes() == (
+            plain.run_root / "scan" / rel
+        ).read_bytes(), rel
+    rows = json.loads((fanned.run_root / "scan" / "iia.json").read_text())
+    assert {row[LAYERS] for row in rows} == set(emitted)
+    assert (
+        len(rows) == 4 * 2
+    )  # four run-time points (2 taps x 2 layers), two examples each
+    joined, single = _record(fanned.run_root, "scan"), _record(plain.run_root, "scan")
+    assert joined["point_digests"] == single["point_digests"]
+    assert joined["coords"] == single["coords"]
+    assert {coords[LAYERS] for coords in joined["coords"]} == set(emitted)
+    # the children published the run-time coordinates, aligned with their digests
+    for child in fanned_loaded.children["scan"]:
+        record = _record(fanned.run_root, child)
+        assert len(record["coords"]) == len(record["point_digests"]) == 2
+        assert {coords[LAYERS] for coords in record["coords"]} <= set(emitted)
+    assert (
+        json.loads((fanned.run_root / "best" / "values.json").read_text())["best_layer"]
+        in emitted
+    )
+
+
+def test_a_child_record_without_coordinates_is_a_missing_point(
+    tmp_path: Path,
+) -> None:
+    """The join places a metric row through the coordinates the children
+    published; a child's record without them (a record written by another
+    runner, or tampered) is a missing point, refused as a record without
+    `point_digests` is."""
+    root = _tree(tmp_path)
+
+    def strip(run_root: Path) -> None:
+        sidecar = run_root / "scan@1" / SIDECAR
+        record = json.loads(sidecar.read_text())
+        del record["coords"]
+        sidecar.write_text(json.dumps(record))
+
+    err, _ = _run_tampered(root, tmp_path / "runs", "scan@1", strip)
+    assert err.rule == FAN_OUT_RULE
+    assert "was published by no child" in str(err)
+    assert "'scan@1' published the coordinates of 0 of its 4 points" in str(err)
+
+
+def test_a_row_at_a_skipped_childs_coordinates_is_foreign_under_selected(
+    tmp_path: Path,
+) -> None:
+    """Under `require: selected` the skipped child's points are not missing,
+    but nothing places a row there: a row of the unskipped child rewritten to
+    the skipped child's coordinates names a point no child of the join
+    published, and is refused under rule 19 saying so."""
+    root = _tree(tmp_path)
+    raw = _behavioral_raw(root)  # apply@0 runs (layer 0), apply@1 is skipped
+
+    def relocate(run_root: Path) -> None:
+        table = run_root / "apply@0" / "iia.json"
+        rows = json.loads(table.read_text())
+        rows[0][PROBE_LAYERS] = 1  # apply@1's coordinate
+        table.write_text(json.dumps(rows))
+
+    err, run_root = _run_tampered(root, tmp_path / "runs", "apply@0", relocate, raw)
+    assert err.rule == FAN_OUT_RULE
+    assert "row 0 of 'iia.json' in 'apply@0' names coordinates" in str(err)
+    assert f"'{PROBE_LAYERS}': 1" in str(err)
+    assert "which no child of 'apply' published" in str(err)
+    manifest = json.loads((run_root / mf.MANIFEST).read_text())["steps"]
+    assert manifest["apply"]["status"] == "failed"
+    assert manifest["apply@1"]["status"] == "skipped"
 
 
 # --------------------------------------------------------------------------- #
@@ -1305,10 +1495,13 @@ def test_t16_a_missing_row_is_a_distinct_refusal(tmp_path: Path) -> None:
     root = _tree(tmp_path)
 
     def delete_row(run_root: Path) -> None:
+        # every row at the first row's coordinates: one point's rows
         table = run_root / "scan@1" / "iia.json"
         rows = json.loads(table.read_text())
-        digest = rows[0]["produced_by"]
-        table.write_text(json.dumps([r for r in rows if r["produced_by"] != digest]))
+        point = {axis: rows[0][axis] for axis in SCAN_AXES}
+        table.write_text(
+            json.dumps([r for r in rows if {a: r[a] for a in SCAN_AXES} != point])
+        )
 
     err, run_root = _run_tampered(root, tmp_path / "rows", "scan@1", delete_row)
     assert err.rule == FAN_OUT_RULE
@@ -1343,8 +1536,8 @@ def test_t16_a_missing_row_is_a_distinct_refusal_for_a_point_digest_table(
     """T16 over the second dense shape: a `continuations.json` row names its
     point by `point_digest`, whose writer promises one row per point, so a
     point with no row in it is the missing-row refusal exactly as for a
-    `produced_by` metric table (`test_t16_a_missing_row_is_a_distinct_refusal`)
-    — the sparse exemption covers only digest-valued `point` side tables."""
+    coordinate-placed metric table (`test_t16_a_missing_row_is_a_distinct_refusal`)
+    — the sparse-table split exempts only digest-valued `point` side tables."""
     root = _tree(tmp_path)
     loaded = _load(root, _lone_behavioral_raw(root, {"axis": PROBE_LAYERS}))
     fanned = _run(loaded, root, tmp_path / "fanned")
@@ -1483,8 +1676,7 @@ def test_t16_a_global_conditional_skips_the_parent_and_its_children(
     tmp_path: Path,
 ) -> None:
     """The global conditional's second half: `scan` on the false side — its
-    children are skipped with it (no `scan@i/` directory), `best`
-    transitively."""
+    children are skipped with it (no `scan@i/` directory), `best` transitively."""
     root = _tree(tmp_path)
     loaded = _load(root, _gated_raw(root, score=0.1))
     result = _run(loaded, root, tmp_path / "runs")
@@ -1564,7 +1756,7 @@ def test_t17_the_conditional_chain_is_unchanged(env: Any, tmp_path: Path) -> Non
     """T14 again: identities for every existing kind, the chain's order and
     records with no §2.9 key, and a clean run then `--resume` byte-identical."""
     kinds: set[str] = set()
-    for name in ("mean_ablation.json", "weekdays_8b.json"):
+    for name in ("mean_ablation.json", "weekdays.json", "pca_basis.json"):
         kinds |= _identity_kinds(load_workflow(WORKFLOWS / name, env))
     root = _chain_tree(tmp_path)
     loaded = _chain_load(root)
@@ -1630,7 +1822,7 @@ def test_t17_a_clean_run_then_resume_reuses_children_and_join(tmp_path: Path) ->
 
 
 def test_t17_a_width_change_re_runs_every_child_under_resume(tmp_path: Path) -> None:
-    """The identity's second half: were a child identified by the inner digest,
+    """The identity mutation's second half: were a child identified by the inner digest,
     `--resume` after `shards: 2 → 3` would reuse `scan@0` with the wrong
     points; it is identified by its parent's entry and its shard instead."""
     root = _tree(tmp_path)
@@ -1672,7 +1864,7 @@ def test_the_join_runs_no_engine(
     first = _run(loaded, root, out)
     shutil.rmtree(first.run_root / "scan")
     _sentinels(monkeypatch)
-    again = run_workflow(loaded, _env(root), out, [], resume=True)
+    again = run_workflow(loaded, _env(root), out, None, resume=True)
     assert _statuses(again) == {
         "scan@0": "reused",
         "scan@1": "reused",
@@ -1757,9 +1949,8 @@ def _with_bundle(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
     doc = json.loads((root / "protocols" / "scan.json").read_text())
     doc["method"]["save"].append(
         {
-            "value": "v_cf",
-            "model": "original",
-            "input": "counterfactual",
+            "read": "v_cf",
+            "model": "original_counterfactual",
             "file_path": "v_cf.safetensors",
         }
     )
@@ -1770,8 +1961,8 @@ def _with_bundle(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
 
 def _with_ledger(root: Path, raw: dict[str, Any]) -> dict[str, Any]:
     """scan.json plus a `location_ledger` save entry (IM spec §2.12) — the
-    one non-value save kind; its rows name their point by digest string with
-    no `produced_by`, and the ledger is a certificate, so a fan-out over it is
+    one non-value save kind; its rows name their point by digest string, and
+    the ledger is a certificate, so a fan-out over it is
     refused at load."""
     doc = json.loads((root / "protocols" / "scan.json").read_text())
     doc["method"]["save"].append(
@@ -1788,7 +1979,7 @@ def _with_save_named(root: Path, raw: dict[str, Any], file_path: str) -> dict[st
     (IM spec §2.12), so a document may claim any name, one of the engine's
     sparse side tables' included."""
     doc = json.loads((root / "protocols" / "scan.json").read_text())
-    (entry,) = [e for e in doc["method"]["save"] if e["value"] == "logit_diff"]
+    (entry,) = [e for e in doc["method"]["save"] if e["file_path"] == "logit_diff.json"]
     entry["file_path"] = file_path
     (root / "protocols" / "scan_named.json").write_text(json.dumps(doc))
     raw["steps"]["scan"]["document"] = "protocols/scan_named.json"
@@ -1982,7 +2173,7 @@ def test_a_ledger_saving_document_loads_unfanned() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = _tree(Path(tmp))
         loaded = _load(root, _unfanned(_with_ledger(root, _raw(root))))
-        entry = loaded.inner["scan"].document.save[-1]
+        entry = loaded.inner["scan"].compiled.document.save[-1]
         assert entry.kind == "location_ledger"
         assert str(entry.file_path) == "ledger.json"
         assert "scan" not in loaded.children
@@ -2033,7 +2224,7 @@ def test_a_document_saving_any_other_name_fans_out_and_the_claimant_loads_unfann
     root = _tree(tmp_path)
     loaded = _load(root, _with_save_named(root, _raw(root), "scores.json"))
     assert loaded.children["scan"] == ("scan@0", "scan@1")
-    assert [str(e.file_path) for e in loaded.inner["scan"].document.save] == [
+    assert [str(e.file_path) for e in loaded.inner["scan"].compiled.document.save] == [
         "iia.json",
         "scores.json",
     ]
@@ -2042,15 +2233,20 @@ def test_a_document_saving_any_other_name_fans_out_and_the_claimant_loads_unfann
     assert record["status"] == "completed" and "scores.json" in record["files"]
     joined = json.loads((fanned.run_root / "scan" / "scores.json").read_text())
     assert len(joined) == len(loaded.inner["scan"].point_digests) * 2  # two examples
-    assert {row["produced_by"] for row in joined} == set(
-        loaded.inner["scan"].point_digests
-    )
+    axes = _axes(loaded, "scan")
+    assert {tuple(row[a] for a in axes) for row in joined} == {
+        tuple(_plain(point.coords[a]) for a in axes)
+        for point in loaded.inner["scan"].expansion.points
+    }
     other = _tree(tmp_path / "unfanned")
     unfanned = _load(
         other, _unfanned(_with_save_named(other, _raw(other), "train_eval.json"))
     )
     assert "scan" not in unfanned.children
-    assert str(unfanned.inner["scan"].document.save[-1].file_path) == "train_eval.json"
+    assert (
+        str(unfanned.inner["scan"].compiled.document.save[-1].file_path)
+        == "train_eval.json"
+    )
 
 
 def _per_child(**changes: Any) -> Callable[[Path], dict[str, Any]]:
@@ -2346,6 +2542,8 @@ def test_explain_prints_the_fan_out(
     code = cli_main(
         [
             "explain",
+            "--engine",
+            "auto",
             str(root / "scan_wf.json"),
             "--data-root",
             str(PROTOCOL_DATA),

@@ -12,7 +12,7 @@ module.
 
 **T3, tiny tier.** ``registry.inventory`` on ``tiny-random/qwen3.5-moe`` (4
 layers: 3 Gated DeltaNet + 1 full attention) is the 4-layer analogue of
-the A3B inventory's counts, and it agrees with what the resolver serves at every
+``Qwen/Qwen3.6-35B-A3B``'s counts, and it agrees with what the resolver serves at every
 (layer, component) — the inventory is the one producer, the resolver its
 consumer. *Mutation:* an inventory that listed ``attention_premix`` at a
 DeltaNet layer fails the agreement check with the ``_FULL_ATTENTION_ONLY``
@@ -32,8 +32,9 @@ from transformers import AutoTokenizer
 import causalab.neural
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle
 from causalab.neural.shared import sites
+from causalab.neural.shared.devices import DeviceMap
 from causalab.neural.shared.sites import adapter_of, resolve_site
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.registry import (
     CAPABILITIES,
     COMPONENT_STREAMS,
@@ -47,11 +48,17 @@ from causalab.protocol.registry import (
     inventory,
     register_family,
 )
-from causalab.protocol.schema import COMPONENTS, LAYERLESS_COMPONENTS, SiteSpec
+from causalab.protocol.schema import (
+    COMPONENTS,
+    LAYERLESS_COMPONENTS,
+    PROTOCOL_VERSION,
+    SiteSpec,
+)
 
 from tests._helpers import synthetic_family as synth
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import saved
 
 pytestmark = pytest.mark.smoke
 
@@ -73,7 +80,7 @@ def synthetic_bundle() -> ModelBundle:
         model=synth.build_model(),
         tokenizer=_tokenizer(),
         info=synth.INFO,
-        device="cpu",
+        devices=DeviceMap.parse("cpu", synth.INFO.num_layers),
         dtype="fp32",
     )
 
@@ -91,71 +98,45 @@ def _read_doc(component: str, layer: int | None = 0) -> dict[str, Any]:
     if layer is not None:
         site["layers"] = layer
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": synth.KEY, "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": site},
-            "reads": {
-                "r": {"site": "tap", "pos": "all", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "all"}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 
 
 def _swap_doc(component: str, layer: int = 0) -> dict[str, Any]:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": synth.KEY, "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "original_base": {"input": "base", "reads": ["clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {"component": component, "layers": [layer]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "clean": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": -1},
+                "clean": {"site": "lm_head", "pos": -1},
+                "after": {"site": "lm_head", "pos": -1},
             },
             "writes": {"patch": {"site": "tap", "pos": -1, "do": {"swap": "v_cf"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "p.safetensors",
-                },
-                {
-                    "value": "clean",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "c.safetensors",
-                },
+                saved("after", "patched", "p.safetensors"),
+                saved("clean", "original_base", "c.safetensors"),
             ],
         },
     }
@@ -227,8 +208,9 @@ def test_a_swap_write_lands_on_every_writable_block_site(synthetic_bundle, compo
         return float((after - clean).abs().max())
 
     assert moved(_swap_doc(component)) > 1e-6, component
-    self_swap = _swap_doc(component)
-    self_swap["method"]["reads"]["v_cf"]["input"] = "base"
+    self_swap = _swap_doc(component)  # v_cf taken on the un-intervened base
+    del self_swap["method"]["intervened_models"]["original_counterfactual"]
+    self_swap["method"]["intervened_models"]["original_base"]["reads"].append("v_cf")
     assert moved(self_swap) == 0.0, component
 
 
@@ -239,19 +221,10 @@ def test_the_declared_identities_hold_on_the_new_family(synthetic_bundle):
     others = ("attention_output", "block_mid", "mlp_output", "block_output")
     for name in others:
         doc["method"]["sites"][f"{name}_site"] = {"component": name, "layers": [0]}
-        doc["method"]["reads"][f"read_{name}"] = {
-            "site": f"{name}_site",
-            "pos": "all",
-            "model": "original",
-            "input": "base",
-        }
+        doc["method"]["reads"][f"read_{name}"] = {"site": f"{name}_site", "pos": "all"}
+        doc["method"]["intervened_models"]["original"]["reads"].append(f"read_{name}")
         doc["method"]["save"].append(
-            {
-                "value": f"read_{name}",
-                "model": "original",
-                "input": "base",
-                "file_path": f"{name}.safetensors",
-            }
+            saved(f"read_{name}", "original", f"{name}.safetensors")
         )
     executor = executor_for(doc, synthetic_bundle, base_texts=[TEXT])
     values = {"block_input": executor.read_value("r")}

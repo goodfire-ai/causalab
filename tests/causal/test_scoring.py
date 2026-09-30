@@ -1,12 +1,11 @@
 """``causalab/causal/scoring.py`` — one immutable ``ScoringSpec`` per task.
 
 The torch-free tier: construction and its refusals, the frozen
-object and its content digest (T12 and its mutation), the derived read-only
-views a ``CausalModel`` exposes, the grader's semantics under both string
-modes and both undeclared / invalid-output policies, the probability path's
-form groups as a derivation of the spec, the bespoke ``full_string_checker``
-with its digest, and ``check_scoring`` — the table-side comparison the
-``validate --data`` pass and the executor both make.
+object and its identity (T12), the derived read-only views a ``CausalModel``
+exposes, the grader's semantics under both string modes and both undeclared /
+invalid-output policies, the probability path's form groups as a derivation
+of the spec, the bespoke ``full_string_checker``, and ``check_scoring`` — the
+table-side comparison the ``validate --data`` pass and the executor both make.
 
 Every test here is arithmetic over small hand-built specs; no model, no
 tokenizer, no table on disk.
@@ -15,18 +14,17 @@ tokenizer, no table on disk.
 from __future__ import annotations
 
 import dataclasses
-import hashlib
 import sys
 from pathlib import Path
 
 import pytest
 
-from causalab.causal.causal_model import CausalModel, build_output_tokens
+from causalab.causal import Dom, V, mechanism
+from causalab.causal.model import CausalModel
 from causalab.causal.scoring import (
     GRADE_RECORD_IDENTITY,
     INVALID_OUTPUT_POLICIES,
     PROTOCOL_MODES,
-    SCORING_DIGEST_COLUMN,
     SCORING_FIELDS,
     SCORING_RESULTS,
     STRING_MODE_COLUMN,
@@ -35,11 +33,11 @@ from causalab.causal.scoring import (
     ScoringError,
     ScoringMismatch,
     ScoringSpec,
+    build_output_tokens,
     check_scoring,
     declared_modes,
     table_scoring,
 )
-from causalab.causal.trace import Mechanism, input_var
 
 pytestmark = pytest.mark.unit
 
@@ -53,18 +51,13 @@ def _spec(**overrides) -> ScoringSpec:
 
 
 def _model(spec: ScoringSpec | None) -> CausalModel:
-    values = {"weekday": WEEKDAYS, "raw_input": None, "raw_output": None}
-    mechanisms = {
-        "weekday": input_var(WEEKDAYS),
-        "raw_input": Mechanism(
-            parents=["weekday"],
-            compute=lambda t: f"Today is {t['weekday']}. Tomorrow is",
-        ),
-        "raw_output": Mechanism(
-            parents=["weekday"], compute=lambda t: " " + t["weekday"]
-        ),
-    }
-    return CausalModel(mechanisms, values, id="weekdays_fixture", scoring=spec)
+    @mechanism
+    def equations(weekday: Dom(WEEKDAYS)):
+        raw_input = V(f"Today is {weekday}. Tomorrow is", domain=Dom(str))  # noqa: F841
+        raw_output = V(" " + weekday, domain=Dom(str))
+        return raw_output
+
+    return CausalModel(equations, id="weekdays_fixture", scoring=spec)
 
 
 # --------------------------------------------------------------------------- #
@@ -76,10 +69,9 @@ def test_the_authored_defaults_and_the_derived_fields():
     spec = _spec()
     assert spec.answer_variable == "weekday"  # the sole declared variable
     assert spec.string_mode == "exact" and spec.protocol_mode == "exact"
-    assert spec.full_string_checker is None and spec.checker_digest is None
+    assert spec.full_string_checker is None
     assert spec.undeclared_value == "refuse" and spec.invalid_output == "incorrect"
     assert spec.version == 1
-    assert len(spec.digest) == 64 and int(spec.digest, 16)
 
 
 def test_every_field_is_in_the_fields_tuple_once():
@@ -89,8 +81,7 @@ def test_every_field_is_in_the_fields_tuple_once():
     declared = tuple(f.name for f in dataclasses.fields(ScoringSpec))
     assert set(declared) == set(SCORING_FIELDS)
     assert len(set(SCORING_FIELDS)) == len(SCORING_FIELDS)
-    identity = _spec().identity()
-    assert set(identity) == set(SCORING_FIELDS) - {"digest"}
+    assert tuple(_spec().identity()) == SCORING_FIELDS
 
 
 def test_protocol_mode_is_derived_never_authored():
@@ -164,7 +155,7 @@ def test_the_policy_vocabularies_are_closed_and_small():
 
 
 # --------------------------------------------------------------------------- #
-# immutability and the digest (T12)
+# immutability and the identity (T12)
 # --------------------------------------------------------------------------- #
 
 
@@ -173,7 +164,7 @@ def test_the_spec_is_frozen():
     with pytest.raises(dataclasses.FrozenInstanceError):
         spec.string_mode = "prefix"  # type: ignore[misc]
     with pytest.raises(dataclasses.FrozenInstanceError):
-        spec.digest = "0" * 64  # type: ignore[misc]
+        spec.protocol_mode = "first_token"  # type: ignore[misc]
     with pytest.raises(TypeError):
         spec.forms["weekday"] = {}  # type: ignore[index]
     with pytest.raises(TypeError):
@@ -181,7 +172,7 @@ def test_the_spec_is_frozen():
 
 
 def test_reassigning_a_causal_models_scoring_views_is_refused():
-    """T12 — #3 of the eleven sites was the live defect: ``output_tokens`` and
+    """T12 — the live defect: ``output_tokens`` and
     ``match_modes`` were plain attributes anyone could reassign after
     validation. They are properties without setters now."""
     model = _model(_spec())
@@ -195,9 +186,12 @@ def test_reassigning_a_causal_models_scoring_views_is_refused():
     assert model.output_tokens == {"weekday": build_output_tokens(WEEKDAYS)}
 
 
-def test_a_different_definition_of_correct_is_a_different_digest():
-    """T12's mutation: digest the forms but not the mode (or the reverse) and
-    this fails — every field but ``digest`` is under the hash."""
+def test_a_different_definition_of_correct_is_a_different_identity():
+    """T12: every field is in ``identity()``, so changing any one of them is
+    a different definition of correct — and ``identity()`` is a function of
+    the declaration alone (two constructions agree; a tuple-keyed spelling of
+    the same values collapses to the same form groups)."""
+    assert _spec().identity() == _spec().identity()
     base = _spec()
     changed = {
         "forms": ScoringSpec(
@@ -216,23 +210,9 @@ def test_a_different_definition_of_correct_is_a_different_digest():
             answer_variable="weekday",
         ),
     }
-    digests = {name: spec.digest for name, spec in changed.items()}
-    assert base.digest not in digests.values(), digests
-    assert len(set(digests.values())) == len(digests)  # pairwise distinct too
-
-
-def test_the_digest_is_a_function_of_the_identity_only():
-    """Same declaration, same digest — across constructions and across a
-    tuple-keyed spelling of the same values."""
-    assert _spec().digest == _spec().digest
-    assert (
-        _spec().digest
-        == hashlib.sha256(
-            __import__("json")
-            .dumps(_spec().identity(), sort_keys=True, separators=(",", ":"))
-            .encode()
-        ).hexdigest()
-    )
+    identities = [spec.identity() for spec in changed.values()]
+    assert base.identity() not in identities
+    assert all(a != b for i, a in enumerate(identities) for b in identities[i + 1 :])
     grouped = ScoringSpec(
         forms={"result": {(e, g): [f" {e}", e] for e in WEEKDAYS for g in range(2)}}
     )
@@ -295,9 +275,9 @@ def test_a_list_of_expected_values_is_a_list_of_acceptable_answers():
 
 
 def test_an_undeclared_expected_value_refuses_by_default_and_grades_literally_on_request():
-    """Two graders once disagreed: the serializer always refused an undeclared
-    value and the string checker graded it literally. One rule now, and the
-    task says which."""
+    """A disagreement, settled: the serializer always refused an
+    undeclared value and the string checker graded it literally. One rule
+    now, and the task says which."""
     with pytest.raises(ScoringError, match="names no declared form"):
         _spec().grade("Friday", "Friday")
     literal = _spec(undeclared_value="literal")
@@ -350,7 +330,7 @@ def test_the_grade_record_identity_is_a_real_unit_and_identifier():
 
 
 # --------------------------------------------------------------------------- #
-# the bespoke full_string_checker, digested
+# the bespoke full_string_checker
 # --------------------------------------------------------------------------- #
 
 CHECKER_SRC = '''\
@@ -378,37 +358,15 @@ def checker_module(tmp_path, monkeypatch):
         del sys.modules[name]
 
 
-def test_a_full_string_checker_is_digested_and_grades(checker_module):
-    from causalab.protocol.code import source_sha256
-
+def test_a_full_string_checker_grades(checker_module):
     spec = _spec(full_string_checker="bespoke_pkg.grader.checker")
-    assert spec.checker_digest == source_sha256(checker_module)  # the same quantity
     assert (
         spec.grade("I think it is MONDAY.", "Monday") == 1.0
     )  # the checker's semantics
     assert spec.grade("Tuesday", "Monday") == 0.0
-    assert spec.digest != _spec().digest  # the checker is inside the identity
-
-
-def test_editing_the_checker_moves_the_spec_digest(checker_module):
-    before = _spec(full_string_checker="bespoke_pkg.grader.checker")
-    checker_module.write_text(
-        CHECKER_SRC.replace("in neural_output", "== neural_output")
-    )
-    after = _spec(full_string_checker="bespoke_pkg.grader.checker")
-    assert before.checker_digest != after.checker_digest
-    assert before.digest != after.digest
-
-
-def test_a_checker_whose_source_moved_after_the_spec_was_built_is_refused(
-    checker_module,
-):
-    """The refusal a bespoke override never had: a table stamped with this
-    spec's digest would otherwise be graded by code the digest does not name."""
-    spec = _spec(full_string_checker="bespoke_pkg.grader.checker")
-    checker_module.write_text(CHECKER_SRC + "\n# edited after the fact\n")
-    with pytest.raises(ScoringError, match="moved after the spec was built"):
-        spec.grade("Monday", "Monday")
+    # the checker is inside the identity
+    assert spec.identity() != _spec().identity()
+    assert spec.identity()["full_string_checker"] == "bespoke_pkg.grader.checker"
 
 
 def test_a_locator_naming_no_function_or_no_module_is_refused(checker_module):
@@ -433,7 +391,7 @@ def test_a_broken_import_inside_the_checker_propagates(checker_module):
 
 
 # --------------------------------------------------------------------------- #
-# check_scoring — the table's identity against the document's modes
+# check_scoring — the table's string_mode against the document's modes
 # --------------------------------------------------------------------------- #
 
 
@@ -441,26 +399,22 @@ def _rows(spec: ScoringSpec | None, n: int = 3) -> list[dict]:
     rows = [{"input": f"row {i}", "label": " Monday"} for i in range(n)]
     if spec is not None:
         for row in rows:
-            row[SCORING_DIGEST_COLUMN] = spec.digest
             row[STRING_MODE_COLUMN] = spec.string_mode
     return rows
 
 
 def test_an_unrecorded_table_compares_nothing():
     check = check_scoring(_rows(None), {"iia": "exact"}, where="weekdays/data")
-    assert check.result == "unrecorded" and check.digest is None
-    assert check.as_record() == {
-        "digest": None,
-        "string_mode": None,
-        "result": "unrecorded",
-    }
-    assert table_scoring([]) == (None, None)
+    assert check.result == "unrecorded" and check.string_mode is None
+    assert check.as_record() == {"string_mode": None, "result": "unrecorded"}
+    assert table_scoring([]) is None
 
 
 def test_a_recorded_table_under_the_derived_mode_is_ok():
     exact, prefix = _spec(), _spec(string_mode="prefix")
     ok = check_scoring(_rows(exact), {"iia": "exact"}, where="t")
-    assert ok.result == "ok" and ok.digest == exact.digest and ok.string_mode == "exact"
+    assert ok.result == "ok" and ok.string_mode == "exact"
+    assert ok.as_record() == {"string_mode": "exact", "result": "ok"}
     ok = check_scoring(_rows(prefix), {"iia": "first_token"}, where="t")
     assert ok.result == "ok" and ok.string_mode == "prefix"
     # no match metric at all: nothing to contradict, still recorded
@@ -487,21 +441,15 @@ def test_a_prefix_table_under_exact_is_refused_naming_both_modes_and_the_derivat
     assert err.value.metric == "iia"
 
 
-def test_a_malformed_identity_is_refused():
+def test_a_malformed_string_mode_column_is_refused():
     rows = _rows(_spec())
     rows[1][STRING_MODE_COLUMN] = "prefix"
     with pytest.raises(ScoringError, match="rows disagree"):
         table_scoring(rows)
     half = _rows(_spec())
-    for row in half:
-        del row[STRING_MODE_COLUMN]
-    with pytest.raises(ScoringError, match="carries both"):
+    del half[1][STRING_MODE_COLUMN]  # one row without the column disagrees too
+    with pytest.raises(ScoringError, match="rows disagree"):
         table_scoring(half)
-    bad_digest = _rows(_spec())
-    for row in bad_digest:
-        row[SCORING_DIGEST_COLUMN] = "abc"
-    with pytest.raises(ScoringError, match="sha256"):
-        table_scoring(bad_digest)
     bad_mode = _rows(_spec())
     for row in bad_mode:
         row[STRING_MODE_COLUMN] = "startswith"
@@ -510,16 +458,15 @@ def test_a_malformed_identity_is_refused():
 
 
 def test_declared_modes_reads_only_match_metrics():
-    from causalab.protocol.schema import MetricSpec
+    from causalab.protocol.schema import AggregationSpec
 
     metrics = {
-        "iia": MetricSpec(
+        "iia": AggregationSpec(
             kind="match",
-            of="logits",
             fields={"expected": "label", "mode": "first_token"},
         ),
-        "ld": MetricSpec(kind="logit_diff", of="logits", fields={"a": "x", "b": "y"}),
-        "bare": MetricSpec(kind="match", of="logits", fields={"expected": "label"}),
+        "ld": AggregationSpec(kind="logit_diff", fields={"a": "x", "b": "y"}),
+        "bare": AggregationSpec(kind="match", fields={"expected": "label"}),
     }
     assert declared_modes(metrics) == {"iia": "first_token"}
 

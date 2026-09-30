@@ -9,11 +9,12 @@ figure rather than a missing one.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
-from causalab.protocol.tables import read_table
+from causalab.io.tables import read_table
 from causalab.io.plots import workflow_figures as plot
 from causalab.io.step_io import StepError
 from tests.step_scripts import put_sidecar, put_table, run_step
@@ -179,3 +180,68 @@ def test_a_missing_figure_output_is_refused(grid, tmp_path):
             {"plotted": tmp_path / "out.json"},
         )
     assert "figure" in str(err.value)
+
+
+CLASS_PROBS = [
+    {
+        "sites.target.layers": layer,
+        "positions.tap": tap,
+        "value": json.dumps({"Q": q, "Z": round(1 - q, 2)}),
+        "example_id": "0",
+    }
+    for layer, tap, q in ((1, 0, 0.1), (1, 1, 0.9), (2, 0, 0.4), (2, 1, 0.6))
+]
+
+
+@pytest.fixture()
+def class_probs(tmp_path: Path) -> Path:
+    scan = tmp_path / "scan"
+    put_table(scan / "p.json", CLASS_PROBS)
+    put_sidecar(scan, AXES)
+    return scan / "p.json"
+
+
+def test_key_draws_one_entry_of_a_structured_value(class_probs, tmp_path):
+    """``class_probs`` stores one JSON object per row; ``key`` picks the group
+    to draw, and the plotted table carries that group's numbers."""
+    out = tmp_path / "out" / "p_q.json"
+    run_step(
+        plot,
+        {
+            "table": class_probs,
+            "plot": "heatmap",
+            "key": "Q",
+            "x": "sites.target.layers",
+            "y": "positions.tap",
+        },
+        {"figure": tmp_path / "out" / "p_q.png", "plotted": out},
+    )
+    rows = {
+        (r["sites.target.layers"], r["positions.tap"]): r["value"]
+        for r in read_table(out)
+    }
+    assert rows == {(1, 0): 0.1, (1, 1): 0.9, (2, 0): 0.4, (2, 1): 0.6}
+
+
+def test_key_that_no_row_has_is_refused_by_name(class_probs, tmp_path):
+    with pytest.raises(StepError, match=r"no entry 'M'.*\['Q', 'Z'\]"):
+        run_step(
+            plot,
+            {
+                "table": class_probs,
+                "plot": "heatmap",
+                "key": "M",
+                "x": AXES[0],
+                "y": AXES[1],
+            },
+            {"figure": tmp_path / "out" / "p.png"},
+        )
+
+
+def test_key_over_a_plain_number_is_refused(grid, tmp_path):
+    with pytest.raises(StepError, match="plain number"):
+        run_step(
+            plot,
+            {"table": grid, "plot": "heatmap", "key": "Q", "x": AXES[0], "y": AXES[1]},
+            {"figure": tmp_path / "out" / "p.png"},
+        )

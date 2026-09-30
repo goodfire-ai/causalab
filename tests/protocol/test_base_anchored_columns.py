@@ -2,7 +2,7 @@
 
 Validation used to check column references against the **union** of the data
 roles while the executor served them from **base** alone
-(``neural/shared/executor_base.py``: ``rows_for_metrics`` returns
+(``neural/shared/executor/base.py``: ``rows_for_metrics`` returns
 ``role_rows["base"]``). So validation accepted a superset of what a run could
 serve: a metric naming a counterfactual-only column passed ``validate --data``,
 the model was loaded, and only then did the metric die looking for the column
@@ -38,11 +38,13 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.loader import check_data_columns, load
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.rules.data import check_data_columns
 
 from tests.protocol._docs import in_order
 from tests.protocol._env import CORPUS_DIR
+
 
 pytestmark = pytest.mark.unit
 
@@ -50,7 +52,6 @@ REPO = Path(__file__).resolve().parents[2]
 
 #: Every place a runnable document with a `data` section is committed.
 SHIPPED = (
-    "causalab/configs/protocols/*.json",
     "tests/protocols/*.json",
     "demos/*/protocols/*.json",
 )
@@ -72,8 +73,8 @@ def _document(env, base: str, counterfactual: str) -> dict[str, Any]:
     is in both tables — so the document is a clean control until a test breaks
     it deliberately.
     """
-    loaded = load(CORPUS_DIR / "02_interchange_im.json", env)
-    raw = json.loads(json.dumps(dict(loaded.raw)))
+    loaded = compile_protocol(CORPUS_DIR / "02_interchange_im.json", env=env)
+    raw = json.loads(json.dumps(dict(loaded.tree)))
     raw["data"] = {
         "base": {"dataset": base, "field": "input"},
         "counterfactual": {
@@ -81,11 +82,12 @@ def _document(env, base: str, counterfactual: str) -> dict[str, Any]:
             "field": "counterfactual_inputs[0]",
         },
     }
-    del raw["method"]["metrics"]["logit_diff"]
     raw["method"]["save"] = [
-        entry for entry in raw["method"]["save"] if entry["value"] != "logit_diff"
+        entry
+        for entry in raw["method"]["save"]
+        if entry["file_path"] != "logit_diff.json"
     ]
-    return in_order(raw)
+    return raw  # protocol-3 literal; the module shims migrate it at parse
 
 
 def test_a_metric_on_a_counterfactual_only_column_is_refused_at_load(env) -> None:
@@ -96,10 +98,11 @@ def test_a_metric_on_a_counterfactual_only_column_is_refused_at_load(env) -> Non
     row 0`` — a message that names neither role and reads like a bad table.
     """
     raw = _document(env, base=NARROW, counterfactual=WIDE)
-    raw["method"]["metrics"]["iia"]["expected"] = WIDE_ONLY
+    (iia,) = [e for e in raw["method"]["save"] if e["file_path"] == "iia.json"]
+    iia["aggregation"]["expected"] = WIDE_ONLY
 
     with pytest.raises(ValidationError) as err:
-        check_data_columns(load(raw, env), env)
+        check_data_columns(compile_protocol(raw, env=env), env)
 
     message = str(err.value)
     assert err.value.rule == 4
@@ -117,7 +120,7 @@ def test_a_position_on_a_counterfactual_only_column_is_refused_at_load(env) -> N
     raw = in_order(raw)
 
     with pytest.raises(ValidationError) as err:
-        check_data_columns(load(raw, env), env)
+        check_data_columns(compile_protocol(raw, env=env), env)
 
     assert err.value.rule == 4
     assert WIDE_ONLY in str(err.value)
@@ -134,7 +137,7 @@ def test_a_counterfactual_only_column_is_refused_even_unreferenced(env) -> None:
     raw = _document(env, base=NARROW, counterfactual=WIDE)
 
     with pytest.raises(ValidationError) as err:
-        check_data_columns(load(raw, env), env)
+        check_data_columns(compile_protocol(raw, env=env), env)
 
     assert err.value.rule == 20
     assert err.value.path == "data.counterfactual"
@@ -145,14 +148,14 @@ def test_two_tables_must_carry_identical_columns(env) -> None:
     """Rule 20's equality half, and the hole it closes.
 
     A ``column`` position resolves against the role of the read it positions
-    (``executor_base``), not against base. Under a bare subset rule, a position
+    (``executor/base.py``), not against base. Under a bare subset rule, a position
     on a counterfactual read naming a **base-only** column would pass load and
     fail at run — the mirror image of the bug this whole rule is about.
     """
     raw = _document(env, base=WIDE, counterfactual=NARROW)
 
     with pytest.raises(ValidationError) as err:
-        check_data_columns(load(raw, env), env)
+        check_data_columns(compile_protocol(raw, env=env), env)
 
     assert err.value.rule == 20
     assert "different dataset" in str(err.value)
@@ -162,7 +165,7 @@ def test_two_tables_must_carry_identical_columns(env) -> None:
 def test_one_table_for_both_roles_costs_nothing(env) -> None:
     """The shape every shipped document has: rule 20 is satisfied trivially."""
     raw = _document(env, base=WIDE, counterfactual=WIDE)
-    assert check_data_columns(load(raw, env), env)
+    assert check_data_columns(compile_protocol(raw, env=env), env)
 
 
 @pytest.mark.parametrize(
@@ -175,7 +178,7 @@ def test_one_table_for_both_roles_costs_nothing(env) -> None:
 )
 def test_every_multi_role_corpus_document_still_loads(env, name: str) -> None:
     """The rule refuses nothing that ships."""
-    assert check_data_columns(load(CORPUS_DIR / name, env), env)
+    assert check_data_columns(compile_protocol(CORPUS_DIR / name, env=env), env)
 
 
 def test_no_shipped_document_splits_its_roles_across_tables() -> None:

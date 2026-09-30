@@ -1,0 +1,20 @@
+{
+  "document": "protocols/dbm_apply.json",
+  "document_digest": "a6400ad164fd1cbcf178ca44d5152d7f00ae3f0646c912298ddb66c8b6d41f4e",
+  "run_digest": "3decfb47fcf5c2dea97bfa1f100e14c2d224b54a7903beaac820c0664e4a80f5",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "bf16",
+  "date": "2026-09-21",
+  "elapsed_s": 18.8,
+  "metrics": {
+    "iia": {
+      "metric": "iia",
+      "unit": "logit",
+      "rows": 19,
+      "eligible_rows": 19,
+      "mean": 2.4836
+    }
+  }
+}

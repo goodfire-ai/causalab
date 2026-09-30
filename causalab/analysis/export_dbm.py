@@ -4,10 +4,13 @@ The manifest lists experiments with ``id``, ``title``, and ``evaluations``.
 Each evaluation names ``document``, ``run_dir``, ``data_root``, and
 ``artifacts_root``. Paths resolve from the manifest's directory.
 
-Only apply documents are accepted. Their recorded digests must agree with the
-compiled document and the frozen fit files. Masks use the same ``theta > 0``
-readout as the generator's sigmoid gates. Missing evaluations are recorded
-in ``omitted_points``.
+Only apply documents are accepted. The document is compiled here and its
+steps signed, so each point's identity comes from the document and the
+artifacts it names, whose canonical form carries each frozen fit's content
+digest; the run directory holds only the saved tables. Metric rows are placed
+on the signed steps by their coordinate columns. Masks use the same
+``theta > 0`` readout as the generator's sigmoid gates. Missing evaluations
+are recorded in ``omitted_points``.
 """
 
 from __future__ import annotations
@@ -20,10 +23,13 @@ from pathlib import Path
 from typing import Any
 
 from causalab.protocol.bundles import entry_selection, select_entry
-from causalab.protocol.examples import example_labels
-from causalab.protocol.loader import load, load_text
+from causalab.protocol.results import example_labels
+from causalab.io.sources import load_text
+from causalab.neural.shared.sweep import signed_steps
+from causalab.protocol.pipeline import compile_protocol
 from causalab.protocol.registry import get_model_info
-from causalab.protocol.resolve import (
+from causalab.protocol.schema import inline_train_saves
+from causalab.io.env import (
     FileArtifacts,
     FileDatasets,
     ResolutionEnv,
@@ -33,6 +39,19 @@ from causalab.protocol.resolve import (
 
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text())
+
+
+def plain(value: Any) -> Any:
+    """Serialize a coordinate the way the engine writes it on a metric row."""
+    if isinstance(value, (int, float, str, bool)):
+        return value
+    return json.dumps(value, sort_keys=True)
+
+
+def coordinate_key(coords: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
+    """The join key between a signed step and its metric rows: the sorted
+    (full axis id, serialized value) pairs of the step's coordinates."""
+    return tuple(sorted((axis, plain(value)) for axis, value in coords.items()))
 
 
 def encoded_mask(mask: Any) -> dict[str, Any]:
@@ -112,8 +131,9 @@ def model_manifest(model: dict[str, Any]) -> dict[str, Any]:
 
 def position(value: Any, method: dict[str, Any]) -> int | str:
     """Resolve a scalar token index or the shared all-token position."""
-    if isinstance(value, str) and value != "all":
-        value = method.get("positions", {}).get(value)
+    from causalab.analysis.hypothesis_artifacts import resolve_position
+
+    value = resolve_position(value, method)
     if isinstance(value, dict):
         if set(value) == {"index"}:
             value = value["index"]
@@ -132,6 +152,46 @@ def resolved_read(read: dict[str, Any], method: dict[str, Any]) -> dict[str, Any
     }
 
 
+def models_of(method: dict[str, Any], read: str) -> list[str]:
+    """The models that list ``read`` (§2.9), in declaration order."""
+    return [
+        name
+        for name, entry in method.get("intervened_models", {}).items()
+        if read in entry.get("reads", [])
+    ]
+
+
+def _unwritten_on(method: dict[str, Any], model: str, role: str) -> bool:
+    entry = method["intervened_models"].get(model)
+    return entry is not None and entry.get("input") == role and not entry.get("writes")
+
+
+def saved_aggregations(method: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """The save entries that carry an aggregation, by their file stem — the
+    label their table goes by (§2.12). A ``train`` entry counts as the term
+    it names."""
+    out: dict[str, dict[str, Any]] = {}
+    for entry in inline_train_saves(method):
+        if "aggregation" in entry:
+            stem = str(entry["file_path"]).rsplit("/", 1)[-1].rsplit(".", 1)[0]
+            out[stem] = entry
+    return out
+
+
+def report_entries(method: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """The two save entries a DBM export reports, by report key: the one
+    ``match`` (``iia``) and the one ``logit_diff`` (``logit_diff``)."""
+    by_kind: dict[str, list[dict[str, Any]]] = {}
+    for entry in saved_aggregations(method).values():
+        by_kind.setdefault(str(entry["aggregation"].get("kind")), []).append(entry)
+    matches, diffs = by_kind.get("match", []), by_kind.get("logit_diff", [])
+    if len(matches) != 1 or len(diffs) != 1:
+        raise ValueError(
+            "DBM export requires distinct match IIA and logit difference metrics"
+        )
+    return {"iia": matches[0], "logit_diff": diffs[0]}
+
+
 def gate_manifest(
     name: str, method: dict[str, Any], model: dict[str, Any]
 ) -> dict[str, Any]:
@@ -146,17 +206,21 @@ def gate_manifest(
     site = method["sites"][write["site"]]
     target_position = position(write["pos"], method)
     operation = write.get("do", {})
-    if set(operation) != {"swap"} or not isinstance(operation["swap"], str):
+    if set(operation) != {"swap"} or not isinstance(operation["swap"], (str, dict)):
         raise ValueError(f"Gate {name} requires a direct counterfactual swap")
-    source = resolved_read(method["reads"][operation["swap"]], method)
-    if source != {
-        "site": site,
-        "pos": target_position,
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": name,
-    }:
+    operand = operation["swap"]
+    read_name = operand["read"] if isinstance(operand, dict) else operand
+    source = resolved_read(method["reads"][read_name], method)
+    if source != {"site": site, "pos": target_position, "featurizer": name}:
         raise ValueError(f"Gate {name} requires an aligned counterfactual swap")
+    source_models = models_of(method, read_name)
+    if len(source_models) != 1 or not _unwritten_on(
+        method, source_models[0], "counterfactual"
+    ):
+        raise ValueError(
+            f"Gate {name} requires its operand read on the un-intervened "
+            "counterfactual model"
+        )
     if len(site["layers"]) != 1 or "head" in site or "expert" in site:
         raise ValueError(f"Gate {name} requires one complete layer site")
     layer = site["layers"][0]
@@ -200,19 +264,52 @@ def gate_manifest(
     }
 
 
+def dbm_aggregations(doc: Any) -> dict[str, Any]:
+    """The two saved aggregations a DBM export reports, by report key: the
+    one ``match`` (``iia``) and the one ``logit_diff`` (``logit_diff``) over
+    the same bound read, agreeing on the gold label (``match.expected ==
+    logit_diff.a``). Located by kind through the document's accessors, so a
+    document may label them as it likes; refused naming what was found."""
+    saved = doc.saved_aggregations()
+    by_kind: dict[str, list[Any]] = {}
+    for agg in saved:
+        by_kind.setdefault(str(agg.spec.kind), []).append(agg)
+    matches, diffs = by_kind.get("match", []), by_kind.get("logit_diff", [])
+    if len(matches) != 1 or len(diffs) != 1:
+        raise ValueError(
+            "DBM export requires exactly one saved match (IIA) and one saved "
+            f"logit_diff aggregation; found {len(matches)} match and "
+            f"{len(diffs)} logit_diff among {[a.label for a in saved]}"
+        )
+    (iia,), (logit_diff,) = matches, diffs
+    if iia.read != logit_diff.read:
+        raise ValueError(
+            "IIA and logit difference must reduce the same read on the same model: "
+            f"{iia.read} vs {logit_diff.read}"
+        )
+    if iia.spec.fields.get("expected") != logit_diff.spec.fields.get("a"):
+        raise ValueError("IIA and logit difference must target the same gold label")
+    return {"iia": iia, "logit_diff": logit_diff}
+
+
+def _save_index(owner: str) -> int:
+    assert owner.startswith("save[") and owner.endswith("]"), owner
+    return int(owner[len("save[") : -1])
+
+
 def validate_measurement(method: dict[str, Any], gates: list[dict[str, Any]]) -> None:
     """Require both scores to measure the model with every exported gate active."""
-    reads = [
-        method["reads"][method["metrics"][name]["of"]] for name in ("iia", "logit_diff")
-    ]
-    resolved = [resolved_read(read, method) for read in reads]
-    if resolved[0] != resolved[1]:
+    entries = report_entries(method)
+    bound = [(entries[k]["read"], entries[k]["model"]) for k in ("iia", "logit_diff")]
+    resolved = [resolved_read(method["reads"][read], method) for read, _ in bound]
+    if resolved[0] != resolved[1] or bound[0][1] != bound[1][1]:
         raise ValueError("IIA and logit difference must use the same resolved read")
-    measured = method["intervened_models"].get(reads[0]["model"])
+    measured = method["intervened_models"].get(bound[0][1])
     if (
         measured is None
-        or measured["input"] != reads[0]["input"]
         or measured["input"] != "base"
+        or not measured.get("writes")
+        or bound[0][0] not in measured.get("reads", [])
     ):
         raise ValueError("DBM metrics must read the intervened model on its input")
     if not gates:
@@ -232,7 +329,7 @@ def validate_measurement(method: dict[str, Any], gates: list[dict[str, Any]]) ->
 
 
 def frozen_mask(
-    spec: dict[str, Any], coords: dict[str, Any], root: Path, digests: dict[Path, str]
+    spec: dict[str, Any], coords: dict[str, Any], root: Path
 ) -> tuple[Any, dict[str, Any]]:
     """Read exactly the fitted tensor named by a recorded sigmoid apply."""
     import numpy as np
@@ -245,14 +342,6 @@ def frozen_mask(
     ):
         raise ValueError("This exporter requires threshold replay of sigmoid DBM gates")
     path = (root / spec["file_path"]).resolve()
-    if path not in digests:
-        digest = hashlib.sha256()
-        with path.open("rb") as stream:
-            for block in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(block)
-        digests[path] = digest.hexdigest()
-    if digests[path] != spec["content_digest"]:
-        raise ValueError(f"Frozen fit changed after evaluation: {path}")
     with safe_open(path, framework="numpy") as bundle:
         selection, implicit = entry_selection(spec.get("entry"), coords, "gate")
         key = select_entry(
@@ -267,13 +356,19 @@ def frozen_mask(
         if not np.isfinite(theta).all():
             raise ValueError(f"Non-finite mask parameter in {path}:{key}")
         mask = theta.reshape(-1) > 0
-    return mask, {"file_path": str(path), "entry": key, "sha256": digests[path]}
+    # the entry's content digest as the compile recorded it (the document's
+    # ``content_digest``): what identifies the fitted tensor independently of
+    # where the run tree sits (``hypothesis_artifacts.frozen_dbm_identity``)
+    return mask, {
+        "file_path": str(path),
+        "entry": key,
+        **({"sha256": spec["content_digest"]} if "content_digest" in spec else {}),
+    }
 
 
 def evaluation(
     item: dict[str, Any],
     base: Path,
-    digests: dict[Path, str],
     *,
     register_from_hf: bool = False,
 ) -> tuple[
@@ -290,32 +385,26 @@ def evaluation(
     if "train" in source["method"]:
         raise ValueError(f"Use a held-out apply document: {document}")
     datasets = FileDatasets(root=(base / item["data_root"]).resolve())
-    loaded = load(
-        source,
-        ResolutionEnv(
-            datasets=datasets,
-            artifacts=FileArtifacts(root=artifact_root),
-        ),
+    env = ResolutionEnv(
+        datasets=datasets,
+        artifacts=FileArtifacts(root=artifact_root),
     )
-    receipt = read_json(run / "protocol.json")
-    if receipt["document_digest"] != loaded.document_digest:
-        raise ValueError(f"Evaluation receipt does not match {document}")
-    first = loaded.canonical_points[0]
+    compiled = compile_protocol(source, env=env)
+    # the steps as the engine enumerated and signed them: coordinates,
+    # canonical forms and digests, in enumeration order — the same signing
+    # the run performed, so the run directory needs no receipt
+    steps = signed_steps(compiled, env)
+    first = steps[0].canonical
     if any(
-        point["model"] != first["model"] or point["data"] != first["data"]
-        for point in loaded.canonical_points
+        step.canonical["model"] != first["model"]
+        or step.canonical["data"] != first["data"]
+        for step in steps
     ):
         raise ValueError("Model or data changes within one DBM evaluation")
     model = model_manifest(first["model"])
     method = first["method"]
-    definitions = method["metrics"]
-    if (
-        definitions["iia"]["kind"] != "match"
-        or definitions["logit_diff"]["kind"] != "logit_diff"
-    ):
-        raise ValueError(
-            "DBM export requires distinct match IIA and logit difference metrics"
-        )
+    entries = report_entries(method)
+    definitions = {key: dict(entry["aggregation"]) for key, entry in entries.items()}
     if definitions["iia"]["expected"] != definitions["logit_diff"]["a"]:
         raise ValueError("IIA and logit difference must target the same gold label")
     pair_rows = datasets.rows(first["data"]["base"]["dataset"])
@@ -331,40 +420,31 @@ def evaluation(
         if spec["kind"] == "gate"
     ]
     tables: dict[str, list[dict[str, Any]]] = {}
-    for metric in ("iia", "logit_diff"):
-        saves = [save for save in method["save"] if save.get("value") == metric]
-        if len(saves) != 1:
-            raise ValueError(f"Expected one saved {metric} table")
-        path = run / saves[0]["file_path"]
+    for metric, agg in dbm_aggregations(compiled.document).items():
+        path = run / compiled.document.save[_save_index(agg.owner)].file_path
         tables[metric] = read_json(path) if path.exists() else []
     routing_path = run / "routing_mismatch.json"
     routing = read_json(routing_path) if routing_path.exists() else []
     points, omitted = [], []
-    recorded = {point["digest"] for point in receipt["points"]}
-    if any(
-        row["produced_by"] not in recorded for rows in tables.values() for row in rows
-    ):
+    # a metric row belongs to the signed step whose coordinates it carries:
+    # every axis of the sweep is a column on every row, keyed by its full id
+    coords_of = [dict(step.coords) for step in steps]
+    keys = [coordinate_key(coords) for coords in coords_of]
+    recorded = set(keys)
+    if len(recorded) != len(keys):
+        raise ValueError(f"Signed steps repeat coordinates: {document}")
+    axes = sorted({axis for coords in coords_of for axis in coords})
+
+    def key_of(row: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
+        return tuple((axis, row.get(axis)) for axis in axes)
+
+    if any(key_of(row) not in recorded for rows in tables.values() for row in rows):
         raise ValueError(f"Unrecorded point in evaluation tables: {run}")
-    for record in receipt["points"]:
-        index, digest = record["index"], record["digest"]
-        if loaded.point_digests[index] != digest:
-            raise ValueError(f"Point digest changed: {run}:{index}")
-        if record["coords"] != dict(loaded.expansion.points[index].coords):
-            raise ValueError(f"Point coordinates changed: {run}:{index}")
+    for index, (step, coords, key) in enumerate(zip(steps, coords_of, keys)):
+        digest = step.digest
         scores = {}
         for name, rows in tables.items():
-            saved = [row for row in rows if row["produced_by"] == digest]
-            for row in saved:
-                for axis, value in record["coords"].items():
-                    serialized = (
-                        value
-                        if isinstance(value, (int, float, str, bool))
-                        else json.dumps(value, sort_keys=True)
-                    )
-                    if row.get(axis) != serialized:
-                        raise ValueError(
-                            f"Metric coordinates changed: {run}:{index}:{name}"
-                        )
+            saved = [row for row in rows if key_of(row) == key]
             if saved and {str(row["example_id"]) for row in saved} != set(pair_ids):
                 raise ValueError(
                     f"Incomplete or unknown example records: {run}:{index}:{name}"
@@ -375,8 +455,11 @@ def evaluation(
         if not any(score["n"] for score in scores.values()):
             omitted.append({"id": digest, "reason": "No eligible saved evaluations"})
             continue
-        concrete = loaded.canonical_points[index]["method"]
-        if concrete["metrics"] != definitions:
+        concrete = step.canonical["method"]
+        if {
+            key: dict(entry["aggregation"])
+            for key, entry in report_entries(concrete).items()
+        } != definitions:
             raise ValueError("Metric definitions change within one experiment")
         validate_measurement(concrete, gates)
         masks, fits, selected = {}, {}, 0
@@ -385,10 +468,7 @@ def evaluation(
             if current != gate:
                 raise ValueError("Gate layout changes within one experiment")
             mask, fit = frozen_mask(
-                concrete["featurizers"][gate["id"]],
-                record["coords"],
-                artifact_root,
-                digests,
+                concrete["featurizers"][gate["id"]], coords, artifact_root
             )
             if len(mask) != gate["unit_count"]:
                 raise ValueError(f"Mask shape mismatch: {gate['id']}")
@@ -415,16 +495,17 @@ def evaluation(
         points.append(
             {
                 "id": digest,
+                # the fitted entries alone, independent of the run tree's path
                 "fit_id": hashlib.sha256(
                     json.dumps(
                         {
-                            name: {"sha256": fit["sha256"], "entry": fit["entry"]}
+                            name: {"sha256": fit.get("sha256"), "entry": fit["entry"]}
                             for name, fit in fits.items()
                         },
                         sort_keys=True,
                     ).encode()
                 ).hexdigest(),
-                "coords": record["coords"],
+                "coords": coords,
                 "selected_count": selected,
                 "eligible_count": eligible,
                 "sparsity": 1 - selected / eligible,
@@ -438,17 +519,26 @@ def evaluation(
                     "fits": fits,
                     "metric_definitions": definitions,
                     "comparison": {
-                        "data": loaded.canonical_points[index]["data"],
+                        "data": step.canonical["data"],
                         "metrics": definitions,
                         "readouts": {
-                            name: resolved_read(concrete["reads"][spec["of"]], concrete)
-                            for name, spec in definitions.items()
+                            name: {
+                                **resolved_read(
+                                    concrete["reads"][entry["read"]], concrete
+                                ),
+                                "model": entry["model"],
+                            }
+                            for name, entry in report_entries(concrete).items()
                         },
                     },
                     "logit_difference_population": "answer-changing pairs",
                 },
             }
         )
+    from causalab.analysis.hypothesis_artifacts import frozen_dbm_identity
+
+    for point in points:
+        point["artifact_id"] = frozen_dbm_identity(gates, point)
     return model, gates, points, omitted
 
 
@@ -461,7 +551,6 @@ def export(manifest_path: Path, *, register_from_hf: bool = False) -> dict[str, 
         "experiments": [],
     }
     ids: set[str] = set()
-    digests: dict[Path, str] = {}
     for experiment in manifest["experiments"]:
         identifier = experiment["id"]
         if identifier in ids:
@@ -477,7 +566,7 @@ def export(manifest_path: Path, *, register_from_hf: bool = False) -> dict[str, 
         comparison = None
         for item in experiment["evaluations"]:
             model, gates, points, omitted = evaluation(
-                item, manifest_path.parent, digests, register_from_hf=register_from_hf
+                item, manifest_path.parent, register_from_hf=register_from_hf
             )
             if result.setdefault("model", model) != model:
                 raise ValueError("Experiments use different model realizations")

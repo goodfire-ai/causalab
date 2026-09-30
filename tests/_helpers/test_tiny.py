@@ -9,7 +9,7 @@ rebound name.
 
 The contract this file guards is **"the tiny stub speaks the runner's
 calling convention"** — explicitly anchored to the kwargs enumerated in
-:data:`tests._helpers.tiny.RUNNER_FORWARD_KWARGS`, NOT
+`tests._helpers.tiny.RUNNER_FORWARD_KWARGS`, NOT
 ``signature(LlamaForCausalLM) == signature(LlamaForCausalLM)`` (which is
 trivially true and detects nothing).
 
@@ -55,7 +55,7 @@ def test_tiny_model_forward_accepts_runner_kwargs() -> None:
     The runner pipeline (``causalab/neural/pipeline.py``) calls
     ``model.generate(**inputs, **defaults)``, which fans out into
     ``forward`` with the kwargs enumerated in
-    :data:`RUNNER_FORWARD_KWARGS`. If a transformers bump renames any of
+    `RUNNER_FORWARD_KWARGS`. If a transformers bump renames any of
     them (e.g. ``past_key_values`` → ``cache``) the smoke tier breaks; we
     want a fast, isolated unit test that flags the contract change before
     any tiered test even runs.

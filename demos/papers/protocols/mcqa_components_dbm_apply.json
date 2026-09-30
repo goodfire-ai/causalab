@@ -1,0 +1,520 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Score the 56 fitted component gates of mcqa_components_dbm_fit.json on the 64 held-out pairs: each gate loads its fitted theta and runs as the hard theta > 0 mask, so a kept cell is swapped whole and a dropped cell keeps the base value; figures.py quotes the IIA."
+  },
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "mcqa_components_dbm/data#test", "field": "input"},
+    "counterfactual": {
+      "dataset": "mcqa_components_dbm/data#test",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {
+        "input": "counterfactual",
+        "reads": [
+          "v_attn0", "v_attn1", "v_attn2", "v_attn3", "v_attn4", "v_attn5", "v_attn6", "v_attn7",
+          "v_attn8", "v_attn9", "v_attn10", "v_attn11", "v_attn12", "v_attn13", "v_attn14",
+          "v_attn15", "v_attn16", "v_attn17", "v_attn18", "v_attn19", "v_attn20", "v_attn21",
+          "v_attn22", "v_attn23", "v_attn24", "v_attn25", "v_attn26", "v_attn27", "v_mlp0",
+          "v_mlp1", "v_mlp2", "v_mlp3", "v_mlp4", "v_mlp5", "v_mlp6", "v_mlp7", "v_mlp8", "v_mlp9",
+          "v_mlp10", "v_mlp11", "v_mlp12", "v_mlp13", "v_mlp14", "v_mlp15", "v_mlp16", "v_mlp17",
+          "v_mlp18", "v_mlp19", "v_mlp20", "v_mlp21", "v_mlp22", "v_mlp23", "v_mlp24", "v_mlp25",
+          "v_mlp26", "v_mlp27"
+        ]
+      },
+      "masked": {
+        "input": "base",
+        "reads": ["logits"],
+        "writes": [
+          "mask_attn0", "mask_attn1", "mask_attn2", "mask_attn3", "mask_attn4", "mask_attn5",
+          "mask_attn6", "mask_attn7", "mask_attn8", "mask_attn9", "mask_attn10", "mask_attn11",
+          "mask_attn12", "mask_attn13", "mask_attn14", "mask_attn15", "mask_attn16", "mask_attn17",
+          "mask_attn18", "mask_attn19", "mask_attn20", "mask_attn21", "mask_attn22", "mask_attn23",
+          "mask_attn24", "mask_attn25", "mask_attn26", "mask_attn27", "mask_mlp0", "mask_mlp1",
+          "mask_mlp2", "mask_mlp3", "mask_mlp4", "mask_mlp5", "mask_mlp6", "mask_mlp7",
+          "mask_mlp8", "mask_mlp9", "mask_mlp10", "mask_mlp11", "mask_mlp12", "mask_mlp13",
+          "mask_mlp14", "mask_mlp15", "mask_mlp16", "mask_mlp17", "mask_mlp18", "mask_mlp19",
+          "mask_mlp20", "mask_mlp21", "mask_mlp22", "mask_mlp23", "mask_mlp24", "mask_mlp25",
+          "mask_mlp26", "mask_mlp27"
+        ]
+      }
+    },
+    "positions": {"slot": {"index": -1}},
+    "sites": {
+      "attn0": {"component": "attention_output", "layers": [0]},
+      "attn1": {"component": "attention_output", "layers": [1]},
+      "attn2": {"component": "attention_output", "layers": [2]},
+      "attn3": {"component": "attention_output", "layers": [3]},
+      "attn4": {"component": "attention_output", "layers": [4]},
+      "attn5": {"component": "attention_output", "layers": [5]},
+      "attn6": {"component": "attention_output", "layers": [6]},
+      "attn7": {"component": "attention_output", "layers": [7]},
+      "attn8": {"component": "attention_output", "layers": [8]},
+      "attn9": {"component": "attention_output", "layers": [9]},
+      "attn10": {"component": "attention_output", "layers": [10]},
+      "attn11": {"component": "attention_output", "layers": [11]},
+      "attn12": {"component": "attention_output", "layers": [12]},
+      "attn13": {"component": "attention_output", "layers": [13]},
+      "attn14": {"component": "attention_output", "layers": [14]},
+      "attn15": {"component": "attention_output", "layers": [15]},
+      "attn16": {"component": "attention_output", "layers": [16]},
+      "attn17": {"component": "attention_output", "layers": [17]},
+      "attn18": {"component": "attention_output", "layers": [18]},
+      "attn19": {"component": "attention_output", "layers": [19]},
+      "attn20": {"component": "attention_output", "layers": [20]},
+      "attn21": {"component": "attention_output", "layers": [21]},
+      "attn22": {"component": "attention_output", "layers": [22]},
+      "attn23": {"component": "attention_output", "layers": [23]},
+      "attn24": {"component": "attention_output", "layers": [24]},
+      "attn25": {"component": "attention_output", "layers": [25]},
+      "attn26": {"component": "attention_output", "layers": [26]},
+      "attn27": {"component": "attention_output", "layers": [27]},
+      "mlp0": {"component": "mlp_output", "layers": [0]},
+      "mlp1": {"component": "mlp_output", "layers": [1]},
+      "mlp2": {"component": "mlp_output", "layers": [2]},
+      "mlp3": {"component": "mlp_output", "layers": [3]},
+      "mlp4": {"component": "mlp_output", "layers": [4]},
+      "mlp5": {"component": "mlp_output", "layers": [5]},
+      "mlp6": {"component": "mlp_output", "layers": [6]},
+      "mlp7": {"component": "mlp_output", "layers": [7]},
+      "mlp8": {"component": "mlp_output", "layers": [8]},
+      "mlp9": {"component": "mlp_output", "layers": [9]},
+      "mlp10": {"component": "mlp_output", "layers": [10]},
+      "mlp11": {"component": "mlp_output", "layers": [11]},
+      "mlp12": {"component": "mlp_output", "layers": [12]},
+      "mlp13": {"component": "mlp_output", "layers": [13]},
+      "mlp14": {"component": "mlp_output", "layers": [14]},
+      "mlp15": {"component": "mlp_output", "layers": [15]},
+      "mlp16": {"component": "mlp_output", "layers": [16]},
+      "mlp17": {"component": "mlp_output", "layers": [17]},
+      "mlp18": {"component": "mlp_output", "layers": [18]},
+      "mlp19": {"component": "mlp_output", "layers": [19]},
+      "mlp20": {"component": "mlp_output", "layers": [20]},
+      "mlp21": {"component": "mlp_output", "layers": [21]},
+      "mlp22": {"component": "mlp_output", "layers": [22]},
+      "mlp23": {"component": "mlp_output", "layers": [23]},
+      "mlp24": {"component": "mlp_output", "layers": [24]},
+      "mlp25": {"component": "mlp_output", "layers": [25]},
+      "mlp26": {"component": "mlp_output", "layers": [26]},
+      "mlp27": {"component": "mlp_output", "layers": [27]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "g_attn0": {"kind": "gate", "group": "site", "file_path": "fit/g_attn0.safetensors"},
+      "g_attn1": {"kind": "gate", "group": "site", "file_path": "fit/g_attn1.safetensors"},
+      "g_attn2": {"kind": "gate", "group": "site", "file_path": "fit/g_attn2.safetensors"},
+      "g_attn3": {"kind": "gate", "group": "site", "file_path": "fit/g_attn3.safetensors"},
+      "g_attn4": {"kind": "gate", "group": "site", "file_path": "fit/g_attn4.safetensors"},
+      "g_attn5": {"kind": "gate", "group": "site", "file_path": "fit/g_attn5.safetensors"},
+      "g_attn6": {"kind": "gate", "group": "site", "file_path": "fit/g_attn6.safetensors"},
+      "g_attn7": {"kind": "gate", "group": "site", "file_path": "fit/g_attn7.safetensors"},
+      "g_attn8": {"kind": "gate", "group": "site", "file_path": "fit/g_attn8.safetensors"},
+      "g_attn9": {"kind": "gate", "group": "site", "file_path": "fit/g_attn9.safetensors"},
+      "g_attn10": {"kind": "gate", "group": "site", "file_path": "fit/g_attn10.safetensors"},
+      "g_attn11": {"kind": "gate", "group": "site", "file_path": "fit/g_attn11.safetensors"},
+      "g_attn12": {"kind": "gate", "group": "site", "file_path": "fit/g_attn12.safetensors"},
+      "g_attn13": {"kind": "gate", "group": "site", "file_path": "fit/g_attn13.safetensors"},
+      "g_attn14": {"kind": "gate", "group": "site", "file_path": "fit/g_attn14.safetensors"},
+      "g_attn15": {"kind": "gate", "group": "site", "file_path": "fit/g_attn15.safetensors"},
+      "g_attn16": {"kind": "gate", "group": "site", "file_path": "fit/g_attn16.safetensors"},
+      "g_attn17": {"kind": "gate", "group": "site", "file_path": "fit/g_attn17.safetensors"},
+      "g_attn18": {"kind": "gate", "group": "site", "file_path": "fit/g_attn18.safetensors"},
+      "g_attn19": {"kind": "gate", "group": "site", "file_path": "fit/g_attn19.safetensors"},
+      "g_attn20": {"kind": "gate", "group": "site", "file_path": "fit/g_attn20.safetensors"},
+      "g_attn21": {"kind": "gate", "group": "site", "file_path": "fit/g_attn21.safetensors"},
+      "g_attn22": {"kind": "gate", "group": "site", "file_path": "fit/g_attn22.safetensors"},
+      "g_attn23": {"kind": "gate", "group": "site", "file_path": "fit/g_attn23.safetensors"},
+      "g_attn24": {"kind": "gate", "group": "site", "file_path": "fit/g_attn24.safetensors"},
+      "g_attn25": {"kind": "gate", "group": "site", "file_path": "fit/g_attn25.safetensors"},
+      "g_attn26": {"kind": "gate", "group": "site", "file_path": "fit/g_attn26.safetensors"},
+      "g_attn27": {"kind": "gate", "group": "site", "file_path": "fit/g_attn27.safetensors"},
+      "g_mlp0": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp0.safetensors"},
+      "g_mlp1": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp1.safetensors"},
+      "g_mlp2": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp2.safetensors"},
+      "g_mlp3": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp3.safetensors"},
+      "g_mlp4": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp4.safetensors"},
+      "g_mlp5": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp5.safetensors"},
+      "g_mlp6": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp6.safetensors"},
+      "g_mlp7": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp7.safetensors"},
+      "g_mlp8": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp8.safetensors"},
+      "g_mlp9": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp9.safetensors"},
+      "g_mlp10": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp10.safetensors"},
+      "g_mlp11": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp11.safetensors"},
+      "g_mlp12": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp12.safetensors"},
+      "g_mlp13": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp13.safetensors"},
+      "g_mlp14": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp14.safetensors"},
+      "g_mlp15": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp15.safetensors"},
+      "g_mlp16": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp16.safetensors"},
+      "g_mlp17": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp17.safetensors"},
+      "g_mlp18": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp18.safetensors"},
+      "g_mlp19": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp19.safetensors"},
+      "g_mlp20": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp20.safetensors"},
+      "g_mlp21": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp21.safetensors"},
+      "g_mlp22": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp22.safetensors"},
+      "g_mlp23": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp23.safetensors"},
+      "g_mlp24": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp24.safetensors"},
+      "g_mlp25": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp25.safetensors"},
+      "g_mlp26": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp26.safetensors"},
+      "g_mlp27": {"kind": "gate", "group": "site", "file_path": "fit/g_mlp27.safetensors"}
+    },
+    "reads": {
+      "v_attn0": {"site": "attn0", "pos": "slot", "featurizer": "g_attn0"},
+      "v_attn1": {"site": "attn1", "pos": "slot", "featurizer": "g_attn1"},
+      "v_attn2": {"site": "attn2", "pos": "slot", "featurizer": "g_attn2"},
+      "v_attn3": {"site": "attn3", "pos": "slot", "featurizer": "g_attn3"},
+      "v_attn4": {"site": "attn4", "pos": "slot", "featurizer": "g_attn4"},
+      "v_attn5": {"site": "attn5", "pos": "slot", "featurizer": "g_attn5"},
+      "v_attn6": {"site": "attn6", "pos": "slot", "featurizer": "g_attn6"},
+      "v_attn7": {"site": "attn7", "pos": "slot", "featurizer": "g_attn7"},
+      "v_attn8": {"site": "attn8", "pos": "slot", "featurizer": "g_attn8"},
+      "v_attn9": {"site": "attn9", "pos": "slot", "featurizer": "g_attn9"},
+      "v_attn10": {"site": "attn10", "pos": "slot", "featurizer": "g_attn10"},
+      "v_attn11": {"site": "attn11", "pos": "slot", "featurizer": "g_attn11"},
+      "v_attn12": {"site": "attn12", "pos": "slot", "featurizer": "g_attn12"},
+      "v_attn13": {"site": "attn13", "pos": "slot", "featurizer": "g_attn13"},
+      "v_attn14": {"site": "attn14", "pos": "slot", "featurizer": "g_attn14"},
+      "v_attn15": {"site": "attn15", "pos": "slot", "featurizer": "g_attn15"},
+      "v_attn16": {"site": "attn16", "pos": "slot", "featurizer": "g_attn16"},
+      "v_attn17": {"site": "attn17", "pos": "slot", "featurizer": "g_attn17"},
+      "v_attn18": {"site": "attn18", "pos": "slot", "featurizer": "g_attn18"},
+      "v_attn19": {"site": "attn19", "pos": "slot", "featurizer": "g_attn19"},
+      "v_attn20": {"site": "attn20", "pos": "slot", "featurizer": "g_attn20"},
+      "v_attn21": {"site": "attn21", "pos": "slot", "featurizer": "g_attn21"},
+      "v_attn22": {"site": "attn22", "pos": "slot", "featurizer": "g_attn22"},
+      "v_attn23": {"site": "attn23", "pos": "slot", "featurizer": "g_attn23"},
+      "v_attn24": {"site": "attn24", "pos": "slot", "featurizer": "g_attn24"},
+      "v_attn25": {"site": "attn25", "pos": "slot", "featurizer": "g_attn25"},
+      "v_attn26": {"site": "attn26", "pos": "slot", "featurizer": "g_attn26"},
+      "v_attn27": {"site": "attn27", "pos": "slot", "featurizer": "g_attn27"},
+      "v_mlp0": {"site": "mlp0", "pos": "slot", "featurizer": "g_mlp0"},
+      "v_mlp1": {"site": "mlp1", "pos": "slot", "featurizer": "g_mlp1"},
+      "v_mlp2": {"site": "mlp2", "pos": "slot", "featurizer": "g_mlp2"},
+      "v_mlp3": {"site": "mlp3", "pos": "slot", "featurizer": "g_mlp3"},
+      "v_mlp4": {"site": "mlp4", "pos": "slot", "featurizer": "g_mlp4"},
+      "v_mlp5": {"site": "mlp5", "pos": "slot", "featurizer": "g_mlp5"},
+      "v_mlp6": {"site": "mlp6", "pos": "slot", "featurizer": "g_mlp6"},
+      "v_mlp7": {"site": "mlp7", "pos": "slot", "featurizer": "g_mlp7"},
+      "v_mlp8": {"site": "mlp8", "pos": "slot", "featurizer": "g_mlp8"},
+      "v_mlp9": {"site": "mlp9", "pos": "slot", "featurizer": "g_mlp9"},
+      "v_mlp10": {"site": "mlp10", "pos": "slot", "featurizer": "g_mlp10"},
+      "v_mlp11": {"site": "mlp11", "pos": "slot", "featurizer": "g_mlp11"},
+      "v_mlp12": {"site": "mlp12", "pos": "slot", "featurizer": "g_mlp12"},
+      "v_mlp13": {"site": "mlp13", "pos": "slot", "featurizer": "g_mlp13"},
+      "v_mlp14": {"site": "mlp14", "pos": "slot", "featurizer": "g_mlp14"},
+      "v_mlp15": {"site": "mlp15", "pos": "slot", "featurizer": "g_mlp15"},
+      "v_mlp16": {"site": "mlp16", "pos": "slot", "featurizer": "g_mlp16"},
+      "v_mlp17": {"site": "mlp17", "pos": "slot", "featurizer": "g_mlp17"},
+      "v_mlp18": {"site": "mlp18", "pos": "slot", "featurizer": "g_mlp18"},
+      "v_mlp19": {"site": "mlp19", "pos": "slot", "featurizer": "g_mlp19"},
+      "v_mlp20": {"site": "mlp20", "pos": "slot", "featurizer": "g_mlp20"},
+      "v_mlp21": {"site": "mlp21", "pos": "slot", "featurizer": "g_mlp21"},
+      "v_mlp22": {"site": "mlp22", "pos": "slot", "featurizer": "g_mlp22"},
+      "v_mlp23": {"site": "mlp23", "pos": "slot", "featurizer": "g_mlp23"},
+      "v_mlp24": {"site": "mlp24", "pos": "slot", "featurizer": "g_mlp24"},
+      "v_mlp25": {"site": "mlp25", "pos": "slot", "featurizer": "g_mlp25"},
+      "v_mlp26": {"site": "mlp26", "pos": "slot", "featurizer": "g_mlp26"},
+      "v_mlp27": {"site": "mlp27", "pos": "slot", "featurizer": "g_mlp27"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask_attn0": {
+        "site": "attn0",
+        "pos": "slot",
+        "featurizer": "g_attn0",
+        "do": {"swap": "v_attn0"}
+      },
+      "mask_attn1": {
+        "site": "attn1",
+        "pos": "slot",
+        "featurizer": "g_attn1",
+        "do": {"swap": "v_attn1"}
+      },
+      "mask_attn2": {
+        "site": "attn2",
+        "pos": "slot",
+        "featurizer": "g_attn2",
+        "do": {"swap": "v_attn2"}
+      },
+      "mask_attn3": {
+        "site": "attn3",
+        "pos": "slot",
+        "featurizer": "g_attn3",
+        "do": {"swap": "v_attn3"}
+      },
+      "mask_attn4": {
+        "site": "attn4",
+        "pos": "slot",
+        "featurizer": "g_attn4",
+        "do": {"swap": "v_attn4"}
+      },
+      "mask_attn5": {
+        "site": "attn5",
+        "pos": "slot",
+        "featurizer": "g_attn5",
+        "do": {"swap": "v_attn5"}
+      },
+      "mask_attn6": {
+        "site": "attn6",
+        "pos": "slot",
+        "featurizer": "g_attn6",
+        "do": {"swap": "v_attn6"}
+      },
+      "mask_attn7": {
+        "site": "attn7",
+        "pos": "slot",
+        "featurizer": "g_attn7",
+        "do": {"swap": "v_attn7"}
+      },
+      "mask_attn8": {
+        "site": "attn8",
+        "pos": "slot",
+        "featurizer": "g_attn8",
+        "do": {"swap": "v_attn8"}
+      },
+      "mask_attn9": {
+        "site": "attn9",
+        "pos": "slot",
+        "featurizer": "g_attn9",
+        "do": {"swap": "v_attn9"}
+      },
+      "mask_attn10": {
+        "site": "attn10",
+        "pos": "slot",
+        "featurizer": "g_attn10",
+        "do": {"swap": "v_attn10"}
+      },
+      "mask_attn11": {
+        "site": "attn11",
+        "pos": "slot",
+        "featurizer": "g_attn11",
+        "do": {"swap": "v_attn11"}
+      },
+      "mask_attn12": {
+        "site": "attn12",
+        "pos": "slot",
+        "featurizer": "g_attn12",
+        "do": {"swap": "v_attn12"}
+      },
+      "mask_attn13": {
+        "site": "attn13",
+        "pos": "slot",
+        "featurizer": "g_attn13",
+        "do": {"swap": "v_attn13"}
+      },
+      "mask_attn14": {
+        "site": "attn14",
+        "pos": "slot",
+        "featurizer": "g_attn14",
+        "do": {"swap": "v_attn14"}
+      },
+      "mask_attn15": {
+        "site": "attn15",
+        "pos": "slot",
+        "featurizer": "g_attn15",
+        "do": {"swap": "v_attn15"}
+      },
+      "mask_attn16": {
+        "site": "attn16",
+        "pos": "slot",
+        "featurizer": "g_attn16",
+        "do": {"swap": "v_attn16"}
+      },
+      "mask_attn17": {
+        "site": "attn17",
+        "pos": "slot",
+        "featurizer": "g_attn17",
+        "do": {"swap": "v_attn17"}
+      },
+      "mask_attn18": {
+        "site": "attn18",
+        "pos": "slot",
+        "featurizer": "g_attn18",
+        "do": {"swap": "v_attn18"}
+      },
+      "mask_attn19": {
+        "site": "attn19",
+        "pos": "slot",
+        "featurizer": "g_attn19",
+        "do": {"swap": "v_attn19"}
+      },
+      "mask_attn20": {
+        "site": "attn20",
+        "pos": "slot",
+        "featurizer": "g_attn20",
+        "do": {"swap": "v_attn20"}
+      },
+      "mask_attn21": {
+        "site": "attn21",
+        "pos": "slot",
+        "featurizer": "g_attn21",
+        "do": {"swap": "v_attn21"}
+      },
+      "mask_attn22": {
+        "site": "attn22",
+        "pos": "slot",
+        "featurizer": "g_attn22",
+        "do": {"swap": "v_attn22"}
+      },
+      "mask_attn23": {
+        "site": "attn23",
+        "pos": "slot",
+        "featurizer": "g_attn23",
+        "do": {"swap": "v_attn23"}
+      },
+      "mask_attn24": {
+        "site": "attn24",
+        "pos": "slot",
+        "featurizer": "g_attn24",
+        "do": {"swap": "v_attn24"}
+      },
+      "mask_attn25": {
+        "site": "attn25",
+        "pos": "slot",
+        "featurizer": "g_attn25",
+        "do": {"swap": "v_attn25"}
+      },
+      "mask_attn26": {
+        "site": "attn26",
+        "pos": "slot",
+        "featurizer": "g_attn26",
+        "do": {"swap": "v_attn26"}
+      },
+      "mask_attn27": {
+        "site": "attn27",
+        "pos": "slot",
+        "featurizer": "g_attn27",
+        "do": {"swap": "v_attn27"}
+      },
+      "mask_mlp0": {"site": "mlp0", "pos": "slot", "featurizer": "g_mlp0", "do": {"swap": "v_mlp0"}},
+      "mask_mlp1": {"site": "mlp1", "pos": "slot", "featurizer": "g_mlp1", "do": {"swap": "v_mlp1"}},
+      "mask_mlp2": {"site": "mlp2", "pos": "slot", "featurizer": "g_mlp2", "do": {"swap": "v_mlp2"}},
+      "mask_mlp3": {"site": "mlp3", "pos": "slot", "featurizer": "g_mlp3", "do": {"swap": "v_mlp3"}},
+      "mask_mlp4": {"site": "mlp4", "pos": "slot", "featurizer": "g_mlp4", "do": {"swap": "v_mlp4"}},
+      "mask_mlp5": {"site": "mlp5", "pos": "slot", "featurizer": "g_mlp5", "do": {"swap": "v_mlp5"}},
+      "mask_mlp6": {"site": "mlp6", "pos": "slot", "featurizer": "g_mlp6", "do": {"swap": "v_mlp6"}},
+      "mask_mlp7": {"site": "mlp7", "pos": "slot", "featurizer": "g_mlp7", "do": {"swap": "v_mlp7"}},
+      "mask_mlp8": {"site": "mlp8", "pos": "slot", "featurizer": "g_mlp8", "do": {"swap": "v_mlp8"}},
+      "mask_mlp9": {"site": "mlp9", "pos": "slot", "featurizer": "g_mlp9", "do": {"swap": "v_mlp9"}},
+      "mask_mlp10": {
+        "site": "mlp10",
+        "pos": "slot",
+        "featurizer": "g_mlp10",
+        "do": {"swap": "v_mlp10"}
+      },
+      "mask_mlp11": {
+        "site": "mlp11",
+        "pos": "slot",
+        "featurizer": "g_mlp11",
+        "do": {"swap": "v_mlp11"}
+      },
+      "mask_mlp12": {
+        "site": "mlp12",
+        "pos": "slot",
+        "featurizer": "g_mlp12",
+        "do": {"swap": "v_mlp12"}
+      },
+      "mask_mlp13": {
+        "site": "mlp13",
+        "pos": "slot",
+        "featurizer": "g_mlp13",
+        "do": {"swap": "v_mlp13"}
+      },
+      "mask_mlp14": {
+        "site": "mlp14",
+        "pos": "slot",
+        "featurizer": "g_mlp14",
+        "do": {"swap": "v_mlp14"}
+      },
+      "mask_mlp15": {
+        "site": "mlp15",
+        "pos": "slot",
+        "featurizer": "g_mlp15",
+        "do": {"swap": "v_mlp15"}
+      },
+      "mask_mlp16": {
+        "site": "mlp16",
+        "pos": "slot",
+        "featurizer": "g_mlp16",
+        "do": {"swap": "v_mlp16"}
+      },
+      "mask_mlp17": {
+        "site": "mlp17",
+        "pos": "slot",
+        "featurizer": "g_mlp17",
+        "do": {"swap": "v_mlp17"}
+      },
+      "mask_mlp18": {
+        "site": "mlp18",
+        "pos": "slot",
+        "featurizer": "g_mlp18",
+        "do": {"swap": "v_mlp18"}
+      },
+      "mask_mlp19": {
+        "site": "mlp19",
+        "pos": "slot",
+        "featurizer": "g_mlp19",
+        "do": {"swap": "v_mlp19"}
+      },
+      "mask_mlp20": {
+        "site": "mlp20",
+        "pos": "slot",
+        "featurizer": "g_mlp20",
+        "do": {"swap": "v_mlp20"}
+      },
+      "mask_mlp21": {
+        "site": "mlp21",
+        "pos": "slot",
+        "featurizer": "g_mlp21",
+        "do": {"swap": "v_mlp21"}
+      },
+      "mask_mlp22": {
+        "site": "mlp22",
+        "pos": "slot",
+        "featurizer": "g_mlp22",
+        "do": {"swap": "v_mlp22"}
+      },
+      "mask_mlp23": {
+        "site": "mlp23",
+        "pos": "slot",
+        "featurizer": "g_mlp23",
+        "do": {"swap": "v_mlp23"}
+      },
+      "mask_mlp24": {
+        "site": "mlp24",
+        "pos": "slot",
+        "featurizer": "g_mlp24",
+        "do": {"swap": "v_mlp24"}
+      },
+      "mask_mlp25": {
+        "site": "mlp25",
+        "pos": "slot",
+        "featurizer": "g_mlp25",
+        "do": {"swap": "v_mlp25"}
+      },
+      "mask_mlp26": {
+        "site": "mlp26",
+        "pos": "slot",
+        "featurizer": "g_mlp26",
+        "do": {"swap": "v_mlp26"}
+      },
+      "mask_mlp27": {
+        "site": "mlp27",
+        "pos": "slot",
+        "featurizer": "g_mlp27",
+        "do": {"swap": "v_mlp27"}
+      }
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      }
+    ]
+  }
+}

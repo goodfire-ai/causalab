@@ -1,27 +1,14 @@
-"""The resolver census: snapshot before, diff after.
+"""Compare resolved sites and refusals with the saved census.
 
-``fixtures/resolved_sites_census.json`` records, on the base the census was
-pinned on *before any edit*, what ``resolve_site`` answered for every ``(component,
-layer, head)`` the census walks on the three tiny fixtures — the resolved
-site (module path, io side, feature slice, slot, declared shape, derivation)
-or the refusal (class, code, reason, text). Moving ``resolve_site`` onto the
-family adapters' declared taps is a refactor whose acceptance is that
-**nothing changes**: this test re-walks the census on the current tree and
-compares every entry to the record.
+The fixture records module paths, tensor shapes, selectors, and refusal
+fields for three tiny models. Its base field identifies the capture revision.
+Expected diagnostic wording follows the current source; structural and
+numerical fields retain the captured values.
 
-Two sets of entries differ by decision, and each is named here rather than
-tolerated:
-
-* the eight ``deltanet_*`` spellings that became aliases: a document
-  naming one now resolves to its canonical name's tap, so the live answer
-  must equal the record **of the canonical name** — redirect, not rebind;
-* GPT-2's three norm taps (``attention_input_norm``, ``block_mid``,
-  ``mlp_input_norm``): the record is a bare ``AttributeError`` (the resolver
-  read the llama tree's child names on every non-GPT-2 tree — and on GPT-2
-  too), the family adapter declares ``ln_1`` / ``ln_2``, and the live answer
-  is the resolved tap.
-
-Everything else — every other refusal text included — is byte-identical.
+Deprecated component names resolve to their canonical component's record.
+GPT-2 norm taps use the adapter's ln_1/ln_2 addresses; their captured
+AttributeError entries remain as evidence for this explicit exception.
+Every other field must match the saved entry.
 """
 
 from __future__ import annotations
@@ -75,7 +62,7 @@ def _recorded(entries: list[dict], component: str, layer: Any, head: Any) -> dic
 
 
 def test_the_record_is_the_bases_and_not_empty():
-    assert RECORD["base"] == "7c28470e"
+    assert RECORD["base"] == "the resolver before rows"
     assert set(RECORD["fixtures"]) == set(census.FIXTURES)
     total = sum(len(f["entries"]) for f in RECORD["fixtures"].values())
     assert total >= 600  # 644 at the capture
@@ -120,9 +107,10 @@ def test_the_resolver_answers_as_it_did_on_the_base(key: str):
 
 
 def test_the_aliases_are_in_the_record_under_their_old_names():
-    """Vacuity floor for the redirect check: the record walked the eight
-    retired spellings (the base still had them in the vocabulary)."""
+    """Vacuity floor for the redirect check: the record walked the nine
+    retired spellings, the eight ``deltanet_*`` ones and ``attention_value``
+    (the base still had them in the vocabulary)."""
     entries = RECORD["fixtures"]["tiny-random/qwen3.5-moe"]["entries"]
     walked = {e["component"] for e in entries} & set(DEPRECATED_COMPONENTS)
-    assert walked == set(DEPRECATED_COMPONENTS)  # the attention-era one included
+    assert walked == set(DEPRECATED_COMPONENTS)
     assert len(walked) == 9

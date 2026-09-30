@@ -1,41 +1,40 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Several writes on ONE site at non-overlapping positions inside one intervened model - the multi-position patch. It is legal today and appeared in no example, which is why every run that wanted it re-derived it. Not a nicety: an effect carried jointly by several positions can read 0.000 at every layer when each position is patched alone and appear only when they are patched together, so a single-position scan cannot see it at all. Rule 8 is what makes this expressible: at most one absolute write per (site, OVERLAPPING pos, model), so three disjoint indices are three legal absolute writes rather than a conflict. Read the counterfactual once per position; the reads share the forward."
+    "protocol_version": "4",
+    "description": "Several writes on ONE site at non-overlapping positions inside one intervened model - the multi-position patch. It is legal and appeared in no other example. Not a nicety: an effect carried jointly by several positions can read 0.000 at every position patched alone and appear only when they are patched together, so a single-position scan cannot see it at all. Rule 8 is what makes this expressible: at most one absolute write per (site, OVERLAPPING pos, model), so three disjoint indices are three legal absolute writes rather than a conflict. Read the counterfactual once per position; the reads share the forward."
   },
-  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main"},
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
   "data": {
     "base": {"dataset": "weekdays/data#train", "field": "input"},
     "counterfactual": {"dataset": "weekdays/data#train", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_m4", "v_m3", "v_m2"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["at_m4", "at_m3", "at_m2"]}
+    },
     "sites": {
       "target": {"component": "block_output", "layers": [18]},
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "v_m4": {"site": "target", "pos": -4, "model": "original", "input": "counterfactual"},
-      "v_m3": {"site": "target", "pos": -3, "model": "original", "input": "counterfactual"},
-      "v_m2": {"site": "target", "pos": -2, "model": "original", "input": "counterfactual"},
-      "logits": {"site": "lm_head", "pos": -1, "model": "patched", "input": "base"}
+      "v_m4": {"site": "target", "pos": -4},
+      "v_m3": {"site": "target", "pos": -3},
+      "v_m2": {"site": "target", "pos": -2},
+      "logits": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "at_m4": {"site": "target", "pos": -4, "do": {"swap": "v_m4"}},
       "at_m3": {"site": "target", "pos": -3, "do": {"swap": "v_m3"}},
       "at_m2": {"site": "target", "pos": -2, "do": {"swap": "v_m2"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["at_m4", "at_m3", "at_m2"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia.json"
       }
-    },
-    "save": [{"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"}]
+    ]
   }
 }

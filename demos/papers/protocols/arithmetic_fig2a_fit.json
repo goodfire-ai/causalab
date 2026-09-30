@@ -1,0 +1,54 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "DAS fit for Figure 2a of Feucht et al. 2026 (arXiv:2605.01148): one rotation per (sublayer, k) for the first operand a of a+b= at the last token of Llama-3.1-8B, trained so that swapping the k-dimensional subspace from the counterfactual prompt makes the model answer a_cf + b_base; arithmetic_fig2a_apply.json scores the saved rotations."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "arithmetic_fig2a/data#train", "field": "input"},
+    "counterfactual": {"dataset": "arithmetic_fig2a/data#train", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "sites": {
+      "target": {
+        "component": {"sweep": ["block_mid", "block_output"]},
+        "layers": {"sweep": {"range": [0, 32]}}
+      },
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "rot": {"kind": "subspace", "k": {"sweep": [1, 2, 4, 8, 16]}, "parametrization": "cayley"}
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "featurizer": "rot"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "patch": {"site": "target", "pos": -1, "featurizer": "rot", "do": {"swap": "v_cf"}}
+    },
+    "train": {
+      "objective": {
+        "ce": {
+          "weight": 1.0,
+          "read": "logits",
+          "model": "patched",
+          "aggregation": {"kind": "cross_entropy", "target": "label"}
+        }
+      },
+      "params": ["rot"],
+      "optimizer": {"name": "adamw", "lr": 0.0001, "weight_decay": 0.0},
+      "steps": {"epochs": 8},
+      "batch": {"pairs": 16},
+      "precision": {"feature": "fp32", "loss": "fp32"},
+      "seed": 0
+    },
+    "save": [
+      {"train": "ce", "file_path": "ce.json"},
+      {"value": "rot", "site": "target", "file_path": "rot.safetensors"}
+    ]
+  }
+}

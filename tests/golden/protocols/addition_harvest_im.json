@@ -1,22 +1,18 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "Arithmetic in the Wild (arXiv:2605.01148), probe-training harvest: layer-18 output residual at the last token of '{a}+{b}=' addition prompts (a, b in 1..199, the paper's full App. G.1 range), meta-llama/Llama-3.1-8B. The golden steering test fits the paper's affine sine/cosine Fourier probes on this harvest (Adam, lr 1e-3, 500 epochs - test-side, since v1 has no Fourier train objective) and steers the hours prompts through a pytorch_fn edit implementing Eq. 4 / Algorithm 1. No lm_head read - the forward elides past layer 18."
   },
   "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
   "data": {"base": {"dataset": "addition/pairs", "field": "input"}},
   "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["acts"]}
+    },
     "sites": {
       "l18": {"component": "block_output", "layers": [18]}
     },
-    "reads": {"acts": {"site": "l18", "pos": -1, "model": "original", "input": "base"}},
-    "save": [
-      {
-        "value": "acts",
-        "model": "original",
-        "input": "base",
-        "file_path": "acts_l18.safetensors"
-      }
-    ]
+    "reads": {"acts": {"site": "l18", "pos": -1}},
+    "save": [{"read": "acts", "model": "original", "file_path": "acts_l18.safetensors"}]
   }
 }

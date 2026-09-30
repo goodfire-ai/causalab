@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import math
 from pathlib import Path
 from typing import Any
@@ -26,14 +24,6 @@ from causalab.io.step_io import (
 __all__ = ["load_fit"]
 
 
-def _artifact(path: Path) -> dict[str, str]:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return {"path": str(path.resolve()), "sha256": digest.hexdigest()}
-
-
 def _population(metadata: dict[str, Any], rows: list[dict[str, Any]]) -> Any:
     """Check the recorded population and return its numeric labels."""
     if (
@@ -51,14 +41,7 @@ def _population(metadata: dict[str, Any], rows: list[dict[str, Any]]) -> Any:
     splits = {s: [row["id"] for row in rows if row["split"] == s] for s in SPLITS}
     if any(len(ids) < 2 for ids in splits.values()):
         raise StepError("each Fourier split needs at least two examples")
-    digest = hashlib.sha256(
-        json.dumps(rows, sort_keys=True, allow_nan=False).encode()
-    ).hexdigest()
-    if (
-        metadata.get("rows_sha256") != digest
-        or metadata.get("example_ids") != ids
-        or metadata.get("split_ids") != splits
-    ):
+    if metadata.get("example_ids") != ids or metadata.get("split_ids") != splits:
         raise StepError("rows differ from the fitted Fourier population")
     target = metadata.get("target")
     if not isinstance(target, str) or not target:
@@ -106,13 +89,12 @@ def _grid(metadata: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def load_fit(directory: Path, acts: Path, rows: Path) -> dict[str, Any]:
-    """Verify native files and return arrays, tables, identity and file digests.
+    """Verify native files and return arrays, tables and identity.
 
     ``directory`` contains the seven standard fit outputs. ``acts`` and
     ``rows`` name the population used by that fit. Arrays are float64 NumPy
-    arrays, including ``truth`` with shape (examples, frequencies, 2).
-    ``artifacts`` maps each native filename, plus ``acts`` and ``rows``, to
-    its absolute ``path`` and ``sha256``. All examples and scores are retained.
+    arrays, including ``truth`` with shape (examples, frequencies, 2). All
+    examples and scores are retained.
 
     Present tensor stamps must agree. Unstamped direct-Python outputs remain
     caller-owned; replay verifies the supplied data, not its model provenance.
@@ -169,12 +151,7 @@ def load_fit(directory: Path, acts: Path, rows: Path) -> dict[str, Any]:
     for name, stamp in identities.items():
         if stamp != identity:
             raise StepError(f"Fourier {name} identity differs from saved predictions")
-    shared = (acts_identity.keys() & identity.keys()) - {
-        "produced_by",
-        "dtype",
-        "engine",
-        "commit",
-    }
+    shared = (acts_identity.keys() & identity.keys()) - {"dtype", "engine", "commit"}
     for field in shared:
         if acts_identity[field] != identity[field]:
             raise StepError(f"Fourier activation identity differs on {field}")
@@ -223,5 +200,4 @@ def load_fit(directory: Path, acts: Path, rows: Path) -> dict[str, Any]:
         **tensors,
         "truth": targets(values, specs, metadata["origin"]),
         "identity": identity,
-        "artifacts": {name: _artifact(path) for name, path in paths.items()},
     }

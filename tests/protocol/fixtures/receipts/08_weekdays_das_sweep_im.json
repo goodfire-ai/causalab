@@ -1,0 +1,284 @@
+{
+  "canonical": {
+    "data": {
+      "base": {
+        "dataset": "weekdays/data#train",
+        "digest": "ff2f6b6c9e13813ee546124047e38472e0272bd3a272361e013412ad41425865",
+        "field": "input"
+      },
+      "counterfactual": {
+        "dataset": "weekdays/data#train",
+        "digest": "ff2f6b6c9e13813ee546124047e38472e0272bd3a272361e013412ad41425865",
+        "field": "counterfactual_inputs[0]"
+      }
+    },
+    "header": {
+      "protocol_version": "4"
+    },
+    "method": {
+      "featurizers": {
+        "rot": {
+          "dtype": "fp32",
+          "k": {
+            "sweep": [
+              8,
+              16,
+              32
+            ]
+          },
+          "kind": "subspace",
+          "parametrization": "cayley",
+          "width": 4096
+        }
+      },
+      "intervened_models": {
+        "original_counterfactual": {
+          "input": "counterfactual",
+          "reads": [
+            "v_cf"
+          ]
+        },
+        "patched": {
+          "input": "base",
+          "reads": [
+            "logits"
+          ],
+          "writes": [
+            "patch"
+          ]
+        }
+      },
+      "positions": {
+        "best": {
+          "index": -1
+        }
+      },
+      "reads": {
+        "logits": {
+          "pos": {
+            "index": -1
+          },
+          "site": "lm_head"
+        },
+        "v_cf": {
+          "featurizer": "rot",
+          "pos": "best",
+          "site": "target"
+        }
+      },
+      "save": [
+        {
+          "aggregation": {
+            "a": "cf_answer",
+            "b": "base_answer",
+            "kind": "logit_diff"
+          },
+          "file_path": "iia.json",
+          "model": "patched",
+          "read": "logits"
+        },
+        {
+          "aggregation": {
+            "kind": "cross_entropy",
+            "target": "label"
+          },
+          "file_path": "ce.json",
+          "model": "patched",
+          "read": "logits"
+        },
+        {
+          "file_path": "rot.safetensors",
+          "site": "target",
+          "value": "rot"
+        }
+      ],
+      "sites": {
+        "lm_head": {
+          "component": "lm_head"
+        },
+        "target": {
+          "component": "block_output",
+          "layers": [
+            18
+          ]
+        }
+      },
+      "train": {
+        "batch": {
+          "pairs": 16
+        },
+        "early_stop": {
+          "mode": "max",
+          "on": "iia",
+          "patience": 3
+        },
+        "eval": {
+          "aggregations": {
+            "iia": {
+              "aggregation": {
+                "a": "cf_answer",
+                "b": "base_answer",
+                "kind": "logit_diff"
+              },
+              "model": "patched",
+              "read": "logits"
+            }
+          },
+          "digest": "e0f4cc89821ef2e8e6fb6c843527513ec0b6faeb307bfda68560cdbf0fc236f4",
+          "every": {
+            "epochs": 1
+          },
+          "split": "weekdays/data#test"
+        },
+        "objective": {
+          "ce": {
+            "aggregation": {
+              "kind": "cross_entropy",
+              "target": "label"
+            },
+            "model": "patched",
+            "read": "logits",
+            "weight": 1.0
+          }
+        },
+        "optimizer": {
+          "betas": [
+            0.9,
+            0.999
+          ],
+          "eps": 1e-08,
+          "lr": 0.001,
+          "name": "adamw",
+          "schedule": "constant",
+          "weight_decay": 0.0
+        },
+        "params": [
+          "rot"
+        ],
+        "precision": {
+          "feature": "fp32",
+          "loss": "fp32"
+        },
+        "seed": {
+          "sweep": [
+            0,
+            1,
+            2
+          ]
+        },
+        "steps": {
+          "epochs": 10
+        }
+      },
+      "writes": {
+        "patch": {
+          "do": {
+            "swap": {
+              "model": "original_counterfactual",
+              "read": "v_cf"
+            }
+          },
+          "featurizer": "rot",
+          "pos": "best",
+          "site": "target"
+        }
+      }
+    },
+    "model": {
+      "dtype": "bf16",
+      "key": "Qwen/Qwen3-8B",
+      "revision": "main"
+    }
+  },
+  "document_digest": "b16c0537832c18bcd22d15f06a1e473aa57b76101368bb7c036a7cd035598da3",
+  "execution": {
+    "batch_rows": null,
+    "device": null,
+    "fit_rows": null,
+    "model_source": "loaded",
+    "parallel": {
+      "context": 1,
+      "data": 1,
+      "data_mode": "points",
+      "expert": 1,
+      "launcher": "solo",
+      "pipeline": 1,
+      "tensor": 1,
+      "world": 1
+    }
+  },
+  "points": [
+    {
+      "coords": {
+        "featurizers.rot.k": 8,
+        "train.seed": 0
+      },
+      "digest": "1243d1f21cbee19fa3647086f51e52627d44c148dc4f960c1cd4580af84fbd65",
+      "index": 0
+    },
+    {
+      "coords": {
+        "featurizers.rot.k": 8,
+        "train.seed": 1
+      },
+      "digest": "d2599eef98bcb0645e14d5b8107ee2efc46b070af8c14e4bc9edfd4317357d84",
+      "index": 1
+    },
+    {
+      "coords": {
+        "featurizers.rot.k": 8,
+        "train.seed": 2
+      },
+      "digest": "64360704070ecb7651371556f399fd25d3cf68f3b857017c27b441a11dab0822",
+      "index": 2
+    },
+    {
+      "coords": {
+        "featurizers.rot.k": 16,
+        "train.seed": 0
+      },
+      "digest": "fe2e19b7a2299a28222fc10d9899b79b4d49f1a5cbe447183338a997fce4318d",
+      "index": 3
+    },
+    {
+      "coords": {
+        "featurizers.rot.k": 16,
+        "train.seed": 1
+      },
+      "digest": "8ffefcd3e22dc65f19fef6e469dd84598af21a5ad5bdd7204e9a43900c95260b",
+      "index": 4
+    },
+    {
+      "coords": {
+        "featurizers.rot.k": 16,
+        "train.seed": 2
+      },
+      "digest": "20243921f8ea67cf19c339450e93d79a56f70a0794c0fbef3b5184e45286b9bb",
+      "index": 5
+    },
+    {
+      "coords": {
+        "featurizers.rot.k": 32,
+        "train.seed": 0
+      },
+      "digest": "eaf86969efb34443704d6805663241c3c86472fdbcce5e667ce84720570151c8",
+      "index": 6
+    },
+    {
+      "coords": {
+        "featurizers.rot.k": 32,
+        "train.seed": 1
+      },
+      "digest": "47b14043de472d465bd71517255186071f223fdde0b694ee1caecbf425f3fd00",
+      "index": 7
+    },
+    {
+      "coords": {
+        "featurizers.rot.k": 32,
+        "train.seed": 2
+      },
+      "digest": "85eb4a7f9f8d31dcfaad6df04f7776edda7d69e839d96b4a6c085f04b68caf61",
+      "index": 8
+    }
+  ]
+}

@@ -1,0 +1,290 @@
+{
+ "model": "Qwen2.5-1.5B-Instruct",
+ "chance": null,
+ "clean": {
+  "base_accuracy": 0.921875,
+  "counterfactual_accuracy": 0.921875,
+  "unpatched_label_rate": 0.0
+ },
+ "das": [
+  {
+   "layer": 0,
+   "test_iia": 0.0,
+   "train_iia": 0.0
+  },
+  {
+   "layer": 1,
+   "test_iia": 0.015625,
+   "train_iia": 0.0546875
+  },
+  {
+   "layer": 2,
+   "test_iia": 0.015625,
+   "train_iia": 0.0234375
+  },
+  {
+   "layer": 3,
+   "test_iia": 0.0,
+   "train_iia": 0.015625
+  },
+  {
+   "layer": 4,
+   "test_iia": 0.0,
+   "train_iia": 0.0234375
+  },
+  {
+   "layer": 5,
+   "test_iia": 0.0,
+   "train_iia": 0.0859375
+  },
+  {
+   "layer": 6,
+   "test_iia": 0.015625,
+   "train_iia": 0.078125
+  },
+  {
+   "layer": 7,
+   "test_iia": 0.015625,
+   "train_iia": 0.078125
+  },
+  {
+   "layer": 8,
+   "test_iia": 0.0,
+   "train_iia": 0.109375
+  },
+  {
+   "layer": 9,
+   "test_iia": 0.0,
+   "train_iia": 0.09375
+  },
+  {
+   "layer": 10,
+   "test_iia": 0.0,
+   "train_iia": 0.125
+  },
+  {
+   "layer": 11,
+   "test_iia": 0.0,
+   "train_iia": 0.125
+  },
+  {
+   "layer": 12,
+   "test_iia": 0.015625,
+   "train_iia": 0.1171875
+  },
+  {
+   "layer": 13,
+   "test_iia": 0.015625,
+   "train_iia": 0.1171875
+  },
+  {
+   "layer": 14,
+   "test_iia": 0.015625,
+   "train_iia": 0.125
+  },
+  {
+   "layer": 15,
+   "test_iia": 0.015625,
+   "train_iia": 0.140625
+  },
+  {
+   "layer": 16,
+   "test_iia": 0.015625,
+   "train_iia": 0.1328125
+  },
+  {
+   "layer": 17,
+   "test_iia": 0.015625,
+   "train_iia": 0.2109375
+  },
+  {
+   "layer": 18,
+   "test_iia": 0.015625,
+   "train_iia": 0.203125
+  },
+  {
+   "layer": 19,
+   "test_iia": 0.015625,
+   "train_iia": 0.1875
+  },
+  {
+   "layer": 20,
+   "test_iia": 0.015625,
+   "train_iia": 0.1875
+  },
+  {
+   "layer": 21,
+   "test_iia": 0.078125,
+   "train_iia": 0.2734375
+  },
+  {
+   "layer": 22,
+   "test_iia": 0.546875,
+   "train_iia": 0.9765625
+  },
+  {
+   "layer": 23,
+   "test_iia": 0.609375,
+   "train_iia": 0.984375
+  },
+  {
+   "layer": 24,
+   "test_iia": 0.5625,
+   "train_iia": 0.984375
+  },
+  {
+   "layer": 25,
+   "test_iia": 0.578125,
+   "train_iia": 0.9765625
+  },
+  {
+   "layer": 26,
+   "test_iia": 0.71875,
+   "train_iia": 1.0
+  },
+  {
+   "layer": 27,
+   "test_iia": 0.59375,
+   "train_iia": 1.0
+  }
+ ],
+ "full_patch": [
+  {
+   "layer": 0,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 1,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 2,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 3,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 4,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 5,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 6,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 7,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 8,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 9,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 10,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 11,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 12,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 13,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 14,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 15,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 16,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 17,
+   "test_iia": 0.0
+  },
+  {
+   "layer": 18,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 19,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 20,
+   "test_iia": 0.015625
+  },
+  {
+   "layer": 21,
+   "test_iia": 0.0625
+  },
+  {
+   "layer": 22,
+   "test_iia": 0.6875
+  },
+  {
+   "layer": 23,
+   "test_iia": 0.75
+  },
+  {
+   "layer": 24,
+   "test_iia": 0.71875
+  },
+  {
+   "layer": 25,
+   "test_iia": 0.734375
+  },
+  {
+   "layer": 26,
+   "test_iia": 0.921875
+  },
+  {
+   "layer": 27,
+   "test_iia": 0.921875
+  }
+ ],
+ "chosen_layer": 26,
+ "dbm": {
+  "learned_rank": 63,
+  "theta": 0.490583598613739,
+  "width": 128,
+  "test_iia": 0.859375
+ },
+ "control": {
+  "k": 32,
+  "test_iia_by_seed": {
+   "0": 0.0,
+   "1": 0.0,
+   "2": 0.0
+  },
+  "test_iia_mean": 0.0
+ },
+ "control_dbm": {
+  "k": 63,
+  "test_iia_by_seed": {
+   "0": 0.0,
+   "1": 0.0,
+   "2": 0.0
+  },
+  "test_iia_mean": 0.0
+ }
+}

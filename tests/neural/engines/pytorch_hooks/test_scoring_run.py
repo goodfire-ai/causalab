@@ -1,12 +1,12 @@
-"""The engine half of scoring: a genuinely multi-token answer graded without
-``first_token``, and the scoring identity at run time — refused before
-the first forward, recorded in the run receipt.
+"""The engine half of multi-token scoring: a genuinely multi-token answer graded without
+``first_token`` (T13), and the table's ``string_mode`` at run time — refused
+before the first forward, recorded in the run receipt.
 
-**The multi-token answer.** ``" 85"`` is two content tokens on the tiny gpt2 fixture
+**T13.** ``" 85"`` is two content tokens on the tiny gpt2 fixture
 (``[" 8", "5"]``, the docstring's own case at ``metrics.py``), so a ``match``
 over it cannot be ``exact`` (the value is not one token) and must not be
 ``first_token`` beside an ``87`` (they share a first token, and the metric
-would credit the wrong answer as correct — the half already refused,
+would credit the wrong answer as correct — the half already refused by
 ``_refuse_indistinct_first_tokens``). The path that needs neither is the
 ``decode`` kind — an ``ids``-domain metric that reads the tokens the model
 produced and obliges no vocabulary projection (§2.10) — plus the task's
@@ -15,7 +15,7 @@ grade is a metric record in the ``fraction`` unit under its own arithmetic
 name (``GRADE_RECORD_IDENTITY``).
 
 **The receipt.** A run over a recorded ``prefix`` table under ``first_token``
-writes ``scoring.<ref> = {digest, string_mode, result: ok}``; over the
+writes ``scoring.<ref> = {string_mode, result: ok}``; over the
 unrecorded corpus fixture it writes ``result: unrecorded`` and runs exactly as
 before; a ``prefix`` table under ``mode: exact`` is refused with rule 4 before
 any forward, and nothing but the receipt is written.
@@ -31,26 +31,24 @@ from typing import Any
 import pytest
 import torch
 
-from causalab.causal.scoring import (
-    GRADE_RECORD_IDENTITY,
-    SCORING_DIGEST_COLUMN,
-    ScoringSpec,
-)
+from causalab.causal.scoring import GRADE_RECORD_IDENTITY, ScoringSpec
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.neural.shared.execution import SCORING_KEY
 from causalab.neural.shared.metrics import (
-    column_first_token_id,
-    column_token_id,
     compute_metric,
     compute_windowed_metric,
 )
-from causalab.neural.shared.outputs import MetricTable
+from causalab.protocol.answers import (
+    column_first_token_id,
+    column_token_id,
+)
+from causalab.neural.shared.results import MetricTable
 from causalab.protocol import RUN_RECORD_NAME, run_protocol
-from causalab.protocol.errors import ProtocolError, ValidationError
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
-from causalab.protocol.schema import MetricSpec
+from causalab.protocol.rules.errors import ProtocolError, ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.schema import AggregationSpec
 from causalab.tasks.serialize import (
     serialize_counterfactual_dataset,
     write_dataset_table,
@@ -59,7 +57,8 @@ from causalab.tasks.subject_object_relations.config import SubjectObjectRelation
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_GPT2, TINY_LLAMA
-from tests.protocol._env import CORPUS_DIR, FIXTURES, write_rot_fixture
+from tests.protocol._docs import aggregation, by_label, saved
+from tests.protocol._env import CORPUS_DIR, FIXTURES, write_rot_fixture, steps_of
 
 pytestmark = pytest.mark.smoke
 
@@ -74,37 +73,23 @@ def gpt2_bundle():
 
 def _decode_document(model_key: str) -> dict[str, Any]:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": model_key, "revision": "main"},
         "data": {"base": {"dataset": "probe", "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["cont"]}},
             "positions": {
                 "window": {"generated": {"max_new_tokens": BUDGET}, "all": True}
             },
             "sites": {"lm_head": {"component": "lm_head"}},
-            "reads": {
-                "cont": {
-                    "site": "lm_head",
-                    "pos": "window",
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "metrics": {"said": {"kind": "decode", "of": "cont"}},
-            "save": [
-                {
-                    "value": "said",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "said.json",
-                }
-            ],
+            "reads": {"cont": {"site": "lm_head", "pos": "window"}},
+            "save": [saved("cont", "original", "said.json", aggregation("decode"))],
         },
     }
 
 
 # --------------------------------------------------------------------------- #
-# the two-token answer
+# T13 — the two-token answer
 # --------------------------------------------------------------------------- #
 
 TWO_TOKEN = ScoringSpec(forms={"total": {"85": [" 85", "85"]}})
@@ -117,10 +102,7 @@ def test_the_witness_is_two_tokens_sharing_a_first_piece(gpt2_bundle):
     for value in (" 85", " 87"):
         ids = tokenizer.encode(value, add_special_tokens=False)
         assert len([t for t in ids if tokenizer.decode([t]).strip()]) == 2, (value, ids)
-    first = {
-        value: column_first_token_id(tokenizer, value, token_form="space_prefixed")
-        for value in (" 85", " 87")
-    }
+    first = {value: column_first_token_id(tokenizer, value) for value in (" 85", " 87")}
     assert first[" 85"] == first[" 87"]
 
 
@@ -130,18 +112,16 @@ def test_exact_cannot_score_a_two_token_answer(gpt2_bundle):
 
 
 def test_first_token_over_85_and_87_is_refused_not_scored(gpt2_bundle):
-    """The two-token answer's mutation: the same fixture through ``match`` with
+    """T13's mutation: the same fixture through ``match`` with
     ``mode: first_token`` must be refused by ``_refuse_indistinct_first_tokens``
     — never silently score 1.000 for an emitted ``87``."""
     tokenizer = gpt2_bundle.tokenizer
-    metric = MetricSpec(
+    metric = AggregationSpec(
         kind="match",
-        of="logits",
         fields={"expected": "total", "mode": "first_token"},
-        token_form="space_prefixed",
     )
     logits = torch.zeros(2, 1, len(tokenizer))
-    eight = column_first_token_id(tokenizer, " 85", token_form="space_prefixed")
+    eight = column_first_token_id(tokenizer, " 85")
     logits[:, 0, eight] = 4.0  # "the model emitted ` 8`…"
     with pytest.raises(ProtocolError) as err:
         compute_metric(metric, logits, [{"total": " 85"}, {"total": " 87"}], tokenizer)
@@ -158,7 +138,7 @@ def test_the_spec_grades_the_two_token_answer_as_text():
 
 
 def test_decode_plus_the_spec_yields_a_graded_metric_record(gpt2_bundle):
-    """The grading path end to end on the tiny fixture: ``decode`` returns the
+    """The decode-and-grade path end to end on the tiny fixture: ``decode`` returns the
     text the model produced, the spec grades it, and the grade lands in a
     metric table as a ``fraction`` under ``string_grade/v1`` — no vocabulary
     projection, no ``first_token``.
@@ -172,7 +152,7 @@ def test_decode_plus_the_spec_yields_a_graded_metric_record(gpt2_bundle):
         _decode_document(TINY_GPT2), gpt2_bundle, base_texts=PROMPTS
     )
     executor.run_all()
-    metric = executor.doc.metrics["said"]
+    metric = by_label(executor.doc)["said"]
     decoded = compute_windowed_metric(
         metric,
         executor.windowed_value("cont"),
@@ -196,7 +176,6 @@ def test_decode_plus_the_spec_yields_a_graded_metric_record(gpt2_bundle):
         "graded",
         [[g] for g in grades],
         {},
-        "digest",
         identity=GRADE_RECORD_IDENTITY,
         steps=None,
         matched=[bool(steps) for steps in executor.addressed_steps("cont")],
@@ -215,43 +194,32 @@ SOR_REF = "sor/name_gender"
 
 def _sor_document(mode: str) -> dict[str, Any]:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": {"base": {"dataset": SOR_REF, "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["logits"]}},
             "positions": {"answer_tok": {"index": -1}},
             "sites": {"lm_head": {"component": "lm_head"}},
-            "reads": {
-                "logits": {
-                    "site": "lm_head",
-                    "pos": "answer_tok",
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "metrics": {
-                "accuracy": {
-                    "kind": "match",
-                    "of": "logits",
-                    "expected": "base_answer_forms",
-                    "mode": mode,
-                    "token_form": "space_prefixed",
-                }
-            },
+            "reads": {"logits": {"site": "lm_head", "pos": "answer_tok"}},
             "save": [
-                {
-                    "value": "accuracy",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "accuracy.json",
-                }
+                saved(
+                    "logits",
+                    "original",
+                    "accuracy.json",
+                    aggregation(
+                        "match",
+                        expected="base_answer_forms",
+                        mode=mode,
+                    ),
+                )
             ],
         },
     }
 
 
 @pytest.fixture(scope="module")
-def recorded_env(tmp_path_factory) -> tuple[ResolutionEnv, str]:
+def recorded_env(tmp_path_factory) -> ResolutionEnv:
     root = tmp_path_factory.mktemp("recorded")
     dataset = serialize_counterfactual_dataset(
         "subject_object_relations",
@@ -261,10 +229,9 @@ def recorded_env(tmp_path_factory) -> tuple[ResolutionEnv, str]:
         task_cfg=SubjectObjectRelationsConfig(relation="name_gender"),
     )
     write_dataset_table(dataset.rows, root / f"{SOR_REF}.json")
-    env = ResolutionEnv(
+    return ResolutionEnv(
         datasets=FileDatasets(root=root), artifacts=FileArtifacts(root=root)
     )
-    return env, dataset.rows[0][SCORING_DIGEST_COLUMN]
 
 
 def _receipt(out: Path) -> dict[str, Any]:
@@ -274,36 +241,44 @@ def _receipt(out: Path) -> dict[str, Any]:
 def test_a_recorded_prefix_table_under_first_token_runs_and_the_receipt_says_ok(
     recorded_env, tmp_path
 ):
-    env, digest = recorded_env
+    env = recorded_env
     result = run_protocol(
-        load(_sor_document("first_token"), env), env, [PytorchHooksEngine()], tmp_path
+        compile_protocol(_sor_document("first_token"), env=env),
+        env,
+        PytorchHooksEngine(),
+        tmp_path,
+        record=True,
     )
     assert "accuracy.json" in result.files
     assert _receipt(tmp_path)[SCORING_KEY] == {
-        SOR_REF: {"digest": digest, "string_mode": "prefix", "result": "ok"}
+        SOR_REF: {"string_mode": "prefix", "result": "ok"}
     }
 
 
 def test_a_recorded_prefix_table_under_exact_is_refused_before_any_forward(
     recorded_env, tmp_path
 ):
-    env, _digest = recorded_env
+    env = recorded_env
     with pytest.raises(ValidationError) as err:
         run_protocol(
-            load(_sor_document("exact"), env), env, [PytorchHooksEngine()], tmp_path
+            compile_protocol(_sor_document("exact"), env=env),
+            env,
+            PytorchHooksEngine(),
+            tmp_path,
+            record=True,
         )
     message = str(err.value)
     assert "[V4]" in message and "'exact'" in message and "'prefix'" in message
     assert "'first_token'" in message and "prefix → first_token" in message
-    # the receipt was written (a crashed run still says what it was); no table was
-    assert (tmp_path / RUN_RECORD_NAME).is_file()
+    # refused at the door, before the engine: nothing on disk — no receipt (the
+    # engine writes it, and a refused document never reaches one), no table
+    assert not (tmp_path / RUN_RECORD_NAME).exists()
     assert not (tmp_path / "accuracy.json").exists()
-    assert SCORING_KEY not in _receipt(tmp_path)  # nothing to record: it never passed
 
 
 def test_the_unrecorded_corpus_fixture_runs_unchanged_and_the_receipt_says_so(tmp_path):
     """The fail-closed twin at run time: the committed table carries no
-    identity, so nothing is compared, the numbers are whatever they were, and
+    string_mode column, so nothing is compared, the numbers are whatever they were, and
     the receipt records ``unrecorded`` for the base ref."""
     artifacts = tmp_path / "artifacts"
     shutil.copytree(FIXTURES / "artifacts", artifacts, dirs_exist_ok=True)
@@ -312,17 +287,15 @@ def test_the_unrecorded_corpus_fixture_runs_unchanged_and_the_receipt_says_so(tm
         datasets=FileDatasets(root=FIXTURES / "data"),
         artifacts=FileArtifacts(root=artifacts),
     )
-    loaded = load(
+    loaded = compile_protocol(
         CORPUS_DIR / "02_interchange_im.json",
-        env,
+        env=env,
         overrides={"model.key": TINY_LLAMA, "sites.target.layers": 1},
     )
     out = tmp_path / "run"
-    result = run_protocol(loaded, env, [PytorchHooksEngine()], out)
+    result = run_protocol(loaded, env, PytorchHooksEngine(), out, record=True)
     assert "iia.json" in result.files
     block = _receipt(out)[SCORING_KEY]
-    (doc,) = loaded.point_documents
+    (doc,) = steps_of(loaded, env).documents
     assert set(block) == {doc.data["base"].dataset}
-    assert list(block.values()) == [
-        {"digest": None, "string_mode": None, "result": "unrecorded"}
-    ]
+    assert list(block.values()) == [{"string_mode": None, "result": "unrecorded"}]

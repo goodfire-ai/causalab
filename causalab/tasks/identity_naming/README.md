@@ -11,11 +11,11 @@ The task is a "factory" in the same sense as [`natural_domains_arithmetic/`](../
 
 ## Domain Matrix
 
-| Domain | Entities | Result | Template | Task config |
+| Domain | Entities | Result | Template | Build flag |
 |---|---|---|---|---|
-| `pitch_midi` | Note names `C2`…`C6` (49 notes, MIDI 36–84, common piano range) | MIDI number as string | `"The MIDI number for {entity} is "` | `natural_domains_arithmetic_pitch_midi` *No — see below* |
+| `pitch_midi` | Note names `C2`…`C6` (49 notes, MIDI 36–84, common piano range) | MIDI number as string | `"The MIDI number for {entity} is "` | `--set domain_type=pitch_midi` |
 
-The task config lives at [`causalab/configs/task/identity_naming_pitch_midi.yaml`](../../configs/task/identity_naming_pitch_midi.yaml). The naming convention `<task>_<variant>.yaml` matches `natural_domains_arithmetic_*`. `isometry.grid_range` is set to `[36, 84]` — the MIDI range — so geometry analyses interpret distances on the actual MIDI scale rather than an arbitrary index.
+`scripts/build_task_dataset.py` selects the preset with `--set domain_type=pitch_midi`. The [Files](#files) table gives the command that built the shipped table.
 
 ## Causal Model
 
@@ -53,19 +53,19 @@ Implementation note: `generate_dataset` builds the trace then calls `trace.inter
 | `last_token` | The final prompt token (index `-1`). |
 | `entity` | The last token spanning the `{entity}` slot. |
 
-Built declaratively via `causalab.neural.token_positions.build_token_position_factories` — same pattern as `natural_domains_arithmetic`.
+Built declaratively via `causalab.tasks.token_positions.build_token_position_factories` — same pattern as `natural_domains_arithmetic`.
 
 ## How to Run
 
-The task runs from an intervention document that names its table
-(`identity_naming/data/pitch_midi`) — see `docs/running_experiments.md` and the shipped
-documents under `causalab/configs/protocols/`:
+No document in this repository runs this task yet. A document names the shipped table as `identity_naming/data/pitch_midi#all` in its `data` block, and runs with:
 
 ```bash
-uv run causalab run <document.json>
+uv run causalab run <document> \
+    --engine auto \
+    --out runs/identity_naming
 ```
 
-Outputs land under `artifacts/identity_naming/<model>/<analysis>/...` per `docs/CODEBASE.md` invariant 7.
+[Running experiments](../../../docs/running_experiments.md) shows how to write, validate and run a document.
 
 ## Files
 

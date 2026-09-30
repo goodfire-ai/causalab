@@ -10,12 +10,13 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import os
+from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property
 from types import ModuleType
 from typing import Any, Callable
 
-from causalab.causal.causal_model import CausalModel
+from causalab.causal.model import CausalModel
 
 
 @dataclass
@@ -50,7 +51,13 @@ class Task:
     def intervention_values(self) -> list:
         """Values of the intervention variable (e.g. 28 (weekday, group) tuples)."""
         if self.intervention_variable:
-            return self.causal_model.values.get(self.intervention_variable, [])
+            return deepcopy(
+                list(
+                    self.causal_model.domains[
+                        self.intervention_variable
+                    ].require_enumerated()
+                )
+            )
         return []
 
     @property
@@ -106,7 +113,7 @@ def _task_package_candidates(task_name: str) -> list[str]:
     session-local ``tasks.<name>`` only when ``CAUSALAB_SESSION_CODE`` is set
     (see ``causalab/tasks/README.md`` "Local task packages"). Single
     source of the shipped-first precedence + the session-local gate, so every
-    resolver (:func:`_import_task_module`) agrees and can't drift.
+    resolver (`_import_task_module`) agrees and can't drift.
     """
     candidates = [f"causalab.tasks.{task_name}"]
     if os.environ.get("CAUSALAB_SESSION_CODE"):
@@ -135,12 +142,11 @@ def _import_task_module(task_name: str, submodule: str) -> ModuleType:
     precedence; a session-local ``tasks.<name>`` is the fallback when
     ``CAUSALAB_SESSION_CODE`` is set (see ``causalab/tasks/README.md``
     "Local task packages"). Resolution is by
-    :func:`_task_package_exists` (``find_spec``, no execution), so the fallback
+    `_task_package_exists` (``find_spec``, no execution), so the fallback
     fires only when the shipped task genuinely does not exist — a broken import
     *inside* a task module surfaces as its own error at import time rather than
     being masked as "task not found". A session-local task never shadows a
-    shipped one (same precedence as ``_load_analysis`` in
-    ``causalab.runner.run_exp``).
+    shipped one.
 
     The fallback decision is made once at the task-*package* level (a task lives
     entirely in one namespace): if a shipped task package exists but its
@@ -185,7 +191,7 @@ def _has_model_export(mod: ModuleType, canonical: str) -> bool:
     """Whether ``mod`` defines a causal-model export under either casing.
 
     The case-tolerant counterpart of ``hasattr(mod, canonical)`` — used by the
-    runner's factory probe (``resolve_task``) so it agrees with :func:`load_task`
+    runner's factory probe (``resolve_task``) so it agrees with [`load_task`][]
     on what counts as a factory/singleton.
     """
     return _resolve_model_export(mod, canonical) is not None
@@ -286,7 +292,7 @@ def load_task_counterfactuals(task_name: str) -> ModuleType:
 
     Returns the module so callers can access generate_dataset(model, n, seed).
     Resolves shipped ``causalab.tasks.<name>`` first, then a session-local
-    ``tasks.<name>`` (see :func:`_import_task_module`).
+    ``tasks.<name>`` (see `_import_task_module`).
     """
     return _import_task_module(task_name, "counterfactuals")
 
@@ -296,7 +302,7 @@ def load_task_token_positions(task_name: str) -> ModuleType:
 
     Returns the module so callers can access create_token_positions(...).
     Resolves shipped ``causalab.tasks.<name>`` first, then a session-local
-    ``tasks.<name>`` (see :func:`_import_task_module`).
+    ``tasks.<name>`` (see `_import_task_module`).
     """
     return _import_task_module(task_name, "token_positions")
 
@@ -305,7 +311,7 @@ def _grader(causal_model: CausalModel, task_name: str) -> Callable[[dict, str], 
     """A task's string grader: its causal model's ``ScoringSpec.grader()``.
 
     The one string-match authority is the spec the causal model
-    declares (:class:`causalab.causal.scoring.ScoringSpec`), keyed on the
+    declares ([`causalab.causal.scoring.ScoringSpec`][]), keyed on the
     spec's ``answer_variable`` — the variable the graded string
     (``raw_output``) is a form of — and not on any ``TARGET_VARIABLE`` or later
     ``resolve_task`` override: the answer the model is graded against is the
@@ -323,7 +329,7 @@ def _grader(causal_model: CausalModel, task_name: str) -> Callable[[dict, str], 
         raise ValueError(
             f"Task {task_name!r} cannot grade its output: its causal model declares "
             f"no scoring. Pass scoring=ScoringSpec(forms=...) to the CausalModel "
-            f"(see causalab.causal.scoring and causalab.causal.causal_model."
+            f"(see causalab.causal.scoring.ScoringSpec and causalab.causal.scoring."
             f"build_output_tokens)."
         )
     return spec.grader()

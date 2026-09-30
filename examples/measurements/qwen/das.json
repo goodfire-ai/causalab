@@ -1,0 +1,65 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "DAS fitting through an 8-dimensional orthogonal subspace. The feature width is derived from the model and site; the subspace rank is authored. Optimizer, evaluation policy and held-out split are explicit for this example."
+  },
+  "model": {
+    "key": "Qwen/Qwen3.6-35B-A3B",
+    "revision": "995ad96eacd98c81ed38be0c5b274b04031597b0",
+    "dtype": "bf16"
+  },
+  "data": {
+    "base": {"dataset": "pairs#train", "field": "input"},
+    "counterfactual": {"dataset": "pairs#train", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "sites": {
+      "target": {"component": "block_output", "layers": [19]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {"rot": {"kind": "subspace", "k": 2, "parametrization": "cayley"}},
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "featurizer": "rot"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "patch": {"site": "target", "pos": -1, "featurizer": "rot", "do": {"swap": "v_cf"}}
+    },
+    "train": {
+      "objective": {
+        "ce": {
+          "weight": 1.0,
+          "read": "logits",
+          "model": "patched",
+          "aggregation": {"kind": "cross_entropy", "target": "label"}
+        }
+      },
+      "params": ["rot"],
+      "optimizer": {"name": "adamw", "lr": 0.001, "weight_decay": 0.0},
+      "steps": {"updates": 2},
+      "batch": {"pairs": 2},
+      "precision": {"feature": "fp32", "loss": "fp32"},
+      "eval": {
+        "every": {"epochs": 1},
+        "aggregations": {
+          "iia": {
+            "read": "logits",
+            "model": "patched",
+            "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"}
+          }
+        },
+        "split": "pairs#test"
+      },
+      "seed": 0
+    },
+    "save": [
+      {"train": "iia", "file_path": "iia.json"},
+      {"train": "ce", "file_path": "ce.json"},
+      {"value": "rot", "site": "target", "file_path": "rot.safetensors"}
+    ]
+  }
+}

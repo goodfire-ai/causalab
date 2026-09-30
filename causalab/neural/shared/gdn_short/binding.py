@@ -1,23 +1,17 @@
-"""Route short sequences to the single-chunk kernel, per forward.
+"""Route eligible short sequences to the single-chunk delta kernel.
 
-The mixer calls the module global ``torch_chunk_gated_delta_rule`` (whatever
-``kernels.torch_kernel_path`` has bound it to — FLA on CUDA, transformers'
-torch function elsewhere).
-:func:`short_seq_kernel_path` rebinds that global, in every modeling module
-the model reaches, to a dispatcher that captures the current binding and
-decides per call: a call :func:`selects_single_chunk` accepts runs
-:func:`.triton_kernel.single_chunk_gated_delta_rule`; every other call runs
-the captured binding unchanged. Restored on exit, like the guard it
-composes with; the reference engine enters it after that guard and before the
-DeltaNet taps, so a kernel-boundary tap wraps the dispatcher and sees the
-same arguments and returns whichever kernel runs.
+The context layers a dispatcher over ``torch_chunk_gated_delta_rule`` in
+each modeling module — one per-thread layer on the symbol's
+``SymbolDispatch``, never a ``setattr`` — and removes it on exit. Selection
+uses shapes and flags without reading tensor values or synchronizing the
+device, so warm-up and capture agree. Long sequences, initial states,
+variable-length batches, and non-CUDA models run the binding beneath the
+layer unchanged. The reference engine enters it after the torch-path guard
+and before the DeltaNet taps.
 
-The decision is a pure function of the call's shape and flags — no tensor
-is read, no device is synchronized — so it is the same at a CUDA graph's
-warm-up pass and at its capture, and the graph replays the kernel it
-captured. A sequence longer than the threshold, a call with an initial
-state (a cached decode's prefill), a variable-length batch, or a model off
-CUDA all keep the bound kernel.
+The hooks engine enters this context after the device-kernel guard and
+before DeltaNet taps, which then observe the selected kernel's arguments
+and results.
 """
 
 from __future__ import annotations
@@ -35,7 +29,8 @@ from causalab.neural.shared.gdn_short.triton_kernel import (
     MAX_SEQ_LEN,
     single_chunk_gated_delta_rule,
 )
-from causalab.neural.shared.kernels import _kernel_modules
+from causalab.neural.shared.kernels import kernel_modules
+from causalab.neural.shared.symbol_dispatch import dispatch_for
 
 __all__ = [
     "ShortSeqKernelOptions",
@@ -63,7 +58,7 @@ def selects_single_chunk(
 ) -> bool:
     """Whether a chunk-kernel call with these facts runs the single-chunk
     kernel: on CUDA, ``1 <= T <= threshold`` (``threshold <=``
-    :data:`MAX_SEQ_LEN`), from a zero state, equal-length sequences, key
+    [`MAX_SEQ_LEN`][]), from a zero state, equal-length sequences, key
     heads dividing value heads, power-of-two head dimensions in ``[16,
     256]``."""
     return (
@@ -82,10 +77,11 @@ def short_seq_dispatcher(
     options: ShortSeqKernelOptions,
     short: Callable[..., Any] | None = None,
 ) -> Callable[..., Any]:
-    """The dispatcher over ``bound`` (the global as it was): the mixer's call
+    """The dispatcher over ``bound`` (the binding beneath it — the layer
+    below on the symbol's dispatch, read at call time): the mixer's call
     shape — ``(q, k, v, g=, beta=, **kwargs)`` — with the routing decision
-    from :func:`selects_single_chunk`. ``short`` is the single-chunk kernel,
-    this module's :func:`single_chunk_gated_delta_rule` unless a test hands
+    from [`selects_single_chunk`][]. ``short`` is the single-chunk kernel,
+    this module's [`single_chunk_gated_delta_rule`][] unless a test hands
     in a stand-in."""
     if short is None:
         short = single_chunk_gated_delta_rule
@@ -125,23 +121,18 @@ def short_seq_kernel_path(
     model: torch.nn.Module, options: ShortSeqKernelOptions | None = None
 ) -> Iterator[None]:
     """While active, every chunk-kernel call of ``model``'s DeltaNet mixers
-    goes through :func:`short_seq_dispatcher` (module docstring). ``None``
-    reads the options from the environment; a disabled option installs
-    nothing. Restored on exit either way."""
+    on this thread goes through [`short_seq_dispatcher`][] (module
+    docstring). ``None`` reads the options from the environment; a disabled
+    option installs nothing. The layer is left on exit either way."""
     if options is None:
         options = ShortSeqKernelOptions.from_env()
     if not options.enabled:
         yield
         return
-    rebound: list[tuple[Any, Any]] = []
-    try:
-        for modeling in _kernel_modules(model):
-            current = getattr(modeling, CHUNK_KERNEL_GLOBAL)
-            rebound.append((modeling, current))
-            setattr(
-                modeling, CHUNK_KERNEL_GLOBAL, short_seq_dispatcher(current, options)
+    with contextlib.ExitStack() as layers:
+        for modeling in kernel_modules(model):
+            dispatch = dispatch_for(modeling, CHUNK_KERNEL_GLOBAL)
+            layers.enter_context(
+                dispatch.tapped(short_seq_dispatcher(dispatch.below, options))
             )
         yield
-    finally:
-        for modeling, current in reversed(rebound):
-            setattr(modeling, CHUNK_KERNEL_GLOBAL, current)

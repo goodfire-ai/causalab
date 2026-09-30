@@ -1,7 +1,7 @@
 """Numerical-tier pin for the MCQA task's symbolic outputs.
 
 Re-walks ``generate_dataset(model, n, seed)`` at the seed sequence
-fixed in :data:`tests._helpers.task_pins.TASK_SEEDS` and asserts every
+fixed in `tests._helpers.task_pins.TASK_SEEDS` and asserts every
 sample matches the sidecar ``pinned_samples.json`` byte-for-byte.
 
 This pins the LM-free symbolic layer (``CausalModel`` +

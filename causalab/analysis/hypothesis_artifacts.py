@@ -22,8 +22,8 @@ def export_hypotheses(
     absent IDs are derived from the input values. Reuse these exact tables for
     intervention runs. A new export requires an empty destination.
     """
-    from causalab.causal.causal_utils import rederive_trace
-    from causalab.protocol.tables import write_table
+    from causalab.causal.model_comparison import rederive_trace
+    from causalab.io.tables import write_table
     from causalab.tasks.serialize import serialize_examples
 
     def digest(value):
@@ -77,10 +77,10 @@ def export_hypotheses(
                     other = models[other_model_name]
                     if (
                         other.scoring is None
-                        or other.scoring.digest != model.scoring.digest
+                        or other.scoring.identity() != model.scoring.identity()
                     ):
                         raise ValueError(
-                            "all hypotheses must share the task scoring identity"
+                            "all hypotheses must share the task's ScoringSpec"
                         )
                     other_base = rederive_trace(other, example["input"])
                     other_donor = rederive_trace(other, donors[0])
@@ -96,7 +96,6 @@ def export_hypotheses(
                                     "pair_id",
                                     "family",
                                     "split",
-                                    "scoring_digest",
                                     "base_id",
                                     "donor_id",
                                 )
@@ -119,3 +118,66 @@ def export_hypotheses(
         directory.mkdir(parents=True, exist_ok=True)
         write_table(directory / "pairs.json", pairs)
         write_table(directory / "predictions.json", predictions)
+
+
+def read_frozen_bundle(
+    run: dict[str, Any], name: str, slot: str
+) -> tuple[Any, dict[str, Any]]:
+    """Read one pinned bundle entry and retain its native fit identity."""
+    import numpy as np
+    from causalab.protocol.bundles import entry_selection, select_entry
+    from causalab.io.env import entry_table
+    from safetensors import safe_open
+
+    spec = run["method"]["featurizers"][name]
+    path = Path(run["paths"]["artifacts_root"]) / spec["file_path"]
+    if run["env"].artifacts.file_digest(spec["file_path"]) != spec["content_digest"]:
+        raise ValueError("Frozen artifact changed while exporting")
+    with safe_open(path, framework="numpy") as bundle:
+        selection, implicit = entry_selection(spec.get("entry"), run["coords"], name)
+        entries = entry_table(bundle.metadata())
+        key = select_entry(
+            bundle.keys(),
+            slot,
+            selection,
+            what=str(path),
+            coords_by_key=entries,
+            implicit=implicit,
+        )
+        tensor = bundle.get_tensor(key)
+        if not np.isfinite(tensor).all():
+            raise ValueError("Frozen artifact contains non-finite values")
+        selected_coords = entries.get(key, {}).get("coords", selection or {})
+    return tensor, {
+        "path": str(path.resolve()),
+        "entry": key,
+        "selection": selected_coords,
+        "sha256": spec["content_digest"],
+    }
+
+
+def resolve_position(value: Any, method: Mapping[str, Any]) -> Any:
+    """Resolve a named token position and normalize the shared all-token form."""
+    if isinstance(value, str) and value != "all":
+        value = method.get("positions", {}).get(value)
+    return "all" if value == {"all": True} else value
+
+
+def bundle_identity(bundle: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """Identify the exact tensor entry independently of its local file path."""
+    return {key: bundle.get(key) for key in ("sha256", "entry")} if bundle else None
+
+
+def frozen_dbm_identity(
+    gates: Sequence[Mapping[str, Any]], point: Mapping[str, Any]
+) -> str:
+    """Identify a frozen component inventory, mask and fitted tensor entries."""
+    value = {
+        "gates": sorted(gates, key=lambda gate: gate["id"]),
+        "masks": point["masks"],
+        "fits": {
+            name: bundle_identity(fit)
+            for name, fit in point["provenance"]["fits"].items()
+        },
+    }
+    return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()

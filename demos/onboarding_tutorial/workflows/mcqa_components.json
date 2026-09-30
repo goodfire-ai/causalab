@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "description": "The 06_components demo end to end: scan three components across 16 layers, draw the grid, reduce it to the argmax cell, then fit a gate at that cell under three L1 weights and score each mask on a split it never saw. The scan chooses the site the fit trains at, so 'which component' and 'how much of it' are one chain rather than two experiments with a hand-copied layer number between them. The L1 sweep is three steps rather than an axis because train.objective is a list, and a list-typed field is never a sweep axis.",
-  "output_dir": "mcqa_components",
+  "description": "Scan three components across 28 layers and plot the scan. Select its best component and layer, fit a gate there under three L1 weights, and score each gate on held-out pairs.",
+  "output_dir": "09_components",
   "steps": {
     "scan": {
       "type": "intervention_protocol",
@@ -16,7 +16,7 @@
         "x": "sites.target.layers",
         "series": "sites.target.component"
       },
-      "outputs": {"figure": "component_iia.png", "plotted": {"file": "component_iia.json"}}
+      "outputs": {"figure": "09_components_component_iia.png", "plotted": {"file": "09_components_component_iia.json"}}
     },
     "best": {
       "type": "script",
@@ -32,7 +32,7 @@
       "outputs": {
         "values": {
           "file": "values.json",
-          "keys": {"best_layer": 14, "best_component": "block_output"}
+          "keys": {"best_layer": 26, "best_component": "block_output"}
         }
       }
     },
@@ -42,10 +42,7 @@
       "set": {
         "sites.target.layers": {"artifact": "best", "key": "best_layer"},
         "sites.target.component": {"artifact": "best", "key": "best_component"},
-        "train.objective": [
-          [1.0, "ce"],
-          [0.01, {"l1": "gate"}]
-        ]
+        "train.objective.l1.weight": 0.01
       }
     },
     "gate_apply_lo": {
@@ -63,10 +60,7 @@
       "set": {
         "sites.target.layers": {"artifact": "best", "key": "best_layer"},
         "sites.target.component": {"artifact": "best", "key": "best_component"},
-        "train.objective": [
-          [1.0, "ce"],
-          [0.3, {"l1": "gate"}]
-        ]
+        "train.objective.l1.weight": 0.3
       }
     },
     "gate_apply_mid": {
@@ -84,10 +78,7 @@
       "set": {
         "sites.target.layers": {"artifact": "best", "key": "best_layer"},
         "sites.target.component": {"artifact": "best", "key": "best_component"},
-        "train.objective": [
-          [1.0, "ce"],
-          [3.0, {"l1": "gate"}]
-        ]
+        "train.objective.l1.weight": 3.0
       }
     },
     "gate_apply_hi": {

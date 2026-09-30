@@ -1,0 +1,2550 @@
+{
+  "device": "cuda",
+  "documents": {
+    "das": {
+      "context": {
+        "captured": "2026-09-16",
+        "causalab": {
+          "dirty": null,
+          "resolved_revision": null,
+          "source_kind": "editable",
+          "tree_digest": "fe9526b11c61008b0475365a98dbed92ff4c09affb28771fc27f571e6d355e9f",
+          "version": "0.0.1"
+        },
+        "cuda": [
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3"
+        ],
+        "node": "NVIDIA H100 80GB HBM3",
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1"
+      },
+      "document": {
+        "early_stop": false,
+        "feature_dtype": "fp32",
+        "fit_rows": 16,
+        "layer": 3,
+        "protocol": "04_das_im",
+        "site": "attention_query",
+        "steps": {
+          "epochs": 10
+        }
+      },
+      "exact": {
+        "pp=2": 0.0
+      },
+      "geometries": {
+        "dp=2:rows": {
+          "bundle": {
+            "band": 0.032827121671289206,
+            "dtype": "fp32",
+            "files": {
+              "rot.safetensors": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.010942373890429735,
+                "scale": 0.0649825856089592
+              }
+            },
+            "max_abs_diff": 0.010942373890429735,
+            "scale": 0.0649825856089592
+          },
+          "diagnostics": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "fit_diagnostics.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 8.344650268554688e-07,
+                "scale": 8.0
+              }
+            },
+            "max_abs_diff": 8.344650268554688e-07,
+            "scale": 8.0
+          },
+          "eval": {
+            "band": 0.9375,
+            "dtype": "bf16",
+            "files": {
+              "train_eval.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.3125,
+                "scale": 10.0
+              }
+            },
+            "max_abs_diff": 0.3125,
+            "scale": 10.0
+          },
+          "gradient": {
+            "band": 0.9676134984822183,
+            "dtype": "fp32",
+            "files": {
+              "gradients/against-world-1": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.3225378328274061,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 0.3225378328274061,
+            "scale": 1.0
+          },
+          "gradient_ranks": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "gradients/across-ranks": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 0.0,
+            "scale": 1.0
+          },
+          "tables": {
+            "band": 0.5625,
+            "dtype": "bf16",
+            "files": {
+              "ce.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.15362977981567383,
+                "scale": 4.90890645980835
+              },
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.1875,
+                "scale": 4.6875
+              }
+            },
+            "max_abs_diff": 0.1875,
+            "scale": 4.90890645980835
+          }
+        },
+        "tp=2": {
+          "bundle": {
+            "band": 0.041041210759431124,
+            "dtype": "fp32",
+            "files": {
+              "rot.safetensors": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.013680403586477041,
+                "scale": 0.0649825856089592
+              }
+            },
+            "max_abs_diff": 0.013680403586477041,
+            "scale": 0.0649825856089592
+          },
+          "diagnostics": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "fit_diagnostics.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 4.76837158203125e-07,
+                "scale": 8.0
+              }
+            },
+            "max_abs_diff": 4.76837158203125e-07,
+            "scale": 8.0
+          },
+          "eval": {
+            "band": 0.46875,
+            "dtype": "bf16",
+            "files": {
+              "train_eval.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.15625,
+                "scale": 10.0
+              }
+            },
+            "max_abs_diff": 0.15625,
+            "scale": 10.0
+          },
+          "gradient": {
+            "band": 1.2039917857605302,
+            "dtype": "fp32",
+            "files": {
+              "gradients/against-world-1": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.40133059525351006,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 0.40133059525351006,
+            "scale": 1.0
+          },
+          "gradient_ranks": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "gradients/across-ranks": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 0.0,
+            "scale": 1.0
+          },
+          "tables": {
+            "band": 0.75,
+            "dtype": "bf16",
+            "files": {
+              "ce.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.2292311191558838,
+                "scale": 4.90890645980835
+              },
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.25,
+                "scale": 4.6875
+              }
+            },
+            "max_abs_diff": 0.25,
+            "scale": 4.90890645980835
+          }
+        }
+      },
+      "gradient_agreement": 1e-06,
+      "inexact": {},
+      "load": {
+        "dp=2:rows": {
+          "rank0": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 69321221376
+          },
+          "rank1": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 69321221376
+          }
+        },
+        "pp=2": {
+          "rank0": {
+            "bytes_on_disk": 34660608640,
+            "bytes_requested": 34660608640
+          },
+          "rank1": {
+            "bytes_on_disk": 34660612736,
+            "bytes_requested": 34660612736
+          }
+        },
+        "tp=2": {
+          "rank0": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 67912197376
+          },
+          "rank1": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 67912197376
+          }
+        }
+      },
+      "memory": {
+        "dp=2:rows": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 69443223040,
+            "peak_bytes_reserved": 69461868544,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 69443223040,
+            "peak_bytes_reserved": 69461868544,
+            "rank": 1,
+            "steps": 10
+          }
+        },
+        "pp=2": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 34787367936,
+            "peak_bytes_reserved": 52590280704,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 34788622848,
+            "peak_bytes_reserved": 52089061376,
+            "rank": 1,
+            "steps": 10
+          }
+        },
+        "solo": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 69494114816,
+            "peak_bytes_reserved": 69508005888,
+            "rank": 0,
+            "steps": 10
+          }
+        },
+        "tp=2": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 68080332288,
+            "peak_bytes_reserved": 68205674496,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 68080332288,
+            "peak_bytes_reserved": 68205674496,
+            "rank": 1,
+            "steps": 10
+          }
+        }
+      }
+    },
+    "das_dense": {
+      "context": {
+        "captured": "2026-09-16",
+        "causalab": {
+          "dirty": null,
+          "resolved_revision": null,
+          "source_kind": "editable",
+          "tree_digest": "be9fcd2a5550aac44eef35e86b4890ec0645c51f31747600221d58ab38a04249",
+          "version": "0.0.1"
+        },
+        "cuda": [
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3"
+        ],
+        "node": "NVIDIA H100 80GB HBM3",
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1"
+      },
+      "document": {
+        "early_stop": false,
+        "feature_dtype": "fp32",
+        "fit_rows": 16,
+        "layer": 3,
+        "protocol": "04_das_im",
+        "site": "attention_query",
+        "steps": {
+          "epochs": 10
+        }
+      },
+      "exact": {},
+      "geometries": {
+        "dp=2:rows": {
+          "bundle": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "rot.safetensors": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0002826843410730362,
+                "scale": 0.06300535053014755
+              }
+            },
+            "max_abs_diff": 0.0002826843410730362,
+            "scale": 0.06300535053014755
+          },
+          "diagnostics": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "fit_diagnostics.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 1.7881393432617188e-07,
+                "scale": 8.0
+              }
+            },
+            "max_abs_diff": 1.7881393432617188e-07,
+            "scale": 8.0
+          },
+          "eval": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "train_eval.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 3.814697265625e-06,
+                "scale": 10.0
+              }
+            },
+            "max_abs_diff": 3.814697265625e-06,
+            "scale": 10.0
+          },
+          "gradient": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "gradients/against-world-1": {
+                "dtype": "fp32",
+                "max_abs_diff": 3.6070417371971374e-05,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 3.6070417371971374e-05,
+            "scale": 1.0
+          },
+          "gradient_ranks": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "gradients/across-ranks": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 0.0,
+            "scale": 1.0
+          },
+          "tables": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "ce.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 1.9073486328125e-06,
+                "scale": 7.2894287109375
+              },
+              "iia.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 1.9073486328125e-06,
+                "scale": 7.232375144958496
+              }
+            },
+            "max_abs_diff": 1.9073486328125e-06,
+            "scale": 7.2894287109375
+          }
+        },
+        "tp=2": {
+          "bundle": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "rot.safetensors": {
+                "dtype": "fp32",
+                "max_abs_diff": 9.026098996400833e-05,
+                "scale": 0.06300535053014755
+              }
+            },
+            "max_abs_diff": 9.026098996400833e-05,
+            "scale": 0.06300535053014755
+          },
+          "diagnostics": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "fit_diagnostics.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 1.1920928955078125e-07,
+                "scale": 8.0
+              }
+            },
+            "max_abs_diff": 1.1920928955078125e-07,
+            "scale": 8.0
+          },
+          "eval": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "train_eval.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 9.5367431640625e-07,
+                "scale": 10.0
+              }
+            },
+            "max_abs_diff": 9.5367431640625e-07,
+            "scale": 10.0
+          },
+          "gradient": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "gradients/against-world-1": {
+                "dtype": "fp32",
+                "max_abs_diff": 2.108962988739177e-05,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 2.108962988739177e-05,
+            "scale": 1.0
+          },
+          "gradient_ranks": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "gradients/across-ranks": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 0.0,
+            "scale": 1.0
+          },
+          "tables": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "ce.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 5.245208740234375e-06,
+                "scale": 7.2894287109375
+              },
+              "iia.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 5.7220458984375e-06,
+                "scale": 7.232375144958496
+              }
+            },
+            "max_abs_diff": 5.7220458984375e-06,
+            "scale": 7.2894287109375
+          }
+        }
+      },
+      "gradient_agreement": 1e-06,
+      "inexact": {},
+      "load": {
+        "dp=2:rows": {
+          "rank0": {
+            "bytes_on_disk": 8044936192,
+            "bytes_requested": 8044936192
+          },
+          "rank1": {
+            "bytes_on_disk": 8044936192,
+            "bytes_requested": 8044936192
+          }
+        },
+        "tp=2": {
+          "rank0": {
+            "bytes_on_disk": 8044936192,
+            "bytes_requested": 4411620352
+          },
+          "rank1": {
+            "bytes_on_disk": 8044936192,
+            "bytes_requested": 4411620352
+          }
+        }
+      },
+      "memory": {
+        "dp=2:rows": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 16285356544,
+            "peak_bytes_reserved": 16403922944,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 16285356544,
+            "peak_bytes_reserved": 16445865984,
+            "rank": 1,
+            "steps": 10
+          }
+        },
+        "solo": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 16270638592,
+            "peak_bytes_reserved": 16500391936,
+            "rank": 0,
+            "steps": 10
+          }
+        },
+        "tp=2": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 8968282624,
+            "peak_bytes_reserved": 9049210880,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 8968782336,
+            "peak_bytes_reserved": 9015656448,
+            "rank": 1,
+            "steps": 10
+          }
+        }
+      },
+      "realization": {
+        "device": "cuda",
+        "dtype": "fp32",
+        "model": "Qwen/Qwen3-4B-Instruct-2507"
+      }
+    },
+    "das_large": {
+      "context": {
+        "captured": "2026-09-19",
+        "causalab": {
+          "dirty": null,
+          "resolved_revision": null,
+          "source_kind": "editable",
+          "tree_digest": "3f216f115e9bdac3265ccde638b5511ff6b0794131c1e6e00910ce66a355170c",
+          "version": "0.0.1"
+        },
+        "cuda": [
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3"
+        ],
+        "node": "NVIDIA H100 80GB HBM3",
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1"
+      },
+      "document": {
+        "early_stop": false,
+        "feature_dtype": "fp32",
+        "fit_rows": 16,
+        "layer": 3,
+        "protocol": "04_das_im",
+        "site": "attention_query",
+        "steps": {
+          "epochs": 10
+        }
+      },
+      "estimate": {
+        "pp=4": {
+          "rank0": {
+            "footprint": 57493634253,
+            "resident": 36327522304
+          },
+          "rank1": {
+            "footprint": 55392287949,
+            "resident": 34226176000
+          },
+          "rank2": {
+            "footprint": 55392287949,
+            "resident": 34226176000
+          },
+          "rank3": {
+            "footprint": 57493650637,
+            "resident": 36327538688
+          }
+        },
+        "pp=8": {
+          "rank0": {
+            "footprint": 40380546253,
+            "resident": 19214434304
+          },
+          "rank1": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank2": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank3": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank4": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank5": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank6": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank7": {
+            "footprint": 40380562637,
+            "resident": 19214450688
+          }
+        },
+        "tp=4": {
+          "rank0": {
+            "footprint": 59596963021,
+            "resident": 38430851072
+          },
+          "rank1": {
+            "footprint": 59596963021,
+            "resident": 38430851072
+          },
+          "rank2": {
+            "footprint": 59596963021,
+            "resident": 38430851072
+          },
+          "rank3": {
+            "footprint": 59596963021,
+            "resident": 38430851072
+          }
+        }
+      },
+      "exact": {
+        "pp=8": 0.0
+      },
+      "geometries": {
+        "tp=4": {
+          "bundle": {
+            "band": 0.07346290396526456,
+            "dtype": "fp32",
+            "files": {
+              "rot.safetensors": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.024487634655088186,
+                "scale": 0.04473624378442764
+              }
+            },
+            "max_abs_diff": 0.024487634655088186,
+            "scale": 0.04473624378442764
+          },
+          "diagnostics": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "fit_diagnostics.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 5.960464477539063e-08,
+                "scale": 8.0
+              }
+            },
+            "max_abs_diff": 5.960464477539063e-08,
+            "scale": 8.0
+          },
+          "eval": {
+            "band": 0.125,
+            "dtype": "bf16",
+            "files": {
+              "train_eval.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 10.0
+              }
+            },
+            "max_abs_diff": 0.0,
+            "scale": 10.0
+          },
+          "gradient": {
+            "band": 3.3053275357724257,
+            "dtype": "fp32",
+            "files": {
+              "gradients/against-world-1": {
+                "dtype": "fp32",
+                "max_abs_diff": 1.1017758452574753,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 1.1017758452574753,
+            "scale": 1.0
+          },
+          "gradient_ranks": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "gradients/across-ranks": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 0.0,
+            "scale": 1.0
+          },
+          "tables": {
+            "band": 0.03125,
+            "dtype": "bf16",
+            "files": {
+              "ce.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.005799531936645508,
+                "scale": 3.2024435997009277
+              },
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 2.5
+              }
+            },
+            "max_abs_diff": 0.005799531936645508,
+            "scale": 3.2024435997009277
+          }
+        }
+      },
+      "gradient_agreement": 1e-06,
+      "inexact": {},
+      "load": {
+        "pp=4": {
+          "rank0": {
+            "bytes_on_disk": 36327522304,
+            "bytes_requested": 36327522304
+          },
+          "rank1": {
+            "bytes_on_disk": 34226176000,
+            "bytes_requested": 34226176000
+          },
+          "rank2": {
+            "bytes_on_disk": 34226176000,
+            "bytes_requested": 34226176000
+          },
+          "rank3": {
+            "bytes_on_disk": 36327538688,
+            "bytes_requested": 36327538688
+          }
+        },
+        "pp=8": {
+          "rank0": {
+            "bytes_on_disk": 19214434304,
+            "bytes_requested": 19214434304
+          },
+          "rank1": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank2": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank3": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank4": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank5": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank6": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank7": {
+            "bytes_on_disk": 19214450688,
+            "bytes_requested": 19214450688
+          }
+        },
+        "tp=4": {
+          "rank0": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 38430851072
+          },
+          "rank1": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 38430851072
+          },
+          "rank2": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 38430851072
+          },
+          "rank3": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 38430851072
+          }
+        }
+      },
+      "memory": {
+        "pp=4": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 36488633344,
+            "peak_bytes_reserved": 36511416320,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 34396170240,
+            "peak_bytes_reserved": 34418458624,
+            "rank": 1,
+            "steps": 10
+          },
+          "rank2": {
+            "device": "cuda:2",
+            "peak_bytes_allocated": 34396170240,
+            "peak_bytes_reserved": 34418458624,
+            "rank": 2,
+            "steps": 10
+          },
+          "rank3": {
+            "device": "cuda:3",
+            "peak_bytes_allocated": 36494717952,
+            "peak_bytes_reserved": 36503027712,
+            "rank": 3,
+            "steps": 10
+          }
+        },
+        "pp=8": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 19329168384,
+            "peak_bytes_reserved": 19337838592,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 17236705280,
+            "peak_bytes_reserved": 17244880896,
+            "rank": 1,
+            "steps": 10
+          },
+          "rank2": {
+            "device": "cuda:2",
+            "peak_bytes_allocated": 17236705280,
+            "peak_bytes_reserved": 17244880896,
+            "rank": 2,
+            "steps": 10
+          },
+          "rank3": {
+            "device": "cuda:3",
+            "peak_bytes_allocated": 17236705280,
+            "peak_bytes_reserved": 17244880896,
+            "rank": 3,
+            "steps": 10
+          },
+          "rank4": {
+            "device": "cuda:4",
+            "peak_bytes_allocated": 17236705280,
+            "peak_bytes_reserved": 17244880896,
+            "rank": 4,
+            "steps": 10
+          },
+          "rank5": {
+            "device": "cuda:5",
+            "peak_bytes_allocated": 17236705280,
+            "peak_bytes_reserved": 17244880896,
+            "rank": 5,
+            "steps": 10
+          },
+          "rank6": {
+            "device": "cuda:6",
+            "peak_bytes_allocated": 17236705280,
+            "peak_bytes_reserved": 17244880896,
+            "rank": 6,
+            "steps": 10
+          },
+          "rank7": {
+            "device": "cuda:7",
+            "peak_bytes_allocated": 19335343104,
+            "peak_bytes_reserved": 19342032896,
+            "rank": 7,
+            "steps": 10
+          }
+        },
+        "tp=4": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 38660405248,
+            "peak_bytes_reserved": 39124467712,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 38660405248,
+            "peak_bytes_reserved": 39124467712,
+            "rank": 1,
+            "steps": 10
+          },
+          "rank2": {
+            "device": "cuda:2",
+            "peak_bytes_allocated": 38660405248,
+            "peak_bytes_reserved": 39124467712,
+            "rank": 2,
+            "steps": 10
+          },
+          "rank3": {
+            "device": "cuda:3",
+            "peak_bytes_allocated": 38660405248,
+            "peak_bytes_reserved": 39124467712,
+            "rank": 3,
+            "steps": 10
+          }
+        }
+      },
+      "oracle": "pp=4",
+      "realization": {
+        "device": "cuda",
+        "dtype": "bf16",
+        "model": "meta-llama/Llama-3.1-70B"
+      }
+    },
+    "dbm": {
+      "context": {
+        "captured": "2026-09-16",
+        "causalab": {
+          "dirty": null,
+          "resolved_revision": null,
+          "source_kind": "editable",
+          "tree_digest": "1bf9cafe753551e40bc2e473f935b581716125db5ca662942fe5bd86645f518d",
+          "version": "0.0.1"
+        },
+        "cuda": [
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3"
+        ],
+        "node": "NVIDIA H100 80GB HBM3",
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1"
+      },
+      "document": {
+        "early_stop": false,
+        "feature_dtype": "fp32",
+        "fit_rows": 16,
+        "layer": 3,
+        "protocol": "dbm_expert_neuron",
+        "site": "expert_activation",
+        "steps": {
+          "epochs": 10
+        }
+      },
+      "exact": {
+        "pp=2": 0.0
+      },
+      "geometries": {
+        "ep=2": {
+          "bundle": {
+            "band": 0.5430048108100891,
+            "dtype": "fp32",
+            "files": {
+              "routed_gate.safetensors": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.18100160360336304,
+                "scale": 0.0943443551659584
+              },
+              "shared_gate.safetensors": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.18054939061403275,
+                "scale": 0.09310735017061234
+              }
+            },
+            "max_abs_diff": 0.18100160360336304,
+            "scale": 0.0943443551659584
+          },
+          "diagnostics": {
+            "band": 123.0,
+            "dtype": "fp32",
+            "files": {
+              "fit_diagnostics.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 41.0,
+                "scale": 131072.0
+              },
+              "routing_mismatch.json": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0,
+                "scale": 8.0
+              }
+            },
+            "max_abs_diff": 41.0,
+            "scale": 131072.0
+          },
+          "eval": {
+            "band": 0.1875,
+            "dtype": "bf16",
+            "files": {
+              "train_eval.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 10.0
+              }
+            },
+            "max_abs_diff": 0.0625,
+            "scale": 10.0
+          },
+          "gradient": {
+            "band": 6.204269316362785,
+            "dtype": "fp32",
+            "files": {
+              "gradients/against-world-1": {
+                "dtype": "fp32",
+                "max_abs_diff": 2.068089772120928,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 2.068089772120928,
+            "scale": 1.0
+          },
+          "gradient_ranks": {
+            "band": 0.001,
+            "dtype": "fp32",
+            "files": {
+              "gradients/across-ranks": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0,
+                "scale": 1.0
+              }
+            },
+            "max_abs_diff": 0.0,
+            "scale": 1.0
+          },
+          "tables": {
+            "band": 0.2095799446105957,
+            "dtype": "bf16",
+            "files": {
+              "ce.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.06985998153686523,
+                "scale": 4.7883453369140625
+              },
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 4.5625
+              }
+            },
+            "max_abs_diff": 0.06985998153686523,
+            "scale": 4.7883453369140625
+          }
+        }
+      },
+      "gradient_agreement": 1e-06,
+      "inexact": {},
+      "load": {
+        "ep=2": {
+          "rank0": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 37108966656
+          },
+          "rank1": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 37108966656
+          }
+        },
+        "pp=2": {
+          "rank0": {
+            "bytes_on_disk": 34660608640,
+            "bytes_requested": 34660608640
+          },
+          "rank1": {
+            "bytes_on_disk": 34660612736,
+            "bytes_requested": 34660612736
+          }
+        }
+      },
+      "memory": {
+        "ep=2": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 37295873536,
+            "peak_bytes_reserved": 72469184512,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 37295873536,
+            "peak_bytes_reserved": 72469184512,
+            "rank": 1,
+            "steps": 10
+          }
+        },
+        "pp=2": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 34797072384,
+            "peak_bytes_reserved": 52600766464,
+            "rank": 0,
+            "steps": 10
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 34802077696,
+            "peak_bytes_reserved": 52101644288,
+            "rank": 1,
+            "steps": 10
+          }
+        },
+        "solo": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 69504345600,
+            "peak_bytes_reserved": 69520588800,
+            "rank": 0,
+            "steps": 10
+          }
+        }
+      }
+    },
+    "inference": {
+      "context": {
+        "captured": "2026-09-16",
+        "causalab": {
+          "dirty": null,
+          "resolved_revision": null,
+          "source_kind": "editable",
+          "tree_digest": "fe9526b11c61008b0475365a98dbed92ff4c09affb28771fc27f571e6d355e9f",
+          "version": "0.0.1"
+        },
+        "cuda": [
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3"
+        ],
+        "node": "NVIDIA H100 80GB HBM3",
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1"
+      },
+      "document": {
+        "layer": 3,
+        "protocol": "02_interchange_im + the tp/ep smoke tier's boundary reads and writes",
+        "sweep": [
+          3,
+          7
+        ]
+      },
+      "exact": {
+        "dp=2": 0.0,
+        "pp=2": 0.0
+      },
+      "geometries": {
+        "ep=2": {
+          "experts": {
+            "band": 0.017578125,
+            "dtype": "bf16",
+            "files": {
+              "r_face.safetensors": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0,
+                "scale": 0.0
+              },
+              "r_scores.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.005859375,
+                "scale": 0.48046875
+              }
+            },
+            "max_abs_diff": 0.005859375,
+            "scale": 0.48046875
+          },
+          "routing": {
+            "band": 0.10714285714285714,
+            "fraction": 0.05357142857142857
+          },
+          "sharded_read": {
+            "band": 0.1875,
+            "dtype": "bf16",
+            "files": {
+              "r_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.001953125,
+                "scale": 0.1396484375
+              },
+              "r_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 9.6875
+              },
+              "r_v.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.03515625,
+                "scale": 2.109375
+              }
+            },
+            "max_abs_diff": 0.0625,
+            "scale": 9.6875
+          },
+          "sharded_write": {
+            "band": 3.046875,
+            "dtype": "bf16",
+            "files": {
+              "logits_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.91796875,
+                "scale": 19.25
+              },
+              "logits_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.595703125,
+                "scale": 19.375
+              },
+              "logits_reroute.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 1.015625,
+                "scale": 19.25
+              }
+            },
+            "max_abs_diff": 1.015625,
+            "scale": 19.375
+          },
+          "stream": {
+            "band": 2.8828125,
+            "dtype": "bf16",
+            "files": {
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 7.0
+              },
+              "logit_diff.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.125,
+                "scale": 7.0
+              },
+              "logit_diff_q.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.125,
+                "scale": 7.0
+              },
+              "logits.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.9609375,
+                "scale": 19.375
+              },
+              "r_attn.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00054931640625,
+                "scale": 0.087890625
+              },
+              "r_mlp.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00390625,
+                "scale": 0.13671875
+              },
+              "v_cf.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0078125,
+                "scale": 1.015625
+              }
+            },
+            "max_abs_diff": 0.9609375,
+            "scale": 19.375
+          }
+        },
+        "tp=2": {
+          "experts": {
+            "band": 0.0263671875,
+            "dtype": "bf16",
+            "files": {
+              "r_face.safetensors": {
+                "dtype": "fp32",
+                "max_abs_diff": 0.0,
+                "scale": 0.0
+              },
+              "r_scores.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0087890625,
+                "scale": 0.48046875
+              }
+            },
+            "max_abs_diff": 0.0087890625,
+            "scale": 0.48046875
+          },
+          "routing": {
+            "band": 0.10714285714285714,
+            "fraction": 0.05357142857142857
+          },
+          "sharded_read": {
+            "band": 0.3544921875,
+            "dtype": "bf16",
+            "files": {
+              "r_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00390625,
+                "scale": 0.1396484375
+              },
+              "r_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.1181640625,
+                "scale": 9.6875
+              },
+              "r_v.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0458984375,
+                "scale": 2.109375
+              }
+            },
+            "max_abs_diff": 0.1181640625,
+            "scale": 9.6875
+          },
+          "sharded_write": {
+            "band": 2.625,
+            "dtype": "bf16",
+            "files": {
+              "logits_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.875,
+                "scale": 19.25
+              },
+              "logits_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.59375,
+                "scale": 19.375
+              },
+              "logits_reroute.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.5625,
+                "scale": 19.25
+              }
+            },
+            "max_abs_diff": 0.875,
+            "scale": 19.375
+          },
+          "stream": {
+            "band": 2.9296875,
+            "dtype": "bf16",
+            "files": {
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 7.0
+              },
+              "logit_diff.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.25,
+                "scale": 7.0
+              },
+              "logit_diff_q.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 7.0
+              },
+              "logits.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.9765625,
+                "scale": 19.375
+              },
+              "r_attn.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00146484375,
+                "scale": 0.087890625
+              },
+              "r_mlp.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0029296875,
+                "scale": 0.13671875
+              },
+              "v_cf.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0078125,
+                "scale": 1.015625
+              }
+            },
+            "max_abs_diff": 0.9765625,
+            "scale": 19.375
+          }
+        }
+      },
+      "inexact": {},
+      "load": {
+        "dp=2": {
+          "rank0": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 69321221376
+          },
+          "rank1": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 69321221376
+          }
+        },
+        "ep=2": {
+          "rank0": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 37108966656
+          },
+          "rank1": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 37108966656
+          }
+        },
+        "pp=2": {
+          "rank0": {
+            "bytes_on_disk": 34660608640,
+            "bytes_requested": 34660608640
+          },
+          "rank1": {
+            "bytes_on_disk": 34660612736,
+            "bytes_requested": 34660612736
+          }
+        },
+        "tp=2": {
+          "rank0": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 67912197376
+          },
+          "rank1": {
+            "bytes_on_disk": 69321221376,
+            "bytes_requested": 67912197376
+          }
+        }
+      }
+    },
+    "inference_gemma2_9b": {
+      "context": {
+        "captured": "2026-09-19",
+        "causalab": {
+          "dirty": null,
+          "resolved_revision": null,
+          "source_kind": "editable",
+          "tree_digest": "1a77bcb67f9eeba307f5cd882a4c82551aa88b979bc4fe67dac9efb34fe55c32",
+          "version": "0.0.1"
+        },
+        "cuda": [
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3"
+        ],
+        "node": "NVIDIA H100 80GB HBM3",
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1"
+      },
+      "document": {
+        "layer": 20,
+        "protocol": "02_interchange_im + the tp/ep smoke tier's boundary reads and writes",
+        "sweep": [
+          20,
+          24
+        ]
+      },
+      "exact": {
+        "dp=2": 0.0
+      },
+      "geometries": {
+        "tp=2": {
+          "sharded_read": {
+            "band": 0.1875,
+            "dtype": "bf16",
+            "files": {
+              "r_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.046875,
+                "scale": 2.828125
+              },
+              "r_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 9.75
+              },
+              "r_v.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 5.28125
+              }
+            },
+            "max_abs_diff": 0.0625,
+            "scale": 9.75
+          },
+          "sharded_write": {
+            "band": 1.5,
+            "dtype": "bf16",
+            "files": {
+              "logits_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.5,
+                "scale": 49.0
+              },
+              "logits_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.375,
+                "scale": 49.0
+              }
+            },
+            "max_abs_diff": 0.5,
+            "scale": 49.0
+          },
+          "stream": {
+            "band": 3.0,
+            "dtype": "bf16",
+            "files": {
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 24.0
+              },
+              "logit_diff.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.25,
+                "scale": 24.0
+              },
+              "logit_diff_q.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 24.0
+              },
+              "logits.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.38671875,
+                "scale": 49.25
+              },
+              "r_attn.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.09375,
+                "scale": 5.6875
+              },
+              "r_mlp.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00390625,
+                "scale": 0.703125
+              },
+              "v_cf.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 1.0,
+                "scale": 180.0
+              }
+            },
+            "max_abs_diff": 1.0,
+            "scale": 180.0
+          }
+        }
+      },
+      "inexact": {},
+      "load": {
+        "dp=2": {
+          "rank0": {
+            "bytes_on_disk": 36966823936,
+            "bytes_requested": 36966823936
+          },
+          "rank1": {
+            "bytes_on_disk": 36966823936,
+            "bytes_requested": 36966823936
+          }
+        },
+        "tp=2": {
+          "rank0": {
+            "bytes_on_disk": 36966823936,
+            "bytes_requested": 20319631360
+          },
+          "rank1": {
+            "bytes_on_disk": 36966823936,
+            "bytes_requested": 20319631360
+          }
+        }
+      },
+      "realization": {
+        "device": "cuda",
+        "dtype": "bf16",
+        "model": "google/gemma-2-9b"
+      }
+    },
+    "inference_llama31_8b": {
+      "context": {
+        "captured": "2026-09-19",
+        "causalab": {
+          "dirty": null,
+          "resolved_revision": null,
+          "source_kind": "editable",
+          "tree_digest": "3f216f115e9bdac3265ccde638b5511ff6b0794131c1e6e00910ce66a355170c",
+          "version": "0.0.1"
+        },
+        "cuda": [
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3"
+        ],
+        "node": "NVIDIA H100 80GB HBM3",
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1"
+      },
+      "document": {
+        "layer": 15,
+        "protocol": "02_interchange_im + the tp/ep smoke tier's boundary reads and writes",
+        "sweep": [
+          15,
+          19
+        ]
+      },
+      "exact": {
+        "dp=2": 0.0,
+        "pp=2": 0.0
+      },
+      "geometries": {
+        "tp=2": {
+          "sharded_read": {
+            "band": 0.28125,
+            "dtype": "bf16",
+            "files": {
+              "r_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.025390625,
+                "scale": 0.703125
+              },
+              "r_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.09375,
+                "scale": 8.625
+              },
+              "r_v.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.03515625,
+                "scale": 1.2578125
+              }
+            },
+            "max_abs_diff": 0.09375,
+            "scale": 8.625
+          },
+          "sharded_write": {
+            "band": 0.662109375,
+            "dtype": "bf16",
+            "files": {
+              "logits_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.220703125,
+                "scale": 16.25
+              },
+              "logits_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.1875,
+                "scale": 16.375
+              }
+            },
+            "max_abs_diff": 0.220703125,
+            "scale": 16.375
+          },
+          "stream": {
+            "band": 0.75,
+            "dtype": "bf16",
+            "files": {
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 19.0
+              },
+              "logit_diff.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.125,
+                "scale": 19.0
+              },
+              "logit_diff_q.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 19.0
+              },
+              "logits.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.25,
+                "scale": 16.5
+              },
+              "r_attn.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0234375,
+                "scale": 1.2265625
+              },
+              "r_mlp.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.015625,
+                "scale": 1.78125
+              },
+              "v_cf.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 6.25
+              }
+            },
+            "max_abs_diff": 0.25,
+            "scale": 19.0
+          }
+        }
+      },
+      "inexact": {},
+      "load": {
+        "dp=2": {
+          "rank0": {
+            "bytes_on_disk": 16060522496,
+            "bytes_requested": 16060522496
+          },
+          "rank1": {
+            "bytes_on_disk": 16060522496,
+            "bytes_requested": 16060522496
+          }
+        },
+        "pp=2": {
+          "rank0": {
+            "bytes_on_disk": 8030257152,
+            "bytes_requested": 8030257152
+          },
+          "rank1": {
+            "bytes_on_disk": 8030265344,
+            "bytes_requested": 8030265344
+          }
+        },
+        "tp=2": {
+          "rank0": {
+            "bytes_on_disk": 16060522496,
+            "bytes_requested": 9081200640
+          },
+          "rank1": {
+            "bytes_on_disk": 16060522496,
+            "bytes_requested": 9081200640
+          }
+        }
+      },
+      "realization": {
+        "device": "cuda",
+        "dtype": "bf16",
+        "model": "meta-llama/Llama-3.1-8B"
+      }
+    },
+    "large": {
+      "context": {
+        "captured": "2026-09-19",
+        "causalab": {
+          "dirty": null,
+          "resolved_revision": null,
+          "source_kind": "editable",
+          "tree_digest": "3f216f115e9bdac3265ccde638b5511ff6b0794131c1e6e00910ce66a355170c",
+          "version": "0.0.1"
+        },
+        "cuda": [
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3",
+          "NVIDIA H100 80GB HBM3"
+        ],
+        "node": "NVIDIA H100 80GB HBM3",
+        "torch": "2.9.0+cu128",
+        "transformers": "5.16.1"
+      },
+      "document": {
+        "layer": 3,
+        "protocol": "02_interchange_im + the tp smoke tier's boundary reads and writes (dense)",
+        "sweep": [
+          3,
+          43
+        ]
+      },
+      "estimate": {
+        "pp=4": {
+          "rank0": {
+            "footprint": 57493634253,
+            "resident": 36327522304
+          },
+          "rank1": {
+            "footprint": 55392287949,
+            "resident": 34226176000
+          },
+          "rank2": {
+            "footprint": 55392287949,
+            "resident": 34226176000
+          },
+          "rank3": {
+            "footprint": 57493650637,
+            "resident": 36327538688
+          }
+        },
+        "pp=8": {
+          "rank0": {
+            "footprint": 40380546253,
+            "resident": 19214434304
+          },
+          "rank1": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank2": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank3": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank4": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank5": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank6": {
+            "footprint": 38279199949,
+            "resident": 17113088000
+          },
+          "rank7": {
+            "footprint": 40380562637,
+            "resident": 19214450688
+          }
+        },
+        "tp=2,pp=2": {
+          "rank0": {
+            "footprint": 57494289613,
+            "resident": 36328177664
+          },
+          "rank1": {
+            "footprint": 57494289613,
+            "resident": 36328177664
+          },
+          "rank2": {
+            "footprint": 57494305997,
+            "resident": 36328194048
+          },
+          "rank3": {
+            "footprint": 57494305997,
+            "resident": 36328194048
+          }
+        },
+        "tp=4": {
+          "rank0": {
+            "footprint": 59596963021,
+            "resident": 38430851072
+          },
+          "rank1": {
+            "footprint": 59596963021,
+            "resident": 38430851072
+          },
+          "rank2": {
+            "footprint": 59596963021,
+            "resident": 38430851072
+          },
+          "rank3": {
+            "footprint": 59596963021,
+            "resident": 38430851072
+          }
+        },
+        "tp=8": {
+          "rank0": {
+            "footprint": 42484202701,
+            "resident": 21318090752
+          },
+          "rank1": {
+            "footprint": 42484202701,
+            "resident": 21318090752
+          },
+          "rank2": {
+            "footprint": 42484202701,
+            "resident": 21318090752
+          },
+          "rank3": {
+            "footprint": 42484202701,
+            "resident": 21318090752
+          },
+          "rank4": {
+            "footprint": 42484202701,
+            "resident": 21318090752
+          },
+          "rank5": {
+            "footprint": 42484202701,
+            "resident": 21318090752
+          },
+          "rank6": {
+            "footprint": 42484202701,
+            "resident": 21318090752
+          },
+          "rank7": {
+            "footprint": 42484202701,
+            "resident": 21318090752
+          }
+        }
+      },
+      "exact": {
+        "pp=8": 0.0
+      },
+      "geometries": {
+        "tp=2,pp=2": {
+          "sharded_read": {
+            "band": 0.09375,
+            "dtype": "bf16",
+            "files": {
+              "r_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0003662109375,
+                "scale": 0.03759765625
+              },
+              "r_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.03125,
+                "scale": 4.53125
+              },
+              "r_v.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00146484375,
+                "scale": 0.2080078125
+              }
+            },
+            "max_abs_diff": 0.03125,
+            "scale": 4.53125
+          },
+          "sharded_write": {
+            "band": 0.84375,
+            "dtype": "bf16",
+            "files": {
+              "logits_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.28125,
+                "scale": 16.125
+              },
+              "logits_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.21875,
+                "scale": 16.25
+              }
+            },
+            "max_abs_diff": 0.28125,
+            "scale": 16.25
+          },
+          "stream": {
+            "band": 0.9375,
+            "dtype": "bf16",
+            "files": {
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 43.0
+              },
+              "logit_diff.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.125,
+                "scale": 43.0
+              },
+              "logit_diff_q.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.125,
+                "scale": 43.0
+              },
+              "logits.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.3125,
+                "scale": 16.125
+              },
+              "r_attn.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.000244140625,
+                "scale": 0.048583984375
+              },
+              "r_mlp.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00042724609375,
+                "scale": 0.06396484375
+              },
+              "v_cf.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0205078125,
+                "scale": 1.6640625
+              }
+            },
+            "max_abs_diff": 0.3125,
+            "scale": 43.0
+          }
+        },
+        "tp=4": {
+          "sharded_read": {
+            "band": 0.0625,
+            "dtype": "bf16",
+            "files": {
+              "r_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00048828125,
+                "scale": 0.03759765625
+              },
+              "r_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.015625,
+                "scale": 4.53125
+              },
+              "r_v.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00244140625,
+                "scale": 0.2080078125
+              }
+            },
+            "max_abs_diff": 0.015625,
+            "scale": 4.53125
+          },
+          "sharded_write": {
+            "band": 1.125,
+            "dtype": "bf16",
+            "files": {
+              "logits_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.375,
+                "scale": 16.125
+              },
+              "logits_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.34375,
+                "scale": 16.25
+              }
+            },
+            "max_abs_diff": 0.375,
+            "scale": 16.25
+          },
+          "stream": {
+            "band": 0.75,
+            "dtype": "bf16",
+            "files": {
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 43.0
+              },
+              "logit_diff.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 43.0
+              },
+              "logit_diff_q.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 43.0
+              },
+              "logits.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.25,
+                "scale": 16.125
+              },
+              "r_attn.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.000244140625,
+                "scale": 0.048583984375
+              },
+              "r_mlp.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0008392333984375,
+                "scale": 0.06396484375
+              },
+              "v_cf.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0263671875,
+                "scale": 1.6640625
+              }
+            },
+            "max_abs_diff": 0.25,
+            "scale": 43.0
+          }
+        },
+        "tp=8": {
+          "sharded_read": {
+            "band": 0.09375,
+            "dtype": "bf16",
+            "files": {
+              "r_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00030517578125,
+                "scale": 0.03759765625
+              },
+              "r_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.03125,
+                "scale": 4.53125
+              },
+              "r_v.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.001953125,
+                "scale": 0.2080078125
+              }
+            },
+            "max_abs_diff": 0.03125,
+            "scale": 4.53125
+          },
+          "sharded_write": {
+            "band": 1.59375,
+            "dtype": "bf16",
+            "files": {
+              "logits_premix.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.53125,
+                "scale": 16.125
+              },
+              "logits_q.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.375,
+                "scale": 16.25
+              }
+            },
+            "max_abs_diff": 0.53125,
+            "scale": 16.25
+          },
+          "stream": {
+            "band": 1.03125,
+            "dtype": "bf16",
+            "files": {
+              "iia.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0,
+                "scale": 43.0
+              },
+              "logit_diff.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.125,
+                "scale": 43.0
+              },
+              "logit_diff_q.json": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0625,
+                "scale": 43.0
+              },
+              "logits.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.34375,
+                "scale": 16.125
+              },
+              "r_attn.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00048828125,
+                "scale": 0.048583984375
+              },
+              "r_mlp.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.00048828125,
+                "scale": 0.06396484375
+              },
+              "v_cf.safetensors": {
+                "dtype": "bf16",
+                "max_abs_diff": 0.0439453125,
+                "scale": 1.6640625
+              }
+            },
+            "max_abs_diff": 0.34375,
+            "scale": 43.0
+          }
+        }
+      },
+      "inexact": {},
+      "load": {
+        "pp=4": {
+          "rank0": {
+            "bytes_on_disk": 36327522304,
+            "bytes_requested": 36327522304
+          },
+          "rank1": {
+            "bytes_on_disk": 34226176000,
+            "bytes_requested": 34226176000
+          },
+          "rank2": {
+            "bytes_on_disk": 34226176000,
+            "bytes_requested": 34226176000
+          },
+          "rank3": {
+            "bytes_on_disk": 36327538688,
+            "bytes_requested": 36327538688
+          }
+        },
+        "pp=8": {
+          "rank0": {
+            "bytes_on_disk": 19214434304,
+            "bytes_requested": 19214434304
+          },
+          "rank1": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank2": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank3": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank4": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank5": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank6": {
+            "bytes_on_disk": 17113088000,
+            "bytes_requested": 17113088000
+          },
+          "rank7": {
+            "bytes_on_disk": 19214450688,
+            "bytes_requested": 19214450688
+          }
+        },
+        "tp=2,pp=2": {
+          "rank0": {
+            "bytes_on_disk": 70553698304,
+            "bytes_requested": 36328177664
+          },
+          "rank1": {
+            "bytes_on_disk": 70553698304,
+            "bytes_requested": 36328177664
+          },
+          "rank2": {
+            "bytes_on_disk": 70553714688,
+            "bytes_requested": 36328194048
+          },
+          "rank3": {
+            "bytes_on_disk": 70553714688,
+            "bytes_requested": 36328194048
+          }
+        },
+        "tp=4": {
+          "rank0": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 38430851072
+          },
+          "rank1": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 38430851072
+          },
+          "rank2": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 38430851072
+          },
+          "rank3": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 38430851072
+          }
+        },
+        "tp=8": {
+          "rank0": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 21318090752
+          },
+          "rank1": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 21318090752
+          },
+          "rank2": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 21318090752
+          },
+          "rank3": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 21318090752
+          },
+          "rank4": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 21318090752
+          },
+          "rank5": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 21318090752
+          },
+          "rank6": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 21318090752
+          },
+          "rank7": {
+            "bytes_on_disk": 141107412992,
+            "bytes_requested": 21318090752
+          }
+        }
+      },
+      "memory": {
+        "pp=4": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 36367299584,
+            "peak_bytes_reserved": 36370907136,
+            "rank": 0,
+            "steps": 0
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 34264871936,
+            "peak_bytes_reserved": 34269560832,
+            "rank": 1,
+            "steps": 0
+          },
+          "rank2": {
+            "device": "cuda:2",
+            "peak_bytes_allocated": 34264871936,
+            "peak_bytes_reserved": 34269560832,
+            "rank": 2,
+            "steps": 0
+          },
+          "rank3": {
+            "device": "cuda:3",
+            "peak_bytes_allocated": 36366234624,
+            "peak_bytes_reserved": 36375101440,
+            "rank": 3,
+            "steps": 0
+          }
+        },
+        "pp=8": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 19254211584,
+            "peak_bytes_reserved": 19266535424,
+            "rank": 0,
+            "steps": 0
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 17151783936,
+            "peak_bytes_reserved": 17163091968,
+            "rank": 1,
+            "steps": 0
+          },
+          "rank2": {
+            "device": "cuda:2",
+            "peak_bytes_allocated": 17151783936,
+            "peak_bytes_reserved": 17163091968,
+            "rank": 2,
+            "steps": 0
+          },
+          "rank3": {
+            "device": "cuda:3",
+            "peak_bytes_allocated": 17151783936,
+            "peak_bytes_reserved": 17163091968,
+            "rank": 3,
+            "steps": 0
+          },
+          "rank4": {
+            "device": "cuda:4",
+            "peak_bytes_allocated": 17151783936,
+            "peak_bytes_reserved": 17163091968,
+            "rank": 4,
+            "steps": 0
+          },
+          "rank5": {
+            "device": "cuda:5",
+            "peak_bytes_allocated": 17151783936,
+            "peak_bytes_reserved": 17163091968,
+            "rank": 5,
+            "steps": 0
+          },
+          "rank6": {
+            "device": "cuda:6",
+            "peak_bytes_allocated": 17151783936,
+            "peak_bytes_reserved": 17163091968,
+            "rank": 6,
+            "steps": 0
+          },
+          "rank7": {
+            "device": "cuda:7",
+            "peak_bytes_allocated": 19253146624,
+            "peak_bytes_reserved": 19258146816,
+            "rank": 7,
+            "steps": 0
+          }
+        },
+        "tp=2,pp=2": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 36366570496,
+            "peak_bytes_reserved": 36454793216,
+            "rank": 0,
+            "steps": 0
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 36366570496,
+            "peak_bytes_reserved": 36454793216,
+            "rank": 1,
+            "steps": 0
+          },
+          "rank2": {
+            "device": "cuda:2",
+            "peak_bytes_allocated": 36365505536,
+            "peak_bytes_reserved": 36454793216,
+            "rank": 2,
+            "steps": 0
+          },
+          "rank3": {
+            "device": "cuda:3",
+            "peak_bytes_allocated": 36365505536,
+            "peak_bytes_reserved": 36454793216,
+            "rank": 3,
+            "steps": 0
+          }
+        },
+        "tp=4": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 38468651008,
+            "peak_bytes_reserved": 38965084160,
+            "rank": 0,
+            "steps": 0
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 38468651008,
+            "peak_bytes_reserved": 38965084160,
+            "rank": 1,
+            "steps": 0
+          },
+          "rank2": {
+            "device": "cuda:2",
+            "peak_bytes_allocated": 38468651008,
+            "peak_bytes_reserved": 38965084160,
+            "rank": 2,
+            "steps": 0
+          },
+          "rank3": {
+            "device": "cuda:3",
+            "peak_bytes_allocated": 38468651008,
+            "peak_bytes_reserved": 38965084160,
+            "rank": 3,
+            "steps": 0
+          }
+        },
+        "tp=8": {
+          "rank0": {
+            "device": "cuda:0",
+            "peak_bytes_allocated": 21355888640,
+            "peak_bytes_reserved": 21590179840,
+            "rank": 0,
+            "steps": 0
+          },
+          "rank1": {
+            "device": "cuda:1",
+            "peak_bytes_allocated": 21355888640,
+            "peak_bytes_reserved": 21590179840,
+            "rank": 1,
+            "steps": 0
+          },
+          "rank2": {
+            "device": "cuda:2",
+            "peak_bytes_allocated": 21355888640,
+            "peak_bytes_reserved": 21590179840,
+            "rank": 2,
+            "steps": 0
+          },
+          "rank3": {
+            "device": "cuda:3",
+            "peak_bytes_allocated": 21355888640,
+            "peak_bytes_reserved": 21590179840,
+            "rank": 3,
+            "steps": 0
+          },
+          "rank4": {
+            "device": "cuda:4",
+            "peak_bytes_allocated": 21355888640,
+            "peak_bytes_reserved": 21590179840,
+            "rank": 4,
+            "steps": 0
+          },
+          "rank5": {
+            "device": "cuda:5",
+            "peak_bytes_allocated": 21355888640,
+            "peak_bytes_reserved": 21590179840,
+            "rank": 5,
+            "steps": 0
+          },
+          "rank6": {
+            "device": "cuda:6",
+            "peak_bytes_allocated": 21355888640,
+            "peak_bytes_reserved": 21590179840,
+            "rank": 6,
+            "steps": 0
+          },
+          "rank7": {
+            "device": "cuda:7",
+            "peak_bytes_allocated": 21355888640,
+            "peak_bytes_reserved": 21590179840,
+            "rank": 7,
+            "steps": 0
+          }
+        }
+      },
+      "oracle": "pp=4",
+      "realization": {
+        "device": "cuda",
+        "dtype": "bf16",
+        "model": "meta-llama/Llama-3.1-70B"
+      }
+    }
+  },
+  "dtype": "bf16",
+  "format": 2,
+  "model": "Qwen/Qwen3.6-35B-A3B",
+  "recapture": "HF_HUB_OFFLINE=1 uv run python tests/golden/update_parallel_goldens.py --i-have-reviewed-the-diff",
+  "tolerance": {
+    "factor": 3,
+    "floor": 0.001,
+    "justification": "A sharded run is the world-1 computation up to the reduction order its collectives add (a rowwise projection's all-reduce over tp partial sums, the expert outputs' over ep ranks, a rows split's loss mean), so a float class differs from world 1 by a few units in the last place of its own dtype at the magnitude it lives at, carried through the layers above; dp over points and pp move no reduction and are held byte for byte. Per class the capture measures the largest absolute difference against world 1 (max_abs_diff) and the largest world-1 magnitude (scale) and records the outputs' dtype. The band is 3 times the measured maximum (one draw of the noise; headroom for a recapture after a kernel change; a fivefold regression falls outside whenever the maximum is the binding term), never below 2 ulps of the dtype at the scale (one rounding on each side of a re-associated sum: a class that measured zero at logit scale is held to a couple of bf16 ulps there, not to the absolute floor), never below 0.001. The routing class is the fraction of r_idx slots that differ: top-k routing over 256 experts in bf16 flips at near-ties when the residual's reduction order changes, so under tp and ep it is banded at 2 times the measured fraction (floor 0.01), and the float classes' maxima include the re-routed slots. A fit's gradient classes are relative to the step's largest world-1 entry (scale one, fp32).",
+    "routing_factor": 2,
+    "routing_floor": 0.01,
+    "rule": "band = max(3 * max_abs_diff, 2 * ulp(dtype, scale), 0.001); routing: band = min(1, max(2 * fraction, 0.01))",
+    "ulps": 2
+  }
+}

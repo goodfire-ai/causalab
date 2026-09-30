@@ -27,9 +27,10 @@ from __future__ import annotations
 import random
 
 import pytest
-from hypothesis import HealthCheck, given, settings, strategies as st
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
-from causalab.causal.causal_model import CausalModel
+from causalab.causal.model import CausalModel
 from causalab.tasks.identity_naming.causal_models import (
     CYCLIC_VARIABLES,
     EMBEDDINGS,

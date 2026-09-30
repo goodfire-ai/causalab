@@ -28,20 +28,25 @@ from safetensors.torch import load_file
 
 from causalab.cli import main
 from causalab.neural.shared.featurizers import Gate, build_stack
-from causalab.neural.shared.services import TensorBundle
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.resolve import read_safetensors_metadata
+from causalab.io.tensor_files import TensorBundle
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.io.env import read_safetensors_metadata
 from causalab.protocol.schema import FeaturizerSpec
-from causalab.protocol.shapes import FeatureShape, bs_flat_heads
+from causalab.protocol.registry.shapes import FeatureShape, bs_flat_heads
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import UNWRITTEN, aggregation, saved, term
 from tests.protocol._env import FIXTURES, fixture_input_overrides
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.smoke
 
+#: The masked model's margin: the fit's objective and its `iia.json` table.
+IIA = aggregation("logit_diff", a="cf_answer", b="base_answer")
+
 REPO = Path(__file__).resolve().parents[4]
-METHODS = str(REPO / "causalab/configs/protocols")
+METHODS = str(PROTOCOLS_DIR)
 
 
 def _fixture_inputs(name: str) -> dict[str, str]:
@@ -243,6 +248,8 @@ def _run_workflow(base: Path, document: dict) -> tuple[int, Path]:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -314,7 +321,7 @@ def _head_grouped_document() -> dict:
     """
     return {
         "header": {
-            "protocol_version": "3",
+            "protocol_version": "4",
             "description": "a head-grouped DBM gate: one theta per attention head",
         },
         "model": {"key": TINY_LLAMA, "revision": "main", "dtype": "fp32"},
@@ -326,25 +333,18 @@ def _head_grouped_document() -> dict:
             },
         },
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]},
+            },
             "sites": {
                 "target": {"component": "attention_premix", "layers": [0]},
                 "lm_head": {"component": "lm_head"},
             },
             "featurizers": {"gate": {"kind": "gate", "group": "head"}},
             "reads": {
-                "v_cf": {
-                    "site": "target",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "counterfactual",
-                    "featurizer": "gate",
-                },
-                "logits": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "masked",
-                    "input": "base",
-                },
+                "v_cf": {"site": "target", "pos": -1, "featurizer": "gate"},
+                "logits": {"site": "lm_head", "pos": -1},
             },
             "writes": {
                 "mask": {
@@ -354,18 +354,11 @@ def _head_grouped_document() -> dict:
                     "do": {"swap": "v_cf"},
                 }
             },
-            "intervened_models": {"masked": {"input": "base", "writes": ["mask"]}},
-            "metrics": {
-                "iia": {
-                    "kind": "logit_diff",
-                    "of": "logits",
-                    "a": "cf_answer",
-                    "b": "base_answer",
-                    "token_form": "space_prefixed",
-                }
-            },
             "train": {
-                "objective": [[1.0, "iia"], [0.01, {"l1": "gate"}]],
+                "objective": [
+                    [1.0, term("logits", "masked", dict(IIA))],
+                    [0.01, {"l1": "gate"}],
+                ],
                 "params": ["gate"],
                 "optimizer": {"name": "adamw", "lr": 1e-3},
                 "steps": {"epochs": 1},
@@ -373,12 +366,7 @@ def _head_grouped_document() -> dict:
                 "seed": 0,
             },
             "save": [
-                {
-                    "value": "iia",
-                    "model": "masked",
-                    "input": "base",
-                    "file_path": "iia.json",
-                },
+                saved("logits", "masked", "iia.json", dict(IIA)),
                 {"value": "gate", "site": "target", "file_path": "gate.safetensors"},
             ],
         },
@@ -414,7 +402,7 @@ def grouped_fit(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 def test_a_head_grouped_fit_saves_one_parameter_per_head(grouped_fit: Path) -> None:
-    """The head-grouped contract end to end: H parameters, resolved from the model's own
+    """The head-grouping contract end to end: H parameters, resolved from the model's own
     config through the document's one `group` field, and the bundle stamps
     the group kind and the derived map."""
     from transformers import AutoConfig
@@ -436,9 +424,8 @@ def test_dropping_the_group_makes_the_same_document_coordinate_wise(
     Same site, same model, same train block — only the one field removed — and
     the parameter count goes from H to the full feature width. Without this the
     test above would also pass if `attention_premix` merely happened to be H
-    wide. It is also the backward-compatibility clause on the fit side: an
-    ungrouped document stamps no `group` and no `group_map`, exactly as before
-    grouping existed.
+    wide. It is also the compatibility check on the fit side: an ungrouped
+    document stamps no `group` and no `group_map`, as before grouping existed.
     """
     from transformers import AutoConfig
 
@@ -487,9 +474,9 @@ def _digest_of(document: dict) -> str:
     """The document digest, resolved the way a run resolves it."""
     from transformers import AutoConfig
 
-    from causalab.protocol.canonical import canonicalize, digest
+    from causalab.protocol.schema.explicit import canonicalize, digest
     from causalab.protocol.registry import model_info_from_hf_config
-    from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+    from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 
     info = model_info_from_hf_config(TINY_LLAMA, AutoConfig.from_pretrained(TINY_LLAMA))
     env = ResolutionEnv(

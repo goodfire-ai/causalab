@@ -1,79 +1,120 @@
-"""Tests for ``causalab.causal.trace``.
-
-``trace.py`` defines the runtime substrate of every causal model: ``Mechanism``
-(dataclass binding parents → compute → lazy flag), ``input_var`` (factory for
-free-input variables that sample from a list), and ``CausalTrace`` (the
-stateful object that holds variable values during a single forward pass and
-supports interventions). ``CausalModel``, counterfactual dataset generation,
-interchange interventions, and the runner pipeline all instantiate
-``CausalTrace`` objects per example. Wrong values here silently corrupt every
-downstream counterfactual sample and intervention experiment.
-"""
+"""Compiled trace evaluation, copying, intervention and lazy invalidation."""
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
-from causalab.causal.trace import CausalTrace, Mechanism, input_var
+from causalab.causal import Dom, V, mechanism
+from causalab.causal.model import CausalModel, CausalTrace, CompiledEquation
 
 
-def _ab_chain() -> dict[str, Mechanism]:
-    """Two-node mechanisms dict: A is input, B = A."""
-    return {
-        "A": input_var([0, 1]),
-        "B": Mechanism(parents=["A"], compute=lambda t: t["A"]),
-    }
+@pytest.mark.unit
+def test_lazy_readiness_visits_shared_ancestors_once():
+    visits = []
+
+    class Equation:
+        lazy = True
+        compute = staticmethod(lambda trace: 0)
+
+        def __init__(self, parents):
+            self._parents = parents
+
+        @property
+        def parents(self):
+            visits.append(self)
+            assert len(visits) <= 100, "Readiness revisited shared ancestors"
+            return self._parents
+
+    names = [f"step_{i}" for i in range(41)]
+    model = SimpleNamespace(
+        inputs=[],
+        variables=names,
+        mechanisms={
+            name: Equation(names[max(0, i - 2) : i]) for i, name in enumerate(names)
+        },
+        domains={},
+        children={},
+        _validators=[],
+    )
+    trace = CausalTrace(model)
+    assert trace._values == {}
 
 
-def _abc_chain() -> dict[str, Mechanism]:
-    """Three-node mechanisms dict: A -> B -> C, each step adds 1."""
-    return {
-        "A": input_var([0, 1, 2]),
-        "B": Mechanism(parents=["A"], compute=lambda t: t["A"] + 1),
-        "C": Mechanism(parents=["B"], compute=lambda t: t["B"] + 1),
-    }
+@pytest.mark.unit
+def test_deep_lazy_chains_evaluate_and_invalidate_without_recursion():
+    names = [f"step_{i}" for i in range(1500)]
+    equations = {names[0]: CompiledEquation([], None)}
+    for previous, name in zip(names, names[1:]):
+        equations[name] = CompiledEquation(
+            [previous], lambda trace, parent=previous: trace[parent] + 1, lazy=True
+        )
+    model = SimpleNamespace(
+        inputs=[names[0]],
+        variables=names,
+        mechanisms=equations,
+        domains={name: Dom(int) for name in names},
+        children={name: names[i + 1 : i + 2] for i, name in enumerate(names)},
+        _validators=[],
+    )
+    trace = CausalTrace(model, {names[0]: 0})
+    assert len(trace._values) == 1
+    assert trace[names[-1]] == 1499
+    trace[names[0]] = 10
+    assert trace[names[-1]] == 1509
 
 
-class TestMechanismUnit:
-    """``Mechanism`` dataclass: parents/compute/lazy fields and ``__call__`` delegation."""
+@pytest.mark.unit
+def test_iterative_reads_preserve_lazy_branch_selection():
+    @mechanism
+    def equations(enabled: Dom(bool), divisor: Dom([0, 1])):
+        bad = V(1 // divisor, domain=Dom(int), lazy=True)
+        result = V(bad if enabled else 5, domain=Dom(int), lazy=True)
+        raw_input = V(str(enabled))  # noqa: F841
+        raw_output = V(str(result), lazy=True)  # noqa: F841
+        return result
 
-    pytestmark = pytest.mark.unit
-
-    def test_default_lazy_is_false(self):
-        mech = Mechanism(parents=["A"], compute=lambda t: 1)
-        assert mech.lazy is False
-
-    def test_call_delegates_to_compute(self):
-        mech = Mechanism(parents=[], compute=lambda t: 42)
-        # __call__(trace) returns compute(trace); trace can be None here since
-        # the compute closure ignores it.
-        assert mech(None) == 42
-
-    def test_parents_field_is_stored(self):
-        mech = Mechanism(parents=["A", "B"], compute=lambda t: 0)
-        assert mech.parents == ["A", "B"]
-
-    def test_lazy_can_be_set(self):
-        mech = Mechanism(parents=["A"], compute=lambda t: 1, lazy=True)
-        assert mech.lazy is True
+    trace = CausalModel(equations).new_trace({"enabled": False, "divisor": 0})
+    assert trace["raw_output"] == "5"
+    assert "bad" not in trace
+    trace["enabled"] = True
+    with pytest.raises(ZeroDivisionError):
+        trace["raw_output"]
 
 
-class TestInputVarUnit:
-    """``input_var`` factory: parentless mechanism sampling from a fixed value list."""
+def _ab_chain():
+    @mechanism
+    def equations(A: Dom([0, 1])):
+        B = V(A)
+        raw_input = V(str(A), domain=Dom(str))  # noqa: F841
+        raw_output = V(str(B), domain=Dom(str))  # noqa: F841
+        return B
 
-    pytestmark = pytest.mark.unit
+    return CausalModel(equations)
 
-    def test_returns_mechanism_with_empty_parents(self):
-        mech = input_var([0, 1, 2])
-        assert isinstance(mech, Mechanism)
-        assert mech.parents == []
 
-    def test_sampled_value_in_value_list(self):
-        values = [10, 20, 30]
-        mech = input_var(values)
-        # Call repeatedly; every draw must be in the list.
-        for _ in range(20):
-            assert mech(None) in values
+def _abc_chain():
+    @mechanism
+    def equations(A: Dom([0, 1, 2])):
+        B = V(A + 1, domain=Dom(range(100)))
+        C = V(B + 1)
+        raw_input = V(str(A), domain=Dom(str))  # noqa: F841
+        raw_output = V(str(C), domain=Dom(str))  # noqa: F841
+        return C
+
+    return CausalModel(equations)
+
+
+def _lazy_chain(multiplier=1, offset=0):
+    @mechanism
+    def equations(A: Dom([0, 1, 2])):
+        B = V(A * multiplier + offset, lazy=True)
+        raw_input = V(str(A), domain=Dom(str))  # noqa: F841
+        raw_output = V(str(B), domain=Dom(str), lazy=True)  # noqa: F841
+        return B
+
+    return CausalModel(equations)
 
 
 class TestCausalTraceUnit:
@@ -145,7 +186,7 @@ class TestCausalTraceUnit:
         trace = CausalTrace(_abc_chain(), inputs={"A": 0})
         d = trace.to_dict()
         assert isinstance(d, dict)
-        assert d == {"A": 0, "B": 1, "C": 2}
+        assert d == {"A": 0, "B": 1, "C": 2, "raw_input": "0", "raw_output": "2"}
 
     def test_to_dict_returns_copy_not_alias(self):
         trace = CausalTrace(_abc_chain(), inputs={"A": 0})
@@ -155,11 +196,7 @@ class TestCausalTraceUnit:
         assert trace["A"] == 0
 
     def test_lazy_mechanism_resolved_on_access(self):
-        mechs = {
-            "A": input_var([0, 1]),
-            "B": Mechanism(parents=["A"], compute=lambda t: t["A"] + 1, lazy=True),
-        }
-        trace = CausalTrace(mechs, inputs={"A": 1})
+        trace = CausalTrace(_lazy_chain(offset=1), inputs={"A": 1})
         # B is lazy; not stored eagerly during init.
         assert "B" not in trace
         # First access computes it.
@@ -216,11 +253,7 @@ class TestCausalTraceProperty:
         assert fresh.to_dict() == intervened.to_dict()
 
     def test_lazy_value_invalidated_on_ancestor_intervene(self):
-        mechs = {
-            "A": input_var([0, 1, 2]),
-            "B": Mechanism(parents=["A"], compute=lambda t: t["A"] * 10, lazy=True),
-        }
-        trace = CausalTrace(mechs, inputs={"A": 1})
+        trace = CausalTrace(_lazy_chain(multiplier=10), inputs={"A": 1})
         # Force B to materialize.
         assert trace["B"] == 10
         # Now intervene on A; lazy descendant must be invalidated.

@@ -1,0 +1,27 @@
+{
+  "document": "protocols/minimal_cpu.json",
+  "document_digest": "unpinned: not in tests/protocol/shipped_digests.json",
+  "run_digest": "04a7b6dae1b61197471b4a213e3aa6c34e4187ae02892413c617a1d527505f03",
+  "model": "hf-internal-testing/tiny-random-LlamaForCausalLM",
+  "engine": "auto",
+  "device": "cpu",
+  "dtype": "fp32",
+  "date": "2026-09-21",
+  "elapsed_s": 32.5,
+  "metrics": {
+    "iia": {
+      "metric": "iia",
+      "unit": "fraction",
+      "rows": 4,
+      "eligible_rows": 4,
+      "mean": 0.0
+    },
+    "logit_diff": {
+      "metric": "logit_diff",
+      "unit": "logit",
+      "rows": 4,
+      "eligible_rows": 4,
+      "mean": -0.0012
+    }
+  }
+}

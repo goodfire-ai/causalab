@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "description": "The 08_attention demo end to end: interchange a whole layer's attention pattern, then interchange each head's contribution to the residual stream, and draw both. The two scans are the demo's contrast -- where a head looks against what it delivers -- and they share a band, a position, a dataset and a metric so that the difference between them is the site and nothing else. head_stats is told which columns hold the layer and the head, because its defaults name a site called 'target' and this document's sites are called 'pattern' and 'contribution'.",
-  "output_dir": "mcqa_heads",
+  "description": "Interchange each layer's attention pattern and each head's contribution at layers 20 to 27, plot both scans, and select the head with the highest interchange accuracy.",
+  "output_dir": "11_attention",
   "steps": {
     "pattern_scan": {"type": "intervention_protocol", "document": "../protocols/mcqa_head_scan.json"},
     "pattern_curve": {
@@ -12,7 +12,7 @@
         "plot": "lines",
         "x": "sites.pattern.layers"
       },
-      "outputs": {"figure": "pattern_iia.png", "plotted": {"file": "pattern_iia.json"}}
+      "outputs": {"figure": "11_attention_pattern_iia.png", "plotted": {"file": "11_attention_pattern_iia.json"}}
     },
     "result_scan": {
       "type": "intervention_protocol",
@@ -27,28 +27,7 @@
         "x": "sites.contribution.layers",
         "y": "sites.contribution.head"
       },
-      "outputs": {"figure": "head_iia.png", "plotted": {"file": "head_iia.json"}}
-    },
-    "per_head": {
-      "type": "script",
-      "script": {"module": "causalab.analysis.head_stats"},
-      "inputs": {
-        "table": {"step": "result_scan", "file": "iia.json"},
-        "layer_column": "sites.contribution.layers",
-        "head_column": "sites.contribution.head"
-      },
-      "outputs": {
-        "stats": {
-          "file": "head_stats.json",
-          "columns": {
-            "layer": "int64",
-            "head": "int64",
-            "n": "int64",
-            "mean": "float64",
-            "std": "float64"
-          }
-        }
-      }
+      "outputs": {"figure": "11_attention_head_iia.png", "plotted": {"file": "11_attention_head_iia.json"}}
     },
     "best": {
       "type": "script",
@@ -62,7 +41,7 @@
         }
       },
       "outputs": {
-        "values": {"file": "values.json", "keys": {"best_layer": 14, "best_head": 11}}
+        "values": {"file": "values.json", "keys": {"best_layer": 26, "best_head": 0}}
       }
     }
   }

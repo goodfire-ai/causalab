@@ -1,6 +1,6 @@
 """Splits are a column of one table, selected by a ref fragment (§2.2).
 
-Both halves live here because both live in :class:`FileDatasets`: parsing and
+Both halves live here because both live in [`FileDatasets`][causalab.io.env.FileDatasets]: parsing and
 selection, and the four refusals that make the declaration mean something. They
 sit in the resolver rather than in a load-time pass because each is a property
 of *one table*, and the resolver is the single place a ref becomes rows — so no
@@ -15,9 +15,9 @@ from pathlib import Path
 
 import pytest
 
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.resolve import FileDatasets, split_dataset_ref
-from causalab.tables import table_bytes
+from causalab.protocol.rules.errors import ValidationError
+from causalab.io.env import FileDatasets, split_dataset_ref
+from causalab.tables import INLINE_REF_PREFIX, inline_ref, inline_rows, table_bytes
 
 pytestmark = pytest.mark.unit
 
@@ -228,8 +228,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 #: Every data root the repo ships tables under.
 DATA_ROOTS = [
-    REPO_ROOT / "demos" / "onboarding_tutorial" / "data",
-    REPO_ROOT / "demos" / "weekdays_geometry" / "data",
+    REPO_ROOT / "demos" / "onboarding_tutorial" / "artifacts" / "data",
     REPO_ROOT / "tests" / "protocol" / "fixtures" / "data",
     REPO_ROOT / "tests" / "golden" / "fixtures" / "data",
 ]
@@ -260,3 +259,32 @@ def test_every_committed_table_declares_its_splits(root: Path, ref: str):
     datasets = FileDatasets(root)
     for split in declared:
         assert datasets.rows(f"{ref}#{split}"), f"{ref}#{split} selected no rows"
+
+
+def test_an_inline_ref_resolves_without_a_file(tmp_path: Path):
+    """§2.2: an inline table lives in the process, never under the root; its
+    rows, columns and digest follow the file formulas exactly."""
+    prompts = ["a", "b"]
+    ref = inline_ref(prompts)
+    datasets = FileDatasets(root=tmp_path)
+    rows = datasets.rows(ref)
+    assert rows == inline_rows(prompts)
+    assert datasets.columns(ref) == ("input", "split")
+    assert datasets.digest(ref) == hashlib.sha256(table_bytes(rows)).hexdigest()
+    assert datasets.digest(ref) == ref[len(INLINE_REF_PREFIX) :]
+
+
+def test_inline_rows_are_fresh_copies(tmp_path: Path):
+    ref = inline_ref(["a"])
+    datasets = FileDatasets(root=tmp_path)
+    datasets.rows(ref)[0]["input"] = "changed"
+    assert datasets.rows(ref)[0]["input"] == "a"
+
+
+def test_an_unregistered_inline_ref_refuses(tmp_path: Path):
+    """An inline ref is derived, never authored: one nobody parsed names no
+    table, and the refusal says where the rows come from."""
+    with pytest.raises(ValidationError) as err:
+        FileDatasets(root=tmp_path).rows(INLINE_REF_PREFIX + "0" * 64)
+    assert err.value.rule == 4
+    assert "'inputs'" in str(err.value)

@@ -1,0 +1,86 @@
+{
+  "version": "1",
+  "description": "Desiderata-based masking over the 14336 neurons of layer 18's MLP of Llama-3.1-8B, against the 28 addition neurons of Feucht et al. 2026 (arXiv:2605.01148, Section 5): sweep the mask's L1 weight on the weekdays val split, fit the chosen weight, score its mask on the test split beside a size-matched random mask, every neuron and the paper's 28, rerun the fit on the gate half of the MLP, and read the neurons' activations on the addition prompts (Figure 8a). The figure scripts under workflows/scripts/arithmetic_neurons/ draw from the run tree.",
+  "output_dir": "arithmetic_neurons",
+  "steps": {
+    "sweep": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_neurons_fit.json",
+      "set": {
+        "train.objective.l1.weight": {
+          "sweep": [
+            0.01,
+            0.1,
+            1.0,
+            10.0,
+            30.0,
+            100.0,
+            300.0
+          ]
+        }
+      }
+    },
+    "fit": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_neurons_fit.json"
+    },
+    "apply": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_neurons_apply.json",
+      "set": {
+        "featurizers.gate.file_path": "fit/gate.safetensors"
+      }
+    },
+    "random": {
+      "type": "script",
+      "script": {
+        "module": "causalab.analysis.random_mask"
+      },
+      "inputs": {
+        "gate": {
+          "step": "fit",
+          "file": "gate.safetensors"
+        },
+        "seed": 0,
+        "draw": "uniform"
+      },
+      "outputs": {
+        "gate": "gate.safetensors"
+      }
+    },
+    "apply_random": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_neurons_apply.json",
+      "set": {
+        "featurizers.gate.file_path": "random/gate.safetensors"
+      }
+    },
+    "all_neurons": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_neurons_all_neurons.json"
+    },
+    "paper_neurons": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_neurons_paper_neurons.json"
+    },
+    "fit_gate_half": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_neurons_fit.json",
+      "set": {
+        "sites.neurons.component": "mlp_activation"
+      }
+    },
+    "apply_gate_half": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_neurons_apply.json",
+      "set": {
+        "sites.neurons.component": "mlp_activation",
+        "featurizers.gate.file_path": "fit_gate_half/gate.safetensors"
+      }
+    },
+    "harvest_addition": {
+      "type": "intervention_protocol",
+      "document": "../protocols/arithmetic_neurons_harvest.json"
+    }
+  }
+}

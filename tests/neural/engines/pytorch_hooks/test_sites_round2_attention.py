@@ -1,6 +1,6 @@
-"""Round-2 attention interior at module boundaries: `v`, pre-RoPE q/k, the gate.
+"""The attention interior at module boundaries: `v`, pre-RoPE q/k, the gate.
 
-📐 The plan note assumed these needed function-level taps inside the mixer's
+📐 One could assume these need function-level taps inside the mixer's
 forward, "chunk/view/reshape ops, not module boundaries". Measured against
 ``tiny-random/qwen3.5-moe`` on transformers 5.16, three of the four are ordinary
 ``nn.Module`` outputs — ``Qwen3_5MoeAttention`` runs ``q_norm``/``k_norm``
@@ -22,8 +22,8 @@ What each group of tests is for:
   *message* rather than the exception type. GPT-2's fused ``c_attn`` is no
   longer one of them: the per-family tap table addresses its three
   logical blocks (``test_family_tap_table.py`` has the oracle equivalence).
-* **head bounds** — the §2.2 defect, on the components that introduce it: three
-  of these four live in KV-head space.
+* **head bounds** — the head-bound defect, on the components that introduce
+  it: three of these four live in KV-head space.
 """
 
 from __future__ import annotations
@@ -31,13 +31,15 @@ from __future__ import annotations
 import pytest
 import torch
 
-from causalab.neural.pytorch_hooks.layout import to_contract
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
+from causalab.neural.shared.layout import to_contract
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.plan import COMPONENT_RANK
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.positions.alignment import COMPONENT_RANK
 from causalab.protocol.registry import component_shape, component_width
-from causalab.protocol.schema import SiteSpec
+from causalab.protocol.schema import PROTOCOL_VERSION, SiteSpec
+
+from tests.protocol._docs import saved
 
 from ._drive import base_data_section, executor_for
 from .conftest import TINY_GPT2
@@ -273,7 +275,7 @@ def test_k_pre_rope_is_the_normalized_k_projection(qwen35moe_bundle):
 
 
 def test_the_gate_is_what_separates_premix_from_the_mixer_output(qwen35moe_bundle):
-    """The #20 docstring correction, as a test rather than a restatement.
+    """A docstring correction, as a test rather than a restatement.
 
     📐 ``Qwen3_5MoeAttention`` ends with ``attn_output * sigmoid(gate)`` before
     ``o_proj``, so ``attention_premix`` — the o-projection's input — is the
@@ -328,49 +330,40 @@ def _write_doc(component: str, layer: int, *, head: int | None = None) -> dict:
     if head is not None:
         site["head"] = head
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "original_base": {"input": "base", "reads": ["clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {"tap": site, "lm_head": {"component": "lm_head"}},
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "clean": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": "all"},
+                "clean": {"site": "lm_head", "pos": {"index": -1}},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {"patch": {"site": "tap", "pos": "all", "do": {"swap": "v_cf"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "p.safetensors",
-                },
-                {
-                    "value": "clean",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "c.safetensors",
-                },
+                saved("after", "patched", "p.safetensors"),
+                saved("clean", "original_base", "c.safetensors"),
             ],
         },
     }
+
+
+def _self_swap(doc: dict) -> dict:
+    """Take ``v_cf`` on the un-intervened *base* forward instead of the
+    counterfactual one, so the write swaps the tap with its own value."""
+    models = doc["method"]["intervened_models"]
+    del models["original_counterfactual"]
+    models["original_base"]["reads"].append("v_cf")
+    return doc
 
 
 @pytest.mark.parametrize("component", INTERIOR)
@@ -399,10 +392,8 @@ def test_swapping_a_tap_with_its_own_value_moves_nothing(
     identity. For the gate this is the load-bearing case — the write goes back
     into a projection it shares with ``q``, and disturbing ``q`` would show up
     here as a nonzero delta."""
-    doc = _write_doc(component, FULL_ATTENTION_LAYER)
-    doc["method"]["reads"]["v_cf"]["input"] = "base"  # swap the tap with itself
     executor = executor_for(
-        doc,
+        _self_swap(_write_doc(component, FULL_ATTENTION_LAYER)),
         qwen35moe_bundle,
         base_texts=[TEXT],
         counterfactual_texts=[CF_TEXT],
@@ -446,7 +437,7 @@ def test_a_deltanet_layer_refuses_with_the_architectural_reason(
 
 
 def test_the_gate_refuses_on_a_family_that_computes_none(llama_bundle):
-    """D4/§4.2: llama's mixer has no output gate, so the box does not exist
+    """Llama's mixer has no output gate, so the box does not exist
     there — refused by name rather than fabricated from a slice of ``q_proj``."""
     with pytest.raises(ProtocolError) as excinfo:
         resolve_site(
@@ -503,7 +494,7 @@ def test_gpt2_refuses_the_gate_by_name():
 
 
 # --------------------------------------------------------------------------- #
-# §2.2 — the head bound, on the components that introduce KV space
+# the head bound, on the components that introduce KV space
 # --------------------------------------------------------------------------- #
 
 

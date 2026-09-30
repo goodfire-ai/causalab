@@ -1,0 +1,51 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Activation harvesting: pure reads at two layers x two positions, one un-intervened forward. No writes, hence no intervened_models section."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"}
+  },
+  "method": {
+    "intervened_models": {
+      "original": {
+        "input": "base",
+        "reads": ["acts_L7_ans", "acts_L7_ent", "acts_L21_ans", "acts_L21_ent"]
+      }
+    },
+    "positions": {"answer_tok": {"index": -1}, "entity": {"variable": "entity"}},
+    "sites": {
+      "L7": {"component": "block_output", "layers": [7]},
+      "L21": {"component": "block_output", "layers": [21]}
+    },
+    "reads": {
+      "acts_L7_ans": {"site": "L7", "pos": "answer_tok"},
+      "acts_L7_ent": {"site": "L7", "pos": "entity"},
+      "acts_L21_ans": {"site": "L21", "pos": "answer_tok"},
+      "acts_L21_ent": {"site": "L21", "pos": "entity"}
+    },
+    "save": [
+      {
+        "read": "acts_L7_ans",
+        "model": "original",
+        "file_path": "acts_L7_ans.safetensors"
+      },
+      {
+        "read": "acts_L7_ent",
+        "model": "original",
+        "file_path": "acts_L7_ent.safetensors"
+      },
+      {
+        "read": "acts_L21_ans",
+        "model": "original",
+        "file_path": "acts_L21_ans.safetensors"
+      },
+      {
+        "read": "acts_L21_ent",
+        "model": "original",
+        "file_path": "acts_L21_ent.safetensors"
+      }
+    ]
+  }
+}

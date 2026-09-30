@@ -5,7 +5,8 @@
 is exactly the bytes a document names: nothing sits beside it (spec §2.2) —
 no recipe sidecar, no rebuild guard. What was built how is the builder's
 command line, recorded in the task's README; what a run is held to is the
-consuming workflow's ``pins`` section (workflow spec §7).
+table's content digest, which is in every consuming document's canonical
+form (spec §7).
 
 What this file keeps is the one invariant that survives without a recipe:
 the set of task packages and the set of shipped tables agree, so a task that
@@ -68,7 +69,7 @@ def test_a_shipped_table_is_a_split_declaring_row_table(table: Path) -> None:
 
 def test_nothing_sits_beside_a_shipped_table() -> None:
     """A ``data/`` directory holds tables and nothing else — no sidecar of any
-    kind (spec §2.2): the pin over a table is the consuming workflow's."""
+    kind (spec §2.2): a table is exactly the bytes a document names."""
     for data_dir in sorted(TASKS_ROOT.glob(f"*/{DATA_DIR}")):
         extras = [p.name for p in data_dir.iterdir() if p.suffix != ".json"]
         assert not extras, f"{data_dir} holds non-table files: {extras}"

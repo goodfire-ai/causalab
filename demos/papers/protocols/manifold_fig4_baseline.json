@@ -1,0 +1,64 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Behavior-manifold input for Figure 4 of Wurgaft et al. 2026 (arXiv:2605.05115): one un-intervened forward per prompt of the 49-prompt weekdays pool, saving the softmax mass on each weekday in the space-prefixed, the bare and the single-token lowercase spelling, which workflows/scripts/manifold_fig4/behavior_manifold.py sums into p(x) and fits the behavior manifold to."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b", "dtype": "bf16"},
+  "data": {"base": {"dataset": "manifold_fig4/data", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["logits"]}
+    },
+    "sites": {"lm_head": {"component": "lm_head"}},
+    "reads": {"logits": {"site": "lm_head", "pos": -1}},
+    "save": [
+      {
+        "read": "logits",
+        "model": "original",
+        "aggregation": {
+          "kind": "class_probs",
+          "groups": {
+            "Monday": [" Monday"],
+            "Tuesday": [" Tuesday"],
+            "Wednesday": [" Wednesday"],
+            "Thursday": [" Thursday"],
+            "Friday": [" Friday"],
+            "Saturday": [" Saturday"],
+            "Sunday": [" Sunday"]
+          }
+        },
+        "file_path": "day_probs_space.json"
+      },
+      {
+        "read": "logits",
+        "model": "original",
+        "aggregation": {
+          "kind": "class_probs",
+          "groups": {
+            "Monday": ["Monday"],
+            "Tuesday": ["Tuesday"],
+            "Wednesday": ["Wednesday"],
+            "Thursday": ["Thursday"],
+            "Friday": ["Friday"],
+            "Saturday": ["Saturday"],
+            "Sunday": ["Sunday"]
+          }
+        },
+        "file_path": "day_probs_bare.json"
+      },
+      {
+        "read": "logits",
+        "model": "original",
+        "aggregation": {
+          "kind": "class_probs",
+          "groups": {
+            "Monday": [" monday"],
+            "Friday": [" friday"],
+            "Sunday": [" sunday"]
+          }
+        },
+        "file_path": "day_probs_lower.json"
+      }
+    ]
+  }
+}

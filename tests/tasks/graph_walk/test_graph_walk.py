@@ -11,7 +11,7 @@ Coverage map:
   exported hooks (``EXAMPLE_TO_CLASS``, ``GET_VARIABLE_VALUES``,
   ``GET_PERIODIC_INFO``) and the ``output_tokens`` coordinate→concept map.
   ``SCORE_TOKEN_IDS_FROM_MODEL`` needs a loaded pipeline and is deferred
-  to runner-tier coverage.
+  to runner-tier coverage (a known gap).
 * ``config.py`` — ``GraphWalkConfig.__post_init__`` invariants and the
   ``DEFAULT_CONCEPTS`` pool-shape contract.
 * ``counterfactuals.py`` — ``generate_graph_walk_dataset`` /
@@ -51,7 +51,7 @@ import pytest
 import torch
 from hypothesis import HealthCheck, given, settings, strategies as st
 
-from causalab.neural.token_positions import TokenPosition
+from causalab.tasks.token_positions import TokenPosition
 from causalab.tasks.graph_walk.causal_models import (
     EXAMPLE_TO_CLASS,
     GET_PERIODIC_INFO,
@@ -86,7 +86,7 @@ from tests._helpers.tasks import get_task
 #     hex/torus adjacency-symmetry sweeps walk O(n*m) neighbours, so the
 #     default 200ms deadline can flake on cold caches.
 #   - max_examples=30 + dimensions in [2, 5] keep the property suite
-#     sub-second (a seed sweep over Hypothesis examples adds up quickly).
+#     sub-second.
 _HYPOTHESIS_SETTINGS = settings(
     deadline=None,
     max_examples=30,
@@ -243,7 +243,7 @@ class TestGraphWalkCausalModelStructureProperty:
     )
     def test_node_coordinates_is_only_input(self, builder) -> None:
         model = builder()
-        assert list(model.inputs) == ["node_coordinates"]
+        assert list(model.inputs) == ["node_coordinates", "walk_seed"]
 
     @pytest.mark.parametrize(
         "builder",
@@ -251,7 +251,7 @@ class TestGraphWalkCausalModelStructureProperty:
         ids=["ring", "grid", "cylinder"],
     )
     def test_walk_sequence_parents_are_node_coordinates(self, builder) -> None:
-        assert builder().parents["walk_sequence"] == ["node_coordinates"]
+        assert builder().parents["walk_sequence"] == ["node_coordinates", "walk_seed"]
 
     @pytest.mark.parametrize(
         "builder",
@@ -307,14 +307,13 @@ class TestGraphWalkSampleInputProperty:
     def test_new_trace_deterministic_repeats(self) -> None:
         """``CausalModel.new_trace`` on the same input is byte-equal across calls.
 
-        The walk_sequence mechanism uses an ``rng`` seeded once at model
-        construction time, so repeated ``new_trace`` calls with identical
-        inputs against a single model instance should yield identical traces.
+        The explicit walk seed is part of the input, so repeated calls
+        produce identical traces without sharing mutable RNG state.
         """
         model = _ring_handle()
         coord = model.values["node_coordinates"][0]
-        a = dict(model.new_trace({"node_coordinates": coord}).to_dict())
-        b = dict(model.new_trace({"node_coordinates": coord}).to_dict())
+        a = dict(model.new_trace({"node_coordinates": coord, "walk_seed": 0}).to_dict())
+        b = dict(model.new_trace({"node_coordinates": coord, "walk_seed": 0}).to_dict())
         assert a == b
 
 
@@ -322,6 +321,37 @@ class TestGraphWalkRawOutputProperty:
     """``raw_output`` token set and ``raw_input`` formatting invariants."""
 
     pytestmark = pytest.mark.property
+
+    @pytest.mark.parametrize(
+        "graph_type,size,size2,node,neighbor_nodes",
+        [
+            ("ring", 1, None, 0, [0, 0]),
+            ("ring", 2, None, 0, [1, 1]),
+            ("cylinder", 1, 2, 0, [0, 0, 1]),
+            ("cylinder", 2, 2, 0, [1, 1, 2]),
+            ("torus", 1, 2, 0, [0, 0, 1, 1]),
+            ("torus", 2, 2, 0, [1, 1, 2, 2]),
+            ("grid", 3, None, 4, [1, 7, 3, 5]),
+        ],
+    )
+    def test_raw_output_preserves_repeated_periodic_neighbors(
+        self, graph_type, size, size2, node, neighbor_nodes
+    ) -> None:
+        """Periodic directions can repeat a neighbor, exceeding the node count."""
+        cfg = GraphWalkConfig(
+            graph_type=graph_type,
+            graph_size=size,
+            graph_size_2=size2,
+            context_length=3,
+        )
+        model = get_task("graph_walk", task_cfg=cfg).causal_model
+        trace = model.new_trace(
+            {
+                "node_coordinates": model.values["node_coordinates"][node],
+                "walk_seed": 0,
+            }
+        )
+        assert trace["raw_output"] == [cfg.concepts[n] for n in neighbor_nodes]
 
     @given(seed=st.integers(min_value=0, max_value=10_000))
     @_HYPOTHESIS_SETTINGS
@@ -363,8 +393,8 @@ class TestGraphWalkRawOutputProperty:
 class TestGraphWalkExportHooksProperty:
     """Module-level exports consumed by the loader / scorer contract.
 
-    ``SCORE_TOKEN_IDS_FROM_MODEL`` needs a loaded pipeline; it is deferred to
-    runner-tier coverage and not exercised here.
+    ``SCORE_TOKEN_IDS_FROM_MODEL`` needs a loaded pipeline, so it
+    is deferred to runner-tier coverage and not exercised here.
     """
 
     pytestmark = pytest.mark.property
@@ -396,7 +426,7 @@ class TestGraphWalkExportHooksProperty:
         ``raw_output`` — the variable whose value (a list of every valid next
         node's concept) is the answer.
 
-        Keyed by value, never by ``id()``, and on the
+        Keyed by value, never by ``id()`` (a past regression), and on the
         answer rather than on the current node's coordinate: a row's
         ``raw_output`` list resolves to the union of its members' forms, so the
         string grader and the serialized ``*_forms`` both say "any valid
@@ -410,7 +440,7 @@ class TestGraphWalkExportHooksProperty:
         assert set(forms) == set(concepts)
         assert all(forms[c] == [c] for c in concepts)
         trace = model.new_trace(
-            {"node_coordinates": model.values["node_coordinates"][0]}
+            {"node_coordinates": model.values["node_coordinates"][0], "walk_seed": 0}
         )
         neighbours = trace["raw_output"]
         assert isinstance(neighbours, list) and len(neighbours) == 2  # a ring
@@ -446,6 +476,25 @@ class TestGenerateGraphWalkDatasetProperty:
     """
 
     pytestmark = pytest.mark.property
+
+    @pytest.mark.parametrize("graph_type", ["cylinder", "torus"])
+    def test_small_periodic_dataset_labels_include_repeated_neighbors(
+        self, graph_type
+    ) -> None:
+        cfg = GraphWalkConfig(
+            graph_type=graph_type,
+            graph_size=1,
+            graph_size_2=2,
+            context_length=3,
+        )
+        model = get_task("graph_walk", task_cfg=cfg).causal_model
+        examples = generate_graph_walk_dataset(model, n_examples=2, seed=0)
+        labeled = model.label_counterfactual_data(examples, ["node_coordinates"])
+        for example, row in zip(examples, labeled):
+            expected = example["counterfactual_inputs"][0]["raw_output"]
+            assert row["label"] == expected
+            assert len(expected) == (3 if graph_type == "cylinder" else 4)
+            assert len(set(expected)) == 2
 
     @pytest.mark.parametrize("n", [1, 5])
     def test_length_matches_request(self, _grid_cm, n: int) -> None:
@@ -638,9 +687,9 @@ class TestGraphWalkTokenPositionsProperty:
 class TestGraphTopologyProperty:
     """Per-symbol invariants from the largest surface in this task.
 
-    Test methods are grouped by builder; each method stays ≤ 15 lines per
-    the recipe. ``Graph.random_walk_fast`` is pinned against ``random_walk``
-    even though it has no in-repo caller besides this class.
+    Test methods are grouped by builder; each method stays ≤ 15 lines.
+    ``Graph.random_walk_fast`` is pinned against ``random_walk`` even though
+    it has no in-repo caller besides this class.
     """
 
     pytestmark = pytest.mark.property

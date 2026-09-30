@@ -16,7 +16,7 @@ import pytest
 import torch
 
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
-from causalab.neural.shared.executor_base import RowWindow
+from causalab.neural.shared.executor import RowWindow
 from causalab.neural.shared.sites import resolve_site
 from causalab.protocol.registry import ATTENTION_FUNCTION_SLOTS
 from causalab.protocol.schema import SiteSpec
@@ -171,8 +171,8 @@ def test_prefixes_do_not_cross_backends():
     raws = _scan()
     _, handles, cache = _campaign(raws)
     executor = _executor(raws[0], bundle, interning=handles[0])
-    digest = handles[0].digests[("patched", "base")]
-    plan = cache.prefix_plans[digest]
+    key = handles[0].keys[("patched", "base")]
+    plan = cache.prefix_plans[key]
     window = RowWindow(0, 1, 1)
     interior = resolve_site(bundle, SiteSpec(component="attention_scores", layers=[1]))
     sdpa_key = executor._prefix_key(plan, window, 1)
@@ -184,8 +184,8 @@ def test_prefixes_do_not_cross_backends():
     assert sdpa_key != eager_key
     assert executor._prefix_key(plan, window, 1) == sdpa_key
     # Both variants must be released by the existing reference-count policy.
-    while cache.prefix_owed[(plan.base_digest, 1)] > 0:
-        executor._settle_prefixes(digest)
+    while cache.prefix_owed[(plan.base_key, 1)] > 0:
+        executor._settle_prefixes(key)
     assert not cache.prefixes
 
 
@@ -222,7 +222,7 @@ def test_campaign_interior_taps_do_not_change_module_only_values(reverse, compon
     if reverse:
         raws.reverse()
     _, handles, _ = _campaign(raws)
-    assert handles[0].digests != handles[1].digests
+    assert handles[0].keys != handles[1].keys
     for raw, handle in zip(raws, handles):
         with observed(bundle) as seen:
             actual = executor_for(
@@ -257,7 +257,7 @@ def test_composite_backend_prefix_keys_are_stable_and_distinct(monkeypatch):
     raws = _scan()
     _, handles, cache = _campaign(raws)
     executor = _executor(raws[0], bundle, interning=handles[0])
-    plan = cache.prefix_plans[handles[0].digests[("patched", "base")]]
+    plan = cache.prefix_plans[handles[0].keys[("patched", "base")]]
     window = RowWindow(0, 1, 1)
     from types import SimpleNamespace
 
@@ -284,7 +284,7 @@ def test_composite_backend_prefix_keys_are_stable_and_distinct(monkeypatch):
 @pytest.mark.parametrize("missing", [False, True])
 def test_unknown_backend_refuses_before_switching(monkeypatch, missing):
     from types import SimpleNamespace
-    from causalab.protocol.errors import ProtocolError
+    from causalab.protocol.rules.errors import ProtocolError
 
     bundle = load_model(TINY_LLAMA, attn_implementation="sdpa")
     executor = executor_for(_read_doc("attention_probs", 1), bundle, base_texts=[TEXT])
@@ -304,7 +304,7 @@ def test_unknown_backend_refuses_before_switching(monkeypatch, missing):
 
 def test_plugin_attention_slots_partition_forward_groups(monkeypatch):
     import dataclasses
-    from causalab.protocol import plan
+    from causalab.neural.shared import plan
     from causalab.protocol.registry import Tap
 
     raw = _read_doc("attention_value_states", 1)
@@ -319,4 +319,4 @@ def test_plugin_attention_slots_partition_forward_groups(monkeypatch):
     )
     monkeypatch.setattr(plan, "FAMILIES", {**plan.FAMILIES, "test_plugin": plugin})
     _, after, _ = _campaign([raw])
-    assert before[0].digests != after[0].digests
+    assert before[0].keys != after[0].keys

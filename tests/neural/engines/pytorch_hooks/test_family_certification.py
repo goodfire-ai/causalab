@@ -6,8 +6,8 @@ family.
 engine and through the raw-hook oracle (``hook_oracle_lib``, extended to the
 DeltaNet kernel boundary and the recurrence interior), compared at the
 declared fp32 band — **exact** — and replayed against the committed record
-``tests/neural/parity/goldens/qwen35moe.json``, which carries the eight
-certification fields.
+``tests/neural/parity/goldens/qwen35moe.json``, which carries the
+eight certification fields.
 
 The acceptance clauses:
 
@@ -40,6 +40,7 @@ from pathlib import Path
 import pytest
 import torch
 
+from tests._helpers.kernel_paths import LIBRARY_KERNEL_PATHS_IN_FORCE
 from tests.neural.engines.pytorch_hooks import hook_oracle_lib as oracle_lib
 from tests.neural.parity import family_certification as fc
 
@@ -91,6 +92,13 @@ def test_the_committed_record_replays(capture, committed):
     assert not problems, "\n".join(problems)
 
 
+def test_the_capture_runs_the_library_kernel_paths(capture):
+    """The record attests what was in force, and what was in force is the
+    library setting: ``capture_family`` wraps its body, and a dropped wrap
+    fails here on every CPU run rather than at the next recapture."""
+    assert capture.record["context"]["kernel_paths"] == LIBRARY_KERNEL_PATHS_IN_FORCE
+
+
 def test_the_record_is_a_family_golden_in_the_existing_shape(committed):
     """The frozen goldens' keys are all there, with their meanings, and the
     values are keyed the way the frozen goldens key theirs."""
@@ -108,7 +116,8 @@ def test_the_record_is_a_family_golden_in_the_existing_shape(committed):
     assert committed["captured_from"] == "hook_oracle"
     assert committed["attn_implementation"] == "eager"
     assert committed["deterministic"] is True
-    assert set(committed["context"]) == {"torch", "transformers"}
+    assert set(committed["context"]) == {"torch", "transformers", "kernel_paths"}
+    assert committed["context"]["kernel_paths"] == LIBRARY_KERNEL_PATHS_IN_FORCE
     assert committed["recapture"].endswith(f"--family {FAMILY}")
     grammar = re.compile(rf"^{FAMILY}\.(collect|interchange)\.[a-z_]+\.identity\.")
     assert committed["values"], "an empty pin set would replay vacuously"
@@ -149,7 +158,7 @@ def _fields_documented_in_tests_md() -> set[str]:
     families — the doc half of the census (``test_vocabulary_census.py``'s
     pattern: the table that documents a closed set is held to the set)."""
     text = TESTS_DOC.read_text()
-    marker = "the certification record's eight fields"
+    marker = "the eight certification fields"
     assert marker in text, f"docs/TESTS.md no longer names {marker!r}"
     after = text.split(marker, 1)[1]
     row = after.split("\n", 1)[0]
@@ -160,13 +169,13 @@ def _fields_documented_in_tests_md() -> set[str]:
 
 @pytest.mark.parametrize("family", fc.CERTIFIED_FAMILIES)
 def test_the_record_carries_exactly_the_eight_fields(family: str):
-    """T5: the certification block's key set equals the declared list —
+    """T5: the certification block's key set equals `CERTIFICATION_FIELDS` —
     both directions, per certified family record."""
     path = fc.record_path(family)
     if not path.exists():
         pytest.fail(f"{path} is missing: capture it with {fc.FAMILIES[family]!r}")
     record = fc.load_record(family)
-    assert len(fc.MIXING_S20_FIELDS) == 8
+    assert len(fc.CERTIFICATION_FIELDS) == 8
     missing, extra = fc.check_certification_fields(record)
     assert not missing and not extra, (missing, extra)
     block = record["certification"]
@@ -186,7 +195,7 @@ def test_the_record_carries_exactly_the_eight_fields(family: str):
 
 
 def test_the_docs_list_the_same_eight_fields():
-    assert _fields_documented_in_tests_md() == set(fc.MIXING_S20_FIELDS)
+    assert _fields_documented_in_tests_md() == set(fc.CERTIFICATION_FIELDS)
 
 
 def test_dropping_a_field_fails_the_census(committed):

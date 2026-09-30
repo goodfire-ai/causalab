@@ -3,7 +3,9 @@
 Two tests walk the whole tree for prose — the vocabulary census
 (`tests/protocol/test_vocabulary_census.py`) and the refusal-quote guard
 (`tests/workflow/test_cli_refusals.py`) — and both name their carve-outs by
-path from the repo root. A filesystem walk is the wrong instrument for that:
+path from the repo root. The paper layout check
+(`tests/demos/test_papers.py::test_layout`) counts directories the same way,
+through `tracked_child_dirs`. A filesystem walk is the wrong instrument for that:
 it enumerates whatever is *present*, and a checkout routinely holds a second
 copy of the tree that is not part of it — a worktree under ``worktrees/``
 (`.gitignore`), a setuptools ``build/lib/``, a ``dist/`` unpack. Every
@@ -42,7 +44,7 @@ def tracked_files(root: Path, *patterns: str) -> list[Path]:
     Reads ``git ls-files``; patterns are git pathspecs, so ``*.md`` matches at
     every depth. Falls back to a filesystem walk **only when git cannot answer**
     — no ``git`` on ``PATH``, or ``root`` is not inside a repository (a source
-    tarball). The fallback prunes :data:`PRUNED_DIRECTORIES` and so has the
+    tarball). The fallback prunes `PRUNED_DIRECTORIES` and so has the
     nested-copy hole described in the module docstring; a checkout that is a
     git repository never takes it.
     """
@@ -58,9 +60,27 @@ def tracked_files(root: Path, *patterns: str) -> list[Path]:
     return sorted(root / entry.decode() for entry in listed.split(b"\0") if entry)
 
 
+def tracked_child_dirs(parent: Path) -> set[str]:
+    """The names of ``parent``'s child directories that hold a tracked file
+    at any depth.
+
+    A layout check lists these rather than every directory on disk. A
+    directory that holds only ignored files, such as the ``__pycache__`` a
+    renamed package leaves in an old checkout, is then not reported as a
+    stray, and CI's clean checkout and a developer's tree agree. Reads
+    `tracked_files`, so it takes the same fallback walk outside a
+    repository.
+    """
+    return {
+        path.relative_to(parent).parts[0]
+        for path in tracked_files(parent, "*")
+        if len(path.relative_to(parent).parts) > 1
+    }
+
+
 def _walked(root: Path, *patterns: str) -> list[Path]:
     """The fallback: every file under ``root`` whose name matches a pattern,
-    with :data:`PRUNED_DIRECTORIES` and dotted directories pruned from the
+    with `PRUNED_DIRECTORIES` and dotted directories pruned from the
     descent rather than filtered from the result — a virtualenv holds more
     files than the tree does."""
     out: list[Path] = []

@@ -4,7 +4,7 @@ A three-step script chain — the same shape `test_attempt_publish.py` uses —
 run on CPU with no engine. What is pinned: the per-step order `phase_started`
 → `result_committed` → `phase_completed`, with `result_committed` at the
 publish moment and `campaign_terminal` last; the stream beside `workflow.json`
-and in **no** step directory (mutable sidecar, immutable outputs);
+and in **no** step directory (a mutable sidecar beside immutable outputs);
 **T9** — `workflow.json` and every published file byte-identical with and
 without a sink that raises on every line, the stream holding one `warning`
 per failed delivery; `--resume` reusing every step with the stream present
@@ -29,7 +29,7 @@ from typing import Any
 import pytest
 
 from causalab.io.events import EVENTS, EVENTS_FILE, read_events, terminal
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.workflow import manifest as mf
 from causalab.workflow import runner
 from causalab.workflow.document import load_workflow
@@ -43,11 +43,12 @@ from tests.workflow.test_attempt_publish import (
     THIRD,
     _document,  # pyright: ignore[reportPrivateUsage]
 )
+from tests._helpers.paths import WORKFLOWS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
-WORKFLOWS = REPO / "causalab" / "configs" / "workflows"
+WORKFLOWS = WORKFLOWS_DIR
 
 
 class Delivered(Exception):
@@ -88,7 +89,7 @@ def test_the_stream_narrates_each_step_in_order_and_ends_terminal(
     chain_dir: Path, env: Any, tmp_path: Path
 ) -> None:
     loaded = _load(chain_dir, env)
-    result = run_workflow(loaded, env, tmp_path / "runs", [])
+    result = run_workflow(loaded, env, tmp_path / "runs", None)
     run_root = result.run_root
     records = read_events(run_root / EVENTS_FILE)
 
@@ -124,7 +125,7 @@ def test_the_stream_sits_beside_the_manifest_and_in_no_step_directory(
     chain_dir: Path, env: Any, tmp_path: Path
 ) -> None:
     loaded = _load(chain_dir, env)
-    run_root = run_workflow(loaded, env, tmp_path / "runs", []).run_root
+    run_root = run_workflow(loaded, env, tmp_path / "runs", None).run_root
     assert (run_root / EVENTS_FILE).is_file()
     assert (run_root / mf.MANIFEST).is_file()
     for name in loaded.order:
@@ -139,8 +140,10 @@ def test_t9_a_raising_sink_changes_no_output_and_leaves_one_warning_per_line(
     chain_dir: Path, env: Any, tmp_path: Path
 ) -> None:
     loaded = _load(chain_dir, env)
-    plain = run_workflow(loaded, env, tmp_path / "plain", []).run_root
-    sunk = run_workflow(loaded, env, tmp_path / "sunk", [], sink=_raising_sink).run_root
+    plain = run_workflow(loaded, env, tmp_path / "plain", None).run_root
+    sunk = run_workflow(
+        loaded, env, tmp_path / "sunk", None, sink=_raising_sink
+    ).run_root
 
     assert (plain / mf.MANIFEST).read_bytes() == (sunk / mf.MANIFEST).read_bytes()
     assert _files(plain) == _files(sunk)
@@ -172,11 +175,11 @@ def test_resume_ignores_the_stream_and_appends_to_it(
 ) -> None:
     loaded = _load(chain_dir, env)
     out = tmp_path / "runs"
-    first = run_workflow(loaded, env, out, [])
+    first = run_workflow(loaded, env, out, None)
     first_stream = (first.run_root / EVENTS_FILE).read_bytes()
     first_files = _files(first.run_root)
 
-    second = run_workflow(loaded, env, out, [], resume=True)
+    second = run_workflow(loaded, env, out, None, resume=True)
     assert {n: e["status"] for n, e in second.manifest["steps"].items()} == {
         name: "reused" for name in loaded.order
     }
@@ -215,7 +218,7 @@ def test_a_failed_run_warns_and_ends_terminal_failed_because_the_manifest_was_wr
     that dies before its `finally` leaves neither (the next test)."""
     loaded = _load(chain_dir, env, scripts={"second": "raising.py"})
     with pytest.raises(RuntimeError, match="the step died"):
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     run_root = tmp_path / "runs" / "chain"
     records = read_events(run_root / EVENTS_FILE)
     events = [(r["event"], r["payload"].get("step")) for r in records]
@@ -252,7 +255,7 @@ def test_a_run_that_dies_before_the_manifest_leaves_no_terminal_line(
     monkeypatch.setattr(runner, "write_manifest", dying)
     loaded = _load(chain_dir, env)
     with pytest.raises(OSError, match="disk full"):
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     stream = tmp_path / "runs" / "chain" / EVENTS_FILE
     assert not terminal(stream)
     assert read_events(stream)[-1]["event"] == "phase_completed"
@@ -289,7 +292,7 @@ def test_an_interrupted_run_writes_its_manifest_and_no_terminal_line(
     loaded = _load(chain_dir, env, aside=True)
     assert loaded.order == ("first", "second", "third", "aside")
     with pytest.raises(type(interrupt)) as info:
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     assert info.value is interrupt
     if isinstance(interrupt, SystemExit):
         assert interrupt.code == 3
@@ -343,7 +346,7 @@ def test_a_pre_existing_stream_the_runner_cannot_read_refuses_the_run_before_it_
 
     loaded = _load(chain_dir, env)
     with pytest.raises(ProtocolError, match="cannot be read") as info:
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     assert isinstance(info.value.__cause__, ValueError)
     assert str(stream) in str(info.value.__cause__)
     assert "move the sidecar aside" in str(info.value)
@@ -364,7 +367,7 @@ def test_a_manifest_the_finally_withheld_on_a_clean_run_is_refused_not_asserted(
     monkeypatch.setattr(runner, "_derived_statuses", lambda *a, **k: None)
     loaded = _load(chain_dir, env)
     with pytest.raises(ProtocolError, match="no manifest to return"):
-        run_workflow(loaded, env, tmp_path / "runs", [])
+        run_workflow(loaded, env, tmp_path / "runs", None)
     run_root = tmp_path / "runs" / "chain"
     assert not (run_root / mf.MANIFEST).exists()
     assert not terminal(run_root / EVENTS_FILE), "a terminal line without a manifest"
@@ -375,12 +378,12 @@ def test_a_manifest_the_finally_withheld_on_a_clean_run_is_refused_not_asserted(
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("name", ["mean_ablation.json", "weekdays_8b.json"])
+@pytest.mark.parametrize("name", ["mean_ablation.json", "weekdays.json"])
 def test_the_event_layer_is_in_no_shipped_scripts_closure(env: Any, name: str) -> None:
     """`events.py` and `derived.py` are in no shipped script's repository
     closure (spec §4.2) — a layering fact, not an identity one: no shipped
     entry carries a closure key at all."""
-    from causalab.protocol.code import import_closure
+    from causalab.protocol.identity import import_closure
 
     loaded = load_workflow(WORKFLOWS / name, env)
     for entry in loaded.canonical["steps"].values():

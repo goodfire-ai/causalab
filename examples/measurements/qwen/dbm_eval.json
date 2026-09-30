@@ -1,0 +1,47 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Held-out interchange through the saved DBM gate using its hard evaluation mask. Load the fitted artifact from the authored dependency; interpret effectiveness alongside gate confidence from the fit."
+  },
+  "model": {
+    "key": "Qwen/Qwen3.6-35B-A3B",
+    "revision": "995ad96eacd98c81ed38be0c5b274b04031597b0",
+    "dtype": "bf16"
+  },
+  "data": {
+    "base": {"dataset": "pairs#test", "field": "input"},
+    "counterfactual": {"dataset": "pairs#test", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]}
+    },
+    "sites": {
+      "target": {"component": "block_output", "layers": [19]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {"gate": {"kind": "gate", "file_path": "dbm/gate.safetensors"}},
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "featurizer": "gate"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "mask": {"site": "target", "pos": -1, "featurizer": "gate", "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "cross_entropy", "target": "label"},
+        "file_path": "ce.json"
+      }
+    ]
+  }
+}

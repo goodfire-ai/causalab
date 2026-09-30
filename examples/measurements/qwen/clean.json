@@ -1,0 +1,25 @@
+{
+  "header": {"protocol_version": "4"},
+  "model": {
+    "key": "Qwen/Qwen3.6-35B-A3B",
+    "revision": "995ad96eacd98c81ed38be0c5b274b04031597b0",
+    "dtype": "bf16"
+  },
+  "data": {"base": {"dataset": "pairs#test", "field": "input"}},
+  "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["logits"]}
+    },
+    "sites": {"head": {"component": "lm_head"}},
+    "reads": {"logits": {"site": "head", "pos": -1}},
+    "save": [
+      {"read": "logits", "model": "original", "file_path": "logits.safetensors"},
+      {
+        "read": "logits",
+        "model": "original",
+        "aggregation": {"kind": "match", "expected": "base_answer"},
+        "file_path": "accuracy.json"
+      }
+    ]
+  }
+}

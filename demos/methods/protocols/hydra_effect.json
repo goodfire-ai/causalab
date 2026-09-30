@@ -1,0 +1,91 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "The Hydra effect (McGrath et al. 2023, arXiv:2307.15771), main experiment: resample-ablate attention layer 11 at the final token, measure downstream layers' direct effects (contribution injected as the final residual, read at lm_head) in both the clean and ablated intervened models. Two probe layers written out; a range axis on a single probe site would fan the whole pattern to the paper's grid."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main"},
+  "data": {
+    "base": {"dataset": "pile/data/sample", "field": "input"},
+    "counterfactual": {"dataset": "pile/data/sample", "field": "resample_input"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_noise"]},
+      "original_base": {"input": "base", "reads": ["logits_clean", "a12_clean", "a17_clean"]},
+      "ablated": {
+        "input": "base",
+        "reads": ["logits_abl", "a12_abl", "a17_abl"],
+        "writes": ["resample"]
+      },
+      "with_inj12_clean": {"input": "base", "reads": ["de12_clean"], "writes": ["inj12_clean"]},
+      "with_inj17_clean": {"input": "base", "reads": ["de17_clean"], "writes": ["inj17_clean"]},
+      "with_inj12_abl": {"input": "base", "reads": ["de12_abl"], "writes": ["inj12_abl"]},
+      "with_inj17_abl": {"input": "base", "reads": ["de17_abl"], "writes": ["inj17_abl"]}
+    },
+    "sites": {
+      "abl": {"component": "attention_output", "layers": [11]},
+      "probe12": {"component": "attention_output", "layers": [12]},
+      "probe17": {"component": "attention_output", "layers": [17]},
+      "resid_final": {"component": "block_output", "layers": [27]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_noise": {"site": "abl", "pos": -1},
+      "logits_clean": {"site": "lm_head", "pos": -1},
+      "logits_abl": {"site": "lm_head", "pos": -1},
+      "a12_clean": {"site": "probe12", "pos": -1},
+      "a17_clean": {"site": "probe17", "pos": -1},
+      "a12_abl": {"site": "probe12", "pos": -1},
+      "a17_abl": {"site": "probe17", "pos": -1},
+      "de12_clean": {"site": "lm_head", "pos": -1},
+      "de17_clean": {"site": "lm_head", "pos": -1},
+      "de12_abl": {"site": "lm_head", "pos": -1},
+      "de17_abl": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "resample": {"site": "abl", "pos": -1, "do": {"swap": "v_noise"}},
+      "inj12_clean": {"site": "resid_final", "pos": -1, "do": {"swap": "a12_clean"}},
+      "inj17_clean": {"site": "resid_final", "pos": -1, "do": {"swap": "a17_clean"}},
+      "inj12_abl": {"site": "resid_final", "pos": -1, "do": {"swap": "a12_abl"}},
+      "inj17_abl": {"site": "resid_final", "pos": -1, "do": {"swap": "a17_abl"}}
+    },
+    "save": [
+      {
+        "read": "logits_clean",
+        "model": "original_base",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
+        "file_path": "te_clean.json"
+      },
+      {
+        "read": "logits_abl",
+        "model": "ablated",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
+        "file_path": "te_abl.json"
+      },
+      {
+        "read": "de12_clean",
+        "model": "with_inj12_clean",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
+        "file_path": "de12_clean.json"
+      },
+      {
+        "read": "de17_clean",
+        "model": "with_inj17_clean",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
+        "file_path": "de17_clean.json"
+      },
+      {
+        "read": "de12_abl",
+        "model": "with_inj12_abl",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
+        "file_path": "de12_abl.json"
+      },
+      {
+        "read": "de17_abl",
+        "model": "with_inj17_abl",
+        "aggregation": {"kind": "token_logit", "token": "ml_token"},
+        "file_path": "de17_abl.json"
+      }
+    ]
+  }
+}

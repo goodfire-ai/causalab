@@ -17,11 +17,12 @@ from typing import Any
 import pytest
 
 from causalab.workflow.document import _walk_run_tree_paths, load_workflow
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
-PROTOCOLS = REPO / "causalab" / "configs" / "protocols"
+PROTOCOLS = PROTOCOLS_DIR
 
 
 def _steps() -> dict[str, Any]:
@@ -34,7 +35,7 @@ def _steps() -> dict[str, Any]:
             "type": "script",
             "script": {"module": "causalab.analysis.fit_pca"},
             "inputs": {
-                "acts": {"step": "harvest", "file": "acts_L8_ans.safetensors"},
+                "acts": {"step": "harvest", "file": "acts_L7_ans.safetensors"},
                 "k": 32,
             },
             "outputs": {

@@ -19,6 +19,7 @@ from __future__ import annotations
 import pytest
 import torch
 
+from tests._helpers.kernel_paths import LIBRARY_KERNEL_PATHS_IN_FORCE
 from tests.neural.parity import family_certification as fc
 
 pytestmark = pytest.mark.golden
@@ -53,9 +54,18 @@ def test_the_committed_record_replays(capture, committed):
     assert not problems, "\n".join(problems)
 
 
+def test_the_capture_runs_the_library_kernel_paths(capture):
+    """What was in force for this capture is the library setting (module
+    docstring): ``capture_family`` wraps its body."""
+    assert capture.record["context"]["kernel_paths"] == LIBRARY_KERNEL_PATHS_IN_FORCE
+
+
 def test_the_record_carries_the_eight_fields(committed):
     missing, extra = fc.check_certification_fields(committed)
     assert not missing and not extra, (missing, extra)
+    # `compare_records` leaves `context` alone, so the provenance of the kernel
+    # setting is read here: the committed record was captured on the library path
+    assert committed["context"]["kernel_paths"] == LIBRARY_KERNEL_PATHS_IN_FORCE
     assert committed["certification"]["dtype"] == "bf16"
     assert (
         committed["certification"]["model_revision"]["key"] == fc.FAMILIES[FAMILY].key
@@ -69,8 +79,7 @@ def test_the_tower_is_the_documented_hybrid_schedule(capture):
 
 
 def test_every_genuine_write_moves_the_logits_and_the_intermediate(capture):
-    """The CPU family's writes check on the real checkpoint: every genuine
-    write moves the logits and every downstream intermediate."""
+    """T7 on the real checkpoint."""
     values = capture.record["values"]
     deltas = {k: v for k, v in values.items() if k.endswith(".clean_delta.max")}
     assert len(deltas) == len(fc.WRITES) + sum(len(w.downstream) for w in fc.WRITES)

@@ -1,26 +1,28 @@
 """Does a fitted rotation survive being saved and reloaded, exactly?
 
-A small drift between a `subspace` fit and the same fit reloaded from its
-artifact would put every replay control built on "reload the fit and score it
-again" on sand — so the property is settled by executing it rather than by
-reading the code, which is what this file is.
+The hypothesis under test is a **2^-14 ≈ 6.1e-5** drift between a `subspace` fit
+and the same fit reloaded from its artifact: a half-ulp at 10 mantissa bits,
+the size a silent half-precision hop on the save or load path would leave.
+This file uses the number only as the size of drift to test for. Every replay
+control that reloads a fit and scores it again depends on the round-trip being
+exact, so the tests execute the round-trip instead of relying on a reading of
+the code.
 
 There are two round-trips, and they are not the same object:
 
-**The artifact round-trip.** `slot_params()`
+**The artifact round-trip** (the artifact's own acceptance test). `slot_params()`
 returns the *materialized* Q of an orthogonal parametrization; that tensor is
 detached by `TensorFile.add`, written by `write_outputs`, and read back through
 `load_tensors` and `build_stack` as a `LoadedLinear`. The round-trip here is
 **the stack's own writer and reader**, not a `safetensors` stand-in: a dtype
 hop is something the code around `safetensors` would introduce, never
-`safetensors` itself, so a test that bypasses that code tests the one link
-that was never suspect. The claim under test is that the matrix is
-bit-identical and that the logits it produces are too — not merely close.
+`safetensors` itself, so a test that bypasses that code would skip the only
+place a hop could enter. The tests assert that the matrix is bit-identical and
+that the logits it produces are too — not merely close.
 
-**The in-training restore path**, which is where a small drift would more
-plausibly live.
-`train.early_stop` snapshots the best-scoring stages and restores them at the
-end, and a `Subspace`'s `weight` is *computed* from
+**The in-training restore path**, the other place a drift of this size could
+enter. `train.early_stop` snapshots the best-scoring stages and restores them
+at the end, and a `Subspace`'s `weight` is *computed* from
 `parametrizations.weight.original`. A snapshot taken over `slot_params()` would
 save the materialized Q and restore nothing — the weight would silently stay
 wherever the last update left it, which is exactly a small drift between "the
@@ -29,20 +31,21 @@ fit that was selected" and "the fit that was saved". `_snapshot` uses
 `test_a_snapshot_captures_the_parametrizations_own_parameter` is the guard that
 keeps it that way — the bug is re-introducible by a one-word edit.
 
-**What a drift of this kind would look like, and it is not fp32.**
+**The hypothesized size points at 10 mantissa bits, not at fp32.**
 
-    2^-14 = 6.1035e-5
+    hypothesized drift  = 2^-14 = 6.1035e-5
 
-``2^-14`` is the half-ulp of a **10-explicit-mantissa-bit** format for values in
-``[0.125, 0.25)`` — float16, and also TF32, the default matmul path on Ampere
-and later. A max-abs-diff sitting just *under* that ceiling is the signature of
-"the largest entries in that band were rounded to 10 mantissa bits", not of a
-logic bug. (bf16 has 8 mantissa bits, so its ceiling in the same band is
-2.44e-4.)
+``2^-14`` is exactly the half-ulp of a **10-explicit-mantissa-bit** format for
+values in ``[0.125, 0.25)`` — float16, and also TF32, the default matmul path on
+Ampere and later. A max-abs-diff sitting just *under* that ceiling is the
+signature of "the largest entries in that band were rounded to 10 mantissa
+bits", not of a logic bug. (bf16 has 8 mantissa bits, so its ceiling in the same
+band is 2.44e-4; a bf16 max-diff would land near 2e-4, not 6e-5.)
 
-Two mechanisms fit, and the conclusion reads differently under each: a dtype hop
-in the real save/load path, or a **recomputation** under TF32 rather than a copy
-— which would mean the number never came from the artifact at all.
+Two mechanisms would leave a drift of that size: a dtype hop in the real
+save/load path (mechanism 1), or a **recomputation** under TF32 rather than a
+copy (mechanism 2), in which case the drift would not come from the artifact
+at all.
 
 So the artifact round-trip here is parametrized over **fp32, bf16 and fp16**,
 through the real writer and reader. That costs nothing on CPU, and it turns
@@ -51,19 +54,21 @@ dtype that is deserves saying precisely: it is the `Subspace` parameter's,
 **fp32 on every engine today** — `Subspace.__init__` draws it with
 `torch.randn`, `build_stack` moves a stage's *device* and not its dtype, and
 nothing in the train loop casts it — so `model.dtype` never reaches it, and
-``weekdays_das_sweep.json``'s bf16 fits store fp32 rotations too. The
+the bf16 fits of ``demos/methods/protocols/weekdays_das_sweep.json`` store
+fp32 rotations too. The
 parametrization is what keeps that from being a load-bearing coincidence: a
 stage built in any of the three dtypes gets its bytes back.
 
 Result: **the artifact round-trip is exact in all three dtypes**, and the
-in-training restore path is exact in fp32.
+in-training restore path is exact in fp32. The hypothesized 2^-14 drift
+does not appear in any of them.
 
-What that does and does not settle. It rules out the *artifact* as the source at
-every precision this stack stores, which is the half the replay controls rest
-on. It does **not** rule out a reduced-precision *recomputation* — mechanism 2 —
-because that needs a GPU: TF32 is a matmul path, not a storage format, and no
-CPU test can exercise it. That check belongs on an accelerator, and the
-arithmetic above is why it is worth running rather than a formality.
+What the tests establish and what they do not. They rule out the *artifact*
+as the source of such a drift at every precision this stack stores, which is
+what the replay controls rest on. The restore path is tested in fp32 only.
+Every test here runs on CPU, so none covers mechanism 2: TF32 is a CUDA matmul
+path, not a storage format, and no CPU test can exercise it. A reduced-precision
+recomputation on a GPU therefore stays untested by this file.
 """
 
 from __future__ import annotations
@@ -80,10 +85,11 @@ from safetensors.torch import load_file
 from causalab.cli import main
 from causalab.neural.engines.pytorch_hooks.loading import _DTYPES
 from causalab.neural.shared.featurizers import LoadedLinear, Subspace, build_stack
-from causalab.neural.shared.outputs import TensorFile, write_outputs
-from causalab.neural.shared.services import load_tensors
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.resolve import (
+from causalab.io.results_io import write_outputs
+from causalab.neural.shared.results import TensorFile
+from causalab.io.tensor_files import load_tensors
+from causalab.protocol.engine import RunContext
+from causalab.io.env import (
     FileArtifacts,
     ResolutionEnv,
     build_artifact_identity,
@@ -93,14 +99,16 @@ from causalab.protocol.schema import FeaturizerSpec
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
+from tests.protocol._docs import UNWRITTEN, saved, term
 from tests.protocol._env import FIXTURES, fixture_input_overrides
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR
 
 # One tier per test, declared per test. `docs/TESTS.md`: "every test belongs to
 # exactly one tier" — and a `pytestmark` at module level *adds to* a marker on a
 # test rather than being replaced by it, so a module-level `unit` plus the
 # `smoke` marker on the end-to-end run put that test in two tiers at once.
-# `tests/conftest.py` only catches *zero* markers, so nothing flagged it.
+# `tests/conftest.py` only catches *zero* markers, so it would not flag that.
 unit = pytest.mark.unit
 
 #: The seed every draw in this file uses. One constant, because the non-vacuity
@@ -110,10 +118,9 @@ unit = pytest.mark.unit
 #: pass more easily.
 SEED = 0
 
-#: The half-ulp of a 10-mantissa-bit format in ``[0.125, 0.25)`` — the size of
-#: drift a dtype hop would produce. Named so the assertions can say what they
-#: would have caught.
-HALF_ULP_DRIFT = 2.0**-14
+#: The hypothesized drift under test. Named so the assertions can say what
+#: they would have caught.
+HYPOTHESIZED_DRIFT = 2.0**-14
 
 BASES = [
     "the quick brown fox jumps over",
@@ -131,6 +138,11 @@ ANSWERS = [" one", " two", " three", " four"]
 
 K = 4
 
+#: The fit's one aggregation (§2.10): the cross-entropy of the patched logits
+#: against the row's ``label`` — the objective's term, the eval's score and
+#: the table ``ce.json`` (label ``ce``) the document saves.
+CE: dict = {"kind": "cross_entropy", "target": "label"}
+
 
 def das_doc(
     *, epochs: int = 2, early_stop_mode: str | None = None, seed: int = SEED
@@ -141,10 +153,14 @@ def das_doc(
     (``"min"`` or ``"max"`` on ``ce``); ``None`` fits without selection.
     """
     doc: dict = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "sites": {
                 "tgt": {"component": "block_output", "layers": [0]},
                 "lm_head": {"component": "lm_head"},
@@ -153,19 +169,8 @@ def das_doc(
                 "rot": {"kind": "subspace", "k": K, "parametrization": "cayley"}
             },
             "reads": {
-                "v_cf": {
-                    "site": "tgt",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "counterfactual",
-                    "featurizer": "rot",
-                },
-                "logits": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tgt", "pos": {"index": -1}, "featurizer": "rot"},
+                "logits": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {
                 "patch": {
@@ -175,17 +180,8 @@ def das_doc(
                     "do": {"swap": "v_cf"},
                 }
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "metrics": {
-                "ce": {
-                    "kind": "cross_entropy",
-                    "of": "logits",
-                    "target": "label",
-                    "token_form": "space_prefixed",
-                }
-            },
             "train": {
-                "objective": [[1.0, "ce"]],
+                "objective": [[1.0, term("logits", "patched", dict(CE))]],
                 "params": ["rot"],
                 "optimizer": {"name": "adamw", "lr": 1e-2, "weight_decay": 0.0},
                 "steps": {"epochs": epochs},
@@ -193,12 +189,7 @@ def das_doc(
                 "seed": seed,
             },
             "save": [
-                {
-                    "value": "ce",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "ce.json",
-                },
+                saved("logits", "patched", "ce.json", dict(CE)),
                 {"value": "rot", "site": "tgt", "file_path": "rot.safetensors"},
             ],
         },
@@ -211,10 +202,10 @@ def das_doc(
         doc["method"]["train"]["eval"] = {
             "every": {"epochs": 1},
             "split": "inline",
-            "metrics": ["ce"],
+            "aggregations": {"ce": term("logits", "patched", dict(CE))},
         }
         doc["method"]["train"]["early_stop"] = {
-            "metric": "ce",
+            "on": "ce",
             "patience": 5,
             "mode": early_stop_mode,
         }
@@ -250,15 +241,10 @@ class _InlineDatasets:
         ]
 
 
-def _request(artifacts_root: Path | None) -> ExecutionRequest:
+def _request(artifacts_root: Path | None) -> RunContext:
     """The request the engine hands its services; ``artifacts_root`` is what
     `load_tensors` resolves a featurizer's ``file_path`` against."""
-    return ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+    return RunContext(
         env=ResolutionEnv(
             datasets=_InlineDatasets(),  # type: ignore[arg-type]
             artifacts=FileArtifacts(artifacts_root) if artifacts_root else None,  # type: ignore[arg-type]
@@ -308,9 +294,9 @@ def test_the_fit_actually_moved_the_rotation(fitted: Subspace) -> None:
     """
     initial = Subspace(fitted.weight.shape[0], K, "cayley", seed=SEED).weight
     moved = (fitted.weight - initial).abs().max().item()
-    assert moved > HALF_ULP_DRIFT * 10, (
+    assert moved > HYPOTHESIZED_DRIFT * 10, (
         f"the fit moved the basis by only {moved:.3e}, which is not enough "
-        f"larger than the {HALF_ULP_DRIFT:.3e} drift under test for a "
+        f"larger than the {HYPOTHESIZED_DRIFT:.3e} drift under test for a "
         "round-trip assertion to mean anything"
     )
 
@@ -329,11 +315,12 @@ ROT_FILE = "rot.safetensors"
 DTYPE_NAMES = {torch_dtype: name for name, torch_dtype in _DTYPES.items()}
 
 #: Every dtype a rotation could be stored in. fp32 is what `Subspace` is built
-#: in on every engine (module docstring); fp16 is the format whose half-ulp a
-#: dtype-hop drift would match; bf16 is `weekdays_das_sweep.json`'s *model* dtype,
+#: in on every engine (module docstring); fp16 is the format whose half-ulp the
+#: hypothesized drift matches; bf16 is the *model* dtype of the shipped
+#: `demos/methods/protocols/weekdays_das_sweep.json` protocol,
 #: which does not reach the rotation today but is the first place it would land
-#: if a stage were ever built in the model's dtype. Testing only fp32 would
-#: test the one case least likely to show a drift.
+#: if a stage were ever built in the model's dtype. An fp32-only test would
+#: cover the one dtype least likely to show a drift of that size.
 STORED_DTYPES = [torch.float32, torch.bfloat16, torch.float16]
 
 
@@ -347,7 +334,6 @@ def _save_through_the_stack(weight: torch.Tensor, out_dir: Path) -> Path:
     can be handed in at any dtype without building a `Subspace` in it.
     """
     identity = build_artifact_identity(
-        produced_by="0" * 64,
         model_key=TINY_LLAMA,
         model_revision="main",
         model_dtype="fp32",
@@ -365,7 +351,6 @@ def _save_through_the_stack(weight: torch.Tensor, out_dir: Path) -> Path:
         {ROT_FILE: bundle_file},
         {},
         identity_base={
-            "produced_by": "0" * 64,
             "model_key": TINY_LLAMA,
             "model_revision": "main",
             "model_dtype": "fp32",
@@ -406,7 +391,7 @@ def _raw_bytes(tensor: torch.Tensor) -> bytes:
     """The tensor's bytes, for any dtype.
 
     ``.numpy()`` cannot represent bf16 at all, so the byte comparison — which is
-    the claim as stated — goes through a uint8 view.
+    what the artifact test asserts — goes through a uint8 view.
     """
     return tensor.detach().contiguous().view(torch.uint8).numpy().tobytes()
 
@@ -416,10 +401,10 @@ def _raw_bytes(tensor: torch.Tensor) -> bytes:
 def test_the_saved_matrix_comes_back_bit_identical(
     fitted: Subspace, tmp_path: Path, dtype: torch.dtype
 ) -> None:
-    """The round-trip claim, at the tensor level: matrix bytes, not closeness.
+    """The artifact round-trip, at the tensor level: matrix bytes, not closeness.
 
-    Parametrized over the dtypes a rotation can be stored in, because a
-    dtype-hop drift is a 10-mantissa-bit half-ulp and an fp32-only test is
+    Parametrized over the dtypes a rotation can be stored in, because the
+    hypothesized 2^-14 is a 10-mantissa-bit half-ulp and an fp32-only test is
     structurally blind to it. The cast happens *before* the save, so what is
     under test is the storage round-trip and not the cast.
 
@@ -433,7 +418,7 @@ def test_the_saved_matrix_comes_back_bit_identical(
     assert {tensor.dtype for tensor in on_disk.values()} == {dtype}, (
         f"the writer stored a {dtype} rotation as "
         f"{sorted(str(t.dtype) for t in on_disk.values())} — a dtype hop in "
-        "TensorFile.add, which is mechanism 1 for a round-trip drift"
+        "TensorFile.add, which is mechanism 1 for the hypothesized drift"
     )
     reloaded = _load_through_the_stack(tmp_path, weight.shape[0]).weight
     assert reloaded.dtype == dtype, (
@@ -442,20 +427,20 @@ def test_the_saved_matrix_comes_back_bit_identical(
     )
     assert reloaded.shape == weight.shape
     torch.testing.assert_close(reloaded, weight, atol=0.0, rtol=0.0)
-    # and the bytes themselves, which is the claim as stated
+    # and the bytes themselves, which is what the test asserts
     assert _raw_bytes(reloaded) == _raw_bytes(weight)
 
 
 @unit
 @pytest.mark.parametrize("dtype", STORED_DTYPES, ids=lambda d: str(d).split(".")[-1])
-def test_the_round_trip_does_not_drift_in_any_stored_dtype(
+def test_the_round_trip_does_not_reproduce_the_hypothesized_drift(
     fitted: Subspace, tmp_path: Path, dtype: torch.dtype
 ) -> None:
-    """The claim under test, at every stored precision.
+    """The hypothesis under test, at every stored precision.
 
     A reduced-precision *cast* moves the matrix — that is arithmetic, and not
-    the property. The property is a difference between a fit and **the same
-    fit reloaded**, so the comparison is cast-then-save against
+    the drift the hypothesis names. The hypothesis is a difference between a
+    fit and **the same fit reloaded**, so the comparison is cast-then-save against
     cast-then-save-then-load, and it has to be zero in every dtype.
     """
     weight = fitted.weight.detach().to(dtype)
@@ -467,7 +452,7 @@ def test_the_round_trip_does_not_drift_in_any_stored_dtype(
     )
     assert delta == 0.0, (
         f"the artifact round-trip drifted by {delta:.3e} in {dtype} — the "
-        f"half-ulp drift of {HALF_ULP_DRIFT:.3e} a dtype hop produces would show here"
+        f"hypothesized {HYPOTHESIZED_DRIFT:.3e} would reproduce here"
     )
 
 
@@ -507,7 +492,7 @@ def test_a_reloaded_rotation_featurizes_identically(
 def test_a_snapshot_captures_the_parametrizations_own_parameter(
     fitted: Subspace,
 ) -> None:
-    """The regression guard for the snapshot path.
+    """The guard on what `_snapshot` captures.
 
     A `Subspace`'s `weight` is computed by
     `torch.nn.utils.parametrizations.orthogonal`, so the tensor the optimizer
@@ -551,7 +536,7 @@ def test_restoring_a_snapshot_reproduces_the_materialized_rotation(
     with torch.no_grad():
         for param in stage.parameters():
             param.add_(0.1)
-    assert (stage.weight - before).abs().max().item() > HALF_ULP_DRIFT * 10
+    assert (stage.weight - before).abs().max().item() > HYPOTHESIZED_DRIFT * 10
     _restore({"rot": stage}, snapshot)
     torch.testing.assert_close(stage.weight, before, atol=0.0, rtol=0.0)
     # and the shared fixture is untouched, which is the point of the copy
@@ -565,10 +550,10 @@ ORIGINAL = "parametrizations.weight.original"
 
 @unit
 def test_an_early_stopping_fit_returns_the_weights_it_selected(monkeypatch) -> None:
-    """The same claim through the real loop rather than the two helpers.
+    """The same restore check through the real loop rather than the two helpers.
 
     The obvious assertion here — that the returned rotation is orthonormal —
-    **cannot fail**, and that is worth saying because it looks like a check.
+    **cannot fail**, although it looks like a check.
     Under `parametrizations.orthogonal` the weight is *recomputed* from
     `parametrizations.weight.original` on every access, and the Cayley transform
     of any matrix has orthonormal columns. So the Gram identity holds before
@@ -589,7 +574,7 @@ def test_an_early_stopping_fit_returns_the_weights_it_selected(monkeypatch) -> N
     restore has to roll back two epochs of updates. A spy on `_restore`
     captures the state training actually ended on, and the guard asserts that
     state differs from the snapshot — that is what makes the final equality a
-    claim about `_restore` rather than about `_snapshot`, and it is what fails
+    check of `_restore` rather than of `_snapshot`, and it is what fails
     if the fixture's dynamics ever drift back to best-is-last.
     """
     from causalab.neural.engines.pytorch_hooks import train as train_module
@@ -633,7 +618,7 @@ def test_an_early_stopping_fit_returns_the_weights_it_selected(monkeypatch) -> N
     )
     last = ended_on[-1]["rot"][ORIGINAL]
     rolled_back = (last - best[ORIGINAL]).abs().max().item()
-    assert rolled_back > HALF_ULP_DRIFT * 10, (
+    assert rolled_back > HYPOTHESIZED_DRIFT * 10, (
         f"training ended {rolled_back:.3e} from the snapshotted state — this "
         "run never exercised a rollback, so it would pass with _restore as a "
         "no-op and says nothing about it"
@@ -647,7 +632,7 @@ def test_an_early_stopping_fit_returns_the_weights_it_selected(monkeypatch) -> N
         torch.testing.assert_close(state[key], want, atol=0.0, rtol=0.0)
     # ...and therefore the materialized rotation recomputed from it. Implied by
     # the line above for a deterministic map — kept because "the state dict
-    # alone determines Q" is the thesis of this file, and this is where it is checked.
+    # alone determines Q" is this file's thesis, and this is where it is checked.
     restored = Subspace(rot.weight.shape[0], K, "cayley", seed=SEED)
     restored.load_state_dict(dict(best))
     torch.testing.assert_close(rot.weight, restored.weight, atol=0.0, rtol=0.0)
@@ -659,9 +644,9 @@ def test_an_early_stopping_fit_returns_the_weights_it_selected(monkeypatch) -> N
 
 
 REPO = Path(__file__).resolve().parents[4]
-METHODS = str(REPO / "causalab/configs/protocols")
+METHODS = str(PROTOCOLS_DIR)
 #: The tiny-random realization every CPU smoke test runs at
-#: (`tests/_helpers/tiny.py`). It is *not* a claim about the fit's dtype: the
+#: (`tests/_helpers/tiny.py`). It does *not* set the fit's dtype: the
 #: rotation's storage dtype is the `Subspace` parameter's, fp32 on every engine
 #: whatever `model.dtype` says (module docstring), and the smoke test checks the
 #: written file against its own stamp rather than against this pin.
@@ -672,22 +657,22 @@ TINY = {"model.key": TINY_LLAMA, "model.dtype": "fp32"}
 def test_an_applied_rotation_reproduces_the_fits_logits_exactly(
     tmp_path: Path,
 ) -> None:
-    """The "and logits" half, as the strongest available form: the
+    """The "and logits" half of the artifact round-trip, in its strongest form: the
     apply document scores the split the fit reported on, so any difference in
     the reloaded matrix shows up as a difference in the metric.
 
     Plain equality is the assertion. A tolerance here would hide precisely the
-    effect under test — a half-ulp drift on a logit-scale quantity is well
-    inside any tolerance one would reach for casually, which is how such a
-    drift goes unnoticed.
+    hypothesized effect — 2^-14 on a logit-scale quantity is well inside any
+    tolerance one would reach for casually, which is why a number like it
+    can survive unnoticed.
 
     The preset names the shipped weekdays table, whose answers tiny-random
     cannot spell as single tokens ([P2]), so the fit's dataset refs are
     retargeted onto the 4-row fixture the way every tiny-scale run of a shipped
-    document is (`fixture_input_overrides`). Two things the fit step then
-    inherits from `weekdays_das_sweep.json` and does not otherwise override,
-    said here so nobody has to rediscover them: its `eval` — retargeted onto
-    `weekdays/data#test` — and its `early_stop` are **live**. With `epochs: 1` there
+    document is (`fixture_input_overrides`). The fit step inherits two sections
+    from `weekdays_das_sweep.json` that it does not otherwise override, and
+    both are **live**: its `eval`, retargeted onto `weekdays/data#test`, and
+    its `early_stop`. With `epochs: 1` there
     is exactly one eval, so the snapshot is the final state and the restore is
     the identity. Bumping `epochs` would make the restore real — and the
     comparison would still be sound, because `_execute_point` runs the metrics
@@ -752,6 +737,8 @@ def test_an_applied_rotation_reproduces_the_fits_logits_exactly(
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -763,7 +750,7 @@ def test_an_applied_rotation_reproduces_the_fits_logits_exactly(
     )
     assert code == 0
     run = out / "das"
-    # The bytes on disk are in the dtype the file's own identity claims. This is
+    # The bytes on disk are in the dtype the file's own identity records. This is
     # `TensorFile.add` pinned against an up- or downcast at whatever dtype a
     # run declares — it keeps working if the `fp32` pin above is ever lifted.
     rot_file = run / "fit" / ROT_FILE
@@ -773,7 +760,7 @@ def test_an_applied_rotation_reproduces_the_fits_logits_exactly(
         _DTYPES[str(stamped["dtype"])]
     }, (
         "the writer changed the fit's dtype on the way to disk — mechanism 1 "
-        "for a round-trip drift"
+        "for the hypothesized 2^-14"
     )
     fitted = table_frame(run / "fit/iia.json")
     applied = table_frame(run / "apply/iia.json")

@@ -1,29 +1,8 @@
-"""Plot helpers, re-exported lazily (PEP 562).
+"""Load plotting helpers on first access through PEP 562.
 
-Every name below is still ``causalab.io.plots.<name>``; only *when* its module
-is imported changed. The eager version imported the whole plotting stack —
-numpy, matplotlib, and torch through ``causal_graph`` — at ``import
-causalab.io.plots``, which made two things untrue at once:
-
-* ``causalab.io.plots.workflow_figures`` is a **shipped step script**, and a
-  ``{"module": …}`` locator is resolved with :func:`importlib.util.find_spec`,
-  which imports the target's *parent packages* ("If the name is for a
-  submodule (contains a dot), the parent package is automatically imported").
-  So ``causalab validate`` of the shipped ``weekdays_8b.json`` workflow pulled
-  the numerics stack — against the torch-free guarantee that
-  ``docs/workflow_protocol.md`` §4.2 is named after.
-* ``causalab/io/plots/`` is under ``io/``, the lowest application layer, and
-  the layering guard could not see it: it walks each file's own imports and
-  cannot see a parent ``__init__``.
-
-The invariant this file now keeps, stated as weakly as it can be while still
-buying that guarantee: **importing this package imports no numerics.** Asking
-for a name still imports whatever that name needs, at that moment.
-
-``tests/test_architecture_layering.py::test_a_script_package_is_importable_without_numerics`` enforces it, and
-``tests/protocol/test_load_is_torch_free.py`` covers the behavioural half
-through a real ``causalab validate``.
-"""
+The workflow runner can locate and hash a plotting script while importing only
+its parent package. Deferring numerical imports keeps this operation available
+during document validation."""
 
 from __future__ import annotations
 

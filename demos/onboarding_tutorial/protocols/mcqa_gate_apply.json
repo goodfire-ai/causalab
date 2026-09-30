@@ -1,57 +1,42 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Score the fitted mask on the split it never saw. The gate featurizer's file_path loads the fitted theta and the stage comes back in eval mode, so the swap runs through the same hard theta>0 mask the fit was scored on; there is no train section, so the number here is a held-out one by construction -- which mcqa_gate_fit.json's own iia.json is not. The dtype must match the fit's: it is part of the artifact's identity, and an apply that omits it implies fp32 and is refused."
+    "protocol_version": "4",
+    "description": "Load a fitted gate and measure interchange accuracy and logit difference on held-out pairs when only the gated dimensions are swapped."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {
-    "base": {"dataset": "mcqa/data#test", "field": "input"},
-    "counterfactual": {"dataset": "mcqa/data#test", "field": "counterfactual_inputs[0]"}
+    "base": {"dataset": "mcqa/test_n64_s2", "field": "input"},
+    "counterfactual": {"dataset": "mcqa/test_n64_s2", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "masked": {"input": "base", "reads": ["logits"], "writes": ["mask"]}
+    },
     "positions": {"slot": {"index": -1}},
     "sites": {
-      "target": {"component": "block_output", "layers": [14]},
+      "target": {"component": "block_output", "layers": [26]},
       "lm_head": {"component": "lm_head"}
     },
     "featurizers": {"gate": {"kind": "gate", "file_path": "gate_fit/gate.safetensors"}},
     "reads": {
-      "v_cf": {
-        "site": "target",
-        "pos": "slot",
-        "model": "original",
-        "input": "counterfactual",
-        "featurizer": "gate"
-      },
-      "logits": {"site": "lm_head", "pos": -1, "model": "masked", "input": "base"}
+      "v_cf": {"site": "target", "pos": "slot", "featurizer": "gate"},
+      "logits": {"site": "lm_head", "pos": -1}
     },
     "writes": {
       "mask": {"site": "target", "pos": "slot", "featurizer": "gate", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "masked": {"input": "base", "writes": ["mask"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "cf_answer",
-        "token_form": "space_prefixed"
-      },
-      "logit_diff": {
-        "kind": "logit_diff",
-        "of": "logits",
-        "a": "cf_answer",
-        "b": "base_answer",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "masked", "input": "base", "file_path": "iia.json"},
       {
-        "value": "logit_diff",
+        "read": "logits",
         "model": "masked",
-        "input": "base",
+        "aggregation": {"kind": "match", "expected": "cf_answer"},
+        "file_path": "iia.json"
+      },
+      {
+        "read": "logits",
+        "model": "masked",
+        "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"},
         "file_path": "logit_diff.json"
       }
     ]

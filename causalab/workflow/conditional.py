@@ -1,54 +1,9 @@
-"""The ``decision`` and ``conditional`` workflow steps, and the receipt a step
-may require before it is allocated (docs/workflow_protocol.md §2.8).
+"""Define decisions, conditional steps, and required receipts.
 
-A ``decision`` step is the second producer of the ``DecisionRecord`` (the
-first is the ``behavioral`` step, :mod:`causalab.workflow.behavioral`): it
-reads a script step's values object through the §3 reference grammar —
-typically the knee ``select`` publishes — holds each named key to **exactly
-one comparator and a JSON literal**, and writes the same ``decision.json``
-shape beside its record: ``decision_type``, ``schema_version``,
-``measured_inputs``, ``rule``, ``outcome``, ``evidence_identity``, ``step``.
-The evidence identity is the sha256 of the values file's bytes joined to the
-identity of the step that wrote it, so a decision cannot outlive the numbers
-behind it (``select.py`` computes the knee as before; the decision wraps
-its result, and a ``select`` with no decision downstream is unchanged).
-
-A ``conditional`` step reads one field of a producer's ``decision.json``
-through a **closed predicate** — ``outcome`` in ``pass | fail`` or
-``decision_type`` in the decision vocabulary, under ``eq``, ``ne`` or ``in``
-— and decides between two disjoint, non-empty sets of step names: a ``true``
-verdict skips every ``on_false`` step and its dependents, ``false`` the
-``on_true`` side. A skipped step is the runner's third outcome beside
-``completed`` and ``reused``: its manifest entry says ``skipped`` and names
-the decision by ``evidence_identity`` (:data:`SKIPPED_BY_FIELDS`); no step
-directory is created for it, because a file whose existence implies nothing
-is exactly what the orchestration layer must not leave behind. The
-conditional declares its ``scope`` from :data:`SCOPES`: ``global`` decides
-for the run; ``per_target`` and ``per_variable`` decide per child of a
-declared fan-out (:mod:`causalab.workflow.fan_out`, §2.9) — the conditional
-expands with its producer's fan-out at load, one verdict per child, and a
-gated join declaring ``require: selected`` publishes the children the
-verdicts left.
-
-A step of any kind may declare ``requires_receipt``: a producer's name and the
-outcome its receipt must carry. The check runs in the runner **before the
-step is scheduled** — before an attempt directory exists, before any engine
-is chosen, before a device is touched — and a **missing** receipt and a
-**failed** receipt are two distinct refusals with distinct messages. Neither
-is a skip: a skip is a decision, this is an unmet precondition, so the step
-is ``failed`` and its dependents ``blocked``.
-
-**Digest-neutral by construction.** Every vocabulary, the parsers, the
-load-time rule and the runner's halves live here; the two new kinds write
-their fields into canonical entries of their own type only, and
-``requires_receipt`` enters an entry only when authored
-(``document._canonicalize``) — so no other workflow's digest moves and both
-shipped pins hold. Refusals are workflow checklist rule
-:data:`CONDITIONAL_RULE` (§5); no ``protocol/errors.py`` rule is added, no
-hashed script and no member of the shared closure is touched. Torch-free at
-module level, like :mod:`causalab.workflow.document`, which imports this
-module function-locally for the parsers and the load-time check.
-"""
+Decision rules compare declared values and write typed outcomes. A conditional
+step uses an outcome to select which dependent steps run. Required receipts
+are checked before allocating a step. Reuse checks include the identity of
+the evidence used to make the decision."""
 
 from __future__ import annotations
 
@@ -59,7 +14,7 @@ from typing import Any, Collection, Mapping
 
 from causalab.io.step_io import read_values
 from causalab.io.step_record import read_sidecar
-from causalab.protocol.errors import ProtocolError, suggest
+from causalab.protocol.rules.errors import ProtocolError, suggest
 from causalab.workflow.behavioral import (
     DECISION_FILE,
     DECISION_SCHEMA_VERSION,
@@ -76,8 +31,8 @@ from causalab.workflow.document import (
 )
 
 #: A skipped step's manifest entry names the decision that skipped it (§8) by
-#: the six :data:`causalab.workflow.manifest.SKIPPED_BY_FIELDS` — manifest
-#: vocabulary, re-exported here (``__all__``): :func:`skipped_entry` (a reached
+#: the six [`causalab.workflow.manifest.SKIPPED_BY_FIELDS`][] — manifest
+#: vocabulary, re-exported here (``__all__``): [`skipped_entry`][] (a reached
 #: skip) and ``manifest.classify_unreached`` (an unreached one) write the same
 #: keys.
 from causalab.workflow.manifest import CHILD_SEPARATOR, SKIPPED_BY_FIELDS, skipped_via
@@ -121,9 +76,9 @@ COMPARATORS: tuple[str, ...] = ("eq", "ne", "lt", "le", "gt", "ge", "in")
 #: vocabulary is closed, so an order comparison would mean nothing.
 PREDICATE_COMPARATORS: tuple[str, ...] = ("eq", "ne", "in")
 
-#: The scopes a conditional declares. ``global`` decides for the whole
+#: The scopes a conditional declares (9·7). ``global`` decides for the whole
 #: run; ``per_target`` and ``per_variable`` decide per child of a declared
-#: fan-out (§2.9) — every scope executes, and the
+#: fan-out (§2.9). Every scope executes, and the
 #: two tuples are held equal by the census.
 SCOPES: tuple[str, ...] = ("global", "per_target", "per_variable")
 EXECUTABLE_SCOPES: tuple[str, ...] = SCOPES
@@ -508,10 +463,10 @@ def check_conditional(
     other — a verdict skipping the one would skip the other with it
     (``fold_skips``), and the conditional could never launch the side it was
     authored to launch; a per-child scope is further held to its producer's
-    fan-out (§2.9, rule 19 — :func:`causalab.workflow.fan_out.check_scope`,
+    fan-out (§2.9, rule 19 — [`causalab.workflow.fan_out.check_scope`][],
     on the authored conditional; its expanded children are the check's
     consequence, not its subject). Unknown names were refused by
-    :func:`dependency_edges`; a gated step upstream of its conditional by rule
+    [`dependency_edges`][]; a gated step upstream of its conditional by rule
     5; a decision's keys by rule 4 against the producer's declaration."""
     from causalab.workflow.fan_out import check_scope
 
@@ -706,7 +661,7 @@ def evaluate_predicate(
 ) -> bool:
     """The predicate's verdict over one decision record — a ``P2`` when the
     record lacks the predicate's field or carries a value outside the field's
-    closed vocabulary (:data:`FIELD_VOCABULARIES`): a verdict rests on a
+    closed vocabulary ([`FIELD_VOCABULARIES`][]): a verdict rests on a
     value the record states, never on an absence (``ne`` over a missing
     field would hold) or on a word no rule can have written."""
     field = str(predicate["field"])
@@ -784,7 +739,7 @@ def fold_skips(
     order, every step that depends on a skipped step (``transitive_from``
     names the ones it followed; over ``after`` edges too, which are in
     ``loaded.dependencies``). A join declaring ``require: selected`` is not
-    skipped by its own skipped children (§2.9, :func:`manifest.propagates`).
+    skipped by its own skipped children (§2.9, [`manifest.propagates`][]).
     Called for a conditional that ran and for one ``--resume`` reused, from
     its record either way."""
     from causalab.workflow.fan_out import selective_joins
@@ -880,7 +835,7 @@ def evidence_holds(step: Step, step_dir: Path, record: Mapping[str, Any]) -> boo
     step of **any** kind with a ``requires_receipt`` holds only while the
     producer's current ``decision.json`` still carries the required outcome:
     a receipt that flipped since the step ran sends it back through
-    :func:`check_receipt`, which refuses before any allocation — a reused
+    [`check_receipt`][], which refuses before any allocation — a reused
     entry never stands on a failed receipt. Any other kind holds trivially."""
     run_root = step_dir.parent
     receipt = step.requires_receipt

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from causalab.neural.token_positions import LMPipeline
-from causalab.neural.token_positions import (
+from causalab.tasks.token_positions import LMPipeline
+from causalab.tasks.token_positions import (
     TokenPosition,
     build_token_positions,
 )

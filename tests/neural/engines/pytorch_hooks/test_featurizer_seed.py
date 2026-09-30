@@ -36,7 +36,7 @@ import torch
 
 from causalab.neural.engines.pytorch_hooks.executor import document_seed
 from causalab.neural.shared.featurizers import Gate, build_stack
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.schema import FeaturizerSpec, parse_document
 
 from tests.neural.engines.pytorch_hooks._drive import executor_for
@@ -47,6 +47,7 @@ from tests.neural.engines.pytorch_hooks.test_train import (
     das_doc,
 )
 from tests.protocol._docs import in_order
+
 
 pytestmark = pytest.mark.unit
 
@@ -139,7 +140,7 @@ def test_document_seed_is_zero_without_a_train_block() -> None:
     raw = das_doc(seed=5)
     del raw["method"]["train"]
     raw["method"]["save"] = [
-        entry for entry in raw["method"]["save"] if entry["value"] != "rot"
+        entry for entry in raw["method"]["save"] if entry.get("value") != "rot"
     ]
     assert document_seed(parse_document(in_order(raw))) == 0
 
@@ -350,7 +351,7 @@ def test_an_authored_seed_still_refuses_a_shared_stage_cache() -> None:
 def test_a_seed_on_a_loaded_featurizer_is_refused() -> None:
     """A loaded featurizer's weights are its bytes; it draws nothing, so a
     seed there would describe something that never happens."""
-    from causalab.protocol.errors import ParseError
+    from causalab.protocol.rules.errors import ParseError
     from causalab.protocol.schema import parse_document
 
     doc = in_order(
@@ -369,5 +370,5 @@ def test_a_seed_on_a_loaded_featurizer_is_refused() -> None:
             },
         }
     )
-    with pytest.raises(ParseError, match="draws nothing"):
+    with pytest.raises(ParseError, match="a loaded featurizer uses its saved rotation"):
         parse_document(doc)

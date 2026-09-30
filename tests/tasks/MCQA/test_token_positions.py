@@ -9,7 +9,7 @@ from causalab.tasks.MCQA.causal_models import NUM_CHOICES
 from causalab.tasks.MCQA.counterfactuals import sample_answerable_question
 from causalab.tasks.MCQA.token_positions import create_token_positions, TEMPLATES
 from tests._helpers.pipeline_shim import PipelineShim
-from causalab.neural.token_positions import TokenPosition
+from causalab.tasks.token_positions import TokenPosition
 import pytest
 
 
@@ -58,8 +58,8 @@ def test_get_symbol_index():
 
     # Test for each symbol position
     for i in range(NUM_CHOICES):
-        symbol = trace[f"symbol{i}"]
-        token_pos = token_positions[f"symbol{i}"]
+        symbol = trace[f"symbols[{i}]"]
+        token_pos = token_positions[f"symbols[{i}]"]
         indices = token_pos.index(trace)
 
         print(f"Symbol {i}: '{symbol}'")
@@ -129,7 +129,7 @@ def test_token_position_objects():
 
     # Test token positions for each symbol
     for i in range(NUM_CHOICES):
-        token_pos = token_positions[f"symbol{i}"]
+        token_pos = token_positions[f"symbols[{i}]"]
 
         print(f"Symbol {i} TokenPosition:")
         print(f"  ID: {token_pos.id}")
@@ -225,9 +225,9 @@ def test_create_token_positions():
         "correct_symbol",
         "correct_symbol_period",
         "last_token",
-        "symbol0",
+        "symbols[0]",
         "symbol0_period",
-        "symbol1",
+        "symbols[1]",
         "symbol1_period",
     ]
 
@@ -268,11 +268,11 @@ def test_edge_case_symbol_not_found():
 
     # Create token positions
     token_positions = create_token_positions(pipeline)
-    symbol0_pos = token_positions["symbol0"]
+    symbol0_pos = token_positions["symbols[0]"]
 
     # Create a malformed input where symbol doesn't appear in raw_input
     input_sample = {
-        "symbol0": "Z",
+        "symbols[0]": "Z",
         "raw_input": "The banana is yellow. What color is the banana?\nA. blue\nB. yellow\nAnswer:",
     }
 
@@ -308,8 +308,8 @@ def test_period_tokens():
 
         print(f"Symbol0 period token index: {indices}")
 
-        # Check it's right after symbol0
-        symbol0_pos = token_positions["symbol0"]
+        # Check it's right after symbols[0]
+        symbol0_pos = token_positions["symbols[0]"]
         symbol0_indices = symbol0_pos.index(trace)
 
         # Type narrowing - indices are list[int] when batch=False (default)
@@ -342,8 +342,8 @@ def test_token_positions_return_type_and_ids():
     # Verify required keys exist
     required_keys = [
         "last_token",
-        "symbol0",
-        "symbol1",
+        "symbols[0]",
+        "symbols[1]",
         "symbol0_period",
         "symbol1_period",
         "correct_symbol",
@@ -383,7 +383,7 @@ def test_template_none_equivalent_to_default_template():
     # They should produce equivalent results on the same example
     trace = sample_answerable_question()
 
-    for name in ["last_token", "correct_symbol", "symbol0"]:
+    for name in ["last_token", "correct_symbol", "symbols[0]"]:
         idx_explicit = pos_explicit[name].index(trace)
         idx_default = pos_default[name].index(trace)
         assert idx_explicit == idx_default, (

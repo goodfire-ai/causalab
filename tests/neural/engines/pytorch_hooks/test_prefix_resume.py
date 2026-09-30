@@ -35,12 +35,13 @@ from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_mode
 from causalab.neural.engines.pytorch_hooks.train import run_training
 from causalab.neural.shared import execution
 from causalab.neural.shared.execution import campaign_cache
-from causalab.neural.shared.executor_base import ForwardCache, Interning
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.loader import LoadedProtocol, load
-from causalab.protocol.plan import plan_point
+from causalab.neural.shared.executor import ForwardCache, Interning
+from causalab.protocol.compiled import CompiledProtocol
+from causalab.protocol.engine import RunContext
+from causalab.protocol.pipeline import compile_protocol
+from causalab.neural.shared.plan import plan_point
 from causalab.protocol.registry import model_info_from_hf_config
-from causalab.protocol.resolve import ResolutionEnv
+from causalab.io.env import ResolutionEnv
 from causalab.protocol.schema import Document, parse_document
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
@@ -48,12 +49,20 @@ from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA, TINY_QWEN35_
 from tests.neural.engines.pytorch_hooks.test_train import (
     ANSWERS,
     BASES,
+    CE,
     COUNTERFACTUALS,
+    ce_term,
     das_doc,
     dbm_doc,
 )
-from tests.protocol._docs import in_order
-from tests.protocol._env import CORPUS_DIR, FIXTURES, build_env, write_rot_fixture
+from tests.protocol._docs import UNWRITTEN, in_order, saved
+from tests.protocol._env import (
+    CORPUS_DIR,
+    FIXTURES,
+    build_env,
+    write_rot_fixture,
+    steps_of,
+)
 from tests.tables import frame as table_frame
 
 DATA_IDENTITY = {
@@ -100,48 +109,26 @@ def swap_doc(
     closures — so neither is served the other's captures (§3) — over one
     un-intervened prefix."""
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": key, "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "sites": {
                 "tgt": {"component": component, "layers": [layer]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tgt",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "logits": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tgt", "pos": {"index": -1}},
+                "logits": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {
                 "patch": {"site": "tgt", "pos": {"index": pos}, "do": {"swap": "v_cf"}}
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "metrics": {
-                "ce": {
-                    "kind": "cross_entropy",
-                    "of": "logits",
-                    "target": "label",
-                    "token_form": "space_prefixed",
-                }
-            },
-            "save": [
-                {
-                    "value": "ce",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "ce.json",
-                }
-            ],
+            "save": [saved("logits", "patched", "ce.json", dict(CE))],
         },
     }
 
@@ -154,7 +141,7 @@ def _train_doc(kind: str, *, layer: int = 1, epochs: int = 3) -> dict[str, Any]:
     raw["method"]["train"]["eval"] = {
         "every": {"epochs": 1},
         "split": EVAL_SPLIT,
-        "metrics": ["ce"],
+        "aggregations": {"ce": ce_term()},
     }
     return raw
 
@@ -173,13 +160,8 @@ class _InlineDatasets:
         return self._splits[ref]
 
 
-def _train_request() -> ExecutionRequest:
-    return ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=(),
-        coords=(),
-        document_digest="0" * 64,
+def _train_request() -> RunContext:
+    return RunContext(
         env=ResolutionEnv(
             datasets=_InlineDatasets({EVAL_SPLIT: EVAL_ROWS}), artifacts=None
         ),  # type: ignore[arg-type]
@@ -206,16 +188,14 @@ def _campaign(
     raws: Sequence[dict[str, Any]], cache: ForwardCache | None = None
 ) -> tuple[list[Document], list[Interning], ForwardCache]:
     """The points' handles on one campaign cache, built the way
-    ``execute_request`` builds them: plan digests, the tap union and the
+    ``execute_request`` builds them: plan keys, the tap union and the
     prefix plans of the whole point set."""
     docs = [parse_document(in_order(raw)) for raw in raws]
     plans = [plan_point(doc, data_identity=DATA_IDENTITY) for doc in docs]
     if cache is None:
         cache = campaign_cache(docs, plans)
     handles = [
-        Interning(
-            digests={(g.model, g.input): g.digest for g in plan.groups}, cache=cache
-        )
+        Interning(keys={(g.model, g.input): g.key for g in plan.groups}, cache=cache)
         for plan in plans
     ]
     return docs, handles, cache
@@ -352,25 +332,27 @@ class TestResume:
     def test_an_original_group_that_runs_anyway_contributes_the_prefix(
         self, bundle: ModelBundle
     ) -> None:
-        """A read on ``original``/``base`` plans the un-intervened forward
-        over the very rows the patched forward reads; its pass stores the
-        prefix, so even the *first* patched forward resumes. Declared first,
-        since groups run lazily in read order."""
+        """A read on the un-intervened model on ``base`` plans the
+        un-intervened forward over the very rows the patched forward reads;
+        its pass stores the prefix, so even the *first* patched forward
+        resumes. Declared first, since groups run lazily in read order."""
         raw = swap_doc(layer=1)
-        clean = {
-            "site": "lm_head",
-            "pos": {"index": -1},
-            "model": "original",
-            "input": "base",
-        }
+        clean = {"site": "lm_head", "pos": {"index": -1}}
         raw["method"]["reads"] = {"logits_clean": clean, **raw["method"]["reads"]}
-        raw["method"]["metrics"]["kl"] = {
-            "kind": "kl",
-            "of": "logits",
-            "target": "logits_clean",
+        raw["method"]["intervened_models"] = {
+            "original_base": {"input": "base", "reads": ["logits_clean"]},
+            **raw["method"]["intervened_models"],
         }
         raw["method"]["save"].append(
-            {"value": "kl", "model": "patched", "input": "base", "file_path": "kl.json"}
+            saved(
+                "logits",
+                "patched",
+                "kl.json",
+                {
+                    "kind": "kl",
+                    "target": {"read": "logits_clean", "model": "original_base"},
+                },
+            )
         )
         _docs, (handle,), cache = _campaign([raw])
         plain = _reads(_executor(raw, bundle, interning=None))
@@ -394,20 +376,9 @@ class TestResume:
                 "component": "block_output",
                 "layers": [0],
             }
-            raw["method"]["reads"]["below"] = {
-                "site": "probe",
-                "pos": {"index": -1},
-                "model": "patched",
-                "input": "base",
-            }
-            raw["method"]["save"].append(
-                {
-                    "value": "below",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "below.safetensors",
-                }
-            )
+            raw["method"]["reads"]["below"] = {"site": "probe", "pos": {"index": -1}}
+            raw["method"]["intervened_models"]["patched"]["reads"].append("below")
+            raw["method"]["save"].append(saved("below", "patched", "below.safetensors"))
         raw_a, raw_b = raws
         _docs, (first, second), cache = _campaign(raws)
         plain_a = _reads(_executor(raw_a, bundle, interning=None))
@@ -436,27 +407,16 @@ class TestResume:
             "component": "block_output",
             "layers": [0],
         }
-        tapped["method"]["reads"]["below"] = {
-            "site": "probe",
-            "pos": {"index": -1},
-            "model": "patched",
-            "input": "base",
-        }
-        tapped["method"]["save"].append(
-            {
-                "value": "below",
-                "model": "patched",
-                "input": "base",
-                "file_path": "below.safetensors",
-            }
-        )
+        tapped["method"]["reads"]["below"] = {"site": "probe", "pos": {"index": -1}}
+        tapped["method"]["intervened_models"]["patched"]["reads"].append("below")
+        tapped["method"]["save"].append(saved("below", "patched", "below.safetensors"))
         order = [tapped, resuming] if tapped_first else [resuming, tapped]
         _docs, handles, cache = _campaign(order)
         assert cache.prefix_owed == {
             (
                 handles[0]
-                .cache.prefix_plans[handles[0].digests[("patched", "base")]]
-                .base_digest,
+                .cache.prefix_plans[handles[0].keys[("patched", "base")]]
+                .base_key,
                 1,
             ): 1
         }
@@ -513,7 +473,7 @@ class TestResume:
             role_fields={"base": "input", "counterfactual": "counterfactual_inputs[0]"},
             load_tensors=lambda path: (_ for _ in ()).throw(KeyError(path)),
             interning=Interning(
-                digests=handle.digests, cache=cache, rows=(0, 1), counted=False
+                keys=handle.keys, cache=cache, rows=(0, 1), counted=False
             ),
         )
         inner.run_all()
@@ -784,28 +744,24 @@ def scan_env(tmp_path_factory: pytest.TempPathFactory) -> ResolutionEnv:
 
 
 @pytest.fixture(scope="module")
-def scan(scan_env: ResolutionEnv) -> LoadedProtocol:
-    return load(
-        CORPUS_DIR / "07_weekdays_locate_scan_im.json", scan_env, overrides=OVERRIDES
+def scan(scan_env: ResolutionEnv) -> CompiledProtocol:
+    return compile_protocol(
+        CORPUS_DIR / "07_weekdays_locate_scan_im.json",
+        env=scan_env,
+        overrides=OVERRIDES,
     )
 
 
-def _request(
-    loaded: LoadedProtocol,
+def _run(
+    loaded: CompiledProtocol,
     env: ResolutionEnv,
     out: Path,
     selected: Sequence[int] | None = None,
-) -> ExecutionRequest:
-    index = range(len(loaded.expansion.points)) if selected is None else selected
-    return ExecutionRequest(
-        points=tuple(loaded.expansion.points[i].raw for i in index),
-        canonical=tuple(loaded.canonical_points[i] for i in index),
-        digests=tuple(loaded.point_digests[i] for i in index),
-        coords=tuple(loaded.expansion.points[i].coords for i in index),
-        document_digest=loaded.document_digest,
-        env=env,
-        output_dir=out,
-    )
+) -> tuple[CompiledProtocol, RunContext]:
+    """The compiled campaign and a run context over a chosen subset of its
+    points — the two arguments of ``Engine.execute``."""
+    points = None if selected is None else tuple(selected)
+    return loaded, RunContext(output_dir=out, env=env, points=points)
 
 
 def _engine_bundle() -> ModelBundle:
@@ -814,7 +770,9 @@ def _engine_bundle() -> ModelBundle:
     return load_model(TINY_LLAMA, "main", dtype="fp32", device="cpu", quantization=None)
 
 
-def _expected_scan(loaded: LoadedProtocol) -> tuple[list[int], list[int], int]:
+def _expected_scan(
+    loaded: CompiledProtocol, env: ResolutionEnv
+) -> tuple[list[int], list[int], int]:
     """Walk the campaign's points in order and predict, per block, how many
     forwards run it. The shared harvest runs once (§3, every block). A
     patched forward at layer 0 runs every block and may store nothing (its
@@ -822,7 +780,7 @@ def _expected_scan(loaded: LoadedProtocol) -> tuple[list[int], list[int], int]:
     block and stores the prefix; every later one at layer 1 resumes."""
     block0, block1, skipped = 1, 1, 0
     stored = False
-    for point in loaded.expansion.points:
+    for point in steps_of(loaded, env).points:
         layer = point.coords["sites.target.layers"]
         if layer == 0:
             block0 += 1
@@ -839,12 +797,12 @@ def _expected_scan(loaded: LoadedProtocol) -> tuple[list[int], list[int], int]:
 
 @pytest.mark.smoke
 def test_the_scan_skips_the_prefix_below_every_later_write(
-    scan: LoadedProtocol, scan_env: ResolutionEnv, tmp_path: Path
+    scan: CompiledProtocol, scan_env: ResolutionEnv, tmp_path: Path
 ) -> None:
     bundle = _engine_bundle()
-    (block0,), (block1,), skipped = _expected_scan(scan)
+    (block0,), (block1,), skipped = _expected_scan(scan, scan_env)
     with _block_fires(bundle) as fires:
-        result = PytorchHooksEngine().execute(_request(scan, scan_env, tmp_path))
+        result = PytorchHooksEngine().execute(*_run(scan, scan_env, tmp_path))
     assert len(fires[0]) == block0
     assert len(fires[1]) == block1
     assert skipped > 0, "the tiny scan never resumed — the test measures nothing"
@@ -857,7 +815,7 @@ def test_the_scan_skips_the_prefix_below_every_later_write(
 
 @pytest.mark.smoke
 def test_the_store_is_empty_when_the_run_returns(
-    scan: LoadedProtocol,
+    scan: CompiledProtocol,
     scan_env: ResolutionEnv,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -872,7 +830,7 @@ def test_the_store_is_empty_when_the_run_returns(
         return cache
 
     monkeypatch.setattr(execution, "campaign_cache", spy)
-    result = PytorchHooksEngine().execute(_request(scan, scan_env, tmp_path))
+    result = PytorchHooksEngine().execute(*_run(scan, scan_env, tmp_path))
     (cache,) = caches
     assert cache.resumed, "nothing resumed — the test measures nothing"
     assert cache.prefixes == {}
@@ -885,17 +843,15 @@ def test_the_store_is_empty_when_the_run_returns(
 
 @pytest.mark.smoke
 def test_resuming_changes_no_number(
-    scan: LoadedProtocol, scan_env: ResolutionEnv, tmp_path: Path
+    scan: CompiledProtocol, scan_env: ResolutionEnv, tmp_path: Path
 ) -> None:
     """One request per point has nothing to resume against — each shard's
     patched forward is the first on its prefix — so the sharded tables are
     the reference, and the whole run must reproduce them exactly."""
-    whole = PytorchHooksEngine().execute(_request(scan, scan_env, tmp_path / "whole"))
+    whole = PytorchHooksEngine().execute(*_run(scan, scan_env, tmp_path / "whole"))
     shards = [
-        PytorchHooksEngine().execute(
-            _request(scan, scan_env, tmp_path / f"point{i}", [i])
-        )
-        for i in range(len(scan.expansion.points))
+        PytorchHooksEngine().execute(*_run(scan, scan_env, tmp_path / f"point{i}", [i]))
+        for i in range(len(steps_of(scan, scan_env).points))
     ]
     assert (
         sum(s.get("prefix_reuse", {}).get("blocks_skipped", 0) for s in whole.summaries)

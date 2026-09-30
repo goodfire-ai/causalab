@@ -1,0 +1,42 @@
+{
+  "document": "workflows/pca_basis.json",
+  "document_digest": "c6008be86f0d3ef26c367ecfd7ed8600ac49f9ec7d6d0cb4ecfa7bd1f27df8cf",
+  "run_digest": null,
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-28",
+  "elapsed_s": 25.9,
+  "metrics": {
+    "harvest": {
+      "saved_tensors": {
+        "acts.safetensors": {
+          "acts": [
+            30,
+            1,
+            3584
+          ]
+        }
+      }
+    },
+    "pca": {
+      "spectrum": {
+        "components": 16,
+        "explained_variance_ratio_cumulative": {
+          "1": 0.1797,
+          "4": 0.5615,
+          "16": 0.955
+        }
+      },
+      "saved_tensors": {
+        "basis.safetensors": {
+          "weight": [
+            3584,
+            16
+          ]
+        }
+      }
+    }
+  }
+}

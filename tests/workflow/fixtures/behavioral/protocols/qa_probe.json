@@ -1,86 +1,40 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "The behavioral fixture in probe_variable.json's shape, on gpt2 (a registered model, so the document loads torch-free): decode 4 tokens over the weekdays prompts, reduce every step's distribution to its top token, read the answer back as text, and read the tokens where the model *said* the answer. The `variable` anchor searches the continuation, so a row that never said the answer contributes no positions and scores null rather than failing the run. No intervention: the behavioral step adds decoding, checker, split, thresholds and decision on the step, never here; the tiny-scale runs retarget model.key by `set`, as the workflow smoke tests retarget the shipped documents."
   },
-  "model": {
-    "key": "gpt2",
-    "revision": "main",
-    "dtype": "fp32"
-  },
-  "data": {
-    "base": {
-      "dataset": "qa/data#development",
-      "field": "input"
-    }
-  },
+  "model": {"key": "gpt2", "revision": "main", "dtype": "fp32"},
+  "data": {"base": {"dataset": "qa/data#development", "field": "input"}},
   "method": {
+    "intervened_models": {
+      "original": {"input": "base", "reads": ["steps", "where"]}
+    },
     "positions": {
-      "continuation": {
-        "generated": {
-          "max_new_tokens": 4
-        },
-        "all": true
-      },
-      "said_answer": {
-        "generated": {
-          "max_new_tokens": 4
-        },
-        "variable": "result"
-      }
+      "continuation": {"generated": {"max_new_tokens": 4}, "all": true},
+      "said_answer": {"generated": {"max_new_tokens": 4}, "variable": "result"}
     },
-    "sites": {
-      "lm_head": {
-        "component": "lm_head"
-      }
-    },
+    "sites": {"lm_head": {"component": "lm_head"}},
     "reads": {
-      "steps": {
-        "site": "lm_head",
-        "pos": "continuation",
-        "model": "original",
-        "input": "base"
-      },
-      "where": {
-        "site": "lm_head",
-        "pos": "said_answer",
-        "model": "original",
-        "input": "base"
-      }
-    },
-    "metrics": {
-      "per_step": {
-        "kind": "top_k",
-        "of": "steps",
-        "k": 1,
-        "by": "prob"
-      },
-      "said": {
-        "kind": "decode",
-        "of": "steps"
-      },
-      "said_at": {
-        "kind": "decode",
-        "of": "where"
-      }
+      "steps": {"site": "lm_head", "pos": "continuation"},
+      "where": {"site": "lm_head", "pos": "said_answer"}
     },
     "save": [
       {
-        "value": "per_step",
+        "read": "steps",
         "model": "original",
-        "input": "base",
+        "aggregation": {"kind": "top_k", "k": 1, "by": "prob"},
         "file_path": "per_step.json"
       },
       {
-        "value": "said",
+        "read": "steps",
         "model": "original",
-        "input": "base",
+        "aggregation": {"kind": "decode"},
         "file_path": "said.json"
       },
       {
-        "value": "said_at",
+        "read": "where",
         "model": "original",
-        "input": "base",
+        "aggregation": {"kind": "decode"},
         "file_path": "said_at.json"
       }
     ]

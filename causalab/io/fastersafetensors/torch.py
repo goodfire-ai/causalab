@@ -14,8 +14,8 @@ rather than refused (they come back as separate tensors); device-resident
 tensors are accepted by ``save``/``save_file``; ``save_file`` takes
 ``durable`` and ``atomic``;
 ``load_files``, ``serialize`` and ``explain`` exist; ``load_files`` takes a
-``select`` mapping (a slice per tensor, or a :class:`Shard`, see
-:func:`select_shards`) and ``safe_open`` has ``get_sharded``, so a tensor
+``select`` mapping (a slice per tensor, or a `causalab.neural.engines.pytorch_hooks.weights.Shard`, see
+`select_shards`) and ``safe_open`` has ``get_sharded``, so a tensor
 parallel rank reads only its part.
 """
 
@@ -79,7 +79,7 @@ def save_file(
     """Write ``tensors`` to ``filename``: header, then each tensor's bytes
     straight from its own memory, GIL released. CUDA tensors are drained
     through the write engine's pinned staging ring, the copy of the next
-    chunk overlapped with the write of the current one. See :func:`save` for
+    chunk overlapped with the write of the current one. See [`save`][] for
     what else is accepted.
 
     ``durable`` fsyncs the file and its directory before returning;
@@ -123,17 +123,17 @@ def load_files(
     """Read a sharded checkpoint as one call, many files in flight.
 
     ``keys`` restricts the read to those tensors (only their bytes are
-    touched); a name present in two files is a :class:`FormatError`, a
+    touched); a name present in two files is a [`FormatError`][], a
     requested name in none a ``KeyError``.
 
     ``select`` cuts tensors before they are read: per name, an index — ints,
-    slices, ``Ellipsis``, as ``t[index]`` would take — or a :class:`Shard`
-    (see :func:`select_shards`). The tensor comes back at the selected shape
+    slices, ``Ellipsis``, as ``t[index]`` would take — or a `causalab.neural.engines.pytorch_hooks.weights.Shard`
+    (see `select_shards`). The tensor comes back at the selected shape
     and only its runs are read — exactly the bytes wanted for a cut along the
     outer dimensions; for a cut along inner ones, runs whose gaps are cheaper
     to read through than to skip are read as one (the profile's rule;
     ``explain`` shows the amplification). Stepped slices read their covering
-    box. A selection that does not fit its tensor is a :class:`SelectError`.
+    box. A selection that does not fit its tensor is a [`SelectError`][].
 
     ``group`` opts into a collective load (CPU/Gloo or CUDA/NCCL). Every
     member must call with identical files, keys and selections; those tensors
@@ -142,13 +142,13 @@ def load_files(
     ``device`` first.
 
     ``shards`` names the tensors of which each rank wants only its own
-    :class:`Shard` — tensor-parallel narrowing. The shard may differ per rank
+    `causalab.neural.engines.pytorch_hooks.weights.Shard` — tensor-parallel narrowing. The shard may differ per rank
     (its ``rank``; ``dim`` and ``world`` must agree across the group) and is
     what the rank receives: read directly by that rank, never broadcast, and
     counted at shard size in every memory bound. A cut along the outer
     dimension is one contiguous read; a cut along an inner one is read as
     blocks of whole rows, one per rank, and redistributed with an all-to-all.
-    A name in both ``select`` and ``shards`` is a :class:`SelectError`.
+    A name in both ``select`` and ``shards`` is a [`SelectError`][].
     Without ``group``, ``shards`` are ordinary selections.
     """
     if group is not None:
@@ -179,7 +179,7 @@ def stream_files(
     group: ProcessGroup,
     shards: Mapping[str, Shard] | None = None,
 ) -> Iterator[tuple[str, torch.Tensor]]:
-    """Several coordinated :func:`load_files` requests, streamed and pipelined:
+    """Several coordinated [`load_files`][] requests, streamed and pipelined:
     yields ``(name, tensor)`` for every tensor of every ``(filenames, keys)``
     request, in request order, while the next request is already being read.
     A rank holds its own slice of a request (about ``1/world`` of its bytes)
@@ -187,13 +187,13 @@ def stream_files(
     ``world`` times larger than a ``load_files`` call for the same device
     memory; that is what keeps each rank's reads long enough to run at the
     storage's rate. Every member of ``group`` must pass identical requests;
-    see :func:`load_files` for what ``group`` requires.
+    see [`load_files`][] for what ``group`` requires.
 
-    ``shards`` applies across the requests, as in :func:`load_files`; a name
-    that no request loads is a :class:`SelectError` once the last request has
+    ``shards`` applies across the requests, as in [`load_files`][]; a name
+    that no request loads is a [`SelectError`][] once the last request has
     streamed.
 
-    Nothing runs until the first ``next``: the errors :func:`load_files`
+    Nothing runs until the first ``next``: the errors [`load_files`][]
     documents for a request surface from the iteration, not from this call.
     Consume the iterator to exhaustion. Every yield sits between collectives
     that every member must reach, so a rank that stops early (a ``break``, an
@@ -305,7 +305,7 @@ class safe_open:  # the reference's name, so it is not CapWords
     def get_sharded(self, name: str, dim: int, rank: int, world: int) -> torch.Tensor:
         """Shard ``rank`` of ``world`` equal shards of ``name`` along ``dim``
         — ``torch.chunk(t, world, dim)[rank]`` when ``dim`` divides, read
-        without the rest of the tensor. :class:`SelectError` when it does
+        without the rest of the tensor. [`SelectError`][] when it does
         not divide or ``dim``/``rank`` are out of range."""
         entry = self._entry(name)
         selection = resolve(name, entry.shape, Shard(dim, rank, world))

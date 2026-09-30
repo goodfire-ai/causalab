@@ -20,18 +20,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from tests.golden._env import GOLDEN_PROTOCOLS, build_env  # noqa: E402
+from tests.protocol._env import steps_of
 
-from causalab.protocol.loader import load  # noqa: E402
+from causalab.protocol.pipeline import compile_protocol  # noqa: E402
 
 
 def main() -> None:
     env = build_env(Path(tempfile.mkdtemp()))
     pins: dict[str, dict[str, object]] = {}
     for path in sorted(GOLDEN_PROTOCOLS.glob("*_im.json")):
-        loaded = load(path, env)
+        loaded = compile_protocol(path, env=env)
         pins[path.name] = {
-            "document": loaded.document_digest,
-            "points": list(loaded.point_digests),
+            "document": loaded.digests.document,
+            "points": list(steps_of(loaded, env).digests),
         }
     out = Path(__file__).parent / "golden_digests.json"
     out.write_text(json.dumps(pins, indent=2) + "\n")

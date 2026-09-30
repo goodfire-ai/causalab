@@ -10,14 +10,20 @@ import pytest
 from causalab.cli import main
 from causalab.protocol.engine import Engine
 from causalab.protocol.schema import COMPONENTS
-from causalab.protocol.loader import check_data_columns, load
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.rules.data import check_data_columns
 
-from tests.protocol._env import CORPUS_DIR, FIXTURES
+from tests.protocol._env import CORPUS_DIR, FIXTURES, steps_of
+from tests._helpers.paths import PROTOCOLS_DIR
+
 
 pytestmark = pytest.mark.unit
 
 
 def _argv(verb: str, name: str, artifacts_root, *extra: str) -> list[str]:
+    """The verb's argument list. ``--engine auto`` is supplied for every verb
+    that takes the flag (it is required); an explicit ``--engine``
+    in ``extra`` comes later and wins, as argparse takes the last value."""
     return [
         verb,
         str(CORPUS_DIR / name),
@@ -25,6 +31,7 @@ def _argv(verb: str, name: str, artifacts_root, *extra: str) -> list[str]:
         str(FIXTURES / "data"),
         "--artifacts-root",
         str(artifacts_root),
+        *(() if verb == "digest" else ("--engine", "auto")),
         *extra,
     ]
 
@@ -39,11 +46,17 @@ def test_validate_data_checks_columns(capsys, artifacts_root):
     assert code == 0
 
 
+def _aggregation(raw: dict, label: str) -> dict:
+    """The aggregation the save entry labelled ``label`` carries (§2.10)."""
+    (entry,) = [e for e in raw["method"]["save"] if e["file_path"] == f"{label}.json"]
+    return entry["aggregation"]
+
+
 def test_validate_data_catches_missing_column(env):
-    loaded = load(CORPUS_DIR / "02_interchange_im.json", env)
-    raw = json.loads(json.dumps(dict(loaded.raw)))
-    raw["method"]["metrics"]["logit_diff"]["a"] = "not_a_column"
-    reloaded = load(raw, env)
+    loaded = compile_protocol(CORPUS_DIR / "02_interchange_im.json", env=env)
+    raw = json.loads(json.dumps(dict(loaded.tree)))
+    _aggregation(raw, "logit_diff")["a"] = "not_a_column"
+    reloaded = compile_protocol(raw, env=env)
     with pytest.raises(Exception) as err:
         check_data_columns(reloaded, env)
     assert "not_a_column" in str(err.value)
@@ -52,13 +65,21 @@ def test_validate_data_catches_missing_column(env):
 def test_digest_prints_the_document_digest(capsys, env, artifacts_root):
     assert main(_argv("digest", "04_das_im.json", artifacts_root)) == 0
     printed = capsys.readouterr().out.strip()
-    assert printed == load(CORPUS_DIR / "04_das_im.json", env).document_digest
+    assert (
+        printed
+        == compile_protocol(CORPUS_DIR / "04_das_im.json", env=env).digests.document
+    )
 
 
 def test_explain_reports_plan(capsys, artifacts_root):
+    """The first step's forward plan prints under `plan` — its groups, one
+    per (model, input) — and no `forwards N per point` line: the count a
+    step owes is the run's."""
     assert main(_argv("explain", "03_path_patching_im.json", artifacts_root)) == 0
     out = capsys.readouterr().out
-    assert "forwards  4 per point" in out
+    assert "forwards" not in out
+    plan = out[out.index("plan\n") :]
+    assert len([line for line in plan.splitlines() if " on " in line]) == 4
     assert "paired_forward" in out
 
 
@@ -85,7 +106,10 @@ def test_set_override_changes_digest(capsys, env, artifacts_root):
     )
     overridden = capsys.readouterr().out.strip()
     assert (
-        overridden != load(CORPUS_DIR / "02_interchange_im.json", env).document_digest
+        overridden
+        != compile_protocol(
+            CORPUS_DIR / "02_interchange_im.json", env=env
+        ).digests.document
     )
 
 
@@ -110,7 +134,8 @@ def test_refusal_exits_nonzero(capsys, artifacts_root):
 
 class _CapturingEngine(Engine):
     """Stands in for the reference engine: records construction kwargs and
-    the ExecutionRequest, executes nothing."""
+    the handoff (the compiled document and its run context), executes
+    nothing."""
 
     last: "_CapturingEngine | None" = None
 
@@ -132,14 +157,16 @@ class _CapturingEngine(Engine):
         self.device = device
         self.batch_rows = batch_rows
         self.cuda_graphs = cuda_graphs
-        self.request = None
+        self.compiled = None
+        self.run = None
         type(self).last = self
 
-    def execute(self, request):
-        from causalab.protocol.engine import RunResult
+    def execute(self, compiled, run):
+        from tests._helpers.stub_engine import stub_execute
 
-        self.request = request
-        return RunResult(files={})
+        self.compiled = compiled
+        self.run = run
+        return stub_execute(self, compiled, run)
 
 
 @pytest.fixture
@@ -181,8 +208,32 @@ def test_device_goes_to_the_engine_and_dtype_goes_to_the_document(
     assert code == 0
     assert capturing_engine.last.device == "cuda:1"
     assert not hasattr(capturing_engine.last, "dtype")
-    request = capturing_engine.last.request
-    assert request.canonical[0]["model"]["dtype"] == "bf16"
+    compiled, run = capturing_engine.last.compiled, capturing_engine.last.run
+    assert steps_of(compiled, run.env).canonical[0]["model"]["dtype"] == "bf16"
+
+
+def test_device_is_recorded_in_the_receipt_and_not_in_the_document(
+    capturing_engine, artifacts_root, tmp_path
+):
+    """§8: the receipt's ``execution.device`` is the placement the engine was
+    built with, so a reader can tell a CUDA run from an MPS run. It is
+    execution, so the canonical document and the digest are the unplaced
+    run's."""
+    code = main(
+        _run_argv(
+            "02_interchange_im.json",
+            artifacts_root,
+            tmp_path,
+            "--device",
+            "cuda:1",
+            "--record",
+        )
+    )
+    assert code == 0
+    record = json.loads((tmp_path / "protocol.json").read_text())
+    assert record["execution"]["device"] == "cuda:1"
+    assert "cuda:1" not in json.dumps(record["canonical"])
+    assert "cuda:1" not in json.dumps(record["points"])
 
 
 def test_batch_rows_goes_to_the_engine_and_the_receipt_not_the_document(
@@ -194,7 +245,12 @@ def test_batch_rows_goes_to_the_engine_and_the_receipt_not_the_document(
     holds the bound the chosen engine reports, and nothing else does."""
     code = main(
         _run_argv(
-            "02_interchange_im.json", artifacts_root, tmp_path, "--batch-rows", "4"
+            "02_interchange_im.json",
+            artifacts_root,
+            tmp_path,
+            "--batch-rows",
+            "4",
+            "--record",
         )
     )
     assert code == 0
@@ -202,8 +258,19 @@ def test_batch_rows_goes_to_the_engine_and_the_receipt_not_the_document(
     record = json.loads((tmp_path / "protocol.json").read_text())
     assert record["execution"] == {
         "batch_rows": 4,
+        "device": "cpu",
         "fit_rows": None,
         "model_source": "loaded",
+        "parallel": {
+            "data": 1,
+            "data_mode": "points",
+            "pipeline": 1,
+            "context": 1,
+            "tensor": 1,
+            "expert": 1,
+            "world": 1,
+            "launcher": "solo",
+        },
     }
     assert "batch_rows" not in json.dumps(record["canonical"])
     assert "batch_rows" not in json.dumps(record["points"])
@@ -217,13 +284,27 @@ def test_batch_rows_defaults_to_one_forward_per_group(
 ):
     """No flag: the engine runs whole, and the receipt says so — ``null``,
     the same key, so a reader of two receipts compares one field."""
-    assert main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path)) == 0
+    assert (
+        main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path, "--record"))
+        == 0
+    )
     assert capturing_engine.last.batch_rows is None
     record = json.loads((tmp_path / "protocol.json").read_text())
     assert record["execution"] == {
         "batch_rows": None,
+        "device": "cpu",
         "fit_rows": None,
         "model_source": "loaded",
+        "parallel": {
+            "data": 1,
+            "data_mode": "points",
+            "pipeline": 1,
+            "context": 1,
+            "tensor": 1,
+            "expert": 1,
+            "world": 1,
+            "launcher": "solo",
+        },
     }
 
 
@@ -236,12 +317,26 @@ def test_model_source_is_read_off_the_engine_into_the_receipt_only(
     canonical form and no point digest. The CLI has no bundle flag, so the
     caller value is exercised through the engine's own report here."""
     monkeypatch.setattr(capturing_engine, "model_source", "caller", raising=False)
-    assert main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path)) == 0
+    assert (
+        main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path, "--record"))
+        == 0
+    )
     record = json.loads((tmp_path / "protocol.json").read_text())
     assert record["execution"] == {
         "batch_rows": None,
+        "device": "cpu",
         "fit_rows": None,
         "model_source": "caller",
+        "parallel": {
+            "data": 1,
+            "data_mode": "points",
+            "pipeline": 1,
+            "context": 1,
+            "tensor": 1,
+            "expert": 1,
+            "world": 1,
+            "launcher": "solo",
+        },
     }
     assert "model_source" not in json.dumps(record["canonical"])
     assert "model_source" not in json.dumps(record["points"])
@@ -303,6 +398,7 @@ def test_batch_rows_runs_under_the_reference_engine_and_auto(
             engine,
             "--batch-rows",
             "3",
+            "--record",
         )
     )
     assert code == 0
@@ -310,21 +406,39 @@ def test_batch_rows_runs_under_the_reference_engine_and_auto(
     record = json.loads((tmp_path / "protocol.json").read_text())
     assert record["execution"] == {
         "batch_rows": 3,
+        "device": "cpu",
         "fit_rows": None,
         "model_source": "loaded",
+        "parallel": {
+            "data": 1,
+            "data_mode": "points",
+            "pipeline": 1,
+            "context": 1,
+            "tensor": 1,
+            "expert": 1,
+            "world": 1,
+            "launcher": "solo",
+        },
     }
 
 
-def test_engine_auto_tolerates_a_missing_optional_engine(
-    capturing_engine, artifacts_root, tmp_path
+def test_engine_auto_is_the_reference_engine_and_never_imports_nnsight(
+    capturing_engine, artifacts_root, tmp_path, monkeypatch
 ):
-    """--engine auto is every *installed* engine: the nnsight extra being
-    absent must not break runs that never needed it."""
+    """`--engine auto` resolves to `pytorch_hooks` (the router's
+    placeholder) and builds that engine alone: the nnsight extra being absent — or
+    present — is never consulted."""
+    import sys as _sys
+
+    target = "causalab.neural.engines.nnsight_tracing"
+    for mod in [m for m in list(_sys.modules) if m.startswith(target)]:
+        monkeypatch.delitem(_sys.modules, mod)
+    monkeypatch.setattr(_sys, "meta_path", [_AbsentModule(target), *_sys.meta_path])
     code = main(
         _run_argv("01_harvest_im.json", artifacts_root, tmp_path, "--engine", "auto")
     )
     assert code == 0
-    assert capturing_engine.last is not None
+    assert capturing_engine.last is not None  # the stub standing in for pytorch_hooks
 
 
 class _AbsentModule:
@@ -344,7 +458,7 @@ def test_engine_nnsight_refuses_by_name_when_not_installed(
     capturing_engine, artifacts_root, tmp_path, capsys, monkeypatch
 ):
     """Naming an engine that is not installed is an error that says which
-    extra provides it — unlike auto, which quietly narrows to what exists."""
+    extra provides it."""
     import sys as _sys
 
     target = "causalab.neural.engines.nnsight_tracing"
@@ -382,78 +496,81 @@ def test_engine_nnsight_selects_the_nnsight_engine(
     assert _CapturingNnsight.last.name == "nnsight"
 
 
-def test_explain_engine_prints_the_engine_that_would_run(
-    capturing_engine, artifacts_root, capsys
-):
-    """`explain` printed `requires` and stopped, so routing could not be
-    pre-flighted — which is exactly what is not obvious on a model where one
-    family of components is hooks-only and another is nnsight-only."""
+def test_explain_engine_prints_the_engine_by_its_registry_name(artifacts_root, capsys):
+    """`explain --engine auto` prints the engine the router resolved to, by
+    the registry's name — no engine class is loaded (no `capturing_engine`
+    fixture here: the verdict is the registry's capability set)."""
     code = main(
         _argv("explain", "02_interchange_im.json", artifacts_root, "--engine", "auto")
     )
     assert code == 0
-    assert "engine    capture" in capsys.readouterr().out
+    assert "engine    pytorch_hooks" in capsys.readouterr().out
 
 
-def test_explain_engine_prints_the_refusal_rather_than_raising(
-    capturing_engine, artifacts_root, capsys, monkeypatch
-):
-    """A document nothing serves is the *more* useful answer of the two, so it
-    is printed beside the plan instead of aborting the explanation."""
-    monkeypatch.setattr(
-        capturing_engine,
-        "capabilities",
-        frozenset(),  # serves nothing
-    )
-    # `pytorch_hooks`, not `auto`: auto also builds the real nnsight engine,
-    # which would serve this document and route right past the stub
+def test_explain_engine_prints_the_refusal_rather_than_raising(artifacts_root, capsys):
+    """A document the named engine cannot serve is the *more* useful answer
+    of the two, so it is printed beside the plan instead of aborting the
+    explanation: the nnsight engine has no grad path, and `04_das_im.json` is
+    a fit."""
     code = main(
-        _argv(
-            "explain",
-            "02_interchange_im.json",
-            artifacts_root,
-            "--engine",
-            "pytorch_hooks",
-        )
+        _argv("explain", "04_das_im.json", artifacts_root, "--engine", "nnsight")
     )
     assert code == 0
     out = capsys.readouterr().out
-    assert "engine    refused" in out
-    assert "paired_forward" in out  # names what is missing
+    assert "plan" in out  # the plan still prints
+    assert "engine    refused: [V13]" in out
+    assert "lacks ['grad']" in out  # names what is missing
 
 
-def test_explain_without_the_flag_loads_no_engine(artifacts_root, capsys):
-    """Opt-in: engines are heavy, and the pure verbs stay torch-free. No
-    `capturing_engine` fixture here — a load would import the real one."""
-    assert main(_argv("explain", "02_interchange_im.json", artifacts_root)) == 0
-    assert "engine" not in capsys.readouterr().out
-
-
-def test_the_engine_default_is_auto(capturing_engine, artifacts_root, tmp_path):
-    """Routing is §8's own answer, so not passing `--engine` must not silently
-    pin one.
-
-    `auto` is every installed engine with the reference **first**, and list
-    order is preference — so anything the reference serves behaves exactly as
-    the old `pytorch_hooks` default did. What changes is the other case: a
-    document only the nnsight engine can serve now runs instead of refusing by
-    name a document nothing in the list served.
-    """
-    assert main(_run_argv("01_harvest_im.json", artifacts_root, tmp_path)) == 0
-    assert capturing_engine.last is not None  # the reference still wins
-
-
-def test_the_default_falls_through_to_the_engine_that_can_serve(
-    capturing_engine, artifacts_root, tmp_path, monkeypatch
+def test_validate_refuses_a_document_the_named_engine_cannot_serve(
+    artifacts_root, capsys
 ):
-    """The behaviour the default buys: the reference cannot serve it, and the
-    run routes on instead of refusing."""
+    """`validate --engine nnsight` on a fit is rule 13's refusal, exit 1 — the
+    refusal that used to be routing's, now the named engine's; `auto`
+    (pytorch_hooks) is the twin."""
+    code = main(
+        _argv("validate", "04_das_im.json", artifacts_root, "--engine", "nnsight")
+    )
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "refused: [V13]" in err and "lacks ['grad']" in err
+    assert main(_argv("validate", "04_das_im.json", artifacts_root)) == 0
+
+
+@pytest.mark.parametrize("verb", ["run", "validate", "explain", "dry-run"])
+def test_the_engine_flag_is_required(verb, artifacts_root, tmp_path, capsys):
+    """The engine is a mandatory explicit input: no default, so a
+    verb without `--engine` is argparse's exit 2 naming the flag."""
+    argv = [
+        verb,
+        str(CORPUS_DIR / "02_interchange_im.json"),
+        "--data-root",
+        str(FIXTURES / "data"),
+        "--artifacts-root",
+        str(artifacts_root),
+        *(("--out", str(tmp_path)) if verb == "run" else ()),
+    ]
+    with pytest.raises(SystemExit) as err:
+        main(argv)
+    assert err.value.code == 2
+    assert "the following arguments are required: --engine" in capsys.readouterr().err
+
+
+def test_auto_refuses_when_the_reference_engine_lacks_a_capability(
+    capturing_engine, artifacts_root, tmp_path, capsys, monkeypatch
+):
+    """`auto` no longer falls through to the
+    nnsight engine for a document `pytorch_hooks` cannot serve — it is refused
+    under rule 13 naming the shortfall, before any weights, and the nnsight
+    module is never constructed; the user pins `--engine nnsight`. The
+    shortfall is staged by emptying the stub's capability set: no offline
+    document needs a component only nnsight serves (the deltanet and
+    expert_permutation faces), so there is no real-document twin."""
     import sys as _sys
     import types
 
     class _Nnsight(_CapturingEngine):
         name = "nnsight"
-        # its own set, so emptying the base class's below does not follow it
         capabilities = frozenset(_CapturingEngine.capabilities)
 
     monkeypatch.setattr(capturing_engine, "capabilities", frozenset())
@@ -462,14 +579,22 @@ def test_the_default_falls_through_to_the_engine_that_can_serve(
     monkeypatch.setitem(_sys.modules, "causalab.neural.engines.nnsight_tracing", stub)
     _Nnsight.last = None
 
-    assert main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path)) == 0
-    assert _Nnsight.last is not None and _Nnsight.last.name == "nnsight"
+    code = main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path))
+    assert code == 1
+    err = capsys.readouterr().err
+    assert "refused: [V13]" in err and "paired_forward" in err
+    assert _Nnsight.last is None
+    assert capturing_engine.last is not None  # constructed, then refused
+    assert capturing_engine.last.compiled is None  # and never entered
 
 
 def test_run_defaults_stay_cpu_fp32(capturing_engine, artifacts_root, tmp_path):
     assert main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path)) == 0
     assert capturing_engine.last.device == "cpu"
-    assert capturing_engine.last.request.canonical[0]["model"]["dtype"] == "fp32"
+    last = capturing_engine.last
+    assert (
+        steps_of(last.compiled, last.run.env).canonical[0]["model"]["dtype"] == "fp32"
+    )
 
 
 def test_dtype_and_set_may_not_contradict(artifacts_root, tmp_path):
@@ -491,7 +616,7 @@ def test_dtype_and_set_may_not_contradict(artifacts_root, tmp_path):
 def test_points_selects_a_shard_without_moving_the_campaign_digest(
     capturing_engine, env, artifacts_root, tmp_path
 ):
-    loaded = load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env)
+    loaded = compile_protocol(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env)
     code = main(
         _run_argv(
             "07_weekdays_locate_scan_im.json",
@@ -502,11 +627,17 @@ def test_points_selects_a_shard_without_moving_the_campaign_digest(
         )
     )
     assert code == 0
-    request = capturing_engine.last.request
-    assert len(request.points) == 4
-    assert request.digests == tuple(loaded.point_digests[3:7])
-    assert request.coords == tuple(p.coords for p in loaded.expansion.points[3:7])
-    assert request.document_digest == loaded.document_digest
+    compiled, run = capturing_engine.last.compiled, capturing_engine.last.run
+    # the shard rides on the run context as indices; the engine reads the
+    # compiled points at those indices, and the campaign digest is untouched
+    assert run.points == (3, 4, 5, 6)
+    assert [steps_of(compiled, env).digests[i] for i in run.points] == list(
+        steps_of(loaded, env).digests[3:7]
+    )
+    assert [steps_of(compiled, env).points[i].coords for i in run.points] == [
+        p.coords for p in steps_of(loaded, env).points[3:7]
+    ]
+    assert compiled.campaign_digest == loaded.digests.document
 
 
 @pytest.mark.parametrize("spec", ["7", "3:3", "60:70", "-1:4", "a:b"])
@@ -534,6 +665,8 @@ def test_points_refused_on_workflow_documents(
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(doc),
             "--data-root",
             str(FIXTURES / "data"),
@@ -559,18 +692,18 @@ def test_validate_data_flags_a_missing_position_column(env):
     """A ``{"column": …}`` position is an explicit reference, so
     ``validate --data`` catches a typo at load instead of the engine hitting
     it mid-run (§2.3)."""
-    loaded = load(CORPUS_DIR / "10_task_table_iia_im.json", env)
-    raw = json.loads(json.dumps(dict(loaded.raw)))
+    loaded = compile_protocol(CORPUS_DIR / "10_task_table_iia_im.json", env=env)
+    raw = json.loads(json.dumps(dict(loaded.tree)))
     raw["method"]["positions"]["subject"] = {"column": "not_a_column"}
     with pytest.raises(Exception) as err:
-        check_data_columns(load(raw, env), env)
+        check_data_columns(compile_protocol(raw, env=env), env)
     assert "not_a_column" in str(err.value)
 
 
 def test_validate_data_accepts_the_generated_tables_columns(env):
     """The positive half: every reference in the task-table document resolves
     against the built table, including the answer-form group column."""
-    loaded = load(CORPUS_DIR / "10_task_table_iia_im.json", env)
+    loaded = compile_protocol(CORPUS_DIR / "10_task_table_iia_im.json", env=env)
     refs = check_data_columns(loaded, env)
     assert "label_forms" in refs  # the metric's expected group
     assert "entity" in refs  # the column position
@@ -585,14 +718,14 @@ def test_validate_data_flags_a_missing_position_variable(env):
 
     Existence is answerable without a tokenizer, so it is answered here; the
     *width* of the resulting window is not, and stays a run-time refusal."""
-    loaded = load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env)
-    raw = json.loads(json.dumps(dict(loaded.raw)))
+    loaded = compile_protocol(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env)
+    raw = json.loads(json.dumps(dict(loaded.tree)))
     # the axis exactly as it shipped, bad coordinate second
     raw["method"]["positions"]["tap"] = {
         "sweep": [{"index": -1}, {"variable": "subject"}]
     }
     with pytest.raises(Exception) as err:
-        check_data_columns(load(raw, env), env)
+        check_data_columns(compile_protocol(raw, env=env), env)
     assert "subject" in str(err.value)
     assert "prompt variable" in str(err.value)
 
@@ -602,13 +735,11 @@ def test_validate_data_checks_every_point_not_just_the_first(env):
     ``point_documents[0]``, so a swept axis was only ever checked at coordinate
     0. Any reference that varies with the sweep — a position, a metric column,
     a dataset field — was unchecked at every other coordinate."""
-    loaded = load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env)
-    raw = json.loads(json.dumps(dict(loaded.raw)))
-    raw["method"]["metrics"]["iia"]["expected"] = {
-        "sweep": ["cf_answer", "not_a_column"]
-    }
+    loaded = compile_protocol(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env)
+    raw = json.loads(json.dumps(dict(loaded.tree)))
+    _aggregation(raw, "iia")["expected"] = {"sweep": ["cf_answer", "not_a_column"]}
     with pytest.raises(Exception) as err:
-        check_data_columns(load(raw, env), env)
+        check_data_columns(compile_protocol(raw, env=env), env)
     assert "not_a_column" in str(err.value)
 
 
@@ -618,7 +749,7 @@ def test_validate_data_accepts_a_variable_only_the_sibling_names(env):
     top-level column of that name. Resolving one spelling but not the other
     would refuse every real task table."""
     refs = check_data_columns(
-        load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env), env
+        compile_protocol(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env), env
     )
     assert "entity" in refs
 
@@ -632,10 +763,10 @@ def test_validate_data_reads_a_drawn_roles_sibling_at_its_eval_member(env, monke
     exhibit that refusal (its `entity` is also a top-level column), so the
     test records the field the check is handed rather than asserting a
     refusal; `"entity" in refs` holds either way."""
-    from causalab.protocol import loader as loader_module
+    from causalab.protocol.rules import data as loader_module
 
-    loaded = load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env)
-    raw = json.loads(json.dumps(dict(loaded.raw)))
+    loaded = compile_protocol(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env)
+    raw = json.loads(json.dumps(dict(loaded.tree)))
     raw["data"]["counterfactual"] = {
         **raw["data"]["counterfactual"],
         "field": "counterfactual_inputs",
@@ -649,7 +780,7 @@ def test_validate_data_reads_a_drawn_roles_sibling_at_its_eval_member(env, monke
         return real(rows, field)
 
     monkeypatch.setattr(loader_module, "_role_variables", recording)
-    refs = check_data_columns(load(raw, env), env)
+    refs = check_data_columns(compile_protocol(raw, env=env), env)
     assert "counterfactual_inputs[0]" in asked and "counterfactual_inputs" not in asked
     assert "entity" in refs
 
@@ -658,26 +789,26 @@ def test_validate_data_flags_a_missing_scope_variable(env):
     """``scope``/``relative_to`` spelled as a variable is the same reference,
     and the ROME-shaped ``{"index": -1, "scope": {"variable": …}}`` idiom is
     where it is actually written."""
-    loaded = load(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env)
-    raw = json.loads(json.dumps(dict(loaded.raw)))
+    loaded = compile_protocol(CORPUS_DIR / "07_weekdays_locate_scan_im.json", env=env)
+    raw = json.loads(json.dumps(dict(loaded.tree)))
     raw["method"]["positions"]["tap"] = {
         "index": -1,
         "scope": {"variable": "not_a_variable"},
     }
     with pytest.raises(Exception) as err:
-        check_data_columns(load(raw, env), env)
+        check_data_columns(compile_protocol(raw, env=env), env)
     assert "not_a_variable" in str(err.value)
 
 
 def test_validate_data_flags_a_missing_relative_to_column(env):
-    loaded = load(CORPUS_DIR / "10_task_table_iia_im.json", env)
-    raw = json.loads(json.dumps(dict(loaded.raw)))
+    loaded = compile_protocol(CORPUS_DIR / "10_task_table_iia_im.json", env=env)
+    raw = json.loads(json.dumps(dict(loaded.tree)))
     raw["method"]["positions"]["subject"] = {
         "index": 1,
         "relative_to": {"column": "not_a_column"},
     }
     with pytest.raises(Exception) as err:
-        check_data_columns(load(raw, env), env)
+        check_data_columns(compile_protocol(raw, env=env), env)
     assert "not_a_column" in str(err.value)
 
 
@@ -697,7 +828,7 @@ def test_explain_reports_the_decode_and_what_it_obliges(capsys, artifacts_root):
 
 
 REPO = Path(__file__).resolve().parents[2]
-SHIPPED_RUN = REPO / "causalab/configs/protocols/weekdays_8b_interchange.json"
+SHIPPED_RUN = PROTOCOLS_DIR / "weekdays_interchange.json"
 
 
 def _file_argv(verb: str, path, artifacts_root, *extra: str) -> list[str]:
@@ -708,6 +839,7 @@ def _file_argv(verb: str, path, artifacts_root, *extra: str) -> list[str]:
         str(FIXTURES / "data"),
         "--artifacts-root",
         str(artifacts_root),
+        *(() if verb == "digest" else ("--engine", "auto")),  # the flag is required
         *extra,
     ]
 
@@ -718,7 +850,7 @@ def _file_argv(verb: str, path, artifacts_root, *extra: str) -> list[str]:
 
 
 class _StubConfig:
-    """Just the attributes :func:`model_info_from_hf_config` reads."""
+    """Just the attributes [`model_info_from_hf_config`][causalab.protocol.registry.models.model_info_from_hf_config] reads."""
 
     num_attention_heads = 8
     hidden_size = 64
@@ -758,6 +890,8 @@ def _verb(verb: str, path: Path, artifacts_root, *extra: str) -> list[str]:
         str(FIXTURES / "data"),
         "--artifacts-root",
         str(artifacts_root),
+        # `digest` alone takes no engine
+        *(() if verb == "digest" else ("--engine", "auto")),
         *extra,
     ]
 
@@ -776,7 +910,7 @@ def test_a_pure_verb_refuses_an_unregistered_model_without_the_flag(
 def test_register_from_hf_lets_a_pure_verb_pre_flight_an_unregistered_model(
     verb, unregistered_document, artifacts_root, capsys, monkeypatch
 ):
-    """The gap every run on an unregistered model hand-rolled a wrapper around.
+    """The gap a run on an unregistered model had to hand-roll a wrapper around.
 
     The documented workaround — validate against a *similar* registered model —
     produces a **false** refusal: `[V4] layer 36 out of range for the 36-layer
@@ -848,16 +982,30 @@ def test_explain_prints_one_digest(capsys, artifacts_root):
     assert "bf16" in out
 
 
+def test_run_writes_no_receipt_and_no_stream_by_default(
+    capturing_engine, artifacts_root, tmp_path
+):
+    """``causalab run`` writes the saved tables and nothing beside them unless
+    ``--record`` asks for the receipt and the event stream."""
+    assert main(_run_argv("09_das_apply_im.json", artifacts_root, tmp_path)) == 0
+    assert capturing_engine.last is not None
+    assert not (tmp_path / "protocol.json").exists()
+    assert not (tmp_path / "events.jsonl").exists()
+
+
 def test_run_writes_the_protocol_record(capturing_engine, artifacts_root, tmp_path):
     """The record a reproducer reads first: what ran, at what precision, with
-    the provenance digest of every point."""
+    the provenance digest of every point. Corpus 09 — a bf16 apply, one point
+    — and not the shipped ``weekdays_interchange.json``: the run door loads
+    the document's tokenizer, and the shipped weekdays presets name a gated
+    model the CPU tier only ever loads offline, never runs."""
     assert (
-        main(_file_argv("run", SHIPPED_RUN, artifacts_root, "--out", str(tmp_path)))
+        main(_run_argv("09_das_apply_im.json", artifacts_root, tmp_path, "--record"))
         == 0
     )
     record = json.loads((tmp_path / "protocol.json").read_text())
     assert record["canonical"]["model"] == {
-        "key": "meta-llama/Llama-3.1-8B",
+        "key": "Qwen/Qwen3-8B",
         "revision": "main",
         "dtype": "bf16",
     }
@@ -879,7 +1027,7 @@ def test_dry_run_reports_and_ends_with_the_undecided_line(capsys, artifacts_root
     code = main(_argv("dry-run", "02_interchange_im.json", artifacts_root))
     assert code == 0
     out = capsys.readouterr().out
-    assert "points    1" in out and "forwards  2 per point, 2 interned" in out
+    assert "points    1" in out and "forwards" not in out  # the count is the run's
     assert (
         out.strip()
         .splitlines()[-1]
@@ -904,43 +1052,38 @@ def test_dry_run_refuses_with_the_reason_code(capsys, artifacts_root):
     assert "refused: [V4]" in err and "reason component_unavailable" in err
 
 
-def test_dry_run_without_the_flag_loads_no_engine(artifacts_root, capsys):
-    """Opt-in like `explain --engine`: no `capturing_engine` fixture here — a
-    load would import the real engine."""
+def test_dry_run_decides_the_engine_question_from_the_registry(artifacts_root, capsys):
+    """No `capturing_engine` fixture here: `--engine auto` (required) is
+    answered from the registry's capability set for the resolved
+    name, so no engine class loads and the engine question is never left
+    undecided."""
     assert main(_argv("dry-run", "02_interchange_im.json", artifacts_root)) == 0
     out = capsys.readouterr().out
-    assert "engine    " not in out and "engines:" in out  # left undecided, named
+    assert "engine    pytorch_hooks: serves" in out
+    assert not out.strip().splitlines()[-1].split(": ", 1)[1].startswith("engines")
 
 
 def test_dry_run_engine_reports_the_shortfall_rather_than_raising(
-    capturing_engine, artifacts_root, capsys, monkeypatch
+    artifacts_root, capsys
 ):
     """The seam `explain --engine` left for the dry run: the refusal is a
-    `capability_shortfall` per candidate, printed beside the report; a pinned
-    engine's shortfall is exit 1."""
-    monkeypatch.setattr(capturing_engine, "capabilities", frozenset())
+    `capability_shortfall` for the named engine, printed beside the report;
+    the named engine's shortfall is exit 1 (the nnsight engine has no grad
+    path; `04_das_im.json` is a fit)."""
     code = main(
-        _argv(
-            "dry-run",
-            "02_interchange_im.json",
-            artifacts_root,
-            "--engine",
-            "pytorch_hooks",
-        )
+        _argv("dry-run", "04_das_im.json", artifacts_root, "--engine", "nnsight")
     )
     assert code == 1
     captured = capsys.readouterr()
-    assert "engine    capture: capability_shortfall" in captured.out
-    assert "paired_forward" in captured.out
+    assert "engine    nnsight: capability_shortfall" in captured.out
+    assert "lacks ['grad']" in captured.out
     assert "refused: [V13]" in captured.err
 
 
-def test_dry_run_engine_that_serves_is_exit_0(capturing_engine, artifacts_root, capsys):
-    code = main(
-        _argv("dry-run", "02_interchange_im.json", artifacts_root, "--engine", "auto")
-    )
+def test_dry_run_engine_that_serves_is_exit_0(artifacts_root, capsys):
+    code = main(_argv("dry-run", "04_das_im.json", artifacts_root, "--engine", "auto"))
     assert code == 0
-    assert "engine    capture: serves" in capsys.readouterr().out
+    assert "engine    pytorch_hooks: serves" in capsys.readouterr().out
 
 
 def test_dry_run_refuses_register_from_hf(capsys, artifacts_root):
@@ -966,7 +1109,8 @@ def test_cuda_graph_option_reaches_engine_without_changing_document(
         main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path / "eager"))
         == 0
     )
-    canonical = capturing_engine.last.request.canonical
+    last = capturing_engine.last
+    canonical = steps_of(last.compiled, last.run.env).canonical
     assert not capturing_engine.last.cuda_graphs
     assert (
         main(
@@ -982,4 +1126,69 @@ def test_cuda_graph_option_reaches_engine_without_changing_document(
         == 0
     )
     assert capturing_engine.last.cuda_graphs
-    assert capturing_engine.last.request.canonical == canonical
+    last = capturing_engine.last
+    assert steps_of(last.compiled, last.run.env).canonical == canonical
+
+
+# --------------------------------------------------------------------------- #
+# run-verb --verbose: one logger, one handler, nothing else configured
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def restore_loggers():
+    """Snapshot the two loggers ``--verbose`` touches and put them back, so a
+    verbose run leaves no handler or level behind for the tests after it."""
+    import logging
+
+    from causalab.cli import VERBOSE_LOGGER
+
+    ours = logging.getLogger(VERBOSE_LOGGER)
+    hf = logging.getLogger("huggingface_hub")
+    before = (ours.level, list(ours.handlers), hf.level)
+    yield ours
+    ours.setLevel(before[0])
+    ours.handlers[:] = before[1]
+    hf.setLevel(before[2])
+
+
+def test_verbose_enables_the_execution_logger_alone(
+    capturing_engine, artifacts_root, tmp_path, restore_loggers
+):
+    """``--verbose`` raises the shared execution loop's logger to INFO with
+    one stderr handler. The root logger and the ``causalab`` parent stay as
+    they were: no other module gains output from the flag."""
+    import logging
+
+    root_level, root_handlers = logging.root.level, list(logging.root.handlers)
+    parent = logging.getLogger("causalab")
+    parent_level, parent_handlers = parent.level, list(parent.handlers)
+
+    code = main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path, "-v"))
+    assert code == 0
+    assert restore_loggers.isEnabledFor(logging.INFO)
+    assert len(restore_loggers.handlers) == 1
+    assert isinstance(restore_loggers.handlers[0], logging.StreamHandler)
+    assert (logging.root.level, logging.root.handlers) == (root_level, root_handlers)
+    assert (parent.level, parent.handlers) == (parent_level, parent_handlers)
+    assert logging.getLogger("huggingface_hub").isEnabledFor(logging.INFO)
+
+
+def test_verbose_twice_attaches_one_handler(
+    capturing_engine, artifacts_root, tmp_path, restore_loggers
+):
+    """A second verbose run in the same process adds no second handler, so
+    each line prints once."""
+    for out in (tmp_path / "a", tmp_path / "b"):
+        assert main(_run_argv("02_interchange_im.json", artifacts_root, out, "-v")) == 0
+    assert len(restore_loggers.handlers) == 1
+
+
+def test_run_without_verbose_configures_no_logger(
+    capturing_engine, artifacts_root, tmp_path, restore_loggers
+):
+    import logging
+
+    assert main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path)) == 0
+    assert restore_loggers.level == logging.NOTSET
+    assert restore_loggers.handlers == []

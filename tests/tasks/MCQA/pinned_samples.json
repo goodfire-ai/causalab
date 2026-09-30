@@ -5,29 +5,29 @@
         {
           "answer": "Q",
           "answer_position": 1,
-          "choice0": "orange",
-          "choice1": "red",
+          "choices[0]": "orange",
+          "choices[1]": "red",
           "color": "red",
           "object": "cup",
           "raw_input": "The cup is red. What color is the cup?\nJ. orange\nQ. red\nAnswer:",
           "raw_output": " Q",
-          "symbol0": "J",
-          "symbol1": "Q",
-          "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+          "symbols[0]": "J",
+          "symbols[1]": "Q",
+          "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
         }
       ],
       "input": {
         "answer": "Z",
         "answer_position": 1,
-        "choice0": "orange",
-        "choice1": "red",
+        "choices[0]": "orange",
+        "choices[1]": "red",
         "color": "red",
         "object": "cup",
         "raw_input": "The cup is red. What color is the cup?\nM. orange\nZ. red\nAnswer:",
         "raw_output": " Z",
-        "symbol0": "M",
-        "symbol1": "Z",
-        "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+        "symbols[0]": "M",
+        "symbols[1]": "Z",
+        "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
       },
       "seed": 0
     },
@@ -36,29 +36,29 @@
         {
           "answer": "O",
           "answer_position": 0,
-          "choice0": "blue",
-          "choice1": "orange",
+          "choices[0]": "blue",
+          "choices[1]": "orange",
           "color": "blue",
           "object": "shoe",
           "raw_input": "The shoe is blue. What color is the shoe?\nO. blue\nQ. orange\nAnswer:",
           "raw_output": " O",
-          "symbol0": "O",
-          "symbol1": "Q",
-          "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+          "symbols[0]": "O",
+          "symbols[1]": "Q",
+          "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
         }
       ],
       "input": {
         "answer": "P",
         "answer_position": 0,
-        "choice0": "blue",
-        "choice1": "orange",
+        "choices[0]": "blue",
+        "choices[1]": "orange",
         "color": "blue",
         "object": "shoe",
         "raw_input": "The shoe is blue. What color is the shoe?\nP. blue\nY. orange\nAnswer:",
         "raw_output": " P",
-        "symbol0": "P",
-        "symbol1": "Y",
-        "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+        "symbols[0]": "P",
+        "symbols[1]": "Y",
+        "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
       },
       "seed": 1
     },
@@ -67,29 +67,29 @@
         {
           "answer": "V",
           "answer_position": 0,
-          "choice0": "blue",
-          "choice1": "pink",
+          "choices[0]": "blue",
+          "choices[1]": "pink",
           "color": "blue",
           "object": "car",
           "raw_input": "The car is blue. What color is the car?\nV. blue\nJ. pink\nAnswer:",
           "raw_output": " V",
-          "symbol0": "V",
-          "symbol1": "J",
-          "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+          "symbols[0]": "V",
+          "symbols[1]": "J",
+          "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
         }
       ],
       "input": {
         "answer": "X",
         "answer_position": 0,
-        "choice0": "blue",
-        "choice1": "pink",
+        "choices[0]": "blue",
+        "choices[1]": "pink",
         "color": "blue",
         "object": "car",
         "raw_input": "The car is blue. What color is the car?\nX. blue\nZ. pink\nAnswer:",
         "raw_output": " X",
-        "symbol0": "X",
-        "symbol1": "Z",
-        "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+        "symbols[0]": "X",
+        "symbols[1]": "Z",
+        "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
       },
       "seed": 2
     },
@@ -98,29 +98,29 @@
         {
           "answer": "U",
           "answer_position": 1,
-          "choice0": "green",
-          "choice1": "black",
+          "choices[0]": "green",
+          "choices[1]": "black",
           "color": "black",
           "object": "shoe",
           "raw_input": "The shoe is black. What color is the shoe?\nW. green\nU. black\nAnswer:",
           "raw_output": " U",
-          "symbol0": "W",
-          "symbol1": "U",
-          "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+          "symbols[0]": "W",
+          "symbols[1]": "U",
+          "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
         }
       ],
       "input": {
         "answer": "P",
         "answer_position": 1,
-        "choice0": "green",
-        "choice1": "black",
+        "choices[0]": "green",
+        "choices[1]": "black",
         "color": "black",
         "object": "shoe",
         "raw_input": "The shoe is black. What color is the shoe?\nT. green\nP. black\nAnswer:",
         "raw_output": " P",
-        "symbol0": "T",
-        "symbol1": "P",
-        "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+        "symbols[0]": "T",
+        "symbols[1]": "P",
+        "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
       },
       "seed": 3
     },
@@ -129,29 +129,29 @@
         {
           "answer": "A",
           "answer_position": 1,
-          "choice0": "brown",
-          "choice1": "blue",
+          "choices[0]": "brown",
+          "choices[1]": "blue",
           "color": "blue",
           "object": "flower",
           "raw_input": "The flower is blue. What color is the flower?\nD. brown\nA. blue\nAnswer:",
           "raw_output": " A",
-          "symbol0": "D",
-          "symbol1": "A",
-          "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+          "symbols[0]": "D",
+          "symbols[1]": "A",
+          "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
         }
       ],
       "input": {
         "answer": "C",
         "answer_position": 1,
-        "choice0": "brown",
-        "choice1": "blue",
+        "choices[0]": "brown",
+        "choices[1]": "blue",
         "color": "blue",
         "object": "flower",
         "raw_input": "The flower is blue. What color is the flower?\nE. brown\nC. blue\nAnswer:",
         "raw_output": " C",
-        "symbol0": "E",
-        "symbol1": "C",
-        "template": "The {object} is {color}. What color is the {object}?\n{symbol0}. {choice0}\n{symbol1}. {choice1}\nAnswer:"
+        "symbols[0]": "E",
+        "symbols[1]": "C",
+        "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
       },
       "seed": 4
     }

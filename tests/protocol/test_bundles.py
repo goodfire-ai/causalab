@@ -14,7 +14,7 @@ from causalab.protocol.bundles import (
     parse_entry_key,
     select_entry,
 )
-from causalab.protocol.errors import ValidationError
+from causalab.protocol.rules.errors import ValidationError
 
 pytestmark = pytest.mark.unit
 

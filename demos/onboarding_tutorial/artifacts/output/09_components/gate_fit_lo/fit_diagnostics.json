@@ -1,0 +1,25 @@
+[
+  {
+    "point": "4ca94098abfad1e9b987d21722df5c05ba46afe640a525ba375a8675670f063c",
+    "coords": {},
+    "featurizers": {
+      "gate": {
+        "width": 1536.0,
+        "decisive_fraction": 0.9537760615348816,
+        "hard_mask_size": 1463.0,
+        "temperature": 0.010000000000000009,
+        "parametrization": "sigmoid",
+        "frozen_units": 0.0,
+        "reawakened_units": 79.0
+      }
+    },
+    "anneals": {
+      "gate.theta.temperature": {
+        "start": 1.0,
+        "end": 0.01,
+        "final": 0.010000000000000009,
+        "shape": "linear"
+      }
+    }
+  }
+]

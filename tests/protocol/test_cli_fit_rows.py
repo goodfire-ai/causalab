@@ -67,7 +67,14 @@ def test_fit_rows_goes_to_the_engine_and_the_receipt_not_the_document(
     ``execution`` block, and leaves the canonical document and the points —
     so the digest is the unbounded run's."""
     code = main(
-        _run_argv("02_interchange_im.json", artifacts_root, tmp_path, "--fit-rows", "8")
+        _run_argv(
+            "02_interchange_im.json",
+            artifacts_root,
+            tmp_path,
+            "--fit-rows",
+            "8",
+            "--record",
+        )
     )
     assert code == 0
     assert fit_engine.last.fit_rows == 8
@@ -75,8 +82,19 @@ def test_fit_rows_goes_to_the_engine_and_the_receipt_not_the_document(
     record = json.loads((tmp_path / "protocol.json").read_text())
     assert record["execution"] == {
         "batch_rows": None,
+        "device": "cpu",
         "fit_rows": 8,
         "model_source": "loaded",
+        "parallel": {
+            "data": 1,
+            "data_mode": "points",
+            "pipeline": 1,
+            "context": 1,
+            "tensor": 1,
+            "expert": 1,
+            "world": 1,
+            "launcher": "solo",
+        },
     }
     assert "fit_rows" not in json.dumps(record["canonical"])
     assert "fit_rows" not in json.dumps(record["points"])
@@ -97,6 +115,7 @@ def test_fit_rows_and_batch_rows_are_independent_knobs(
             "4",
             "--fit-rows",
             "16",
+            "--record",
         )
     )
     assert code == 0
@@ -105,8 +124,19 @@ def test_fit_rows_and_batch_rows_are_independent_knobs(
     record = json.loads((tmp_path / "protocol.json").read_text())
     assert record["execution"] == {
         "batch_rows": 4,
+        "device": "cpu",
         "fit_rows": 16,
         "model_source": "loaded",
+        "parallel": {
+            "data": 1,
+            "data_mode": "points",
+            "pipeline": 1,
+            "context": 1,
+            "tensor": 1,
+            "expert": 1,
+            "world": 1,
+            "launcher": "solo",
+        },
     }
 
 
@@ -115,13 +145,27 @@ def test_fit_rows_defaults_to_one_grad_forward_per_cohort(
 ):
     """No flag: the engine is built unbounded and the receipt says ``null``
     under the same key, so a reader of two receipts compares one field."""
-    assert main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path)) == 0
+    assert (
+        main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path, "--record"))
+        == 0
+    )
     assert fit_engine.last.fit_rows is None
     record = json.loads((tmp_path / "protocol.json").read_text())
     assert record["execution"] == {
         "batch_rows": None,
+        "device": "cpu",
         "fit_rows": None,
         "model_source": "loaded",
+        "parallel": {
+            "data": 1,
+            "data_mode": "points",
+            "pipeline": 1,
+            "context": 1,
+            "tensor": 1,
+            "expert": 1,
+            "world": 1,
+            "launcher": "solo",
+        },
     }
 
 
@@ -130,7 +174,10 @@ def test_no_fit_rows_flag_builds_the_engine_without_the_kwarg(
 ):
     """The stub in ``test_cli.py`` takes no ``fit_rows``; an unflagged run
     must keep constructing it, so the kwarg is passed only when set."""
-    assert main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path)) == 0
+    assert (
+        main(_run_argv("02_interchange_im.json", artifacts_root, tmp_path, "--record"))
+        == 0
+    )
     assert base_engine.last is not None
     record = json.loads((tmp_path / "protocol.json").read_text())
     assert record["execution"]["fit_rows"] is None
@@ -186,6 +233,7 @@ def test_fit_rows_runs_under_the_reference_engine_and_auto(
             engine,
             "--fit-rows",
             "3",
+            "--record",
         )
     )
     assert code == 0

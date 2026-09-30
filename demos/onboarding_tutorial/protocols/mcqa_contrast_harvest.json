@@ -1,33 +1,35 @@
 {
   "header": {
-    "protocol_version": "3",
-    "description": "Read the located cell on both halves of every pair in one forward each, so the two harvests differ in exactly the thing the pair was built to vary: the answer symbol. Subtracting their means gives a direction that points from 'the base's symbol' to 'the counterfactual's symbol' and is contaminated by nothing else, which a split by answer_position would not be."
+    "protocol_version": "4",
+    "description": "Save block 26's answer-slot residual stream on both prompts of 128 training pairs, for a mean-difference direction."
   },
-  "model": {"key": "meta-llama/Llama-3.2-1B-Instruct", "revision": "main", "dtype": "bf16"},
+  "model": {"key": "Qwen/Qwen2.5-1.5B-Instruct", "revision": "main", "dtype": "bf16"},
   "data": {
-    "base": {"dataset": "mcqa/data#train", "field": "input"},
-    "counterfactual": {"dataset": "mcqa/data#train", "field": "counterfactual_inputs[0]"}
+    "base": {"dataset": "mcqa/train_n128_s1", "field": "input"},
+    "counterfactual": {"dataset": "mcqa/train_n128_s1", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_base": {"input": "base", "reads": ["acts_base"]},
+      "original_counterfactual": {"input": "counterfactual", "reads": ["acts_cf"]}
+    },
     "positions": {"slot": {"index": -1}},
     "sites": {
-      "target": {"component": "block_output", "layers": [14]}
+      "target": {"component": "block_output", "layers": [26]}
     },
     "reads": {
-      "acts_base": {"site": "target", "pos": "slot", "model": "original", "input": "base"},
-      "acts_cf": {"site": "target", "pos": "slot", "model": "original", "input": "counterfactual"}
+      "acts_base": {"site": "target", "pos": "slot"},
+      "acts_cf": {"site": "target", "pos": "slot"}
     },
     "save": [
       {
-        "value": "acts_base",
-        "model": "original",
-        "input": "base",
+        "read": "acts_base",
+        "model": "original_base",
         "file_path": "acts_base.safetensors"
       },
       {
-        "value": "acts_cf",
-        "model": "original",
-        "input": "counterfactual",
+        "read": "acts_cf",
+        "model": "original_counterfactual",
         "file_path": "acts_cf.safetensors"
       }
     ]

@@ -7,7 +7,7 @@ stage; this pins that the loop *opens* one around the right blocks, and that
 several optimizer steps with an eval pass, an early-stop snapshot and a
 restore after each epoch see exactly the values the unscoped loop computes:
 the loss at every step, every eval score, the selected fit. The count is by
-the map's own evaluation (:meth:`Cayley.map`), the frame the profiling
+the map's own evaluation ([`Cayley.map`][causalab.neural.shared.featurizers.stages.Cayley.map]), the frame the profiling
 campaign attributed the launches to, taken per call of the loop's two
 windows rather than over the whole fit: a checkpoint or the save-time
 diagnostics read the weight too, legitimately.
@@ -35,12 +35,13 @@ from tests.neural.engines.pytorch_hooks.test_train import (
     dbm_doc,
     hard_concrete_dbm_doc,
 )
+from tests.protocol._docs import term
 
 unit = pytest.mark.unit
 
 
 def _count_map_evaluations(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[int]]:
-    """Wrap :meth:`Cayley.map` in a counter and the loop's two windows —
+    """Wrap [`Cayley.map`][causalab.neural.shared.featurizers.stages.Cayley.map] in a counter and the loop's two windows —
     one optimizer step's grad forwards, one eval round — in a per-call
     tally of it."""
     calls = {"n": 0}
@@ -115,13 +116,16 @@ def _with_eval(doc: dict) -> dict:
     a patience the run never exhausts: three epochs, three evals, a snapshot
     after the first and a restore at the end — every branch of the loop the
     scope sits beside runs, and the selection is decided by an eval score."""
+    # the eval scores the aggregation the document's `ce.json` tabulates,
+    # over the same bound read (§2.11)
+    (ce,) = [e for e in doc["method"]["save"] if e.get("file_path") == "ce.json"]
     doc["method"]["train"]["eval"] = {
         "every": {"epochs": 1},
         "split": "inline",
-        "metrics": ["ce"],
+        "aggregations": {"ce": term(ce["read"], ce["model"], ce["aggregation"])},
     }
     doc["method"]["train"]["early_stop"] = {
-        "metric": "ce",
+        "on": "ce",
         "patience": 5,
         "mode": "max",
     }

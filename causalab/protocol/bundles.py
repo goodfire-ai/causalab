@@ -3,7 +3,7 @@
 A run writes **one file per ``save`` entry**, across every point of a swept
 document: the engine suffixes each tensor key with the point's coordinate
 label (``weight[k=8,seed=0]``, ``v_mean[target.layers=12]`` —
-:func:`causalab.protocol.sweep.coordinate_label`). Consumers, on the other
+[`causalab.protocol.lowering.coordinate_label`][]). Consumers, on the other
 side, name a *slot* (``weight`` for a subspace/pca bundle, ``value`` for a
 ``params`` constant). Without a selector the two vocabularies only coincide
 for an un-swept producer, so every swept handoff fails at run time with a
@@ -38,8 +38,8 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable, Mapping
 
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.sweep import label_value, short_coords
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.lowering import label_value, short_coords
 
 __all__ = [
     "RAGGED_SUFFIX",
@@ -205,7 +205,7 @@ def entry_selection(
     would make a selector's meaning depend on which axes the consuming document
     happens to sweep. A partial ``entry`` against a multi-axis bundle therefore
     resolves only if it is already unique, and otherwise refuses naming the
-    coordinates that would disambiguate (:func:`select_entry`). Pinning ``k``
+    coordinates that would disambiguate ([`select_entry`][]). Pinning ``k``
     elsewhere in the document does not narrow an ``entry`` that omits ``k``.
 
     With no authored ``entry`` the consuming point's own coordinates stand in —

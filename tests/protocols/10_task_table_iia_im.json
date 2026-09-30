@@ -1,63 +1,49 @@
 {
   "header": {
-    "protocol_version": "3",
+    "protocol_version": "4",
     "description": "Interchange over a task-generated table (the dataset-serialization seam): swap the answer-slot residual from the counterfactual into base and score IIA against the causal model's post-intervention label. The answer forms come from the task's output_tokens declaration, and first_token grading keeps the table tokenizer-agnostic."
   },
-  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main"},
+  "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
   "data": {
     "base": {"dataset": "weekdays/task_n4_s0", "field": "input"},
     "counterfactual": {"dataset": "weekdays/task_n4_s0", "field": "counterfactual_inputs[0]"}
   },
   "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "original_base": {"input": "base", "reads": ["subject_acts", "logits_clean"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
     "positions": {"answer_tok": {"index": -1}, "subject": {"column": "entity"}},
     "sites": {
       "target": {"component": "block_output", "layers": [18]},
       "lm_head": {"component": "lm_head"}
     },
     "reads": {
-      "v_cf": {
-        "site": "target",
-        "pos": "answer_tok",
-        "model": "original",
-        "input": "counterfactual"
-      },
-      "subject_acts": {"site": "target", "pos": "subject", "model": "original", "input": "base"},
-      "logits": {"site": "lm_head", "pos": "answer_tok", "model": "patched", "input": "base"},
-      "logits_clean": {"site": "lm_head", "pos": "answer_tok", "model": "original", "input": "base"}
+      "v_cf": {"site": "target", "pos": "answer_tok"},
+      "subject_acts": {"site": "target", "pos": "subject"},
+      "logits": {"site": "lm_head", "pos": "answer_tok"},
+      "logits_clean": {"site": "lm_head", "pos": "answer_tok"}
     },
     "writes": {
       "patch": {"site": "target", "pos": "answer_tok", "do": {"swap": "v_cf"}}
     },
-    "intervened_models": {
-      "patched": {"input": "base", "writes": ["patch"]}
-    },
-    "metrics": {
-      "iia": {
-        "kind": "match",
-        "of": "logits",
-        "expected": "label_forms",
-        "mode": "first_token",
-        "token_form": "space_prefixed"
-      }
-    },
     "save": [
-      {"value": "iia", "model": "patched", "input": "base", "file_path": "iia.json"},
       {
-        "value": "logits",
+        "read": "logits",
         "model": "patched",
-        "input": "base",
-        "file_path": "logits.safetensors"
+        "aggregation": {"kind": "match", "expected": "label_forms", "mode": "first_token"},
+        "file_path": "iia.json"
       },
+      {"read": "logits", "model": "patched", "file_path": "logits.safetensors"},
       {
-        "value": "logits_clean",
-        "model": "original",
-        "input": "base",
+        "read": "logits_clean",
+        "model": "original_base",
         "file_path": "logits_clean.safetensors"
       },
       {
-        "value": "subject_acts",
-        "model": "original",
-        "input": "base",
+        "read": "subject_acts",
+        "model": "original_base",
         "file_path": "subject_acts.safetensors"
       }
     ]

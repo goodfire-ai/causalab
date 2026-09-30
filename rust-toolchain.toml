@@ -1,12 +1,7 @@
 [toolchain]
-# pinned, not a floating stable: `cargo fmt --check` and `clippy -D warnings`
-# are CI gates, and a new Rust release must not redden main on an untouched
-# tree (the same reason the uv version is pinned in .github/workflows). Bump
-# deliberately; `rust-version` in Cargo.toml is the floor the code needs.
+# Pin Rust so formatting and lint checks agree across environments.
+# Cargo.toml sets the minimum supported version.
 channel = "1.98.1"
-# minimal plus the two components named below: a host whose rustup default
-# profile is `complete` would otherwise try miri and cranelift, which a stable
-# release does not always ship for every target, and the failed install fails
-# `uv sync`; minimal also skips rust-docs, which nothing here reads
+# Install the required tools. Optional components vary by release and target.
 profile = "minimal"
 components = ["rustfmt", "clippy"]

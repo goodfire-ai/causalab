@@ -1,0 +1,858 @@
+{
+  "output_dir": "09_components",
+  "steps": {
+    "scan": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "c1e6dd7fd121a6a0ef1ce12ff3a5bbbecb144486aa588b6875ffccf1f90e5ed3",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_component_scan.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "c1e6dd7fd121a6a0ef1ce12ff3a5bbbecb144486aa588b6875ffccf1f90e5ed3",
+      "points": 84,
+      "point_digests": [
+        "527132d6cf0ddb6d02aaefd44af3f382681082abb9c45723f713ba632bf9b70d",
+        "2ee3fd7a72f02cc47f8491d8854c71afd311545e400bd2dec55fd32380b52926",
+        "2d3b9a6aa9d222ecf4d4b2ba0b3616144d236f8b85dbb0c0fc1b3d54e89a6d6f",
+        "1af6e7f2addbc71c38109cf13f0b9cd53db50d5d86ba93b1cc23ec52ce5568ea",
+        "c6fd2533996f5d1dc4fc30b2a1163826c676711e534cbf6e9d8bbc7259807c5b",
+        "f85719b82c53ff67c8edd9c3ae48135667ea79180546804bc534985beb0fa1d2",
+        "c302239c3ad5502e3b294223aaff47f034428f2e9f63a130f89bccbe7b057cdf",
+        "3181af1ad1be79b38e2a151e4823680d0d94d0faf8e347032af24f59af270de4",
+        "7f4e7907041e7317b397f89242415559dcf0a19220f3a243c0e3857aa2379ca2",
+        "3803feb6fc0046390d9e61307d0e3f9486487d3dae4572a475c9031ce370fbaa",
+        "44fad2c4b5f4376c94688470ecd71d0fecd378880fede498837022c43a3e7fda",
+        "f7d1900fcd0929216a75de94a95c2057d2669086108ddfc082c5e9ce3e2e9e14",
+        "9897513feaecd4370fcded521324a56a98a0c3d0557f520b374a76be1bbc82cd",
+        "b150d012543f816111afd3281defcdffc121381f0ced25c43b62fda414478b53",
+        "fa83a7ed4966897fb191b923d01b4bf0cf8b04375649a7ba6b26d1fb5a49ec86",
+        "563f33111606570e114851fa62f55b22b7406a21e474d2fa29e04a0da41ed735",
+        "15c1586608344e3c66eeec0522d9e8a314d6c6960fe7527401118b90eb954b04",
+        "f1d8599414fdabb36ebcbcf03cc48870ac880f632588b4b5843f091766a4e288",
+        "d0d26ad8aa1401cc658eef95f9635f4a02e824146f84d21c5e340686f8d37c8e",
+        "35c4b3b38eb56fb256590b2d3354e18c5236ed20a74f40d32af65f348c8eaf4d",
+        "180a1b6f69cf88849ede0a360459ea4dafc838223042155cc032724ddc1cbb90",
+        "c352c2cf455d2cb71d1cfd1447f29e91485d17823da3358b612167a05c593c44",
+        "b7e8f3ba1e3f39483fb5250f04a9ce545cad54d4ab0093d91c1dbc6afd4e125e",
+        "d36595643f39fdb68f1000604b91f77e8bc7353462cc4e772c94378c2db5c9e8",
+        "cdd19681f540caa9a62a4d32430eb2dd832a0bc6b3205794a1d256f98348606b",
+        "fbfd9210cc5f02da94df788255aec3e66a32b7d2b7e510867b89c5923bdf2fd7",
+        "f75b012f0918f3f6dc78cd32951c1e0129bdaed998938a9c4493df158ed3804c",
+        "6857df0b8a07d3fe3833b97ce7b42c140e3aee486c8663669ac07dfdd8982bfa",
+        "da190ec7a8a8c3648cdff10ad0616d83d87a421b30a0c517c48ed1e96f083b77",
+        "82b3f6abf142ba9e045c462cb845336101ee652741adaef2320d384e9d5ea276",
+        "4f685e4a45a8bedd8152826acc72ddd840bcc2a7ccb9e5607cac516201375b19",
+        "cbfc0ffae63e18e57c5767b758584ff508354db4ca8f59dc86d3c9b8eb5db61c",
+        "40a5139d9b946bdfcfc3e9c7b74fe9b795cfa6dca2ec4fd101c4ea452e743e99",
+        "96dacc629b44355ca65dba26f84ff4d2fae04aa47698340a1699d4279c99906f",
+        "d8319c9b5870eb2858bccf03a747bd979b551bda6666c45db1a5ca3ef8fee369",
+        "fea68557a50829402723b7b466570a2ec911e496a76d5f31d9ff879037291712",
+        "a7e4409bbbc78a425bef6749c154d275fd82a054d1bd590db7bbfa1d353159dd",
+        "2884c6de47efb80f1434e354dedb9e940f7db318a57e98a11f32dcd8986d5c90",
+        "69e517b164f6ed1f4034c9a3566b756ff0a7e64ce412fd78b2b3d98f57af1511",
+        "81aa52c47c042d9b0094c078ae63458464bb1e08a4112da98a4b931d733deaa2",
+        "163fe01c012d86a610e03287f91147ef377a250c7cedee5e0f362847afc087e1",
+        "d138f9d21b64b6dc83d30c8b2b0c9ae8120973ca783b4c69475b7003958affb9",
+        "eb2979db880136e88f8cb3452d449cc8286fc48a78f72a713f53ea22e03d17fc",
+        "9b0874ee883c8b4c35f336272d5836b025c5c922162074abade4d511bc1fa1ff",
+        "8ab0c93fd9e61a9542aa045a35d23e0ba607529e0f57ddfed4060824b1728f8f",
+        "91c3df29fca1d084782c584648682f7a71389fa8cb793da8c851f7925ea0461e",
+        "431e3fa0f4bc7867cbfdf00048980d5e7ac6e8b1569a3f36c93e77a0be5e73bc",
+        "67ee672282f3c91b99f425047d007b12f5c9bee82b2177609606a411ac1563c5",
+        "bb021f2acacac31631db15f5234f63e64077255e355e05580bb0e3637549c1e3",
+        "df86d6c6daf097f89188bddd2bed3cd9899c9122ac14d714345af7115dc1fbaa",
+        "a83d0e1c89de4f156e2ca482bb3d97e05db9846d7399d74a6c951392f333a10e",
+        "923b0d195a7aff3c3cbe7621304cf9a4c4a03e40789886ce0f81f7a79a8caf26",
+        "349ab9b7890ef90e463b6b7ace81e6191fb43dce008f19a3e9c3c0652dfe8a0f",
+        "29dc0bcc8d571bd984a6e478d6bbc5e0df4e63d00a043f9f522002ccbf85441e",
+        "ba08cdf750289f1d4e1d262e9fcc43c88aa29a03d5a8dedb750655a8dd946dfd",
+        "e12d21015540b7d81561c8b4eb1c50bd921b6824b56f2f9a328e66a78c4dcd28",
+        "ec8550d159afadaf4f3b6a195b0f7f932302284657eb00d9ea0a364012c5988d",
+        "cd0ea55dbf87c447db92c3c5fdfb1b02a0e7d29375324f360f065c9840bff024",
+        "260105249a3e6ae8454817a619e0c4f3a7eb08c60fcf33a880b432e8c6c15486",
+        "4627886a475497df3886cb59368821ac1ebaa448626053c529838771ed9f2618",
+        "9cb3c8b9be9ccd13d34bbdffa487d4aaa600e6d44be0787a36646d9529aa8812",
+        "1b9be51a5ff7b9d43f262649267086280751125731bf6037d58743f9fc3494c0",
+        "67761d50b6dc055f098eb2c4f96ea19f4bd8baa29eb77ee7cd01f3d2a81cc74e",
+        "4fe1378993362c12126192b12f7f245edadcd7dbceca29458f5b966a125210ff",
+        "a464430acaf05578b8b7731c46723bbc5069fcc3448919901b0aff4f1a3a06b4",
+        "a12b6c19afb0cdaa87a9abcb25ebaba653cd3859368ba83f8421e6f31d8ec27e",
+        "b2f69c0f7cabfb80f1a9014be642b6e6a744f11da35df915a6b04920e0ffd71f",
+        "0e8737c6739f7582f8a3bcb32c42adf04e356b0b90821257f1e22dde148ab762",
+        "15e3f98de3c761747642ceca5388f1fb03cb540cd9d813af8ab638cb6c9f9d86",
+        "68ec91f688f4aa70da8370d5cacee52282fa1ac33ad895ad7ab52dfc10b2d138",
+        "9b69b418515ed6a81e5820a35d0d6e98e5607b2d363d7da1903efb220f3a247c",
+        "a057ab47164c6b2e58062cd2c605b05acaace3006aa6f6e26f01c7ab7c90e532",
+        "0574f91672f42322310e3ed0cb6844fe00723bb138c795153a3cc8242a9597d1",
+        "96da35048e9d983cd2f60c62e522f1a624e4cb92c1df9fbd2d71cf8e2aac1780",
+        "125ec8f449a4e7b9bef21af5b4459ebc6df422360365a63c77542d87bd36b86d",
+        "259dd0f8c93fd31cbac17333feb49124f45efe3e73f5d3b5d3d6c412c6451cb0",
+        "afeb26848c88aaaebc015effd811e8d44b7cf97768b02e1d001d5cb4a56056c9",
+        "aff46c4fa69a0060d9c44e310490adef62a1bc757e18629ad2bd32c3b2ea8cc2",
+        "b3bfa69419b6cd63faffcd352f5c0a1d5f5673cb89188f803b738928c9af98c2",
+        "cb2e3a909f81c171b59400eddd354c2730eb5e8ffd1e9a16e17c93351977ce97",
+        "9547b1d39ebf75cdcb8fff8a9628faf97791266c08c9587519f06b90b625e3e9",
+        "eba977bfdd25a6aceb2e789694d13652e47a66bd2cf82ca8649bf94b7b7695b7",
+        "17742ebaf5a8577504613a2512a73208e3c3f0367aca6dd603eed8171e02eeac",
+        "1e89353c93cd5f80507b1fa2956e0245801b063b1b47716aa39c15619610a4d0"
+      ],
+      "coords": [
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 0
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 1
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 2
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 3
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 4
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 5
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 6
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 7
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 8
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 9
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 10
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 11
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 12
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 13
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 14
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 15
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 16
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 17
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 18
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 19
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 20
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 21
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 22
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 23
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 24
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 25
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 26
+        },
+        {
+          "sites.target.component": "attention_output",
+          "sites.target.layers": 27
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 0
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 1
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 2
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 3
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 4
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 5
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 6
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 7
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 8
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 9
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 10
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 11
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 12
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 13
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 14
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 15
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 16
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 17
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 18
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 19
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 20
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 21
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 22
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 23
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 24
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 25
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 26
+        },
+        {
+          "sites.target.component": "mlp_output",
+          "sites.target.layers": 27
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 0
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 1
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 2
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 3
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 4
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 5
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 6
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 7
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 8
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 9
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 10
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 11
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 12
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 13
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 14
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 15
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 16
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 17
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 18
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 19
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 20
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 21
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 22
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 23
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 24
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 25
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 26
+        },
+        {
+          "sites.target.component": "block_output",
+          "sites.target.layers": 27
+        }
+      ],
+      "axes": [
+        "sites.target.component",
+        "sites.target.layers"
+      ],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 85,
+      "digests": {
+        "iia.json": "e71e35cb62e5eeabab7679a31a6091b53c0f6f234bb8436da981f7a33f0be9d3",
+        "logit_diff.json": "501ba25f1ebb42645472c5b10d78b15a55ff01f63bdfab5c11b2464423839ab9"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "grid": {
+      "type": "script",
+      "status": "completed",
+      "identity": "45512ff29b3f95456c085bb4fab84b2e275b4d4004dd83e81e193ac0ea9d2a86",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.io.plots.workflow_figures",
+      "script_sha256": "0de1b7ca714ef474db3ab9f3c7a879e000d5d314d214bea4221e88a361cd81a4",
+      "digest": "45512ff29b3f95456c085bb4fab84b2e275b4d4004dd83e81e193ac0ea9d2a86",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "scan/iia.json",
+        "plot": "lines",
+        "x": "sites.target.layers",
+        "series": "sites.target.component"
+      },
+      "input_digests": {
+        "table": "e71e35cb62e5eeabab7679a31a6091b53c0f6f234bb8436da981f7a33f0be9d3"
+      },
+      "axes": [],
+      "files": [
+        "09_components_component_iia.json",
+        "09_components_component_iia.png"
+      ],
+      "digests": {
+        "09_components_component_iia.json": "d81e7c7a06f905fafea65065d3824ac96b027410142f6851c8db1652513faa6e",
+        "09_components_component_iia.png": "239e3da82b19f5c4a3af71dd8c17b72b10324a59f5eceaf19893daad2eb9bad6"
+      },
+      "checks": {
+        "09_components_component_iia.json": "json",
+        "09_components_component_iia.png": "png-signature"
+      },
+      "disposition": "accepted"
+    },
+    "best": {
+      "type": "script",
+      "status": "completed",
+      "identity": "e9caab8d97dbc9ca1b1af41a852d54cb4f8439d9a3cb676c9b9bfbd94f5aac15",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "script": "causalab.workflow.scripts.select",
+      "script_sha256": "a302fd5e3a331e1c6614eb9227a067d345b960a4a8dfe871580c7fa847f6b57e",
+      "digest": "e9caab8d97dbc9ca1b1af41a852d54cb4f8439d9a3cb676c9b9bfbd94f5aac15",
+      "is_deterministic": true,
+      "inputs": {
+        "table": "scan/iia.json",
+        "choose": "max",
+        "emit": {
+          "best_layer": "sites.target.layers",
+          "best_component": "sites.target.component"
+        }
+      },
+      "input_digests": {
+        "table": "e71e35cb62e5eeabab7679a31a6091b53c0f6f234bb8436da981f7a33f0be9d3"
+      },
+      "axes": [],
+      "files": [
+        "values.json"
+      ],
+      "digests": {
+        "values.json": "896eaf112a0a48befa6a541e5ff78cf95bb6a59a3931323c1fdbfbe141fa8a64"
+      },
+      "checks": {
+        "values.json": "json-values"
+      },
+      "disposition": "accepted"
+    },
+    "gate_fit_lo": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "4ca94098abfad1e9b987d21722df5c05ba46afe640a525ba375a8675670f063c",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_gate_fit.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "4ca94098abfad1e9b987d21722df5c05ba46afe640a525ba375a8675670f063c",
+      "points": 1,
+      "point_digests": [
+        "4ca94098abfad1e9b987d21722df5c05ba46afe640a525ba375a8675670f063c"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "ce.json",
+        "fit_diagnostics.json",
+        "gate.safetensors",
+        "iia.json",
+        "train_eval.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "ce.json": "87584317a89a60108cf548e1473edeeee149c137786319f6647d2aa80782c335",
+        "fit_diagnostics.json": "856837608d5e9d4b0eeab9040700a85f8e74cbf2c085d3d6d35eac252aca9950",
+        "gate.safetensors": "c2c191b7c07fea58e770b8c15241dda05af6cc314ef4ee9de25ec72382d9c253",
+        "iia.json": "4289df45ae615238e4ccdd22ea2835ebfc582c07086a14945a9aeefc4e173047",
+        "train_eval.json": "4dd8d2a9b696d194f7f42d9f1f44273c194b563171fce104e5f9bca437c3a1bd"
+      },
+      "checks": {
+        "ce.json": "json",
+        "fit_diagnostics.json": "json",
+        "gate.safetensors": "safetensors-header",
+        "iia.json": "json",
+        "train_eval.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "gate_apply_lo": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "e8754bbaf4c2dc331b42a53b3bd1bfcb9a491205dda4c03f7fde6210ec9d43a3",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_gate_apply.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "e8754bbaf4c2dc331b42a53b3bd1bfcb9a491205dda4c03f7fde6210ec9d43a3",
+      "points": 1,
+      "point_digests": [
+        "e8754bbaf4c2dc331b42a53b3bd1bfcb9a491205dda4c03f7fde6210ec9d43a3"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "iia.json": "e08ce87a9e25ed1464613400bf595c6c66ed9e5ee0d776ff5ceb1bcc53c28d13",
+        "logit_diff.json": "d88aa72d7f8eb9782eb8361c5cd211b63721bc6eaf0f86c71fc4084cde8376ab"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "gate_fit_mid": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "5e383f88bbd6fe02ea67a611c871612c05714fc16b4b87604893f233a928fe1e",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_gate_fit.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "5e383f88bbd6fe02ea67a611c871612c05714fc16b4b87604893f233a928fe1e",
+      "points": 1,
+      "point_digests": [
+        "5e383f88bbd6fe02ea67a611c871612c05714fc16b4b87604893f233a928fe1e"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "ce.json",
+        "fit_diagnostics.json",
+        "gate.safetensors",
+        "iia.json",
+        "train_eval.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "ce.json": "a6de06bec088bf82f2efa8f1977c55eb50d87b7c8de02f0b3bfd7eb202b477c5",
+        "fit_diagnostics.json": "7de072df2308cb78e4d325716b7891d96cfcb6d8dc6570905ea813392aa08153",
+        "gate.safetensors": "eb66f5ddb4d45e8ea391a457949526505ecb468c6fa59e93c6bc460325f9509c",
+        "iia.json": "4289df45ae615238e4ccdd22ea2835ebfc582c07086a14945a9aeefc4e173047",
+        "train_eval.json": "50570ea377e4220fab99233669a7ac284d3c2bf557884d7e15c3f7361c5d3c8f"
+      },
+      "checks": {
+        "ce.json": "json",
+        "fit_diagnostics.json": "json",
+        "gate.safetensors": "safetensors-header",
+        "iia.json": "json",
+        "train_eval.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "gate_apply_mid": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "b1cbc6d433fda544089bf82c28a2dc564be87772ba2cabbe988633f17d7c6a4c",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_gate_apply.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "b1cbc6d433fda544089bf82c28a2dc564be87772ba2cabbe988633f17d7c6a4c",
+      "points": 1,
+      "point_digests": [
+        "b1cbc6d433fda544089bf82c28a2dc564be87772ba2cabbe988633f17d7c6a4c"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "iia.json": "e08ce87a9e25ed1464613400bf595c6c66ed9e5ee0d776ff5ceb1bcc53c28d13",
+        "logit_diff.json": "73beb02d39d4bbb9750a4bea9204df032fc743f4ed4ee19d0a6e479474a150fd"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "gate_fit_hi": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "02806808b8dd6566555f670b9108f7795784fb74f303e209997ad17f8d9c0091",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_gate_fit.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "02806808b8dd6566555f670b9108f7795784fb74f303e209997ad17f8d9c0091",
+      "points": 1,
+      "point_digests": [
+        "02806808b8dd6566555f670b9108f7795784fb74f303e209997ad17f8d9c0091"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "ce.json",
+        "fit_diagnostics.json",
+        "gate.safetensors",
+        "iia.json",
+        "train_eval.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "ce.json": "8201facbc2f2dd00a3ac833cf45fa77f423b4023af94223f52d557c0b47dca88",
+        "fit_diagnostics.json": "24e40372d1b79684888577a4ed90807e541b326254827f1b8093aad37d327cd7",
+        "gate.safetensors": "9fc222d60671a42f06fbd6501b33ba6aefce1d5a91a0bbad5abf74db4f2e23b3",
+        "iia.json": "233f4aa773bde69714c8e7402024ca1b74e64ee67d3094c52afca2b837c43c2b",
+        "train_eval.json": "2678f5a73ff3d500a64753198a0376b749c94797d3d0b2ad117ff85e072529c2"
+      },
+      "checks": {
+        "ce.json": "json",
+        "fit_diagnostics.json": "json",
+        "gate.safetensors": "safetensors-header",
+        "iia.json": "json",
+        "train_eval.json": "json"
+      },
+      "disposition": "accepted"
+    },
+    "gate_apply_hi": {
+      "type": "intervention_protocol",
+      "status": "completed",
+      "identity": "0114139794391715d88b9703aa8f1279df70afa80fc6bcb5b91a76d67a585916",
+      "implementation": {
+        "tree_digest": "19f83be28e5ac2e41db838ca867b4d3ef7affd11d8503827711459b5b0f56aae"
+      },
+      "document": "../protocols/mcqa_gate_apply.json",
+      "engine": "pytorch_hooks",
+      "document_digest": "0114139794391715d88b9703aa8f1279df70afa80fc6bcb5b91a76d67a585916",
+      "points": 1,
+      "point_digests": [
+        "0114139794391715d88b9703aa8f1279df70afa80fc6bcb5b91a76d67a585916"
+      ],
+      "coords": [
+        {}
+      ],
+      "axes": [],
+      "files": [
+        "iia.json",
+        "logit_diff.json"
+      ],
+      "execution": {
+        "batch_rows": null,
+        "fit_rows": null,
+        "model_source": "loaded",
+        "parallel": {
+          "data": 1,
+          "data_mode": "points",
+          "pipeline": 1,
+          "context": 1,
+          "tensor": 1,
+          "expert": 1,
+          "world": 1,
+          "launcher": "solo"
+        }
+      },
+      "forwards": 2,
+      "digests": {
+        "iia.json": "4d4e9692f2e1f151bd797897fcc6988954ab712b7325671a765e0fb03f4cfdd0",
+        "logit_diff.json": "77e756158d3e6eda43a94cb349787de5788ccb723329ce921a05366438cfa851"
+      },
+      "checks": {
+        "iia.json": "json",
+        "logit_diff.json": "json"
+      },
+      "disposition": "accepted"
+    }
+  }
+}

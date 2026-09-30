@@ -13,6 +13,7 @@ read, so a shared pass stores the head's input and not the vocabulary.
 
 from __future__ import annotations
 
+import dataclasses
 import functools
 from typing import Any
 
@@ -23,7 +24,7 @@ from hypothesis import strategies as st
 
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.neural.shared.execution import campaign_cache
-from causalab.neural.shared.executor_base import ExecutorBase, RaggedValue, tap_key
+from causalab.neural.shared.executor import ExecutorBase, RaggedValue, tap_key
 from causalab.neural.shared.head import (
     HEAD,
     HEAD_INPUT,
@@ -34,8 +35,13 @@ from causalab.neural.shared.head import (
     taps_head,
 )
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.plan import plan_point
-from causalab.protocol.schema import Document, SiteSpec, parse_document
+from causalab.neural.shared.plan import plan_point
+from causalab.protocol.schema import (
+    PROTOCOL_VERSION,
+    Document,
+    SiteSpec,
+    parse_document,
+)
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section
 from tests.neural.engines.pytorch_hooks.conftest import (
@@ -43,7 +49,8 @@ from tests.neural.engines.pytorch_hooks.conftest import (
     TINY_LLAMA,
     TINY_QWEN35_MOE,
 )
-from tests.protocol._docs import in_order
+from tests.protocol._docs import in_order, saved
+
 
 unit = pytest.mark.unit
 prop = pytest.mark.property
@@ -51,51 +58,64 @@ prop = pytest.mark.property
 FAMILIES = [TINY_LLAMA, TINY_GPT2, TINY_QWEN35_MOE]
 
 
-def _raw(**reads: dict[str, Any]) -> dict[str, Any]:
+@dataclasses.dataclass(frozen=True)
+class _Read:
+    """A read's address and the model that takes it — the binding a document
+    spells on the model (§2.9), not on the read. The un-intervened models go
+    by the migrator's names: ``original_base`` / ``original_counterfactual``."""
+
+    address: dict[str, Any]
+    model: str = "patched"
+
+    @property
+    def input(self) -> str:
+        return "counterfactual" if self.model == "original_counterfactual" else "base"
+
+
+def _raw(**reads: _Read) -> dict[str, Any]:
     """An inference document with a swap at block 0 and the given reads —
-    ``v_cf`` (the operand) always present."""
+    ``v_cf`` (the operand) always present. A model a read names and the
+    document does not declare is declared un-intervened on the read's input;
+    a test that writes in it sets its ``writes`` afterwards."""
+    models: dict[str, dict[str, Any]] = {
+        "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+        "patched": {"input": "base", "reads": [], "writes": ["patch"]},
+    }
+    for name, read in reads.items():
+        entry = models.setdefault(read.model, {"input": read.input, "reads": []})
+        entry["reads"].append(name)
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": models,
             "sites": {
                 "tgt": {"component": "block_output", "layers": [0]},
                 "head": {"component": "lm_head"},
                 "norm": {"component": "ln_final"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tgt",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                **reads,
+                "v_cf": {"site": "tgt", "pos": {"index": -1}},
+                **{name: read.address for name, read in reads.items()},
             },
             "writes": {
                 "patch": {"site": "tgt", "pos": {"index": -1}, "do": {"swap": "v_cf"}}
             },
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": name,
-                    "model": read["model"],
-                    "input": read["input"],
-                    "file_path": f"{name}.safetensors",
-                }
+                saved(name, read.model, f"{name}.safetensors")
                 for name, read in reads.items()
             ],
         },
     }
 
 
-def _doc(**reads: dict[str, Any]) -> Document:
+def _doc(**reads: _Read) -> Document:
     return parse_document(in_order(_raw(**reads)))
 
 
-def _head_read(pos: Any, model: str = "patched", input: str = "base") -> dict:
-    return {"site": "head", "pos": pos, "model": model, "input": input}
+def _head_read(pos: Any, model: str = "patched") -> _Read:
+    return _Read({"site": "head", "pos": pos}, model)
 
 
 class TestTheDecision:
@@ -103,12 +123,12 @@ class TestTheDecision:
     def test_a_read_at_named_positions_projects_the_head(self) -> None:
         doc = _doc(
             last=_head_read({"index": -1}),
-            first=_head_read({"index": 0}, model="original"),
-            second_last=_head_read({"index": -2}, model="original"),
+            first=_head_read({"index": 0}, model="original_base"),
+            second_last=_head_read({"index": -2}, model="original_base"),
         )
         assert projects_head(doc, "patched", "base", "last")
-        assert projects_head(doc, "original", "base", "first")
-        assert projects_head(doc, "original", "base", "second_last")
+        assert projects_head(doc, "original_base", "base", "first")
+        assert projects_head(doc, "original_base", "base", "second_last")
         assert capture_spec(doc, "patched", "base", "last") == SiteSpec(
             component=HEAD_INPUT
         )
@@ -130,38 +150,33 @@ class TestTheDecision:
 
     @unit
     def test_a_read_off_the_head_never_projects(self) -> None:
-        doc = _doc(
-            norm={
-                "site": "norm",
-                "pos": {"index": -1},
-                "model": "patched",
-                "input": "base",
-            }
-        )
+        doc = _doc(norm=_Read({"site": "norm", "pos": {"index": -1}}))
         assert not projects_head(doc, "patched", "base", "norm")
-        assert not projects_head(doc, "original", "counterfactual", "v_cf")
+        assert not projects_head(
+            doc, "original_counterfactual", "counterfactual", "v_cf"
+        )
         assert capture_spec(doc, "patched", "base", "norm") == doc.sites["norm"]
 
     @unit
     def test_a_continuation_read_and_its_group_keep_the_head(self) -> None:
         doc = _doc(
             gen=_head_read(
-                {"index": 0, "generated": {"max_new_tokens": 2}}, model="original"
+                {"index": 0, "generated": {"max_new_tokens": 2}}, model="original_base"
             ),
-            prompt=_head_read({"index": -1}, model="original"),
+            prompt=_head_read({"index": -1}, model="original_base"),
             other=_head_read({"index": -1}),
         )
-        assert not projects_head(doc, "original", "base", "gen")
+        assert not projects_head(doc, "original_base", "base", "gen")
         # the prompt-frame read shares the decoding group: its prefill's
         # logits are consumed, so the head runs there anyway
-        assert not projects_head(doc, "original", "base", "prompt")
+        assert not projects_head(doc, "original_base", "base", "prompt")
         # a group that does not decode is unaffected
         assert projects_head(doc, "patched", "base", "other")
 
     @unit
     def test_a_write_at_the_head_keeps_the_head_in_that_model_only(self) -> None:
         raw = _raw(
-            head_cf=_head_read({"index": -1}, model="original", input="counterfactual"),
+            head_cf=_head_read({"index": -1}, model="original_counterfactual"),
             bumped=_head_read({"index": -1}, model="bumped"),
             last=_head_read({"index": -1}),
         )
@@ -170,14 +185,13 @@ class TestTheDecision:
             "pos": {"index": -1},
             "do": {"swap": "head_cf"},
         }
-        raw["method"]["intervened_models"]["bumped"] = {
-            "input": "base",
-            "writes": ["swap_head"],
-        }
+        raw["method"]["intervened_models"]["bumped"]["writes"] = ["swap_head"]
         doc = parse_document(in_order(raw))
         assert not projects_head(doc, "bumped", "base", "bumped")
         assert projects_head(doc, "patched", "base", "last")
-        assert projects_head(doc, "original", "counterfactual", "head_cf")
+        assert projects_head(
+            doc, "original_counterfactual", "counterfactual", "head_cf"
+        )
 
     @unit
     def test_a_write_below_the_head_does_not_keep_it(self) -> None:
@@ -185,29 +199,26 @@ class TestTheDecision:
         install before captures at one module), so the projection sees the
         written input exactly as the head would."""
         raw = _raw(
-            norm_cf={
-                "site": "norm",
-                "pos": {"index": -1},
-                "model": "original",
-                "input": "counterfactual",
-            },
+            norm_cf=_Read(
+                {"site": "norm", "pos": {"index": -1}}, "original_counterfactual"
+            ),
             after=_head_read({"index": -1}, model="normed"),
+            probe=_head_read({"index": -1}),  # a model nobody reads is refused
         )
         raw["method"]["writes"]["swap_norm"] = {
             "site": "norm",
             "pos": {"index": -1},
             "do": {"swap": "norm_cf"},
         }
-        raw["method"]["intervened_models"]["normed"] = {
-            "input": "base",
-            "writes": ["swap_norm"],
-        }
+        raw["method"]["intervened_models"]["normed"]["writes"] = ["swap_norm"]
         doc = parse_document(in_order(raw))
         assert projects_head(doc, "normed", "base", "after")
 
     @unit
     def test_a_featurizer_or_dims_on_the_read_changes_nothing(self) -> None:
-        raw = _raw(sliced={**_head_read({"index": -1}), "dims": [0, 1, 2]})
+        raw = _raw(
+            sliced=_Read({"site": "head", "pos": {"index": -1}, "dims": [0, 1, 2]})
+        )
         doc = parse_document(in_order(raw))
         assert projects_head(doc, "patched", "base", "sliced")
 
@@ -296,10 +307,11 @@ def test_the_head_over_gathered_rows_is_the_full_head_sliced(
     absolute.
 
     **Where the projection is exact** is established elsewhere, not by this
-    test: measured once on an H100 at the A3B workflow's shapes (M ∈ {42, 96,
-    900} against ``M·13``, bf16 and fp32, no entry differed), and end to end by
-    the standard workflow's **zero differing metric rows** against the
-    unprojected tree in eager and graphs mode. A gradient never flows through a projection
+    test: measured on an H100 with the ``Qwen/Qwen3.6-35B-A3B`` head at
+    M ∈ {42, 96, 900} against ``M·13``, bf16 and fp32, 0 of 223 488 000
+    entries differ; and end to end by the
+    standard workflow's **zero differing metric rows** against the base tree
+    in eager and graphs mode. A gradient never flows through a projection
     (``shared/head.py``), so training is the model's own head, exact by
     construction."""
     rows, seq, per_row = table
@@ -369,22 +381,27 @@ class TestTheTapUnion:
         group's own union is ``ln_final`` alone."""
         docs = [
             _doc(
-                last=_head_read({"index": -1}, model="original"),
+                last=_head_read({"index": -1}, model="original_base"),
                 patched=_head_read({"index": -1}),
             ),
-            _doc(whole=_head_read("all", model="original")),
+            _doc(
+                whole=_head_read("all", model="original_base"),
+                patched=_head_read({"index": -1}),
+            ),
         ]
         plans = [plan_point(doc) for doc in docs]
         cache = campaign_cache(docs, plans)
         shared = next(
-            g for g in plans[0].groups if g.model == "original" and g.input == "base"
+            g
+            for g in plans[0].groups
+            if g.model == "original_base" and g.input == "base"
         )
-        assert shared.digest == next(
-            g.digest
+        assert shared.key == next(
+            g.key
             for g in plans[1].groups
-            if g.model == "original" and g.input == "base"
+            if g.model == "original_base" and g.input == "base"
         )
-        wanted = {spec.component for spec in cache.wanted[shared.digest]}
+        wanted = {spec.component for spec in cache.wanted[shared.key]}
         assert wanted == {HEAD_INPUT, HEAD}
         patched = next(g for g in plans[0].groups if g.model == "patched")
-        assert {spec.component for spec in cache.wanted[patched.digest]} == {HEAD_INPUT}
+        assert {spec.component for spec in cache.wanted[patched.key]} == {HEAD_INPUT}

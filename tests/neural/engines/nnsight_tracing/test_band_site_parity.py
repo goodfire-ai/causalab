@@ -1,7 +1,7 @@
 """A band site through both engines (spec §2.4 ``layers``).
 
 Both executors lower a band to its per-layer members before resolving a
-module (``executor_base``), so each must run a one-site band exactly as it
+module (``executor/base.py``), so each must run a one-site band exactly as it
 runs the hand-written two-site document — and the two engines agree with each
 other to the parity tolerance, as they do on every one-layer site.
 """
@@ -13,6 +13,7 @@ import torch
 
 from causalab.neural.engines.nnsight_tracing.executor import TracePointExecutor
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
+from causalab.protocol.schema import PROTOCOL_VERSION
 
 from tests.neural.engines.nnsight_tracing.test_parity_module_boundaries import (
     ATOL,
@@ -20,6 +21,7 @@ from tests.neural.engines.nnsight_tracing.test_parity_module_boundaries import (
     _data,
     _executor,
 )
+from tests.protocol._docs import UNWRITTEN, saved
 
 pytestmark = pytest.mark.smoke
 
@@ -29,59 +31,32 @@ def _band_doc(one_site: bool) -> dict:
     layers into the base forward: as one band site, or as two sites."""
     if one_site:
         sites = {"a": {"component": "attention_output", "layers": [0, 1]}}
-        reads = {
-            "v": {
-                "site": "a",
-                "pos": -1,
-                "model": "original",
-                "input": "counterfactual",
-            }
-        }
+        reads = {"v": {"site": "a", "pos": -1}}
         writes = {"w": {"site": "a", "pos": -1, "do": {"swap": "v"}}}
         in_force = ["w"]
     else:
         sites = {
             f"a{i}": {"component": "attention_output", "layers": [i]} for i in (0, 1)
         }
-        reads = {
-            f"v{i}": {
-                "site": f"a{i}",
-                "pos": -1,
-                "model": "original",
-                "input": "counterfactual",
-            }
-            for i in (0, 1)
-        }
+        reads = {f"v{i}": {"site": f"a{i}", "pos": -1} for i in (0, 1)}
         writes = {
             f"w{i}": {"site": f"a{i}", "pos": -1, "do": {"swap": f"v{i}"}}
             for i in (0, 1)
         }
         in_force = ["w0", "w1"]
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": _data(with_cf=True),
         "method": {
-            "sites": {**sites, "head": {"component": "lm_head"}},
-            "reads": {
-                **reads,
-                "logits": {
-                    "site": "head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": list(reads)},
+                "patched": {"input": "base", "reads": ["logits"], "writes": in_force},
             },
+            "sites": {**sites, "head": {"component": "lm_head"}},
+            "reads": {**reads, "logits": {"site": "head", "pos": -1}},
             "writes": writes,
-            "intervened_models": {"patched": {"input": "base", "writes": in_force}},
-            "save": [
-                {
-                    "value": "logits",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "l.safetensors",
-                }
-            ],
+            "save": [saved("logits", "patched", "l.safetensors")],
         },
     }
 

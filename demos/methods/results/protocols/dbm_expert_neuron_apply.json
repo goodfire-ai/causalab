@@ -1,0 +1,26 @@
+{
+  "document": "protocols/dbm_expert_neuron_apply.json",
+  "document_digest": "2e323a3492aae18a67c4a1ade638f8e20291d2f1a52a4786ddecca7ced4a978b",
+  "run_digest": "5f71a5246fd10bc563f106482f19015859e3db35db716de11ade5fd50c8849ca",
+  "model": "Qwen/Qwen3.6-35B-A3B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "bf16",
+  "date": "2026-09-21",
+  "elapsed_s": 19.4,
+  "metrics": {
+    "iia": {
+      "metric": "iia",
+      "unit": "logit",
+      "rows": 19,
+      "eligible_rows": 19,
+      "mean": -3.1645
+    },
+    "routing_mismatch": {
+      "examples": 19,
+      "mismatched_slots": 29,
+      "slots": 152,
+      "fraction": 0.1908
+    }
+  }
+}

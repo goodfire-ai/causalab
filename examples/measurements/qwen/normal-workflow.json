@@ -1,0 +1,330 @@
+{
+  "version": "1",
+  "description": "Normal-policy resident and cold workflow; DAS/DBM 10/20 epoch budgets with early stopping. Small example dataset; not a research quality claim.",
+  "output_dir": "research",
+  "steps": {
+    "das": {
+      "type": "intervention_protocol",
+      "document": "das.json",
+      "set": {
+        "train": {
+          "objective": {
+            "ce": {
+              "weight": 1.0,
+              "read": "logits",
+              "model": "patched",
+              "aggregation": {
+                "kind": "cross_entropy",
+                "target": "label"
+              }
+            }
+          },
+          "params": [
+            "rot"
+          ],
+          "optimizer": {
+            "name": "adamw",
+            "lr": 0.001,
+            "weight_decay": 0.0
+          },
+          "steps": {
+            "epochs": 10
+          },
+          "batch": {
+            "pairs": 2
+          },
+          "precision": {
+            "feature": "fp32",
+            "loss": "fp32"
+          },
+          "eval": {
+            "every": {
+              "epochs": 1
+            },
+            "aggregations": {
+              "iia": {
+                "read": "logits",
+                "model": "patched",
+                "aggregation": {
+                  "kind": "logit_diff",
+                  "a": "cf_answer",
+                  "b": "base_answer"
+                }
+              }
+            },
+            "split": "pairs#test"
+          },
+          "seed": 0,
+          "early_stop": {
+            "on": "iia",
+            "patience": 3,
+            "mode": "max"
+          }
+        }
+      }
+    },
+    "das_eval": {
+      "type": "intervention_protocol",
+      "document": "das_eval.json"
+    },
+    "dbm": {
+      "type": "intervention_protocol",
+      "document": "dbm.json",
+      "set": {
+        "train": {
+          "objective": {
+            "ce": {
+              "weight": 1.0,
+              "read": "logits",
+              "model": "masked",
+              "aggregation": {
+                "kind": "cross_entropy",
+                "target": "label"
+              }
+            },
+            "l1": {
+              "weight": 0.01,
+              "l1": "gate"
+            }
+          },
+          "params": [
+            "gate"
+          ],
+          "optimizer": {
+            "name": "adamw",
+            "lr": 0.001,
+            "weight_decay": 0.0
+          },
+          "steps": {
+            "epochs": 20
+          },
+          "batch": {
+            "pairs": 2
+          },
+          "anneal": {
+            "gate.theta.temperature": [
+              1.0,
+              0.01,
+              0.5
+            ]
+          },
+          "precision": {
+            "feature": "fp32",
+            "loss": "fp32"
+          },
+          "eval": {
+            "every": {
+              "epochs": 1
+            },
+            "aggregations": {
+              "iia": {
+                "read": "logits",
+                "model": "masked",
+                "aggregation": {
+                  "kind": "logit_diff",
+                  "a": "cf_answer",
+                  "b": "base_answer"
+                }
+              }
+            },
+            "split": "pairs#test"
+          },
+          "seed": 0,
+          "early_stop": {
+            "on": "iia",
+            "patience": 3,
+            "mode": "max"
+          }
+        }
+      }
+    },
+    "dbm_eval": {
+      "type": "intervention_protocol",
+      "document": "dbm_eval.json"
+    },
+    "clean": {
+      "type": "intervention_protocol",
+      "document": "clean.json"
+    },
+    "noop": {
+      "type": "intervention_protocol",
+      "document": "noop.json"
+    }
+  },
+  "measurement": {
+    "version": 1,
+    "arms": {
+      "before": {
+        "revision": "HEAD",
+        "execution": {
+          "batch_rows": 4,
+          "cuda_graphs": true
+        }
+      },
+      "after": {
+        "revision": "HEAD",
+        "execution": {
+          "batch_rows": 4,
+          "cuda_graphs": true
+        }
+      }
+    },
+    "seeds": [
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "repeats": 3,
+    "warmups": 1,
+    "bootstrap_draws": 1000,
+    "cases": {
+      "resident_workflow": {
+        "kind": "workflow",
+        "cold_process": false
+      },
+      "cold_workflow": {
+        "kind": "workflow",
+        "cold_process": true
+      }
+    },
+    "observations": {
+      "rot": {
+        "step": "das",
+        "file": "rot.safetensors",
+        "kind": "subspace"
+      },
+      "das_iia": {
+        "step": "das",
+        "file": "iia.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "das_ce": {
+        "step": "das",
+        "file": "ce.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "das_eval_iia": {
+        "step": "das_eval",
+        "file": "iia.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "das_eval_ce": {
+        "step": "das_eval",
+        "file": "ce.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "gate": {
+        "step": "dbm",
+        "file": "gate.safetensors",
+        "kind": "gate"
+      },
+      "dbm_iia": {
+        "step": "dbm",
+        "file": "iia.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "dbm_ce": {
+        "step": "dbm",
+        "file": "ce.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "dbm_eval_iia": {
+        "step": "dbm_eval",
+        "file": "iia.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "dbm_eval_ce": {
+        "step": "dbm_eval",
+        "file": "ce.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "clean_logits": {
+        "step": "clean",
+        "file": "logits.safetensors",
+        "kind": "tensor"
+      },
+      "clean_accuracy": {
+        "step": "clean",
+        "file": "accuracy.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      },
+      "noop_logits": {
+        "step": "noop",
+        "file": "logits.safetensors",
+        "kind": "tensor"
+      },
+      "noop_accuracy": {
+        "step": "noop",
+        "file": "accuracy.json",
+        "kind": "table",
+        "row_keys": [
+          "example_id",
+          "metric"
+        ],
+        "value": "value"
+      }
+    },
+    "evaluation": {
+      "arm": "before",
+      "crossed": true,
+      "cases": {
+        "resident_workflow": [
+          "das_eval",
+          "dbm_eval"
+        ],
+        "cold_workflow": [
+          "das_eval",
+          "dbm_eval"
+        ]
+      }
+    },
+    "profile": false
+  }
+}

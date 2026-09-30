@@ -1,0 +1,2882 @@
+[
+ {
+  "answer": "X",
+  "answer_position": "0",
+  "base_answer": " X",
+  "base_answer_forms": [
+   " X",
+   "X"
+  ],
+  "cf_answer": " V",
+  "cf_answer_forms": [
+   " V",
+   "V"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "pink",
+  "color": "blue",
+  "counterfactual_inputs": [
+   "The car is blue. What color is the car?\nV. blue\nJ. pink\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "V",
+    "answer_position": "0",
+    "choices[0]": "blue",
+    "choices[1]": "pink",
+    "color": "blue",
+    "object": "car",
+    "symbols[0]": "V",
+    "symbols[1]": "J",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The car is blue. What color is the car?\nX. blue\nZ. pink\nAnswer:",
+  "label": " V",
+  "label_forms": [
+   " V",
+   "V"
+  ],
+  "object": "car",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "X",
+  "symbols[1]": "Z",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "N",
+  "answer_position": "0",
+  "base_answer": " N",
+  "base_answer_forms": [
+   " N",
+   "N"
+  ],
+  "cf_answer": " M",
+  "cf_answer_forms": [
+   " M",
+   "M"
+  ],
+  "choices[0]": "yellow",
+  "choices[1]": "red",
+  "color": "yellow",
+  "counterfactual_inputs": [
+   "The shoe is yellow. What color is the shoe?\nM. yellow\nZ. red\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "M",
+    "answer_position": "0",
+    "choices[0]": "yellow",
+    "choices[1]": "red",
+    "color": "yellow",
+    "object": "shoe",
+    "symbols[0]": "M",
+    "symbols[1]": "Z",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shoe is yellow. What color is the shoe?\nN. yellow\nU. red\nAnswer:",
+  "label": " M",
+  "label_forms": [
+   " M",
+   "M"
+  ],
+  "object": "shoe",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "N",
+  "symbols[1]": "U",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "A",
+  "answer_position": "1",
+  "base_answer": " A",
+  "base_answer_forms": [
+   " A",
+   "A"
+  ],
+  "cf_answer": " Q",
+  "cf_answer_forms": [
+   " Q",
+   "Q"
+  ],
+  "choices[0]": "white",
+  "choices[1]": "brown",
+  "color": "brown",
+  "counterfactual_inputs": [
+   "The bag is brown. What color is the bag?\nN. white\nQ. brown\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "Q",
+    "answer_position": "1",
+    "choices[0]": "white",
+    "choices[1]": "brown",
+    "color": "brown",
+    "object": "bag",
+    "symbols[0]": "N",
+    "symbols[1]": "Q",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is brown. What color is the bag?\nB. white\nA. brown\nAnswer:",
+  "label": " Q",
+  "label_forms": [
+   " Q",
+   "Q"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "B",
+  "symbols[1]": "A",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "R",
+  "answer_position": "0",
+  "base_answer": " R",
+  "base_answer_forms": [
+   " R",
+   "R"
+  ],
+  "cf_answer": " I",
+  "cf_answer_forms": [
+   " I",
+   "I"
+  ],
+  "choices[0]": "pink",
+  "choices[1]": "white",
+  "color": "pink",
+  "counterfactual_inputs": [
+   "The cup is pink. What color is the cup?\nI. pink\nA. white\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "I",
+    "answer_position": "0",
+    "choices[0]": "pink",
+    "choices[1]": "white",
+    "color": "pink",
+    "object": "cup",
+    "symbols[0]": "I",
+    "symbols[1]": "A",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The cup is pink. What color is the cup?\nR. pink\nF. white\nAnswer:",
+  "label": " I",
+  "label_forms": [
+   " I",
+   "I"
+  ],
+  "object": "cup",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "R",
+  "symbols[1]": "F",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "V",
+  "answer_position": "1",
+  "base_answer": " V",
+  "base_answer_forms": [
+   " V",
+   "V"
+  ],
+  "cf_answer": " F",
+  "cf_answer_forms": [
+   " F",
+   "F"
+  ],
+  "choices[0]": "yellow",
+  "choices[1]": "green",
+  "color": "green",
+  "counterfactual_inputs": [
+   "The pen is green. What color is the pen?\nS. yellow\nF. green\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "F",
+    "answer_position": "1",
+    "choices[0]": "yellow",
+    "choices[1]": "green",
+    "color": "green",
+    "object": "pen",
+    "symbols[0]": "S",
+    "symbols[1]": "F",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The pen is green. What color is the pen?\nQ. yellow\nV. green\nAnswer:",
+  "label": " F",
+  "label_forms": [
+   " F",
+   "F"
+  ],
+  "object": "pen",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "Q",
+  "symbols[1]": "V",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "O",
+  "answer_position": "1",
+  "base_answer": " O",
+  "base_answer_forms": [
+   " O",
+   "O"
+  ],
+  "cf_answer": " N",
+  "cf_answer_forms": [
+   " N",
+   "N"
+  ],
+  "choices[0]": "orange",
+  "choices[1]": "black",
+  "color": "black",
+  "counterfactual_inputs": [
+   "The cup is black. What color is the cup?\nF. orange\nN. black\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "N",
+    "answer_position": "1",
+    "choices[0]": "orange",
+    "choices[1]": "black",
+    "color": "black",
+    "object": "cup",
+    "symbols[0]": "F",
+    "symbols[1]": "N",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The cup is black. What color is the cup?\nL. orange\nO. black\nAnswer:",
+  "label": " N",
+  "label_forms": [
+   " N",
+   "N"
+  ],
+  "object": "cup",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "L",
+  "symbols[1]": "O",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "Q",
+  "answer_position": "1",
+  "base_answer": " Q",
+  "base_answer_forms": [
+   " Q",
+   "Q"
+  ],
+  "cf_answer": " L",
+  "cf_answer_forms": [
+   " L",
+   "L"
+  ],
+  "choices[0]": "black",
+  "choices[1]": "yellow",
+  "color": "yellow",
+  "counterfactual_inputs": [
+   "The bag is yellow. What color is the bag?\nS. black\nL. yellow\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "L",
+    "answer_position": "1",
+    "choices[0]": "black",
+    "choices[1]": "yellow",
+    "color": "yellow",
+    "object": "bag",
+    "symbols[0]": "S",
+    "symbols[1]": "L",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is yellow. What color is the bag?\nP. black\nQ. yellow\nAnswer:",
+  "label": " L",
+  "label_forms": [
+   " L",
+   "L"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "P",
+  "symbols[1]": "Q",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "V",
+  "answer_position": "1",
+  "base_answer": " V",
+  "base_answer_forms": [
+   " V",
+   "V"
+  ],
+  "cf_answer": " K",
+  "cf_answer_forms": [
+   " K",
+   "K"
+  ],
+  "choices[0]": "white",
+  "choices[1]": "orange",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The hat is orange. What color is the hat?\nH. white\nK. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "K",
+    "answer_position": "1",
+    "choices[0]": "white",
+    "choices[1]": "orange",
+    "color": "orange",
+    "object": "hat",
+    "symbols[0]": "H",
+    "symbols[1]": "K",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The hat is orange. What color is the hat?\nP. white\nV. orange\nAnswer:",
+  "label": " K",
+  "label_forms": [
+   " K",
+   "K"
+  ],
+  "object": "hat",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "P",
+  "symbols[1]": "V",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "Z",
+  "answer_position": "1",
+  "base_answer": " Z",
+  "base_answer_forms": [
+   " Z",
+   "Z"
+  ],
+  "cf_answer": " R",
+  "cf_answer_forms": [
+   " R",
+   "R"
+  ],
+  "choices[0]": "black",
+  "choices[1]": "purple",
+  "color": "purple",
+  "counterfactual_inputs": [
+   "The shoe is purple. What color is the shoe?\nX. black\nR. purple\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "R",
+    "answer_position": "1",
+    "choices[0]": "black",
+    "choices[1]": "purple",
+    "color": "purple",
+    "object": "shoe",
+    "symbols[0]": "X",
+    "symbols[1]": "R",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shoe is purple. What color is the shoe?\nJ. black\nZ. purple\nAnswer:",
+  "label": " R",
+  "label_forms": [
+   " R",
+   "R"
+  ],
+  "object": "shoe",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "J",
+  "symbols[1]": "Z",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "T",
+  "answer_position": "1",
+  "base_answer": " T",
+  "base_answer_forms": [
+   " T",
+   "T"
+  ],
+  "cf_answer": " K",
+  "cf_answer_forms": [
+   " K",
+   "K"
+  ],
+  "choices[0]": "black",
+  "choices[1]": "yellow",
+  "color": "yellow",
+  "counterfactual_inputs": [
+   "The flower is yellow. What color is the flower?\nC. black\nK. yellow\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "K",
+    "answer_position": "1",
+    "choices[0]": "black",
+    "choices[1]": "yellow",
+    "color": "yellow",
+    "object": "flower",
+    "symbols[0]": "C",
+    "symbols[1]": "K",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The flower is yellow. What color is the flower?\nV. black\nT. yellow\nAnswer:",
+  "label": " K",
+  "label_forms": [
+   " K",
+   "K"
+  ],
+  "object": "flower",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "V",
+  "symbols[1]": "T",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "I",
+  "answer_position": "0",
+  "base_answer": " I",
+  "base_answer_forms": [
+   " I",
+   "I"
+  ],
+  "cf_answer": " H",
+  "cf_answer_forms": [
+   " H",
+   "H"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "red",
+  "color": "blue",
+  "counterfactual_inputs": [
+   "The shirt is blue. What color is the shirt?\nH. blue\nX. red\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "H",
+    "answer_position": "0",
+    "choices[0]": "blue",
+    "choices[1]": "red",
+    "color": "blue",
+    "object": "shirt",
+    "symbols[0]": "H",
+    "symbols[1]": "X",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shirt is blue. What color is the shirt?\nI. blue\nS. red\nAnswer:",
+  "label": " H",
+  "label_forms": [
+   " H",
+   "H"
+  ],
+  "object": "shirt",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "I",
+  "symbols[1]": "S",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "G",
+  "answer_position": "0",
+  "base_answer": " G",
+  "base_answer_forms": [
+   " G",
+   "G"
+  ],
+  "cf_answer": " P",
+  "cf_answer_forms": [
+   " P",
+   "P"
+  ],
+  "choices[0]": "green",
+  "choices[1]": "orange",
+  "color": "green",
+  "counterfactual_inputs": [
+   "The bag is green. What color is the bag?\nP. green\nY. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "P",
+    "answer_position": "0",
+    "choices[0]": "green",
+    "choices[1]": "orange",
+    "color": "green",
+    "object": "bag",
+    "symbols[0]": "P",
+    "symbols[1]": "Y",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is green. What color is the bag?\nG. green\nB. orange\nAnswer:",
+  "label": " P",
+  "label_forms": [
+   " P",
+   "P"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "G",
+  "symbols[1]": "B",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "H",
+  "answer_position": "0",
+  "base_answer": " H",
+  "base_answer_forms": [
+   " H",
+   "H"
+  ],
+  "cf_answer": " A",
+  "cf_answer_forms": [
+   " A",
+   "A"
+  ],
+  "choices[0]": "orange",
+  "choices[1]": "pink",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The ball is orange. What color is the ball?\nA. orange\nC. pink\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "A",
+    "answer_position": "0",
+    "choices[0]": "orange",
+    "choices[1]": "pink",
+    "color": "orange",
+    "object": "ball",
+    "symbols[0]": "A",
+    "symbols[1]": "C",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The ball is orange. What color is the ball?\nH. orange\nV. pink\nAnswer:",
+  "label": " A",
+  "label_forms": [
+   " A",
+   "A"
+  ],
+  "object": "ball",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "H",
+  "symbols[1]": "V",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "L",
+  "answer_position": "0",
+  "base_answer": " L",
+  "base_answer_forms": [
+   " L",
+   "L"
+  ],
+  "cf_answer": " E",
+  "cf_answer_forms": [
+   " E",
+   "E"
+  ],
+  "choices[0]": "red",
+  "choices[1]": "blue",
+  "color": "red",
+  "counterfactual_inputs": [
+   "The car is red. What color is the car?\nE. red\nF. blue\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "E",
+    "answer_position": "0",
+    "choices[0]": "red",
+    "choices[1]": "blue",
+    "color": "red",
+    "object": "car",
+    "symbols[0]": "E",
+    "symbols[1]": "F",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The car is red. What color is the car?\nL. red\nI. blue\nAnswer:",
+  "label": " E",
+  "label_forms": [
+   " E",
+   "E"
+  ],
+  "object": "car",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "L",
+  "symbols[1]": "I",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "Z",
+  "answer_position": "0",
+  "base_answer": " Z",
+  "base_answer_forms": [
+   " Z",
+   "Z"
+  ],
+  "cf_answer": " E",
+  "cf_answer_forms": [
+   " E",
+   "E"
+  ],
+  "choices[0]": "red",
+  "choices[1]": "brown",
+  "color": "red",
+  "counterfactual_inputs": [
+   "The bag is red. What color is the bag?\nE. red\nB. brown\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "E",
+    "answer_position": "0",
+    "choices[0]": "red",
+    "choices[1]": "brown",
+    "color": "red",
+    "object": "bag",
+    "symbols[0]": "E",
+    "symbols[1]": "B",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is red. What color is the bag?\nZ. red\nH. brown\nAnswer:",
+  "label": " E",
+  "label_forms": [
+   " E",
+   "E"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "Z",
+  "symbols[1]": "H",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "P",
+  "answer_position": "1",
+  "base_answer": " P",
+  "base_answer_forms": [
+   " P",
+   "P"
+  ],
+  "cf_answer": " J",
+  "cf_answer_forms": [
+   " J",
+   "J"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "white",
+  "color": "white",
+  "counterfactual_inputs": [
+   "The pen is white. What color is the pen?\nA. blue\nJ. white\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "J",
+    "answer_position": "1",
+    "choices[0]": "blue",
+    "choices[1]": "white",
+    "color": "white",
+    "object": "pen",
+    "symbols[0]": "A",
+    "symbols[1]": "J",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The pen is white. What color is the pen?\nK. blue\nP. white\nAnswer:",
+  "label": " J",
+  "label_forms": [
+   " J",
+   "J"
+  ],
+  "object": "pen",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "K",
+  "symbols[1]": "P",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "M",
+  "answer_position": "1",
+  "base_answer": " M",
+  "base_answer_forms": [
+   " M",
+   "M"
+  ],
+  "cf_answer": " X",
+  "cf_answer_forms": [
+   " X",
+   "X"
+  ],
+  "choices[0]": "red",
+  "choices[1]": "white",
+  "color": "white",
+  "counterfactual_inputs": [
+   "The bag is white. What color is the bag?\nU. red\nX. white\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "X",
+    "answer_position": "1",
+    "choices[0]": "red",
+    "choices[1]": "white",
+    "color": "white",
+    "object": "bag",
+    "symbols[0]": "U",
+    "symbols[1]": "X",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is white. What color is the bag?\nY. red\nM. white\nAnswer:",
+  "label": " X",
+  "label_forms": [
+   " X",
+   "X"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "Y",
+  "symbols[1]": "M",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "A",
+  "answer_position": "1",
+  "base_answer": " A",
+  "base_answer_forms": [
+   " A",
+   "A"
+  ],
+  "cf_answer": " G",
+  "cf_answer_forms": [
+   " G",
+   "G"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "yellow",
+  "color": "yellow",
+  "counterfactual_inputs": [
+   "The hat is yellow. What color is the hat?\nQ. blue\nG. yellow\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "G",
+    "answer_position": "1",
+    "choices[0]": "blue",
+    "choices[1]": "yellow",
+    "color": "yellow",
+    "object": "hat",
+    "symbols[0]": "Q",
+    "symbols[1]": "G",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The hat is yellow. What color is the hat?\nD. blue\nA. yellow\nAnswer:",
+  "label": " G",
+  "label_forms": [
+   " G",
+   "G"
+  ],
+  "object": "hat",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "D",
+  "symbols[1]": "A",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "K",
+  "answer_position": "0",
+  "base_answer": " K",
+  "base_answer_forms": [
+   " K",
+   "K"
+  ],
+  "cf_answer": " J",
+  "cf_answer_forms": [
+   " J",
+   "J"
+  ],
+  "choices[0]": "black",
+  "choices[1]": "orange",
+  "color": "black",
+  "counterfactual_inputs": [
+   "The hat is black. What color is the hat?\nJ. black\nV. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "J",
+    "answer_position": "0",
+    "choices[0]": "black",
+    "choices[1]": "orange",
+    "color": "black",
+    "object": "hat",
+    "symbols[0]": "J",
+    "symbols[1]": "V",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The hat is black. What color is the hat?\nK. black\nI. orange\nAnswer:",
+  "label": " J",
+  "label_forms": [
+   " J",
+   "J"
+  ],
+  "object": "hat",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "K",
+  "symbols[1]": "I",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "I",
+  "answer_position": "0",
+  "base_answer": " I",
+  "base_answer_forms": [
+   " I",
+   "I"
+  ],
+  "cf_answer": " F",
+  "cf_answer_forms": [
+   " F",
+   "F"
+  ],
+  "choices[0]": "black",
+  "choices[1]": "green",
+  "color": "black",
+  "counterfactual_inputs": [
+   "The ball is black. What color is the ball?\nF. black\nG. green\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "F",
+    "answer_position": "0",
+    "choices[0]": "black",
+    "choices[1]": "green",
+    "color": "black",
+    "object": "ball",
+    "symbols[0]": "F",
+    "symbols[1]": "G",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The ball is black. What color is the ball?\nI. black\nB. green\nAnswer:",
+  "label": " F",
+  "label_forms": [
+   " F",
+   "F"
+  ],
+  "object": "ball",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "I",
+  "symbols[1]": "B",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "H",
+  "answer_position": "0",
+  "base_answer": " H",
+  "base_answer_forms": [
+   " H",
+   "H"
+  ],
+  "cf_answer": " P",
+  "cf_answer_forms": [
+   " P",
+   "P"
+  ],
+  "choices[0]": "brown",
+  "choices[1]": "yellow",
+  "color": "brown",
+  "counterfactual_inputs": [
+   "The car is brown. What color is the car?\nP. brown\nC. yellow\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "P",
+    "answer_position": "0",
+    "choices[0]": "brown",
+    "choices[1]": "yellow",
+    "color": "brown",
+    "object": "car",
+    "symbols[0]": "P",
+    "symbols[1]": "C",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The car is brown. What color is the car?\nH. brown\nW. yellow\nAnswer:",
+  "label": " P",
+  "label_forms": [
+   " P",
+   "P"
+  ],
+  "object": "car",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "H",
+  "symbols[1]": "W",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "V",
+  "answer_position": "1",
+  "base_answer": " V",
+  "base_answer_forms": [
+   " V",
+   "V"
+  ],
+  "cf_answer": " J",
+  "cf_answer_forms": [
+   " J",
+   "J"
+  ],
+  "choices[0]": "yellow",
+  "choices[1]": "white",
+  "color": "white",
+  "counterfactual_inputs": [
+   "The car is white. What color is the car?\nO. yellow\nJ. white\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "J",
+    "answer_position": "1",
+    "choices[0]": "yellow",
+    "choices[1]": "white",
+    "color": "white",
+    "object": "car",
+    "symbols[0]": "O",
+    "symbols[1]": "J",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The car is white. What color is the car?\nI. yellow\nV. white\nAnswer:",
+  "label": " J",
+  "label_forms": [
+   " J",
+   "J"
+  ],
+  "object": "car",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "I",
+  "symbols[1]": "V",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "D",
+  "answer_position": "1",
+  "base_answer": " D",
+  "base_answer_forms": [
+   " D",
+   "D"
+  ],
+  "cf_answer": " Z",
+  "cf_answer_forms": [
+   " Z",
+   "Z"
+  ],
+  "choices[0]": "brown",
+  "choices[1]": "red",
+  "color": "red",
+  "counterfactual_inputs": [
+   "The house is red. What color is the house?\nS. brown\nZ. red\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "Z",
+    "answer_position": "1",
+    "choices[0]": "brown",
+    "choices[1]": "red",
+    "color": "red",
+    "object": "house",
+    "symbols[0]": "S",
+    "symbols[1]": "Z",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The house is red. What color is the house?\nF. brown\nD. red\nAnswer:",
+  "label": " Z",
+  "label_forms": [
+   " Z",
+   "Z"
+  ],
+  "object": "house",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "F",
+  "symbols[1]": "D",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "F",
+  "answer_position": "0",
+  "base_answer": " F",
+  "base_answer_forms": [
+   " F",
+   "F"
+  ],
+  "cf_answer": " I",
+  "cf_answer_forms": [
+   " I",
+   "I"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "green",
+  "color": "blue",
+  "counterfactual_inputs": [
+   "The shirt is blue. What color is the shirt?\nI. blue\nD. green\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "I",
+    "answer_position": "0",
+    "choices[0]": "blue",
+    "choices[1]": "green",
+    "color": "blue",
+    "object": "shirt",
+    "symbols[0]": "I",
+    "symbols[1]": "D",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shirt is blue. What color is the shirt?\nF. blue\nY. green\nAnswer:",
+  "label": " I",
+  "label_forms": [
+   " I",
+   "I"
+  ],
+  "object": "shirt",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "F",
+  "symbols[1]": "Y",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "R",
+  "answer_position": "1",
+  "base_answer": " R",
+  "base_answer_forms": [
+   " R",
+   "R"
+  ],
+  "cf_answer": " N",
+  "cf_answer_forms": [
+   " N",
+   "N"
+  ],
+  "choices[0]": "brown",
+  "choices[1]": "black",
+  "color": "black",
+  "counterfactual_inputs": [
+   "The ball is black. What color is the ball?\nW. brown\nN. black\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "N",
+    "answer_position": "1",
+    "choices[0]": "brown",
+    "choices[1]": "black",
+    "color": "black",
+    "object": "ball",
+    "symbols[0]": "W",
+    "symbols[1]": "N",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The ball is black. What color is the ball?\nJ. brown\nR. black\nAnswer:",
+  "label": " N",
+  "label_forms": [
+   " N",
+   "N"
+  ],
+  "object": "ball",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "J",
+  "symbols[1]": "R",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "S",
+  "answer_position": "0",
+  "base_answer": " S",
+  "base_answer_forms": [
+   " S",
+   "S"
+  ],
+  "cf_answer": " O",
+  "cf_answer_forms": [
+   " O",
+   "O"
+  ],
+  "choices[0]": "pink",
+  "choices[1]": "brown",
+  "color": "pink",
+  "counterfactual_inputs": [
+   "The shirt is pink. What color is the shirt?\nO. pink\nR. brown\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "O",
+    "answer_position": "0",
+    "choices[0]": "pink",
+    "choices[1]": "brown",
+    "color": "pink",
+    "object": "shirt",
+    "symbols[0]": "O",
+    "symbols[1]": "R",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shirt is pink. What color is the shirt?\nS. pink\nB. brown\nAnswer:",
+  "label": " O",
+  "label_forms": [
+   " O",
+   "O"
+  ],
+  "object": "shirt",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "S",
+  "symbols[1]": "B",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "Q",
+  "answer_position": "0",
+  "base_answer": " Q",
+  "base_answer_forms": [
+   " Q",
+   "Q"
+  ],
+  "cf_answer": " V",
+  "cf_answer_forms": [
+   " V",
+   "V"
+  ],
+  "choices[0]": "brown",
+  "choices[1]": "orange",
+  "color": "brown",
+  "counterfactual_inputs": [
+   "The car is brown. What color is the car?\nV. brown\nM. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "V",
+    "answer_position": "0",
+    "choices[0]": "brown",
+    "choices[1]": "orange",
+    "color": "brown",
+    "object": "car",
+    "symbols[0]": "V",
+    "symbols[1]": "M",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The car is brown. What color is the car?\nQ. brown\nD. orange\nAnswer:",
+  "label": " V",
+  "label_forms": [
+   " V",
+   "V"
+  ],
+  "object": "car",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "Q",
+  "symbols[1]": "D",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "J",
+  "answer_position": "1",
+  "base_answer": " J",
+  "base_answer_forms": [
+   " J",
+   "J"
+  ],
+  "cf_answer": " X",
+  "cf_answer_forms": [
+   " X",
+   "X"
+  ],
+  "choices[0]": "red",
+  "choices[1]": "purple",
+  "color": "purple",
+  "counterfactual_inputs": [
+   "The pen is purple. What color is the pen?\nH. red\nX. purple\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "X",
+    "answer_position": "1",
+    "choices[0]": "red",
+    "choices[1]": "purple",
+    "color": "purple",
+    "object": "pen",
+    "symbols[0]": "H",
+    "symbols[1]": "X",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The pen is purple. What color is the pen?\nD. red\nJ. purple\nAnswer:",
+  "label": " X",
+  "label_forms": [
+   " X",
+   "X"
+  ],
+  "object": "pen",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "D",
+  "symbols[1]": "J",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "G",
+  "answer_position": "1",
+  "base_answer": " G",
+  "base_answer_forms": [
+   " G",
+   "G"
+  ],
+  "cf_answer": " V",
+  "cf_answer_forms": [
+   " V",
+   "V"
+  ],
+  "choices[0]": "brown",
+  "choices[1]": "red",
+  "color": "red",
+  "counterfactual_inputs": [
+   "The hat is red. What color is the hat?\nU. brown\nV. red\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "V",
+    "answer_position": "1",
+    "choices[0]": "brown",
+    "choices[1]": "red",
+    "color": "red",
+    "object": "hat",
+    "symbols[0]": "U",
+    "symbols[1]": "V",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The hat is red. What color is the hat?\nO. brown\nG. red\nAnswer:",
+  "label": " V",
+  "label_forms": [
+   " V",
+   "V"
+  ],
+  "object": "hat",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "O",
+  "symbols[1]": "G",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "X",
+  "answer_position": "1",
+  "base_answer": " X",
+  "base_answer_forms": [
+   " X",
+   "X"
+  ],
+  "cf_answer": " H",
+  "cf_answer_forms": [
+   " H",
+   "H"
+  ],
+  "choices[0]": "red",
+  "choices[1]": "purple",
+  "color": "purple",
+  "counterfactual_inputs": [
+   "The ball is purple. What color is the ball?\nC. red\nH. purple\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "H",
+    "answer_position": "1",
+    "choices[0]": "red",
+    "choices[1]": "purple",
+    "color": "purple",
+    "object": "ball",
+    "symbols[0]": "C",
+    "symbols[1]": "H",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The ball is purple. What color is the ball?\nJ. red\nX. purple\nAnswer:",
+  "label": " H",
+  "label_forms": [
+   " H",
+   "H"
+  ],
+  "object": "ball",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "J",
+  "symbols[1]": "X",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "O",
+  "answer_position": "1",
+  "base_answer": " O",
+  "base_answer_forms": [
+   " O",
+   "O"
+  ],
+  "cf_answer": " L",
+  "cf_answer_forms": [
+   " L",
+   "L"
+  ],
+  "choices[0]": "pink",
+  "choices[1]": "blue",
+  "color": "blue",
+  "counterfactual_inputs": [
+   "The shirt is blue. What color is the shirt?\nE. pink\nL. blue\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "L",
+    "answer_position": "1",
+    "choices[0]": "pink",
+    "choices[1]": "blue",
+    "color": "blue",
+    "object": "shirt",
+    "symbols[0]": "E",
+    "symbols[1]": "L",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shirt is blue. What color is the shirt?\nW. pink\nO. blue\nAnswer:",
+  "label": " L",
+  "label_forms": [
+   " L",
+   "L"
+  ],
+  "object": "shirt",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "W",
+  "symbols[1]": "O",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "C",
+  "answer_position": "0",
+  "base_answer": " C",
+  "base_answer_forms": [
+   " C",
+   "C"
+  ],
+  "cf_answer": " L",
+  "cf_answer_forms": [
+   " L",
+   "L"
+  ],
+  "choices[0]": "purple",
+  "choices[1]": "blue",
+  "color": "purple",
+  "counterfactual_inputs": [
+   "The car is purple. What color is the car?\nL. purple\nW. blue\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "L",
+    "answer_position": "0",
+    "choices[0]": "purple",
+    "choices[1]": "blue",
+    "color": "purple",
+    "object": "car",
+    "symbols[0]": "L",
+    "symbols[1]": "W",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The car is purple. What color is the car?\nC. purple\nT. blue\nAnswer:",
+  "label": " L",
+  "label_forms": [
+   " L",
+   "L"
+  ],
+  "object": "car",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "C",
+  "symbols[1]": "T",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "B",
+  "answer_position": "1",
+  "base_answer": " B",
+  "base_answer_forms": [
+   " B",
+   "B"
+  ],
+  "cf_answer": " X",
+  "cf_answer_forms": [
+   " X",
+   "X"
+  ],
+  "choices[0]": "red",
+  "choices[1]": "blue",
+  "color": "blue",
+  "counterfactual_inputs": [
+   "The shirt is blue. What color is the shirt?\nZ. red\nX. blue\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "X",
+    "answer_position": "1",
+    "choices[0]": "red",
+    "choices[1]": "blue",
+    "color": "blue",
+    "object": "shirt",
+    "symbols[0]": "Z",
+    "symbols[1]": "X",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shirt is blue. What color is the shirt?\nY. red\nB. blue\nAnswer:",
+  "label": " X",
+  "label_forms": [
+   " X",
+   "X"
+  ],
+  "object": "shirt",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "Y",
+  "symbols[1]": "B",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "Z",
+  "answer_position": "0",
+  "base_answer": " Z",
+  "base_answer_forms": [
+   " Z",
+   "Z"
+  ],
+  "cf_answer": " I",
+  "cf_answer_forms": [
+   " I",
+   "I"
+  ],
+  "choices[0]": "orange",
+  "choices[1]": "black",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The flower is orange. What color is the flower?\nI. orange\nQ. black\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "I",
+    "answer_position": "0",
+    "choices[0]": "orange",
+    "choices[1]": "black",
+    "color": "orange",
+    "object": "flower",
+    "symbols[0]": "I",
+    "symbols[1]": "Q",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The flower is orange. What color is the flower?\nZ. orange\nL. black\nAnswer:",
+  "label": " I",
+  "label_forms": [
+   " I",
+   "I"
+  ],
+  "object": "flower",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "Z",
+  "symbols[1]": "L",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "F",
+  "answer_position": "1",
+  "base_answer": " F",
+  "base_answer_forms": [
+   " F",
+   "F"
+  ],
+  "cf_answer": " V",
+  "cf_answer_forms": [
+   " V",
+   "V"
+  ],
+  "choices[0]": "purple",
+  "choices[1]": "brown",
+  "color": "brown",
+  "counterfactual_inputs": [
+   "The cup is brown. What color is the cup?\nR. purple\nV. brown\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "V",
+    "answer_position": "1",
+    "choices[0]": "purple",
+    "choices[1]": "brown",
+    "color": "brown",
+    "object": "cup",
+    "symbols[0]": "R",
+    "symbols[1]": "V",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The cup is brown. What color is the cup?\nH. purple\nF. brown\nAnswer:",
+  "label": " V",
+  "label_forms": [
+   " V",
+   "V"
+  ],
+  "object": "cup",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "H",
+  "symbols[1]": "F",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "C",
+  "answer_position": "0",
+  "base_answer": " C",
+  "base_answer_forms": [
+   " C",
+   "C"
+  ],
+  "cf_answer": " G",
+  "cf_answer_forms": [
+   " G",
+   "G"
+  ],
+  "choices[0]": "pink",
+  "choices[1]": "blue",
+  "color": "pink",
+  "counterfactual_inputs": [
+   "The bag is pink. What color is the bag?\nG. pink\nT. blue\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "G",
+    "answer_position": "0",
+    "choices[0]": "pink",
+    "choices[1]": "blue",
+    "color": "pink",
+    "object": "bag",
+    "symbols[0]": "G",
+    "symbols[1]": "T",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is pink. What color is the bag?\nC. pink\nL. blue\nAnswer:",
+  "label": " G",
+  "label_forms": [
+   " G",
+   "G"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "C",
+  "symbols[1]": "L",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "E",
+  "answer_position": "0",
+  "base_answer": " E",
+  "base_answer_forms": [
+   " E",
+   "E"
+  ],
+  "cf_answer": " O",
+  "cf_answer_forms": [
+   " O",
+   "O"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "green",
+  "color": "blue",
+  "counterfactual_inputs": [
+   "The cup is blue. What color is the cup?\nO. blue\nI. green\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "O",
+    "answer_position": "0",
+    "choices[0]": "blue",
+    "choices[1]": "green",
+    "color": "blue",
+    "object": "cup",
+    "symbols[0]": "O",
+    "symbols[1]": "I",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The cup is blue. What color is the cup?\nE. blue\nJ. green\nAnswer:",
+  "label": " O",
+  "label_forms": [
+   " O",
+   "O"
+  ],
+  "object": "cup",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "E",
+  "symbols[1]": "J",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "E",
+  "answer_position": "1",
+  "base_answer": " E",
+  "base_answer_forms": [
+   " E",
+   "E"
+  ],
+  "cf_answer": " P",
+  "cf_answer_forms": [
+   " P",
+   "P"
+  ],
+  "choices[0]": "white",
+  "choices[1]": "green",
+  "color": "green",
+  "counterfactual_inputs": [
+   "The hat is green. What color is the hat?\nT. white\nP. green\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "P",
+    "answer_position": "1",
+    "choices[0]": "white",
+    "choices[1]": "green",
+    "color": "green",
+    "object": "hat",
+    "symbols[0]": "T",
+    "symbols[1]": "P",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The hat is green. What color is the hat?\nD. white\nE. green\nAnswer:",
+  "label": " P",
+  "label_forms": [
+   " P",
+   "P"
+  ],
+  "object": "hat",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "D",
+  "symbols[1]": "E",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "O",
+  "answer_position": "1",
+  "base_answer": " O",
+  "base_answer_forms": [
+   " O",
+   "O"
+  ],
+  "cf_answer": " I",
+  "cf_answer_forms": [
+   " I",
+   "I"
+  ],
+  "choices[0]": "yellow",
+  "choices[1]": "black",
+  "color": "black",
+  "counterfactual_inputs": [
+   "The pen is black. What color is the pen?\nY. yellow\nI. black\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "I",
+    "answer_position": "1",
+    "choices[0]": "yellow",
+    "choices[1]": "black",
+    "color": "black",
+    "object": "pen",
+    "symbols[0]": "Y",
+    "symbols[1]": "I",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The pen is black. What color is the pen?\nF. yellow\nO. black\nAnswer:",
+  "label": " I",
+  "label_forms": [
+   " I",
+   "I"
+  ],
+  "object": "pen",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "F",
+  "symbols[1]": "O",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "X",
+  "answer_position": "1",
+  "base_answer": " X",
+  "base_answer_forms": [
+   " X",
+   "X"
+  ],
+  "cf_answer": " U",
+  "cf_answer_forms": [
+   " U",
+   "U"
+  ],
+  "choices[0]": "green",
+  "choices[1]": "white",
+  "color": "white",
+  "counterfactual_inputs": [
+   "The pen is white. What color is the pen?\nA. green\nU. white\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "U",
+    "answer_position": "1",
+    "choices[0]": "green",
+    "choices[1]": "white",
+    "color": "white",
+    "object": "pen",
+    "symbols[0]": "A",
+    "symbols[1]": "U",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The pen is white. What color is the pen?\nO. green\nX. white\nAnswer:",
+  "label": " U",
+  "label_forms": [
+   " U",
+   "U"
+  ],
+  "object": "pen",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "O",
+  "symbols[1]": "X",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "P",
+  "answer_position": "0",
+  "base_answer": " P",
+  "base_answer_forms": [
+   " P",
+   "P"
+  ],
+  "cf_answer": " N",
+  "cf_answer_forms": [
+   " N",
+   "N"
+  ],
+  "choices[0]": "pink",
+  "choices[1]": "white",
+  "color": "pink",
+  "counterfactual_inputs": [
+   "The house is pink. What color is the house?\nN. pink\nJ. white\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "N",
+    "answer_position": "0",
+    "choices[0]": "pink",
+    "choices[1]": "white",
+    "color": "pink",
+    "object": "house",
+    "symbols[0]": "N",
+    "symbols[1]": "J",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The house is pink. What color is the house?\nP. pink\nI. white\nAnswer:",
+  "label": " N",
+  "label_forms": [
+   " N",
+   "N"
+  ],
+  "object": "house",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "P",
+  "symbols[1]": "I",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "X",
+  "answer_position": "1",
+  "base_answer": " X",
+  "base_answer_forms": [
+   " X",
+   "X"
+  ],
+  "cf_answer": " C",
+  "cf_answer_forms": [
+   " C",
+   "C"
+  ],
+  "choices[0]": "white",
+  "choices[1]": "orange",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The hat is orange. What color is the hat?\nV. white\nC. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "C",
+    "answer_position": "1",
+    "choices[0]": "white",
+    "choices[1]": "orange",
+    "color": "orange",
+    "object": "hat",
+    "symbols[0]": "V",
+    "symbols[1]": "C",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The hat is orange. What color is the hat?\nW. white\nX. orange\nAnswer:",
+  "label": " C",
+  "label_forms": [
+   " C",
+   "C"
+  ],
+  "object": "hat",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "W",
+  "symbols[1]": "X",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "M",
+  "answer_position": "1",
+  "base_answer": " M",
+  "base_answer_forms": [
+   " M",
+   "M"
+  ],
+  "cf_answer": " A",
+  "cf_answer_forms": [
+   " A",
+   "A"
+  ],
+  "choices[0]": "yellow",
+  "choices[1]": "white",
+  "color": "white",
+  "counterfactual_inputs": [
+   "The bag is white. What color is the bag?\nW. yellow\nA. white\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "A",
+    "answer_position": "1",
+    "choices[0]": "yellow",
+    "choices[1]": "white",
+    "color": "white",
+    "object": "bag",
+    "symbols[0]": "W",
+    "symbols[1]": "A",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is white. What color is the bag?\nV. yellow\nM. white\nAnswer:",
+  "label": " A",
+  "label_forms": [
+   " A",
+   "A"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "V",
+  "symbols[1]": "M",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "D",
+  "answer_position": "0",
+  "base_answer": " D",
+  "base_answer_forms": [
+   " D",
+   "D"
+  ],
+  "cf_answer": " O",
+  "cf_answer_forms": [
+   " O",
+   "O"
+  ],
+  "choices[0]": "black",
+  "choices[1]": "brown",
+  "color": "black",
+  "counterfactual_inputs": [
+   "The hat is black. What color is the hat?\nO. black\nI. brown\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "O",
+    "answer_position": "0",
+    "choices[0]": "black",
+    "choices[1]": "brown",
+    "color": "black",
+    "object": "hat",
+    "symbols[0]": "O",
+    "symbols[1]": "I",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The hat is black. What color is the hat?\nD. black\nA. brown\nAnswer:",
+  "label": " O",
+  "label_forms": [
+   " O",
+   "O"
+  ],
+  "object": "hat",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "D",
+  "symbols[1]": "A",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "I",
+  "answer_position": "0",
+  "base_answer": " I",
+  "base_answer_forms": [
+   " I",
+   "I"
+  ],
+  "cf_answer": " T",
+  "cf_answer_forms": [
+   " T",
+   "T"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "brown",
+  "color": "blue",
+  "counterfactual_inputs": [
+   "The shirt is blue. What color is the shirt?\nT. blue\nG. brown\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "T",
+    "answer_position": "0",
+    "choices[0]": "blue",
+    "choices[1]": "brown",
+    "color": "blue",
+    "object": "shirt",
+    "symbols[0]": "T",
+    "symbols[1]": "G",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shirt is blue. What color is the shirt?\nI. blue\nX. brown\nAnswer:",
+  "label": " T",
+  "label_forms": [
+   " T",
+   "T"
+  ],
+  "object": "shirt",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "I",
+  "symbols[1]": "X",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "I",
+  "answer_position": "1",
+  "base_answer": " I",
+  "base_answer_forms": [
+   " I",
+   "I"
+  ],
+  "cf_answer": " U",
+  "cf_answer_forms": [
+   " U",
+   "U"
+  ],
+  "choices[0]": "red",
+  "choices[1]": "green",
+  "color": "green",
+  "counterfactual_inputs": [
+   "The shoe is green. What color is the shoe?\nS. red\nU. green\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "U",
+    "answer_position": "1",
+    "choices[0]": "red",
+    "choices[1]": "green",
+    "color": "green",
+    "object": "shoe",
+    "symbols[0]": "S",
+    "symbols[1]": "U",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shoe is green. What color is the shoe?\nP. red\nI. green\nAnswer:",
+  "label": " U",
+  "label_forms": [
+   " U",
+   "U"
+  ],
+  "object": "shoe",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "P",
+  "symbols[1]": "I",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "P",
+  "answer_position": "1",
+  "base_answer": " P",
+  "base_answer_forms": [
+   " P",
+   "P"
+  ],
+  "cf_answer": " X",
+  "cf_answer_forms": [
+   " X",
+   "X"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "yellow",
+  "color": "yellow",
+  "counterfactual_inputs": [
+   "The hat is yellow. What color is the hat?\nT. blue\nX. yellow\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "X",
+    "answer_position": "1",
+    "choices[0]": "blue",
+    "choices[1]": "yellow",
+    "color": "yellow",
+    "object": "hat",
+    "symbols[0]": "T",
+    "symbols[1]": "X",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The hat is yellow. What color is the hat?\nA. blue\nP. yellow\nAnswer:",
+  "label": " X",
+  "label_forms": [
+   " X",
+   "X"
+  ],
+  "object": "hat",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "A",
+  "symbols[1]": "P",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "Q",
+  "answer_position": "1",
+  "base_answer": " Q",
+  "base_answer_forms": [
+   " Q",
+   "Q"
+  ],
+  "cf_answer": " A",
+  "cf_answer_forms": [
+   " A",
+   "A"
+  ],
+  "choices[0]": "orange",
+  "choices[1]": "brown",
+  "color": "brown",
+  "counterfactual_inputs": [
+   "The shoe is brown. What color is the shoe?\nP. orange\nA. brown\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "A",
+    "answer_position": "1",
+    "choices[0]": "orange",
+    "choices[1]": "brown",
+    "color": "brown",
+    "object": "shoe",
+    "symbols[0]": "P",
+    "symbols[1]": "A",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shoe is brown. What color is the shoe?\nI. orange\nQ. brown\nAnswer:",
+  "label": " A",
+  "label_forms": [
+   " A",
+   "A"
+  ],
+  "object": "shoe",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "I",
+  "symbols[1]": "Q",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "V",
+  "answer_position": "1",
+  "base_answer": " V",
+  "base_answer_forms": [
+   " V",
+   "V"
+  ],
+  "cf_answer": " Z",
+  "cf_answer_forms": [
+   " Z",
+   "Z"
+  ],
+  "choices[0]": "green",
+  "choices[1]": "orange",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The shoe is orange. What color is the shoe?\nW. green\nZ. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "Z",
+    "answer_position": "1",
+    "choices[0]": "green",
+    "choices[1]": "orange",
+    "color": "orange",
+    "object": "shoe",
+    "symbols[0]": "W",
+    "symbols[1]": "Z",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shoe is orange. What color is the shoe?\nI. green\nV. orange\nAnswer:",
+  "label": " Z",
+  "label_forms": [
+   " Z",
+   "Z"
+  ],
+  "object": "shoe",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "I",
+  "symbols[1]": "V",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "V",
+  "answer_position": "1",
+  "base_answer": " V",
+  "base_answer_forms": [
+   " V",
+   "V"
+  ],
+  "cf_answer": " E",
+  "cf_answer_forms": [
+   " E",
+   "E"
+  ],
+  "choices[0]": "black",
+  "choices[1]": "green",
+  "color": "green",
+  "counterfactual_inputs": [
+   "The ball is green. What color is the ball?\nJ. black\nE. green\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "E",
+    "answer_position": "1",
+    "choices[0]": "black",
+    "choices[1]": "green",
+    "color": "green",
+    "object": "ball",
+    "symbols[0]": "J",
+    "symbols[1]": "E",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The ball is green. What color is the ball?\nO. black\nV. green\nAnswer:",
+  "label": " E",
+  "label_forms": [
+   " E",
+   "E"
+  ],
+  "object": "ball",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "O",
+  "symbols[1]": "V",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "L",
+  "answer_position": "0",
+  "base_answer": " L",
+  "base_answer_forms": [
+   " L",
+   "L"
+  ],
+  "cf_answer": " T",
+  "cf_answer_forms": [
+   " T",
+   "T"
+  ],
+  "choices[0]": "black",
+  "choices[1]": "brown",
+  "color": "black",
+  "counterfactual_inputs": [
+   "The flower is black. What color is the flower?\nT. black\nO. brown\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "T",
+    "answer_position": "0",
+    "choices[0]": "black",
+    "choices[1]": "brown",
+    "color": "black",
+    "object": "flower",
+    "symbols[0]": "T",
+    "symbols[1]": "O",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The flower is black. What color is the flower?\nL. black\nB. brown\nAnswer:",
+  "label": " T",
+  "label_forms": [
+   " T",
+   "T"
+  ],
+  "object": "flower",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "L",
+  "symbols[1]": "B",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "P",
+  "answer_position": "0",
+  "base_answer": " P",
+  "base_answer_forms": [
+   " P",
+   "P"
+  ],
+  "cf_answer": " S",
+  "cf_answer_forms": [
+   " S",
+   "S"
+  ],
+  "choices[0]": "purple",
+  "choices[1]": "black",
+  "color": "purple",
+  "counterfactual_inputs": [
+   "The shirt is purple. What color is the shirt?\nS. purple\nY. black\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "S",
+    "answer_position": "0",
+    "choices[0]": "purple",
+    "choices[1]": "black",
+    "color": "purple",
+    "object": "shirt",
+    "symbols[0]": "S",
+    "symbols[1]": "Y",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shirt is purple. What color is the shirt?\nP. purple\nW. black\nAnswer:",
+  "label": " S",
+  "label_forms": [
+   " S",
+   "S"
+  ],
+  "object": "shirt",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "P",
+  "symbols[1]": "W",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "U",
+  "answer_position": "1",
+  "base_answer": " U",
+  "base_answer_forms": [
+   " U",
+   "U"
+  ],
+  "cf_answer": " W",
+  "cf_answer_forms": [
+   " W",
+   "W"
+  ],
+  "choices[0]": "pink",
+  "choices[1]": "purple",
+  "color": "purple",
+  "counterfactual_inputs": [
+   "The car is purple. What color is the car?\nJ. pink\nW. purple\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "W",
+    "answer_position": "1",
+    "choices[0]": "pink",
+    "choices[1]": "purple",
+    "color": "purple",
+    "object": "car",
+    "symbols[0]": "J",
+    "symbols[1]": "W",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The car is purple. What color is the car?\nK. pink\nU. purple\nAnswer:",
+  "label": " W",
+  "label_forms": [
+   " W",
+   "W"
+  ],
+  "object": "car",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "K",
+  "symbols[1]": "U",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "M",
+  "answer_position": "0",
+  "base_answer": " M",
+  "base_answer_forms": [
+   " M",
+   "M"
+  ],
+  "cf_answer": " R",
+  "cf_answer_forms": [
+   " R",
+   "R"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "white",
+  "color": "blue",
+  "counterfactual_inputs": [
+   "The bag is blue. What color is the bag?\nR. blue\nE. white\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "R",
+    "answer_position": "0",
+    "choices[0]": "blue",
+    "choices[1]": "white",
+    "color": "blue",
+    "object": "bag",
+    "symbols[0]": "R",
+    "symbols[1]": "E",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is blue. What color is the bag?\nM. blue\nT. white\nAnswer:",
+  "label": " R",
+  "label_forms": [
+   " R",
+   "R"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "M",
+  "symbols[1]": "T",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "H",
+  "answer_position": "1",
+  "base_answer": " H",
+  "base_answer_forms": [
+   " H",
+   "H"
+  ],
+  "cf_answer": " J",
+  "cf_answer_forms": [
+   " J",
+   "J"
+  ],
+  "choices[0]": "purple",
+  "choices[1]": "red",
+  "color": "red",
+  "counterfactual_inputs": [
+   "The flower is red. What color is the flower?\nS. purple\nJ. red\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "J",
+    "answer_position": "1",
+    "choices[0]": "purple",
+    "choices[1]": "red",
+    "color": "red",
+    "object": "flower",
+    "symbols[0]": "S",
+    "symbols[1]": "J",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The flower is red. What color is the flower?\nR. purple\nH. red\nAnswer:",
+  "label": " J",
+  "label_forms": [
+   " J",
+   "J"
+  ],
+  "object": "flower",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "R",
+  "symbols[1]": "H",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "K",
+  "answer_position": "1",
+  "base_answer": " K",
+  "base_answer_forms": [
+   " K",
+   "K"
+  ],
+  "cf_answer": " C",
+  "cf_answer_forms": [
+   " C",
+   "C"
+  ],
+  "choices[0]": "brown",
+  "choices[1]": "blue",
+  "color": "blue",
+  "counterfactual_inputs": [
+   "The car is blue. What color is the car?\nN. brown\nC. blue\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "C",
+    "answer_position": "1",
+    "choices[0]": "brown",
+    "choices[1]": "blue",
+    "color": "blue",
+    "object": "car",
+    "symbols[0]": "N",
+    "symbols[1]": "C",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The car is blue. What color is the car?\nG. brown\nK. blue\nAnswer:",
+  "label": " C",
+  "label_forms": [
+   " C",
+   "C"
+  ],
+  "object": "car",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "G",
+  "symbols[1]": "K",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "J",
+  "answer_position": "1",
+  "base_answer": " J",
+  "base_answer_forms": [
+   " J",
+   "J"
+  ],
+  "cf_answer": " E",
+  "cf_answer_forms": [
+   " E",
+   "E"
+  ],
+  "choices[0]": "green",
+  "choices[1]": "orange",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The hat is orange. What color is the hat?\nQ. green\nE. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "E",
+    "answer_position": "1",
+    "choices[0]": "green",
+    "choices[1]": "orange",
+    "color": "orange",
+    "object": "hat",
+    "symbols[0]": "Q",
+    "symbols[1]": "E",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The hat is orange. What color is the hat?\nO. green\nJ. orange\nAnswer:",
+  "label": " E",
+  "label_forms": [
+   " E",
+   "E"
+  ],
+  "object": "hat",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "O",
+  "symbols[1]": "J",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "D",
+  "answer_position": "0",
+  "base_answer": " D",
+  "base_answer_forms": [
+   " D",
+   "D"
+  ],
+  "cf_answer": " R",
+  "cf_answer_forms": [
+   " R",
+   "R"
+  ],
+  "choices[0]": "purple",
+  "choices[1]": "pink",
+  "color": "purple",
+  "counterfactual_inputs": [
+   "The shirt is purple. What color is the shirt?\nR. purple\nI. pink\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "R",
+    "answer_position": "0",
+    "choices[0]": "purple",
+    "choices[1]": "pink",
+    "color": "purple",
+    "object": "shirt",
+    "symbols[0]": "R",
+    "symbols[1]": "I",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The shirt is purple. What color is the shirt?\nD. purple\nH. pink\nAnswer:",
+  "label": " R",
+  "label_forms": [
+   " R",
+   "R"
+  ],
+  "object": "shirt",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "D",
+  "symbols[1]": "H",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "H",
+  "answer_position": "0",
+  "base_answer": " H",
+  "base_answer_forms": [
+   " H",
+   "H"
+  ],
+  "cf_answer": " T",
+  "cf_answer_forms": [
+   " T",
+   "T"
+  ],
+  "choices[0]": "orange",
+  "choices[1]": "green",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The house is orange. What color is the house?\nT. orange\nW. green\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "T",
+    "answer_position": "0",
+    "choices[0]": "orange",
+    "choices[1]": "green",
+    "color": "orange",
+    "object": "house",
+    "symbols[0]": "T",
+    "symbols[1]": "W",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The house is orange. What color is the house?\nH. orange\nI. green\nAnswer:",
+  "label": " T",
+  "label_forms": [
+   " T",
+   "T"
+  ],
+  "object": "house",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "H",
+  "symbols[1]": "I",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "M",
+  "answer_position": "1",
+  "base_answer": " M",
+  "base_answer_forms": [
+   " M",
+   "M"
+  ],
+  "cf_answer": " V",
+  "cf_answer_forms": [
+   " V",
+   "V"
+  ],
+  "choices[0]": "purple",
+  "choices[1]": "orange",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The cup is orange. What color is the cup?\nY. purple\nV. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "V",
+    "answer_position": "1",
+    "choices[0]": "purple",
+    "choices[1]": "orange",
+    "color": "orange",
+    "object": "cup",
+    "symbols[0]": "Y",
+    "symbols[1]": "V",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The cup is orange. What color is the cup?\nX. purple\nM. orange\nAnswer:",
+  "label": " V",
+  "label_forms": [
+   " V",
+   "V"
+  ],
+  "object": "cup",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "X",
+  "symbols[1]": "M",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "M",
+  "answer_position": "1",
+  "base_answer": " M",
+  "base_answer_forms": [
+   " M",
+   "M"
+  ],
+  "cf_answer": " F",
+  "cf_answer_forms": [
+   " F",
+   "F"
+  ],
+  "choices[0]": "blue",
+  "choices[1]": "white",
+  "color": "white",
+  "counterfactual_inputs": [
+   "The bag is white. What color is the bag?\nR. blue\nF. white\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "F",
+    "answer_position": "1",
+    "choices[0]": "blue",
+    "choices[1]": "white",
+    "color": "white",
+    "object": "bag",
+    "symbols[0]": "R",
+    "symbols[1]": "F",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is white. What color is the bag?\nJ. blue\nM. white\nAnswer:",
+  "label": " F",
+  "label_forms": [
+   " F",
+   "F"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "J",
+  "symbols[1]": "M",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "F",
+  "answer_position": "0",
+  "base_answer": " F",
+  "base_answer_forms": [
+   " F",
+   "F"
+  ],
+  "cf_answer": " O",
+  "cf_answer_forms": [
+   " O",
+   "O"
+  ],
+  "choices[0]": "brown",
+  "choices[1]": "black",
+  "color": "brown",
+  "counterfactual_inputs": [
+   "The pen is brown. What color is the pen?\nO. brown\nE. black\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "O",
+    "answer_position": "0",
+    "choices[0]": "brown",
+    "choices[1]": "black",
+    "color": "brown",
+    "object": "pen",
+    "symbols[0]": "O",
+    "symbols[1]": "E",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The pen is brown. What color is the pen?\nF. brown\nK. black\nAnswer:",
+  "label": " O",
+  "label_forms": [
+   " O",
+   "O"
+  ],
+  "object": "pen",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "F",
+  "symbols[1]": "K",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "X",
+  "answer_position": "1",
+  "base_answer": " X",
+  "base_answer_forms": [
+   " X",
+   "X"
+  ],
+  "cf_answer": " O",
+  "cf_answer_forms": [
+   " O",
+   "O"
+  ],
+  "choices[0]": "green",
+  "choices[1]": "orange",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The car is orange. What color is the car?\nV. green\nO. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "O",
+    "answer_position": "1",
+    "choices[0]": "green",
+    "choices[1]": "orange",
+    "color": "orange",
+    "object": "car",
+    "symbols[0]": "V",
+    "symbols[1]": "O",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The car is orange. What color is the car?\nC. green\nX. orange\nAnswer:",
+  "label": " O",
+  "label_forms": [
+   " O",
+   "O"
+  ],
+  "object": "car",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "C",
+  "symbols[1]": "X",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ },
+ {
+  "answer": "J",
+  "answer_position": "1",
+  "base_answer": " J",
+  "base_answer_forms": [
+   " J",
+   "J"
+  ],
+  "cf_answer": " W",
+  "cf_answer_forms": [
+   " W",
+   "W"
+  ],
+  "choices[0]": "yellow",
+  "choices[1]": "orange",
+  "color": "orange",
+  "counterfactual_inputs": [
+   "The bag is orange. What color is the bag?\nQ. yellow\nW. orange\nAnswer:"
+  ],
+  "counterfactual_inputs_variables": [
+   {
+    "answer": "W",
+    "answer_position": "1",
+    "choices[0]": "yellow",
+    "choices[1]": "orange",
+    "color": "orange",
+    "object": "bag",
+    "symbols[0]": "Q",
+    "symbols[1]": "W",
+    "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+   }
+  ],
+  "input": "The bag is orange. What color is the bag?\nR. yellow\nJ. orange\nAnswer:",
+  "label": " W",
+  "label_forms": [
+   " W",
+   "W"
+  ],
+  "object": "bag",
+  "split": "all",
+  "string_mode": "exact",
+  "symbols[0]": "R",
+  "symbols[1]": "J",
+  "template": "The {object} is {color}. What color is the {object}?\n{symbols[0]}. {choices[0]}\n{symbols[1]}. {choices[1]}\nAnswer:"
+ }
+]

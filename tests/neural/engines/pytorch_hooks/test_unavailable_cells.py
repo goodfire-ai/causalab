@@ -32,11 +32,11 @@ import torch
 from safetensors.torch import load_file
 
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
-from causalab.neural.shared.executor_base import RaggedValue
+from causalab.neural.shared.executor import RaggedValue
 from causalab.protocol import run_protocol
-from causalab.protocol.loader import load
-from causalab.protocol.resolution import Available, Unavailable, cell_key
-from causalab.protocol.resolve import (
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.results import Available, Unavailable, cell_key
+from causalab.io.env import (
     FileArtifacts,
     FileDatasets,
     ResolutionEnv,
@@ -45,7 +45,9 @@ from causalab.protocol.resolve import (
 
 from ._drive import base_data_section, executor_for
 from .conftest import TINY_QWEN35_MOE
+from tests.protocol._docs import saved
 from tests.protocol._env import FIXTURES
+
 
 pytestmark = pytest.mark.smoke
 
@@ -57,19 +59,13 @@ DATASET = "pile/sample"
 
 
 def _doc(expert: int, *, reduce: str | None = None) -> dict[str, Any]:
-    save: dict[str, Any] = {
-        "value": "r",
-        "model": "original",
-        "input": "base",
-        "file_path": "r.safetensors",
-    }
-    if reduce is not None:
-        save["reduce"] = reduce
+    extra = {} if reduce is None else {"reduce": reduce}
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_QWEN35_MOE, "revision": "main"},
         "data": {"base": {"dataset": DATASET, "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {
                 "tap": {
                     "component": "expert_activation",
@@ -77,10 +73,8 @@ def _doc(expert: int, *, reduce: str | None = None) -> dict[str, Any]:
                     "expert": expert,
                 }
             },
-            "reads": {
-                "r": {"site": "tap", "pos": "all", "model": "original", "input": "base"}
-            },
-            "save": [save],
+            "reads": {"r": {"site": "tap", "pos": "all"}},
+            "save": [saved("r", "original", "r.safetensors", **extra)],
         },
     }
 
@@ -98,22 +92,14 @@ def hit_and_missing(qwen35moe_bundle) -> tuple[int, int]:
     rows = json.loads((FIXTURES / "data" / "pile" / "sample.json").read_text())
     texts = [row["input"] for row in rows]
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": {"component": "expert_idx", "layers": [MOE_LAYER]}},
-            "reads": {
-                "r": {"site": "tap", "pos": "all", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "all"}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
     idx = executor_for(doc, qwen35moe_bundle, base_texts=texts).read_value("r")
@@ -126,9 +112,9 @@ def hit_and_missing(qwen35moe_bundle) -> tuple[int, int]:
 
 def _run(tmp_path: Path, doc: dict[str, Any]):
     env = _env(tmp_path)
-    loaded = load(doc, env)
+    loaded = compile_protocol(doc, env=env)
     out = tmp_path / "out"
-    result = run_protocol(loaded, env, [PytorchHooksEngine(device="cpu")], out)
+    result = run_protocol(loaded, env, PytorchHooksEngine(device="cpu"), out)
     return loaded, result, out
 
 
@@ -159,7 +145,6 @@ def test_an_expert_no_token_chose_is_an_unavailable_cell(tmp_path, hit_and_missi
     assert record["reason"] == "empty_selector"
     assert record["denominator_key"] == "r"
     assert record["detail"] == cell.detail
-    assert record["produced_by"] == loaded.point_digests[0]
 
     # the data is still there, and still says width zero per row
     tensors = load_file(str(out / "r.safetensors"))
@@ -189,16 +174,14 @@ def test_the_same_read_on_a_chosen_expert_is_unchanged(
     assert stamped is not None
     record = json.loads(stamped["entries"])["r"]
     # the record before the value existed: the entry's slot and coords, the
-    # producing point, the site (§8), and what a harvested activation was
-    # read from — `trained_on` / `trained_on_digest` (H5, `ARTIFACT_IDENTITY_KEYS`).
-    # Nothing of the four status fields
+    # site (§8), and what a harvested activation was read from —
+    # `trained_on` (H5, `ARTIFACT_IDENTITY_KEYS`). Nothing of the four status
+    # fields
     assert set(record) == {
         "slot",
         "coords",
-        "produced_by",
         "site",
         "trained_on",
-        "trained_on_digest",
         "loaded_attn_implementation",
     }
     assert "status" not in record

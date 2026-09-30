@@ -1,40 +1,15 @@
-"""The refusal snapshot: one trigger per refusal site that predates the registry.
+"""Shared refusal triggers for protocol validation and engine execution.
 
-The registry consolidation moved every table of component / mechanism /
-availability truth into ``causalab/protocol/registry.py``. Its acceptance clause is that *every
-existing refusal still refuses, with the same or a better message* — which is
-only checkable against a record of what the refusals said **before** the
-consolidation. That record is ``tests/protocol/fixtures/refusal_snapshot.json``,
-captured on the untouched base by ``tests/protocol/update_refusal_snapshot.py``
-(the pinned-artifact discipline of ``docs/TESTS.md``: regenerate via the script,
-never hand-edit).
+Load triggers take no arguments and run without torch. Runtime triggers use
+lazy tiny-model fixtures. They call public entry points such as resolve_site,
+canonicalize, and component_width. The capture script records their exception
+class, code, path, and message; snapshot tests compare those records.
 
-This module is the shared half: the **triggers**, one per site of the
-refusal census (rows 1–34), keyed by that row number. Each trigger is a
-zero-argument callable (load-time, torch-free) or takes the lazily loaded tiny
-fixtures (run-time) and *raises* the refusal. The capture script records what
-was raised; the two ``test_refusal_snapshot.py`` modules re-run the same
-triggers and compare. The triggers deliberately reach the refusals through
-stable entry points — ``resolve_site``, an executor, ``canonicalize``,
-``component_width`` — never through the tables the consolidation deletes, so the same
-trigger runs identically before and after.
-
-Four census rows have no fixture family that can reach them
-(a gated q-projection without ``q_norm``, a q-projection of neither width, a
-MoE block without a shared expert, an nnsight interior address absent from the
-tables). They are recorded as ``captured: false`` with the reason, so the
-snapshot says what it does not cover rather than silently covering less.
-
-Two rows are **retired** (``RETIRED``): refusals a later change turned into a
-pass on purpose. Row 23 — GPT-2's fused ``c_attn`` refusing the interior
-q/k/v — became the per-family tap table's logical slices;
-the refusal itself survives for a fused family *without* a row and is pinned
-there (``tests/neural/engines/pytorch_hooks/test_family_tap_table.py``). Row
-30 — the reference engine refusing ``deltanet_qkv`` by name — became an alias
-fold (one name per DeltaNet tensor, both engines serve it); the
-refusal survives for the three nnsight-only faces and is pinned in
-``test_deltanet_interior.py``. Each entry records why it is gone rather than
-pretending it never was.
+NOT_RUNNABLE lists cases without a suitable fixture. RETIRED lists operations
+that the engines now support. The snapshot keeps their reasons for coverage
+accounting. Supported fused GPT-2 q/k/v sites are tested in test_family_tap_table;
+DeltaNet alias handling and unsupported interior sites are tested in
+test_deltanet_interior.
 """
 
 from __future__ import annotations
@@ -44,8 +19,8 @@ import dataclasses
 import functools
 from typing import Any, Callable
 
-from causalab.protocol.canonical import canonicalize
-from causalab.protocol.engine import Engine, choose_engine
+from causalab.protocol.schema.explicit import canonicalize
+from causalab.protocol.engine import Engine, requires
 from causalab.protocol.registry import (
     ModelInfo,
     component_shape,
@@ -53,10 +28,13 @@ from causalab.protocol.registry import (
     get_model_info,
     register_model,
 )
+from causalab.protocol.rules.capability import refuse_shortfall
+from causalab.protocol.rules.document import validate_document
 from causalab.protocol.schema import SiteSpec, parse_document
 
 from tests.protocol._docs import base_doc, in_order
 from tests.protocol._env import FIXTURES, build_env
+
 
 __all__ = [
     "A3B",
@@ -115,7 +93,7 @@ class _BareEngine(Engine):
     components = frozenset()
     writable_components = frozenset()
 
-    def execute(self, request: Any) -> Any:  # pragma: no cover - never run
+    def execute(self, compiled: Any, run: Any) -> Any:  # pragma: no cover - never run
         raise AssertionError("routing only")
 
 
@@ -130,16 +108,28 @@ def _canonicalize(raw: dict[str, Any]) -> None:
     canonicalize(in_order(raw), ENV)
 
 
+def _validate(raw: dict[str, Any]) -> None:
+    """The checklist over one concrete document, with the static model
+    metadata the canonicalizer used to read — rule 4's address half (a site's
+    layer, stream, component and head) moved there from ``canonicalize`` into
+    the rules package, and these triggers follow it."""
+    validate_document(parse_document(in_order(raw)), model_info=ENV.model_info)
+
+
 def _trigger_1() -> None:
-    choose_engine(parse_document(base_doc()), [_BareEngine()])
+    # routing between engines is retired; the same shortfall is the
+    # generated rule-13 refusal against the one chosen engine
+    refuse_shortfall(
+        requires(parse_document(base_doc())), _BareEngine().effective_capabilities
+    )
 
 
 def _trigger_2() -> None:
-    _canonicalize(_doc("gpt2", {"component": "block_output", "layers": [3], "head": 0}))
+    _validate(_doc("gpt2", {"component": "block_output", "layers": [3], "head": 0}))
 
 
 def _trigger_3() -> None:
-    _canonicalize(
+    _validate(
         _doc("gpt2", {"component": "attention_premix", "layers": [3], "head": 99})
     )
 
@@ -169,7 +159,7 @@ def _trigger_8() -> None:
 
 
 def _trigger_9() -> None:
-    _canonicalize(
+    _validate(
         _doc(
             A3B,
             {"component": "block_output", "layers": [0], "stream": "full_attention"},
@@ -178,7 +168,7 @@ def _trigger_9() -> None:
 
 
 def _trigger_10() -> None:
-    _canonicalize(_doc(A3B, {"component": "attention_premix", "layers": [0]}))
+    _validate(_doc(A3B, {"component": "attention_premix", "layers": [0]}))
 
 
 LOAD_TRIGGERS: dict[str, Callable[[], None]] = {
@@ -220,8 +210,9 @@ class Fixtures:
 
     @functools.cached_property
     def hooks_qwen_eager_experts(self) -> Any:
-        """The fixture dispatched on the per-expert loop, for the dispatch pin.
-        Built directly — ``load_model`` deliberately has no experts knob."""
+        """The fixture dispatched on the per-expert loop, so the table pins that
+        dispatch too. Built directly — ``load_model`` deliberately has no
+        experts knob."""
         import torch
         from transformers import AutoModelForCausalLM
 
@@ -254,7 +245,7 @@ def _executor(doc_raw: dict[str, Any], bundle: Any, *, trace: bool = False) -> A
     """An executor over ``doc_raw`` that *parses but does not validate*.
 
     The run-time refusals are for documents arriving unvalidated; a trigger
-    that validated first would, after the consolidation, hit the load-time twin of two of
+    that validated first would hit the load-time twin of two of
     them and never reach the run-time path this snapshot pins."""
     if trace:
         from causalab.neural.engines.nnsight_tracing.executor import (
@@ -410,12 +401,12 @@ RUN_TRIGGERS: dict[str, Callable[[Fixtures], None]] = {
     "34": _trigger_34,
 }
 
-#: Census rows whose refusal a later change deliberately turned into a pass. The
+#: Census rows whose refusal a later PR deliberately turned into a pass. The
 #: entry stays in the snapshot as ``captured: false`` with the reason, so the
 #: census stays complete (rows 1–34) and the decision is on record.
 RETIRED: dict[str, str] = {
     "30": (
-        "The alias fold: 'deltanet_qkv' is an alias of "
+        "'deltanet_qkv' is an alias of "
         "'delta_qkv' — the eight DeltaNet tensors the two engines reached under "
         "two spellings carry one name each (schema.DEPRECATED_COMPONENTS), and "
         "the reference engine serves the name through in_proj_qkv's output. The "
@@ -425,7 +416,7 @@ RETIRED: dict[str, str] = {
         "test_deltanet_interior.py::test_the_reference_engine_refuses_by_name."
     ),
     "23": (
-        "Retired: GPT-2's fused c_attn no longer refuses the interior "
+        "GPT-2's fused c_attn no longer refuses the interior "
         "q/k/v — the per-family tap table (registry.Capability.overrides, "
         "family 'gpt2') addresses them as the three H·d column blocks of "
         "c_attn's output, read and written through the layout conversion's "

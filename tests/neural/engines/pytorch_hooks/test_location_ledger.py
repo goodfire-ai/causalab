@@ -1,17 +1,15 @@
 """Semantic spans, the chat frame and the location ledger against real
-tokenizers (spec §2.2.1, §2.3, §6, §8) — the engine half, on the two tiny
+tokenizers (spec §2.2.1, §2.3, §6) — the engine half, on the two tiny
 fixtures.
 
 * **T1** — one prompt bare and with a terminal separator, on the byte-level
-  BPE fixture: the derived indices differ and the ledger digests differ, so
-  the two tables tell the two runs apart. The mutation — a ledger that
-  ignores token ids — is the pure test beside this one (`test_segments.py`).
-* **T2** — the nine coordinate systems of a list-sorting prompt, each one
-  authored position or span in a table, resolved with no Python between
-  document and indices; `output rank` is marked as not a position (a
-  metric-side notion). The mutation that deletes
-  the `segment` anchor fails the full-sequence, assistant-prefix and
-  continuation rows at parse.
+  BPE fixture: the derived indices differ and the ledger rows differ, so the
+  two tables tell the two runs apart.
+* **T2** — `listsort`'s nine coordinate systems, each one authored position
+  or span in a table, resolved with no Python between document and indices;
+  `output rank` is marked as not a position (a metric-side notion). The
+  mutation that deletes the `segment` anchor fails the full-sequence,
+  assistant-prefix and continuation rows at parse.
 * the chat frame: `frame: chat` on a tokenizer without a template is refused
   with reason `chat_template_missing`; the same document on a templated
   tokenizer runs with a real `prefix_lengths`; a plain document encodes
@@ -20,9 +18,8 @@ fixtures.
   forward; a fixed-width twin runs) and its constituents are classified
   separately under a declared `alignment`.
 * the ledger is opt-in end to end: a run with the save entry writes the
-  table and stamps `location_ledger_sha256` on its tensors; a run without it
-  writes neither; a loaded artifact stamped against another ledger loads,
-  and its ledger lists the tokens selected on its own rows.
+  table; a run without it writes none; a run that loads a parameter fitted
+  on other rows gets a ledger listing the tokens selected on its own rows.
 
 `tiny-random-gpt2` ships no chat template, which is the refusal twin; the chat
 tests set a minimal Jinja template **on the tokenizer object** — the template
@@ -40,26 +37,21 @@ import torch
 
 from causalab.cli import main
 from causalab.neural.engines.pytorch_hooks.loading import load_model
-from causalab.neural.shared.encoding import Continuation, encode, resolve_position
-from causalab.neural.shared.framing import encode_framed
-from causalab.neural.shared.location_ledger import (
-    ledger_identity,
-    point_ledger,
-    wants_ledger,
+from causalab.neural.shared.encoding import (
+    Continuation,
+    EncodedBatch,
+    encode,
+    resolve_position,
 )
-from causalab.protocol.errors import ParseError, ProtocolError, ValidationError
-from causalab.protocol.ledger import (
-    LEDGER_COLUMNS,
-    LEDGER_IDENTITY_KEY,
-    ledger_digest,
-)
-from causalab.protocol.resolve import read_safetensors_metadata
+from causalab.protocol.rules.errors import ParseError, ProtocolError, ValidationError
+from causalab.protocol.positions.framing import encode_framed
+from causalab.protocol.positions.ledger import LEDGER_COLUMNS, wants_ledger
 from causalab.protocol.schema import PositionSpec, parse_document
 from causalab.protocol.segments import parse_segments
 
 from ._drive import base_data_section, bundle_loader, executor_for
 from .conftest import TINY_GPT2, TINY_LLAMA
-from tests.protocol._docs import in_order
+from tests.protocol._docs import UNWRITTEN, in_order, saved
 from tests.protocol._env import FIXTURES
 
 pytestmark = pytest.mark.smoke
@@ -99,25 +91,15 @@ def _doc(
     counterfactual: bool = False,
 ) -> dict[str, Any]:
     doc: dict[str, Any] = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=counterfactual),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": list(reads)}},
             "positions": positions,
             "sites": {"tap": {"component": "block_output", "layers": [0]}},
-            "reads": {
-                name: {"site": "tap", "pos": pos, "model": "original", "input": "base"}
-                for name, pos in reads.items()
-            },
-            "save": [
-                {
-                    "value": name,
-                    "model": "original",
-                    "input": "base",
-                    "file_path": f"{name}.safetensors",
-                }
-                for name in reads
-            ],
+            "reads": {name: {"site": "tap", "pos": pos} for name, pos in reads.items()},
+            "save": [saved(name, "original", f"{name}.safetensors") for name in reads],
         },
     }
     if segments is not None:
@@ -136,7 +118,7 @@ def _doc(
 PROMPT = "If today is Friday, tomorrow is"
 
 
-def test_t1_a_terminal_separator_moves_the_indices_and_the_digest(gpt2_bundle):
+def test_t1_a_terminal_separator_moves_the_indices(gpt2_bundle):
     doc = _doc(
         {"last": {"index": -1}, "ent": {"variable": "entity"}},
         {"r_last": "last", "r_ent": "ent"},
@@ -157,9 +139,9 @@ def test_t1_a_terminal_separator_moves_the_indices_and_the_digest(gpt2_bundle):
     moved = {(r["constituent"], r["token_index"]): r for r in second.records()}
     assert {k for k in by_key if k[0] == "last"} != {k for k in moved if k[0] == "last"}
     assert {k for k in by_key if k[0] == "ent"} == {k for k in moved if k[0] == "ent"}
-    assert first.digest != second.digest
-    # and the twin: the same rows resolve to the same digest
-    assert bare.location_ledger().digest == first.digest
+    assert first.records() != second.records()
+    # and the twin: resolving the same batch again yields the same rows
+    assert bare.location_ledger().records() == first.records()
 
 
 def test_the_ledger_row_is_the_seven_columns_with_the_row_local_index(gpt2_bundle):
@@ -183,7 +165,7 @@ def test_the_ledger_row_is_the_seven_columns_with_the_row_local_index(gpt2_bundl
 
 
 # --------------------------------------------------------------------------- #
-# T2 — a list-sorting prompt's nine coordinate systems, each one authored address
+# T2 — listsort's nine coordinate systems, each one authored address
 # --------------------------------------------------------------------------- #
 
 #: Candidate first items: the test takes the first one this tokenizer makes
@@ -255,7 +237,7 @@ def test_t2_the_nine_coordinate_systems_are_each_one_authored_address(
     frame = parse_segments({"frame": "chat"})
     for item_1 in TWO_TOKEN_CANDIDATES:
         row = _list_row(item_1)
-        batch = encode_framed(tokenizer, [row], "input", frame)
+        batch = EncodedBatch.from_frame(encode_framed(tokenizer, [row], "input", frame))
         width = len(
             resolve_position(
                 PositionSpec(variable="item_1"),
@@ -442,40 +424,24 @@ def test_a_plain_frame_locates_declared_column_segments(bundle):
 def _write_doc(pos: Any) -> dict[str, Any]:
     return in_order(
         {
-            "header": {"protocol_version": "3"},
+            "header": {"protocol_version": "4"},
             "model": {"key": "test", "revision": "main"},
             "data": base_data_section(with_counterfactual=True),
             "method": {
+                "intervened_models": {
+                    UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                    "patched": {"input": "base", "reads": ["out"], "writes": ["patch"]},
+                },
                 "positions": {"w": pos},
                 "sites": {"tap": {"component": "block_output", "layers": [0]}},
                 "reads": {
-                    "v_cf": {
-                        "site": "tap",
-                        "pos": "w",
-                        "model": "original",
-                        "input": "counterfactual",
-                    },
-                    "out": {
-                        "site": "tap",
-                        "pos": -1,
-                        "model": "patched",
-                        "input": "base",
-                    },
+                    "v_cf": {"site": "tap", "pos": "w"},
+                    "out": {"site": "tap", "pos": -1},
                 },
                 "writes": {
                     "patch": {"site": "tap", "pos": "w", "do": {"swap": "v_cf"}}
                 },
-                "intervened_models": {
-                    "patched": {"input": "base", "writes": ["patch"]}
-                },
-                "save": [
-                    {
-                        "value": "out",
-                        "model": "patched",
-                        "input": "base",
-                        "file_path": "out.safetensors",
-                    }
-                ],
+                "save": [saved("out", "patched", "out.safetensors")],
             },
         }
     )
@@ -549,23 +515,15 @@ def test_constituents_of_a_non_atomic_set_are_classified_one_by_one(bundle):
 
 def _run_doc(tmp_path: Path, *, ledger: bool) -> dict[str, Any]:
     doc = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": {"base": {"dataset": "weekdays/data#train", "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "positions": {"ent": {"index": -1, "scope": {"variable": "entity"}}},
             "sites": {"tap": {"component": "block_output", "layers": [0]}},
-            "reads": {
-                "r": {"site": "tap", "pos": "ent", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "r.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "ent"}},
+            "save": [saved("r", "original", "r.safetensors")],
         },
     }
     if ledger:
@@ -581,6 +539,8 @@ def _run(tmp_path: Path, doc: dict[str, Any], out: Path) -> int:
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -588,55 +548,44 @@ def _run(tmp_path: Path, doc: dict[str, Any], out: Path) -> int:
             str(tmp_path),
             "--out",
             str(out),
+            "--record",
         ]
     )
 
 
-def test_a_run_with_the_entry_writes_the_ledger_and_stamps_its_digest(tmp_path):
+def test_a_run_with_the_entry_writes_the_ledger(tmp_path):
     out = tmp_path / "out"
     assert _run(tmp_path, _run_doc(tmp_path, ledger=True), out) == 0
     rows = json.loads((out / "ledger.json").read_text())
     assert rows and all(set(LEDGER_COLUMNS) <= set(row) for row in rows)
     assert {row["constituent"] for row in rows} == {"ent"}
     assert {row["point"] for row in rows} and all("coords" in row for row in rows)
-    metadata = read_safetensors_metadata(out / "r.safetensors")
-    assert metadata is not None
-    entries = json.loads(str(metadata["entries"]))
-    (record,) = entries.values()
-    assert record[LEDGER_IDENTITY_KEY] == ledger_digest(rows)
     receipt = json.loads((out / "protocol.json").read_text())
     kinds = [e.get("kind") for e in receipt["canonical"]["method"]["save"]]
     assert "location_ledger" in kinds
 
 
-def test_a_run_without_the_entry_writes_no_ledger_and_no_key(tmp_path):
+def test_a_run_without_the_entry_writes_no_ledger(tmp_path):
     out = tmp_path / "out"
     assert _run(tmp_path, _run_doc(tmp_path, ledger=False), out) == 0
     assert not (out / "ledger.json").exists()
-    metadata = read_safetensors_metadata(out / "r.safetensors")
-    assert metadata is not None and LEDGER_IDENTITY_KEY not in metadata
-    entries = json.loads(str(metadata["entries"]))
-    assert all(LEDGER_IDENTITY_KEY not in record for record in entries.values())
+    assert (out / "r.safetensors").exists()
 
 
 def _params_doc() -> dict[str, Any]:
     return in_order(
         {
-            "header": {"protocol_version": "3"},
+            "header": {"protocol_version": "4"},
             "model": {"key": "test", "revision": "main"},
             "data": base_data_section(with_counterfactual=False),
             "method": {
+                "intervened_models": {
+                    "steered": {"input": "base", "reads": ["out"], "writes": ["steer"]}
+                },
                 "positions": {"last": {"index": -1}},
                 "sites": {"tap": {"component": "block_output", "layers": [0]}},
                 "params": {"c": {"file_path": "c.safetensors"}},
-                "reads": {
-                    "out": {
-                        "site": "tap",
-                        "pos": "last",
-                        "model": "steered",
-                        "input": "base",
-                    }
-                },
+                "reads": {"out": {"site": "tap", "pos": "last"}},
                 "writes": {
                     "steer": {
                         "site": "tap",
@@ -644,16 +593,8 @@ def _params_doc() -> dict[str, Any]:
                         "do": {"add_scaled": {"op": "c", "alpha": 1.0}},
                     }
                 },
-                "intervened_models": {
-                    "steered": {"input": "base", "writes": ["steer"]}
-                },
                 "save": [
-                    {
-                        "value": "out",
-                        "model": "steered",
-                        "input": "base",
-                        "file_path": "out.safetensors",
-                    },
+                    saved("out", "steered", "out.safetensors"),
                     {"kind": "location_ledger", "file_path": "ledger.json"},
                 ],
             },
@@ -661,10 +602,9 @@ def _params_doc() -> dict[str, Any]:
     )
 
 
-def test_a_loaded_artifact_stamped_against_another_ledger_still_loads(gpt2_bundle):
-    """The stamp is provenance, not a condition: a run that loads a parameter
-    fitted on other rows gets the ledger of the tokens it selected on its own
-    rows, and stamps that digest on what it writes."""
+def test_a_loaded_artifact_gets_the_ledger_of_its_own_rows(gpt2_bundle):
+    """A run that loads a parameter fitted on other rows gets the ledger of
+    the tokens it selected on its own rows, built before any forward."""
     doc = _params_doc()
     executor = executor_for(
         doc,
@@ -676,11 +616,9 @@ def test_a_loaded_artifact_stamped_against_another_ledger_still_loads(gpt2_bundl
     assert wants_ledger(parsed)
     mine = executor.location_ledger()
     other = executor_for(doc, gpt2_bundle, base_texts=[PROMPT + "."]).location_ledger()
-    assert mine.digest != other.digest
-    ledger = point_ledger(executor, parsed)
-    assert ledger is mine
+    assert mine.records() != other.records()
+    assert executor.location_ledger() is mine  # built once, before any forward
     assert not executor._groups_run  # pyright: ignore[reportPrivateUsage]
-    assert ledger_identity(ledger) == {LEDGER_IDENTITY_KEY: mine.digest}
 
 
 def test_a_document_that_does_not_opt_in_gets_no_ledger(gpt2_bundle):
@@ -688,5 +626,110 @@ def test_a_document_that_does_not_opt_in_gets_no_ledger(gpt2_bundle):
     executor = executor_for(doc, gpt2_bundle, base_texts=[PROMPT])
     parsed = parse_document(doc)
     assert not wants_ledger(parsed)
-    assert point_ledger(executor, parsed) is None
-    assert ledger_identity(None) == {}
+    assert executor._ledger is None  # pyright: ignore[reportPrivateUsage]
+
+
+# --------------------------------------------------------------------------- #
+# the protocol layer's ledger is the executor's, row for row
+# --------------------------------------------------------------------------- #
+
+
+def test_the_protocol_layer_builds_the_same_ledger_as_the_executor(gpt2_bundle):
+    """``pipeline.resolve_positions`` builds the ledger before any weights load
+    with the registry's answer to "does this tap have a position axis"; the
+    executor builds it from the resolved tap. Same functions, same rows."""
+    from causalab.protocol.positions.resolve import (
+        build_ledger,
+        encode_roles,
+        resolve_positions,
+    )
+    from causalab.protocol.registry import component_shape
+
+    doc = _doc(
+        {"last": {"index": -1}, "both": {"indices": [0, -1]}},
+        {"r": "last", "s": "both"},
+        ledger=True,
+    )
+    executor = executor_for(doc, gpt2_bundle, base_texts=[PROMPT, PROMPT + " maybe"])
+    parsed = parse_document(doc)
+    mine = executor.location_ledger()
+    frames = encode_roles(
+        gpt2_bundle.tokenizer, parsed, executor.role_rows, executor.role_fields
+    )
+    positions = resolve_positions(
+        parsed, frames, executor.role_rows, executor.role_fields
+    )
+    theirs = build_ledger(
+        parsed,
+        positions,
+        gpt2_bundle.tokenizer,
+        has_positions=lambda site: component_shape(
+            gpt2_bundle.info, str(parsed.sites[site].component)
+        ).has_contract_form,
+    )
+    assert theirs.records() == mine.records()
+    assert len(mine) == 2 * 3  # two rows × (last, both[0], both[1])
+
+
+def test_an_executor_handed_the_protocols_positions_resolves_nothing_itself(
+    gpt2_bundle,
+):
+    """The engine hands ``StepPositions`` in; the executor's frames are the
+    protocol's frames wrapped, its positions are read off the handed object,
+    and the values it reads equal an executor that resolved its own."""
+    from causalab.neural.shared.executor import RaggedValue
+    from causalab.protocol.positions.resolve import encode_roles, resolve_positions
+
+    doc = _doc(
+        {"last": {"index": -1}, "ent": {"column": "entity"}}, {"r": "last", "s": "ent"}
+    )
+    texts = [PROMPT, "Alice gave Bob a book."]
+    entities = ["Friday", "Bob"]
+    own = executor_for(
+        doc, gpt2_bundle, base_texts=texts, extra_columns={"entity": entities}
+    )
+    parsed = parse_document(doc)
+    frames = encode_roles(gpt2_bundle.tokenizer, parsed, own.role_rows, own.role_fields)
+    positions = resolve_positions(parsed, frames, own.role_rows, own.role_fields)
+    handed = executor_for(
+        doc, gpt2_bundle, base_texts=texts, extra_columns={"entity": entities}
+    )
+    handed._resolved = positions  # pyright: ignore[reportPrivateUsage]
+    assert handed._batch("base").texts == frames["base"].texts  # pyright: ignore[reportPrivateUsage]
+    assert handed._batch("base").input_ids.tolist() == [  # pyright: ignore[reportPrivateUsage]
+        list(row) for row in frames["base"].token_ids
+    ]
+    for name in ("r", "s"):
+        mine, theirs = handed.read_value(name), own.read_value(name)
+        if isinstance(mine, RaggedValue):  # `ent` is as wide as each row's value
+            assert isinstance(theirs, RaggedValue) and mine.widths == theirs.widths
+            assert torch.equal(mine.flat, theirs.flat)
+        else:
+            assert torch.equal(mine, theirs)
+    assert handed._step_positions() is positions  # pyright: ignore[reportPrivateUsage]
+    # every address the executor asked for was one the protocol had resolved
+    assert set(positions.addresses) >= {("last", "base"), ("ent", "base")}
+
+
+def test_a_frame_the_bundles_tokenizer_does_not_reproduce_is_refused(
+    gpt2_bundle, llama_bundle
+):
+    """The positions handed in are indices into a frame; a frame another
+    tokenizer produced would make every one of them address the wrong token
+    without a word — so the executor re-encodes (a memo hit for the same
+    tokenizer) and refuses a mismatch by name before any forward."""
+    from causalab.protocol.positions.resolve import encode_roles, resolve_positions
+
+    doc = _doc({"last": {"index": -1}}, {"r": "last"})
+    texts = [PROMPT, "Alice gave Bob a book."]
+    executor = executor_for(doc, gpt2_bundle, base_texts=texts)
+    parsed = parse_document(doc)
+    frames = encode_roles(
+        llama_bundle.tokenizer, parsed, executor.role_rows, executor.role_fields
+    )
+    executor._resolved = resolve_positions(  # pyright: ignore[reportPrivateUsage]
+        parsed, frames, executor.role_rows, executor.role_fields
+    )
+    with pytest.raises(ProtocolError, match="does not reproduce"):
+        executor.read_value("r")
+    assert not executor._groups_run  # pyright: ignore[reportPrivateUsage]

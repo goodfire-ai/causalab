@@ -31,6 +31,7 @@ exist on the base and ``unit`` is an unknown metric key (rule 1).
 from __future__ import annotations
 
 import copy
+import dataclasses
 import json
 import re
 import tempfile
@@ -39,8 +40,8 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.canonical import canonicalize, digest
-from causalab.protocol.errors import ParseError, ValidationError
+from causalab.protocol.schema.explicit import canonicalize, digest
+from causalab.protocol.rules.errors import ParseError, ValidationError
 from causalab.protocol.estimand import (
     IDENTIFIER,
     METRIC_UNITS,
@@ -56,18 +57,20 @@ from causalab.protocol.estimand import (
     parse_identifier,
     table_record,
 )
-from causalab.protocol.loader import load
-from causalab.protocol.schema import METRIC_KINDS, parse_document
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.schema import METRIC_KINDS, PROTOCOL_VERSION, parse_document
 from tests._helpers.tracked import tracked_files
 from tests.golden import _env as golden_env
-from tests.protocol._env import CORPUS_DIR
+from tests.protocol._docs import aggregation, by_label, saved
+from tests.protocol._env import CORPUS_DIR, steps_of
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.unit
 
 REPO = Path(__file__).resolve().parents[2]
 SPEC = REPO / "docs" / "intervention_protocol.md"
 WORKFLOW_SPEC = REPO / "docs" / "workflow_protocol.md"
-PROTOCOLS = REPO / "causalab" / "configs" / "protocols"
+PROTOCOLS = PROTOCOLS_DIR
 ESTIMAND = REPO / "causalab" / "protocol" / "estimand.py"
 CORPUS_PINS = json.loads((REPO / "tests/protocol/corpus_digests.json").read_text())
 GOLDEN_PINS = json.loads((REPO / "tests/golden/golden_digests.json").read_text())
@@ -102,7 +105,7 @@ def _rows(text: str) -> list[list[str]]:
 def _table(header: str) -> list[list[str]]:
     """§2.10's table whose header row starts with ``header``: its body rows,
     up to the first row that is not a backticked member."""
-    rows = _rows(_section("### 2.10 `metrics`"))
+    rows = _rows(_section("### 2.10 `aggregation`: reductions over a read"))
     start = next(index for index, row in enumerate(rows) if row[0] == header)
     body: list[list[str]] = []
     for row in rows[start + 1 :]:
@@ -143,7 +146,7 @@ def test_metric_units_cover_exactly_the_metric_kinds() -> None:
 
 def test_the_kind_table_unit_column_is_metric_units() -> None:
     """The kind table gained a ``unit`` column; each cell is the kind's
-    ``METRIC_UNITS`` entry, ``—`` for a kind with no scalar. Fails on the
+    ``METRIC_UNITS`` entry, ``none`` for a kind with no scalar. Fails on the
     base: the table has four columns."""
     rows = _table("kind")
     assert len(rows) == len(METRIC_KINDS)
@@ -152,7 +155,7 @@ def test_the_kind_table_unit_column_is_metric_units() -> None:
         assert len(row) == 6, f"{kind}: the kind table has six columns now"
         own = METRIC_UNITS[kind]
         if own is None:
-            assert row[4].startswith("—"), f"{kind} has no unit; its cell is '—'"
+            assert row[4].startswith("none"), f"{kind} has no scalar unit: {row[4]}"
         else:
             assert CODE.findall(row[4])[0] == own, f"{kind}: {row[4]} vs {own}"
         assert CODE.findall(row[5]) == [metric_identity(kind)], row[5]
@@ -165,7 +168,7 @@ def test_every_unit_a_kind_produces_is_in_the_vocabulary() -> None:
 def test_the_admits_table_says_no_kind_admits_two_arithmetics() -> None:
     """The decision the spec records: identity is derived for every kind and
     required nowhere; the reduction's identifiers are the workflow spec's."""
-    rows = _rows(_section("### 2.10 `metrics`"))
+    rows = _rows(_section("### 2.10 `aggregation`: reductions over a read"))
     start = next(i for i, row in enumerate(rows) if row[0] == "kind or estimator")
     body = rows[start + 1 : start + 3]
     assert body[0][1] == "one" and "derived" in body[0][2]
@@ -286,71 +289,63 @@ def test_derived_identity_carries_the_kind_unit() -> None:
 
 
 def _document(**metric: Any) -> dict[str, Any]:
-    """A minimal document whose one metric is a ``match`` over an lm_head
-    read — the fixture the loader tests use, reduced to what a metric needs."""
+    """A minimal document whose one aggregation is a ``match`` over an lm_head
+    read, saved as ``acc`` — the fixture the loader tests use, reduced to what
+    an aggregation needs."""
     return {
-        "header": {"protocol_version": "3"},
-        "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
+        "model": {"key": "Qwen/Qwen3-8B", "revision": "main"},
         "data": {"base": {"dataset": "weekdays/data#train", "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["logits"]}},
             "sites": {"lm_head": {"component": "lm_head"}},
-            "reads": {
-                "logits": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "metrics": {
-                "acc": {
-                    "kind": "match",
-                    "of": "logits",
-                    "expected": "cf_answer",
-                    "token_form": "space_prefixed",
-                    **metric,
-                }
-            },
+            "reads": {"logits": {"site": "lm_head", "pos": -1}},
             "save": [
-                {
-                    "value": "acc",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "acc.json",
-                }
+                saved(
+                    "logits",
+                    "original",
+                    "acc.json",
+                    aggregation(
+                        "match",
+                        expected="cf_answer",
+                        **metric,
+                    ),
+                )
             ],
         },
     }
 
 
 def _canonical_metric(env, raw: dict[str, Any]) -> dict[str, Any]:
-    loaded = load(raw, env)
-    return loaded.canonical_document["method"]["metrics"]["acc"]
+    loaded = compile_protocol(raw, env=env)
+    return loaded.canonical["method"]["save"][0]["aggregation"]
 
 
 def test_the_fields_parse_and_land_on_the_spec() -> None:
     doc = parse_document(_document(unit="fraction", estimand_version="match/v1"))
-    spec = doc.metrics["acc"]
+    spec = by_label(doc)["acc"]
     assert spec.unit == "fraction" and spec.estimand_version == "match/v1"
-    bare = parse_document(_document()).metrics["acc"]
+    bare = by_label(parse_document(_document()))["acc"]
     assert bare.unit is None and bare.estimand_version is None
 
 
 def test_authored_identity_is_canonical_and_moves_the_digest(env) -> None:
     """§7: digest-bearing when authored. Fails on the base: unknown key."""
-    plain = load(_document(), env)
-    stated = load(_document(unit="fraction", estimand_version="match/v1"), env)
-    entry = stated.canonical_document["method"]["metrics"]["acc"]
+    plain = compile_protocol(_document(), env=env)
+    stated = compile_protocol(
+        _document(unit="fraction", estimand_version="match/v1"), env=env
+    )
+    entry = stated.canonical["method"]["save"][0]["aggregation"]
     assert entry["unit"] == "fraction" and entry["estimand_version"] == "match/v1"
-    assert stated.document_digest != plain.document_digest
-    unit_only = load(_document(unit="fraction"), env)
+    assert stated.digests.document != plain.digests.document
+    unit_only = compile_protocol(_document(unit="fraction"), env=env)
     assert (
         "estimand_version"
-        not in unit_only.canonical_document["method"]["metrics"]["acc"]
+        not in unit_only.canonical["method"]["save"][0]["aggregation"]
     )
-    assert unit_only.document_digest not in {
-        plain.document_digest,
-        stated.document_digest,
+    assert unit_only.digests.document not in {
+        plain.digests.document,
+        stated.digests.document,
     }
 
 
@@ -376,7 +371,9 @@ def test_an_identity_the_kind_does_not_compute_is_a_p4(metric, expect) -> None:
     with pytest.raises(ParseError) as err:
         parse_document(_document(**metric))
     assert err.value.code == "P4" and expect in str(err.value)
-    assert err.value.path is not None and err.value.path.startswith("metrics.acc.")
+    assert err.value.path is not None and err.value.path.startswith(
+        "save[0].aggregation."
+    )
 
 
 def test_the_identity_fields_are_not_sweepable() -> None:
@@ -389,11 +386,7 @@ def test_the_identity_fields_are_not_sweepable() -> None:
 
 def test_a_kind_with_no_scalar_refuses_an_authored_unit() -> None:
     raw = _document()
-    raw["method"]["metrics"]["acc"] = {
-        "kind": "decode",
-        "of": "logits",
-        "unit": "fraction",
-    }
+    raw["method"]["save"][0]["aggregation"] = {"kind": "decode", "unit": "fraction"}
     with pytest.raises(ParseError, match="produces no scalar"):
         parse_document(raw)
 
@@ -410,23 +403,19 @@ def test_stating_the_derived_identity_is_legitimate_for_every_scalar_kind() -> N
             "soft_accuracy": {"a": "cf_answer", "b": "base_answer"},
             "token_logit": {"token": "cf_answer"},
             "cross_entropy": {"target": "cf_answer"},
-            "kl": {"target": "logits"},
-            "js": {"target": "logits"},
+            "kl": {"target": {"read": "logits", "model": "original"}},
+            "js": {"target": {"read": "logits", "model": "original"}},
             "class_probs": {"groups": {"x": ["a"]}},
             "token_logits": {"tokens": ["a"]},
             "match": {"expected": "cf_answer"},
         }[kind]
-        raw["method"]["metrics"]["acc"] = {
+        raw["method"]["save"][0]["aggregation"] = {
             "kind": kind,
-            "of": "logits",
-            "token_form": "space_prefixed",
             "unit": own,
             "estimand_version": metric_identity(kind),
             **fields,
         }
-        if kind in ("kl", "js"):  # two reads, no string resolved: no token_form
-            del raw["method"]["metrics"]["acc"]["token_form"]
-        spec = parse_document(raw).metrics["acc"]
+        spec = by_label(parse_document(raw))["acc"]
         assert spec.unit == own and spec.estimand_version == f"{kind}/v1"
 
 
@@ -457,8 +446,8 @@ def test_t7_the_refusal_is_symmetric() -> None:
 
 
 def test_t8_two_arms_with_nothing_declared_compare_cleanly() -> None:
-    """A unit check that refuses an arm-vs-arm comparison
-    is worse than no unit check."""
+    """Valid work is not refused: a unit check that refuses an arm-vs-arm
+    comparison is worse than no unit check."""
     result = compare(Record("arm_a/iia.json"), Record("arm_b/iia.json"))
     assert result.kind == "arm" and result.unit is None
 
@@ -499,16 +488,10 @@ def test_a_table_in_two_units_is_one_refusal_naming_both() -> None:
 
 def test_a_table_record_reads_the_repeated_columns() -> None:
     rows = [
-        {
-            "value": 0.5,
-            "unit": "nat",
-            "estimand_version": "kl/v1",
-            "produced_by": "a" * 64,
-        }
-        for _ in range(3)
+        {"value": 0.5, "unit": "nat", "estimand_version": "kl/v1"} for _ in range(3)
     ]
     record = table_record(rows, name="kl.json")
-    assert record == Record("kl.json", "nat", "kl/v1", "a" * 64)
+    assert record == Record("kl.json", "nat", "kl/v1")
     # rows of two metrics: one record, undeclared estimand, still one unit
     rows[0]["estimand_version"] = "cross_entropy/v1"
     assert table_record(rows, name="t").estimand_version is None
@@ -520,19 +503,21 @@ def test_a_table_record_reads_the_repeated_columns() -> None:
 # T10 — the stale claim
 # --------------------------------------------------------------------------- #
 
-POINT = "c" * 64
+#: a reduced row of a one-axis group-by: the coordinate is what a claim
+#: selects the row by
+WHERE = {"sites.target.layers": 3}
 RECORD = [
     {
+        **WHERE,
         "value": 0.5625,
         "n": 4,
         "unit": "fraction",
         "estimand_version": "mean_of_eligible_row_ratios/v1",
-        "produced_by": POINT,
     }
 ]
 CLAIM = Claim(
     file="reduced.json",
-    produced_by=POINT,
+    where=WHERE,
     estimand_version="mean_of_eligible_row_ratios/v1",
     unit="fraction",
     value=0.5625,
@@ -544,7 +529,7 @@ def test_t10_a_claim_its_record_still_supports_passes() -> None:
     check_claim(CLAIM, RECORD)
 
 
-def test_t10_a_recomputed_value_refuses_naming_record_and_point_digest() -> None:
+def test_t10_a_recomputed_value_refuses_naming_record_and_coordinates() -> None:
     """*Mutation:* bind by file path only — the path is `reduced.json` before
     and after, so a path check passes and this `raises` fails."""
     recomputed = copy.deepcopy(RECORD)
@@ -552,35 +537,67 @@ def test_t10_a_recomputed_value_refuses_naming_record_and_point_digest() -> None
     with pytest.raises(EstimandError) as err:
         check_claim(CLAIM, recomputed)
     message = str(err.value)
-    assert "stale claim" in message and "reduced.json" in message and POINT in message
+    assert "stale claim" in message and "reduced.json" in message
+    assert '"sites.target.layers": 3' in message
     assert "0.5625" in message and "0.5454545454545454" in message
 
 
-def test_t10_a_rerun_under_a_changed_document_refuses_by_point_digest() -> None:
-    """The document changed, the point digest moved, the path did not."""
-    rerun = copy.deepcopy(RECORD)
-    rerun[0]["produced_by"] = "d" * 64
+def test_t10_a_row_that_moved_off_the_claims_coordinates_binds_to_nothing() -> None:
+    """The group-by changed and the row the claim named is gone from the file
+    — the path did not change."""
+    moved = copy.deepcopy(RECORD)
+    moved[0]["sites.target.layers"] = 4
     with pytest.raises(EstimandError) as err:
-        check_claim(CLAIM, rerun)
-    assert POINT in str(err.value) and "d" * 64 in str(err.value)
+        check_claim(CLAIM, moved)
+    assert "binds to nothing" in str(err.value)
+    assert '"sites.target.layers": 3' in str(err.value)
+
+
+def test_t10_an_empty_where_binds_a_one_row_table() -> None:
+    """A reduction with no group-by writes one row; the claim names no
+    column and binds it."""
+    check_claim(dataclasses.replace(CLAIM, where={}), RECORD)
+
+
+def test_t10_a_where_column_no_row_carries_is_refused_naming_it() -> None:
+    """A typo'd or dropped column is a different table, not "no row at those
+    coordinates": the refusal names the column."""
+    with pytest.raises(EstimandError) as err:
+        check_claim(dataclasses.replace(CLAIM, where={"layer": 3}), RECORD)
+    assert "['layer']" in str(err.value)
+    assert "no row of the file carries" in str(err.value)
+
+
+def test_t10_an_absent_column_does_not_match_none() -> None:
+    """A row without the column is not a row where the column is `None`: a
+    claim at `None` binds nothing on such a row (the reduced row that dropped
+    its group-by coordinate is not "the same record")."""
+    rows = copy.deepcopy(RECORD)
+    rows.append({k: v for k, v in RECORD[0].items() if k not in WHERE})
+    with pytest.raises(EstimandError) as err:
+        check_claim(
+            dataclasses.replace(CLAIM, where={"sites.target.layers": None}), rows
+        )
+    assert "binds to nothing" in str(err.value)
 
 
 def test_t10_a_claim_in_the_wrong_unit_or_estimand_is_refused() -> None:
     with pytest.raises(EstimandError, match="'percentage_points'"):
         check_claim(
             Claim(
-                CLAIM.file, POINT, CLAIM.estimand_version, "percentage_points", 56.25
+                CLAIM.file, WHERE, CLAIM.estimand_version, "percentage_points", 56.25
             ),
             RECORD,
         )
     with pytest.raises(EstimandError, match="ratio_of_sums/v1"):
         check_claim(
-            Claim(CLAIM.file, POINT, "ratio_of_sums/v1", "fraction", 0.5625), RECORD
+            Claim(CLAIM.file, WHERE, "ratio_of_sums/v1", "fraction", 0.5625), RECORD
         )
 
 
 def test_t10_a_claim_binds_one_record() -> None:
-    """Many rows under one point digest is a table, not a record: reduce first."""
+    """Many rows at one set of coordinates is a table, not a record: reduce
+    first, or name every column that singles the row out."""
     with pytest.raises(EstimandError, match="reduce the table first"):
         check_claim(CLAIM, RECORD + RECORD)
 
@@ -598,11 +615,21 @@ def test_t10_tolerance_is_opt_in_and_exact_by_default() -> None:
 # --------------------------------------------------------------------------- #
 
 
+def _aggregations(method: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """The aggregations a method's save entries carry, by file stem."""
+    return {
+        str(entry["file_path"]).rsplit("/", 1)[-1].rsplit(".", 1)[0]: entry[
+            "aggregation"
+        ]
+        for entry in method.get("save", [])
+        if isinstance(entry, dict) and "aggregation" in entry
+    }
+
+
 def _assert_no_identity_authored(canonical: dict[str, Any], name: str) -> None:
-    metrics = canonical.get("metrics", {})
-    for metric, entry in metrics.items():
+    for metric, entry in _aggregations(canonical).items():
         assert "unit" not in entry and "estimand_version" not in entry, (
-            f"{name}: metric {metric!r} gained an identity key"
+            f"{name}: aggregation {metric!r} gained an identity key"
         )
 
 
@@ -618,22 +645,24 @@ def test_t9_the_census_found_documents() -> None:
 def test_t9_corpus_documents_pin_unchanged_with_nothing_authored(name, env) -> None:
     """Fails under a materialized default (every pin moves, every metric entry
     gains two keys); passes on the base and here alike — the twin."""
-    loaded = load(CORPUS_DIR / name, env)
+    loaded = compile_protocol(CORPUS_DIR / name, env=env)
     pin = CORPUS_PINS[name]
-    assert loaded.document_digest == (pin["document"] if isinstance(pin, dict) else pin)
-    _assert_no_identity_authored(loaded.canonical_document, name)
-    for point in loaded.canonical_points:
+    assert loaded.digests.document == (
+        pin["document"] if isinstance(pin, dict) else pin
+    )
+    _assert_no_identity_authored(loaded.canonical, name)
+    for point in steps_of(loaded, env).canonical:
         _assert_no_identity_authored(point, name)
 
 
 @pytest.mark.parametrize("name", GOLDEN)
 def test_t9_golden_documents_pin_unchanged_with_nothing_authored(name) -> None:
     env = golden_env.build_env(Path(tempfile.mkdtemp()))
-    loaded = load(golden_env.GOLDEN_PROTOCOLS / name, env)
+    loaded = compile_protocol(golden_env.GOLDEN_PROTOCOLS / name, env=env)
     pin = GOLDEN_PINS[name]
-    assert loaded.document_digest == pin["document"]
-    assert list(loaded.point_digests) == pin["points"]
-    _assert_no_identity_authored(loaded.canonical_document, name)
+    assert loaded.digests.document == pin["document"]
+    assert list(steps_of(loaded, env).digests) == pin["points"]
+    _assert_no_identity_authored(loaded.canonical, name)
 
 
 def test_t9_shipped_presets_author_no_identity() -> None:
@@ -645,7 +674,7 @@ def test_t9_shipped_presets_author_no_identity() -> None:
     assert len(presets) >= 5
     for path in presets:
         raw = json.loads(path.read_text())
-        for name, entry in raw.get("metrics", {}).items():
+        for name, entry in _aggregations(raw.get("method", {})).items():
             assert "unit" not in entry and "estimand_version" not in entry, (
                 f"{path.name}: {name} authors an identity field"
             )
@@ -661,4 +690,4 @@ def test_t9_a_document_that_authors_nothing_canonicalizes_as_before(env) -> None
     """Direct form of the twin: the canonical metric entry of an unauthored
     document has exactly the keys it had on the base."""
     entry = _canonical_metric(env, _document())
-    assert set(entry) == {"kind", "of", "expected", "token_form", "mode"}
+    assert set(entry) == {"kind", "expected", "mode"}

@@ -35,7 +35,16 @@ __all__ = ["fit", "main"]
 
 
 def fit(acts: Any, k: int) -> tuple[Any, Any, list[dict[str, Any]]]:
-    """Centered PCA for one declared population; return mean, (d,k) basis, spectrum."""
+    """Centered PCA for one declared population; return mean, (d,k) basis, spectrum.
+
+    Centering removes one degree of freedom, so ``n`` rows of ``d``
+    dimensions carry at most ``min(n - 1, d)`` components with variance. A
+    larger ``k`` would add null-space directions that depend on the row order.
+
+    Raises:
+        StepError: ``acts`` has fewer than 2 dimensions or fewer than 2 rows,
+            or ``k`` is outside ``1 .. min(n - 1, d)``.
+    """
     import torch
 
     if acts.ndim < 2:
@@ -50,12 +59,15 @@ def fit(acts: Any, k: int) -> tuple[Any, Any, list[dict[str, Any]]]:
     # devices at the bit level.
     rows = acts.reshape(-1, acts.shape[-1]).to(torch.float64)
     n, d = int(rows.shape[0]), int(rows.shape[1])
-    if k > min(n, d):
-        raise StepError(
-            f"fit_pca: k={k} exceeds the rank available from {n} rows of {d} dimensions"
-        )
     if n < 2:
         raise StepError("fit_pca: a variance needs at least 2 rows")
+    if k > min(n - 1, d):
+        raise StepError(
+            f"fit_pca: k={k} exceeds the rank available from {n} rows of {d} "
+            f"dimensions: centering leaves at most min(n - 1 = {n - 1}, d = {d}) "
+            f"components with variance. Set k to at most {min(n - 1, d)}, or "
+            "harvest more rows"
+        )
     mean = rows.mean(dim=0)
     centered = rows - mean
     _, singular, vh = torch.linalg.svd(centered, full_matrices=False)

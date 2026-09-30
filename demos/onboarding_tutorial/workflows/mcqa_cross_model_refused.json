@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "description": "The 07_cross_model demo's experimental arm: harvest on the pretrained checkpoint, graft into the instruction-tuned one. Identical to the control workflow beside it but for the source step's model.key. It loads -- validate and explain both pass -- and it refuses at run time, which is the demo's result and the reason both documents ship.",
-  "output_dir": "mcqa_cross_model",
+  "description": "Experimental arm: harvest the answer-slot activation of Qwen2.5-1.5B and graft it into Qwen2.5-1.5B-Instruct. The graft step refuses at run time.",
+  "output_dir": "10_cross_model_refused",
   "steps": {
     "source": {
       "type": "intervention_protocol",

@@ -4,7 +4,7 @@ This task wraps six natural-domain arithmetic variants — ``weekdays``,
 ``months``, ``hours``, ``integer``, ``alphabet``, ``age`` — into a
 single ``(entity, number) → result → raw_output`` DAG over a
 domain-specific modular or bounded mechanism. A Hydra task YAML is
-unpacked into a :class:`NaturalDomainConfig` by
+unpacked into a [`NaturalDomainConfig`][causalab.tasks.natural_domains_arithmetic.config.NaturalDomainConfig] by
 ``causalab.runner.helpers.resolve_task`` and handed to
 ``load_task("natural_domains_arithmetic", task_cfg=...)``; the factory
 returns the ``CausalModel`` plus dynamic getters consumed downstream.
@@ -78,7 +78,8 @@ NONCYCLIC_DOMAINS = ("integer", "alphabet", "age")
 # Domains where create_random_causal_model fits within RANDOM_WORD_POOL (≤24).
 RANDOM_BASELINE_DOMAINS = ("weekdays", "months", "hours", "integer")
 
-# Per-domain expected cyclic-variable sets.
+# Per-domain expected cyclic-variable sets (the task README's domain table
+# and its note on `periods`).
 EXPECTED_CYCLIC: dict[str, set[str]] = {
     "weekdays": {"entity", "number", "result"},
     "months": {"entity", "result"},
@@ -88,7 +89,7 @@ EXPECTED_CYCLIC: dict[str, set[str]] = {
     "age": set(),
 }
 
-# Per-domain expected periodic info.
+# Per-domain expected periodic info (the task README's note on `periods`).
 EXPECTED_PERIODIC: dict[str, dict[str, int] | None] = {
     "weekdays": {"entity": 7, "number": 7, "result": 7},
     "months": {"entity": 12, "result": 12},

@@ -1,4 +1,4 @@
-"""Regression cases for the behavioral runner, on a tiny real model."""
+"""Regression cases from behavioral worker failures, on a tiny real model."""
 
 from __future__ import annotations
 
@@ -7,12 +7,15 @@ import pytest
 import torch
 
 from causalab.neural.engines.pytorch_hooks.engine import _write_continuations
+from causalab.protocol.engine import StepRecord
 from causalab.neural.shared.metrics import compute_windowed_metric
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
-from causalab.protocol.tables import read_table
+from causalab.protocol.engine import RunContext
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.tables import read_table
+from causalab.protocol.schema import ReadRef
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
 from tests.neural.engines.pytorch_hooks.test_generate_frame import _doc, _executor
+from tests.protocol._docs import aggregation, by_label, in_order, saved
 
 pytestmark = pytest.mark.smoke
 
@@ -44,17 +47,14 @@ def test_multi_eos_stops_and_preserves_terminal_and_padding(llama_bundle, tmp_pa
         llama_bundle.model.forward = original
     assert len(calls) == 3  # prefill, content/EOS, final consumed EOS; no budget tail
     assert executor.continuations()[("original", "base")].widths == (0, 1)
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=("test",),
-        coords=(),
-        document_digest="test",
+    request = RunContext(
         output_dir=tmp_path,
         env=ResolutionEnv(FileDatasets(root=tmp_path), FileArtifacts(root=tmp_path)),
         decoding=executor.decoding,
     )
-    rows = read_table(_write_continuations(request, [executor]))
+    rows = read_table(
+        _write_continuations(request, [executor], steps=(StepRecord(0, {}, "test"),))
+    )
     assert rows[0]["token_ids"] == []
     assert rows[0]["emitted_ids"] == [eos1]
     assert rows[1]["emitted_ids"] == [content, eos2]
@@ -83,36 +83,46 @@ def test_continuation_projection_is_bounded_and_matches_dense(llama_bundle):
     raw = _doc(TINY_LLAMA)
     raw["method"]["positions"]["cont"]["generated"]["max_new_tokens"] = 33
     raw["method"]["reads"]["reference"] = dict(raw["method"]["reads"]["cont"])
-    raw["method"]["metrics"] = {
-        "kl": {"kind": "kl", "of": "cont", "target": "reference"},
-        "top": {"kind": "top_k", "of": "cont", "k": 5, "by": "prob"},
-        "text": {"kind": "decode", "of": "cont"},
-    }
+    raw["method"]["intervened_models"]["original"]["reads"].append("reference")
     raw["method"]["save"] = [
-        {"value": "top", "model": "original", "input": "base", "file_path": "top.json"}
+        saved("cont", "original", "top.json", aggregation("top_k", k=5, by="prob")),
+        saved(
+            "cont",
+            "original",
+            "kl.json",
+            aggregation("kl", target={"read": "reference", "model": "original"}),
+        ),
+        saved("cont", "original", "text.json", aggregation("decode")),
     ]
     # Preserve protocol section order.
-    from tests.protocol._docs import in_order
-
     executor = _executor(llama_bundle, in_order(raw))
     executor.run_all()
-    assert "cont" in executor._deferred_heads
+    # keyed by the read bound to its model (ReadRef), never by the bare name
+    cont = ReadRef("cont", "original")
+    assert cont in executor._deferred_heads
     calls = []
-    head = executor._deferred_heads["cont"]
+    head = executor._deferred_heads[cont]
     handle = head.register_forward_pre_hook(
         lambda _m, args: calls.append(args[0].shape[0])
     )
+    # the executor scores an aggregation bound to its read: each is looked up
+    # by its label (`text` and `kl` are saved under their own names)
+    doc = executor.doc
+
+    def bound(name: str):
+        return next(agg for agg in doc.aggregations() if agg.label == name)
+
     try:
-        text = executor.generated_metric(executor.doc.metrics["text"])
+        text = executor.generated_metric(bound("text"))
         assert text and not calls
-        actual = executor.generated_metric(executor.doc.metrics["top"])
-        divergence = executor.generated_metric(executor.doc.metrics["kl"])
+        actual = executor.generated_metric(bound("top"))
+        divergence = executor.generated_metric(bound("kl"))
         assert all(abs(v) < 1e-7 for row in divergence for v in row)
         assert calls and max(calls) <= 16
     finally:
         handle.remove()
     expected = compute_windowed_metric(
-        executor.doc.metrics["top"],
+        by_label(executor.doc)["top"],
         executor.windowed_value("cont"),
         executor.rows_for_metrics(),
         llama_bundle.tokenizer,
@@ -150,17 +160,14 @@ def test_last_slot_eos_and_length_cap_are_distinct(llama_bundle, tmp_path):
         executor.run_all()
     finally:
         llama_bundle.model.forward = original
-    request = ExecutionRequest(
-        points=(),
-        canonical=(),
-        digests=("test",),
-        coords=(),
-        document_digest="test",
+    request = RunContext(
         output_dir=tmp_path,
         env=ResolutionEnv(FileDatasets(root=tmp_path), FileArtifacts(root=tmp_path)),
         decoding=executor.decoding,
     )
-    rows = read_table(_write_continuations(request, [executor]))
+    rows = read_table(
+        _write_continuations(request, [executor], steps=(StepRecord(0, {}, "test"),))
+    )
     assert rows[0]["emitted_ids"] == [content] * 5 + [eos]
     assert rows[0]["stop_reason"] == "eos"
     assert rows[0]["padding_ids"] == []

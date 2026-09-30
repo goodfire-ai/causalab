@@ -10,21 +10,25 @@ and asserts the two are the same intervention to the bit. The resolver's half
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 
 import pytest
 
 from causalab.neural.shared.sites import resolve_band, resolve_site
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.loader import load
-from causalab.protocol.plan import lower_bands, plan_point
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.neural.shared.plan import plan_point
+from causalab.protocol.lowering import lower_bands
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.protocol.schema import SiteSpec
 from causalab.tasks import TASKS_ROOT
 
 from tests.neural.engines.pytorch_hooks.test_band_patch_run import _band_doc, _run
-from tests.protocol._env import FIXTURES
+from tests.protocol._docs import UNWRITTEN, saved
+from tests.protocol._env import FIXTURES, steps_of
 from tests.tables import frame as table_frame
+
 
 pytestmark = pytest.mark.smoke
 
@@ -38,16 +42,14 @@ def _one_site_band_doc(layers: list[int], name: str = "wide") -> dict:
         "lm_head": {"component": "lm_head"},
     }
     method["reads"] = {
-        "v_a": {
-            "site": "a",
-            "pos": "tap",
-            "model": "original",
-            "input": "counterfactual",
-        },
+        "v_a": {"site": "a", "pos": "tap"},
         f"logits_{name}": method["reads"][f"logits_{name}"],
     }
     method["writes"] = {"w": {"site": "a", "pos": "tap", "do": {"swap": "v_a"}}}
-    method["intervened_models"] = {name: {"input": "base", "writes": ["w"]}}
+    method["intervened_models"] = {
+        UNWRITTEN: {"input": "counterfactual", "reads": ["v_a"]},
+        name: {"input": "base", "reads": [f"logits_{name}"], "writes": ["w"]},
+    }
     return doc
 
 
@@ -90,8 +92,13 @@ def test_resolve_band_is_one_module_per_member(llama_bundle) -> None:
 
 
 def test_a_one_site_band_plans_as_its_hand_written_twin(env) -> None:
-    hand = load(_band_doc({"wide": [0, 1]}), env, base_dir=FIXTURES).point_documents[0]
-    band = load(_one_site_band_doc([0, 1]), env, base_dir=FIXTURES).point_documents[0]
+    hand = steps_of(
+        compile_protocol(_band_doc({"wide": [0, 1]}), env=env, base_dir=FIXTURES), env
+    )
+    band = steps_of(
+        compile_protocol(_one_site_band_doc([0, 1]), env=env, base_dir=FIXTURES), env
+    )
+    hand, band = hand.documents[0], band.documents[0]
     assert band.sites["a"].layers == (0, 1)
     hand_plan, band_plan = plan_point(hand), plan_point(band)
     assert band_plan.num_forwards == hand_plan.num_forwards == 2
@@ -143,21 +150,15 @@ def test_a_saved_band_read_is_refused_by_name_before_any_forward(
     from causalab.cli import main
 
     doc = _one_site_band_doc([0, 1])
-    doc["method"]["save"].append(
-        {
-            "value": "v_a",
-            "model": "original",
-            "input": "counterfactual",
-            "file_path": "v.safetensors",
-        }
-    )
+    doc["method"]["save"].append(saved("v_a", UNWRITTEN, "v.safetensors"))
     path = tmp_path / "doc.json"
-    import json
 
     path.write_text(json.dumps(doc))
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),
@@ -174,14 +175,15 @@ def test_a_saved_band_read_is_refused_by_name_before_any_forward(
 
 
 def test_the_migrated_band_preset_still_loads(env) -> None:
-    """The shipped ``attention_band_patch.json`` after the rename: ten
-    one-layer ``at_once`` members, every site a one-layer band."""
+    """The shipped ``attention_band_patch.json`` after the rename: eight
+    one-layer ``at_once`` members (L9-L16 on the 28-layer model), every site
+    a one-layer band."""
     from tests.neural.engines.pytorch_hooks.test_band_patch_run import PRESET
 
-    doc = load(PRESET, env).point_documents[0]
+    doc = steps_of(compile_protocol(PRESET, env=env), env).documents[0]
     assert all(
         spec.layers == (int(name[1:]),)
         for name, spec in doc.sites.items()
         if name != "lm_head"
     )
-    assert copy.deepcopy(doc.sites["a10"].layers) == (10,)
+    assert copy.deepcopy(doc.sites["a9"].layers) == (9,)

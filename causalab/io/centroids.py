@@ -18,7 +18,7 @@ from typing import Any, Callable
 import torch
 from torch import Tensor
 
-from causalab.causal.counterfactual_dataset import CounterfactualExample
+from causalab.causal.counterfactuals import CounterfactualExample
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def coerce_param_to_float(var: str, value: Any) -> float:
 
     The geometry/centroid pipeline projects causal parameters into numeric
     coordinates. When a value cannot be converted (a categorical/string target
-    with no embedding), raise :class:`CategoricalParameterError` naming the
+    with no embedding), raise [`CategoricalParameterError`][] naming the
     variable and pointing at the embedding escape hatch, instead of letting a
     bare ``float()`` surface the opaque ``could not convert string to float``.
     """
@@ -83,7 +83,7 @@ def extract_parameters_from_dataset(
     the value to one or more floats (e.g. cyclic day -> [cos, sin]).
     Multi-dimensional embeddings produce keys like ``var_0``, ``var_1``, etc.
     When no embedding is provided, the value is converted via ``float()``; a
-    non-numeric (categorical) value raises :class:`CategoricalParameterError`
+    non-numeric (categorical) value raises [`CategoricalParameterError`][]
     naming the variable and the embedding remedy, rather than a raw ``float()``
     ``ValueError``.
 

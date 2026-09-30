@@ -5,13 +5,13 @@ base/counterfactual pairs at random. Building a "train" table and a "test" table
 by calling one twice at two seeds guarantees nothing: on a large input space the
 two draws happen not to collide, on a small one they overlap almost entirely,
 and the artifacts look identical either way. The discipline this module
-implements is to hold out *structure*, not just instances.
+implements is "hold out structure, not just instances".
 
-:func:`generate_split_dataset` partitions the *unique inputs* into disjoint
+[`generate_split_dataset`][] partitions the *unique inputs* into disjoint
 groups, assigns each group to one split, and forms counterfactual pairs **within**
 a split so neither endpoint of a test pair was seen in training. It returns one
 example list plus the split each example belongs to — the shape
-:func:`~causalab.tasks.serialize.serialize_examples` takes — because the result
+[`serialize_examples`][causalab.tasks.serialize.serialize_examples] takes — because the result
 is **one table** whose rows declare their split, not three files whose
 relationship lives in prose.
 
@@ -22,12 +22,12 @@ claim about how somebody's builder was invoked. There is deliberately no split
 arguments to a build, and the build's command line is the record of them;
 nothing is written beside the table (spec §2.2).
 
-An earlier form of this logic sat behind a ``SplitSpec`` emitting three files.
-What survives is the group-key handling, the one-prompt-one-label coherence
-guard and the label-change filter; what does not is the spec object, the
-multi-file output and the ``split.manifest.json`` sidecar whose disjointness
-claim nothing could read (resolution ignores sidecars — see
-:mod:`causalab.tasks.serialize`).
+An earlier design had this logic behind a ``SplitSpec`` emitting three
+files. What survives is the group-key handling, the
+one-prompt-one-label coherence guard and the label-change filter; what does not
+is the spec object, the multi-file output and the ``split.manifest.json``
+sidecar whose disjointness claim nothing could read (resolution ignores
+sidecars — see [`causalab.tasks.serialize`][]).
 """
 
 from __future__ import annotations
@@ -36,9 +36,8 @@ import logging
 import random
 from typing import Any, Callable, Hashable, NamedTuple, Sequence
 
-from causalab.causal.causal_model import CausalModel
-from causalab.causal.counterfactual_dataset import CounterfactualExample
-from causalab.causal.trace import CausalTrace
+from causalab.causal.counterfactuals import CounterfactualExample
+from causalab.causal.model import CausalModel, CausalTrace
 from causalab.tasks.loader import Task, load_task_counterfactuals
 
 logger = logging.getLogger(__name__)
@@ -54,7 +53,7 @@ class SplitDataset(NamedTuple):
     """One table's worth of examples, plus the split each one declares.
 
     ``examples`` and ``splits`` are parallel and go straight to
-    :func:`~causalab.tasks.serialize.serialize_examples` as ``examples`` and
+    [`serialize_examples`][causalab.tasks.serialize.serialize_examples] as ``examples`` and
     ``split=``. ``audit`` is provenance for the manifest: group and pair counts
     per split, and how many pairs each filter removed.
     """
@@ -168,8 +167,24 @@ def _input_pool(
     point of the exercise.
     """
     model = task.causal_model
+    # A stochastic model has no enumerable prompt pool without fixed noise.
+    # Keep noise independent here by using the task's seeded generator.
+    if model.exogenous and max_inputs is None:
+        raise ValueError("Specify max_inputs when splitting a stochastic task")
+    # Input enumeration streams finite domains; the accepted pool can be small
+    # even when an individual domain exceeds the display/materialization bound.
+    enumerable = all(model.domains[name].is_finite for name in model.inputs)
+    if not enumerable and max_inputs is None:
+        # n_unique_inputs has no value for an open domain, and the generator
+        # needs a pool size.
+        open_inputs = [n for n in model.inputs if not model.domains[n].is_finite]
+        raise ValueError(
+            f"Specify max_inputs: inputs {open_inputs} cannot be enumerated, "
+            "so the pool is drawn from the task's generator"
+        )
     cap = max_inputs if max_inputs is not None else model.n_unique_inputs
-    if model.n_unique_inputs <= cap:
+    fits = not model.exogenous and enumerable and model.count_inputs(limit=cap) <= cap
+    if fits:
         pool = list(model.enumerate_inputs())
     else:
         generators = load_task_counterfactuals(task.name)
@@ -203,13 +218,23 @@ def _resample_one_variable(
     mechanisms rerun — rather than an in-place intervention. ``None`` when the
     variable admits no other value the model's ``input_filter`` accepts.
     """
-    candidates = [v for v in model.values[variable] if v != base[variable]]
-    rng.shuffle(candidates)
+    domain = model.domains[variable]
+    values = domain.enumerated()
+    if values is None:
+        # Large ranges (including explicit noise) support cheap sampling. Never
+        # materialize the range just to resample one input.
+        candidates = [domain.sample(rng) for _ in range(64)]
+    else:
+        candidates = [v for v in values if v != base[variable]]
+        rng.shuffle(candidates)
+    candidates = [v for v in candidates if v != base[variable]]
     base_inputs = {v: base[v] for v in model.inputs}
     for value in candidates:
-        trace = model.new_trace({**base_inputs, variable: value})
-        if model.input_filter is None or model.input_filter(trace):
-            return trace
+        inputs = {**base_inputs, variable: value}
+        if model.input_filter is None or model.input_filter(
+            CausalTrace(model, inputs, eager=False)
+        ):
+            return model.new_trace(inputs)
     return None
 
 
@@ -273,7 +298,7 @@ def generate_split_dataset(
         task: The loaded task to draw from.
         seed: Seeds the group partition, the pairing and any cap sampling.
         fractions: ``{split name: weight}``; defaults to
-            :data:`DEFAULT_FRACTIONS`. Weights are normalized, so
+            [`DEFAULT_FRACTIONS`][]. Weights are normalized, so
             ``{"train": 2, "test": 1}`` is fine. Names are free-form.
         group_key: ``"input"`` holds out by prompt; an input-variable name holds
             out by that variable's value (every row sharing it lands together).
@@ -282,7 +307,7 @@ def generate_split_dataset(
         max_pairs_per_split: Optional cap on kept pairs, applied *after* the
             filters so it bounds what survives rather than what was tried.
         generator: Which of the task's own generators supplies the input pool
-            when the space is too large to enumerate (see :func:`_input_pool`).
+            when the space is too large to enumerate (see `_input_pool`).
         require_label_change: Drop pairs whose interchange leaves the answer
             unchanged, which would otherwise inflate IIA with free correctness.
         target_variable: What ``require_label_change`` interchanges; defaults to
@@ -293,8 +318,8 @@ def generate_split_dataset(
             model dependency (``tests/tasks/test_serialize.py`` pins that).
 
     Returns:
-        A :class:`SplitDataset`. Feed ``examples`` and ``splits`` straight to
-        :func:`~causalab.tasks.serialize.serialize_examples`.
+        A [`SplitDataset`][]. Feed ``examples`` and ``splits`` straight to
+        [`serialize_examples`][causalab.tasks.serialize.serialize_examples].
     """
     fractions = dict(fractions or DEFAULT_FRACTIONS)
     model = task.causal_model

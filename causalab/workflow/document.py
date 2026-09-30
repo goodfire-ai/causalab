@@ -1,44 +1,11 @@
-"""The Workflow Protocol document model (docs/workflow_protocol.md, v2).
+"""Parse and validate workflow documents.
 
-Engine-free, like the rest of this package: parsing, the workflow load-error
-checklist, the derived dependency graph and schedule, and the canonical form +
-digest. Executing a loaded workflow is :mod:`causalab.workflow.runner`'s job.
+A workflow declares steps and their inputs, outputs, and dependencies. The
+loader derives scheduling edges from references, resolves nested workflows,
+and computes step identities. Control declarations add qualification requirements
+and check whether control sites match their targets.
 
-**Three step types, one wiring mechanism.** ``protocol`` stays declarative
-because that is where the load-time bite lives — inner-document validation,
-sweep expansion, capability routing, shard dispatch. ``script`` is inputs → one
-Python script → declared outputs, wide enough that a pipeline never has to
-leave the record. ``behavioral`` (§2.7, :mod:`causalab.workflow.behavioral`)
-runs a no-intervention document under the ``generated`` frame with a decoding
-spec, a checker bound by content digest, a split purpose, declared thresholds
-and a typed decision — the declarative behavioral runner. Everything any of
-them consumes is spelled as a *locator plus an optional selector* (§3), so the
-dependency graph falls out of one place instead of three.
-
-Three load-time subtleties the spec commits to:
-
-* **Step-dependent inner documents validate against declared
-  representatives.** A protocol step whose document references another step's
-  outputs (``{"artifact": "best", …}``, or a ``file_path`` under a step's run
-  tree) cannot resolve those values before the run. The producing script step
-  declares them — ``outputs.<slot>.keys`` maps each emitted name to a
-  representative *value* (§2.3) — and the loader substitutes those, so the
-  consumer type-checks honestly. Run-tree ``file_path`` loads defer their
-  existence/identity checks to run time (the deferring store advertises
-  :meth:`DeferredArtifacts.defers`).
-* **A script is hashed, never imported — and ``validate``/``digest`` import no
-  numerics.** Load-time checking is the file existing, ``ast.parse``
-  succeeding, a module-level ``def main`` being present, and the bytes being
-  hashed; hashing needs no import, which is what lets the hash sit in the
-  digest and keep ``--resume`` correct (§7). The second clause is not implied
-  by the first: resolving a ``{"module": …}`` locator imports the target's
-  *parent packages*, so it also requires every package holding a shipped script
-  to be importable without numerics (see :func:`resolve_script`).
-* **Digests split by dependency** (§7): a protocol step with no in-run
-  references stamps its document's full campaign digest; a step-dependent
-  document stamps the digest of its overridden authored form, and the fully
-  resolved digests land in the run manifest.
-"""
+See ``docs/workflow_protocol.md`` for the format and validation rules."""
 
 from __future__ import annotations
 
@@ -57,16 +24,18 @@ from causalab.protocol.bundles import (
     select_entry,
     selector_slot,
 )
-from causalab.protocol.canonical import canonical_bytes, canonical_model_ref
-from causalab.protocol.code import (
+from causalab.protocol.schema.explicit import canonical_model_ref
+from causalab.protocol.identity import (
     ResolvedCode,
+    canonical_bytes,
     closure_sha256,
     import_closure,
     is_installed_module,
     source_root,
     source_sha256,
 )
-from causalab.protocol.compile import Authored, compile_protocol, read_document
+from causalab.protocol.compiled import Authored
+from causalab.protocol.pipeline import compile_protocol, read_document
 from causalab.protocol.equivalence import (
     EQUIVALENCE_FIELDS,
     SITE_FIELDS,
@@ -76,36 +45,38 @@ from causalab.protocol.equivalence import (
     explain,
 )
 from causalab.protocol.equivalence import sharing as coordinate_sharing
-from causalab.protocol.errors import (
+from causalab.protocol.rules.errors import (
     ParseError,
     ProtocolError,
     ProtocolWarning,
     ValidationError,
     suggest,
 )
-from causalab.protocol.loader import LoadedProtocol, apply_overrides, load_text
+from causalab.io.sources import apply_overrides, load_text
 from causalab.protocol.registry import ModelInfo
-from causalab.protocol.resolve import ArtifactStore, ResolutionEnv
+from causalab.io.env import ArtifactStore, ResolutionEnv
 from causalab.protocol.schema import (
     FEATURIZER_SLOTS,
     Document,
     FeaturizerSpec,
     IMSpec,
+    operand_reads,
     SiteSpec,
     Sweep,
 )
-from causalab.protocol.sweep import (
+from causalab.protocol.lowering import (
     DEFAULT_POINT_CAP,
     coordinate_label,
     short_coords,
 )
-from causalab.protocol.tables import TABLE_SUFFIX
+from causalab.io.tables import TABLE_SUFFIX
 from causalab.workflow.reduction import (
     REDUCE_MODULE,
     REDUCTION_INPUT,
     ReductionSpecError,
     parse_reduction,
 )
+from causalab.workflow.steps import InnerProtocol
 
 __all__ = [
     "COLUMN_DTYPES",
@@ -195,7 +166,7 @@ CONTROL_KINDS: tuple[str, ...] = (
 #: The kinds whose semantics demand *coverage* of the target's site — every
 #: layer, head, expert, stream and coordinate the target's points write, the
 #: control's points write too — and which rule 16 therefore holds
-#: site-equivalent to their target (:mod:`causalab.protocol.equivalence`).
+#: site-equivalent to their target ([`causalab.protocol.equivalence`][]).
 #: Not ``self_swap``: a self-swap certifies per point, and per-point
 #: *agreement* by coordinates (§8) is the right semantics there — a control
 #: pinned to one layer says exactly what it says at that layer. Not
@@ -247,9 +218,8 @@ CONTROL_SEAMS: tuple[str, ...] = ("A", "B", "C", "R1")
 DEFAULT_MIN_DRAWS = 20
 
 #: The failure rate above which a certified control is a **failed** step and
-#: its dependents are blocked (§8). Zero: the first failure stops — a
-#: certified control is expected never to fail — and a campaign that can
-#: justify a non-zero bound declares one.
+#: its dependents are blocked (§8). Zero: the first failure stops, and a
+#: campaign that can justify a non-zero bound declares one.
 DEFAULT_STOP_AFTER_FAILURE_RATE = 0.0
 
 #: The table a certifying script step writes: one row per control point with
@@ -287,22 +257,20 @@ SECTION_ORDER: tuple[str, ...] = (
     "description",
     "output_dir",
     "steps",
-    "pins",
+    "measurement",
 )
 
 #: The highest checklist rule number (§5). The census guard
 #: (``tests/workflow/test_reduction_census.py``) holds the spec's numbered list
-#: to exactly this many items. 15 is the qualify-once rule, 16 is site
-#: equivalence, 17 is the behavioral step's
-#: (:data:`causalab.workflow.behavioral.BEHAVIORAL_RULE`); 18 is the
+#: to exactly this many items. 15 is the qualify-once rule, 16 is
+#: site equivalence, 17 is the behavioral step's
+#: ([`causalab.workflow.behavioral.BEHAVIORAL_RULE`][]); 18 is the
 #: decision / conditional / receipt layer's
-#: (:data:`causalab.workflow.conditional.CONDITIONAL_RULE`, §2.8); 19 is the
-#: declared fan-out's (:data:`causalab.workflow.fan_out.FAN_OUT_RULE`, §2.9);
-#: 20 is the nested workflow's (:data:`causalab.workflow.nested.NESTED_RULE`,
-#: §2.10); 21 is the pins section's (:data:`causalab.workflow.pins.PINS_RULE`,
-#: §7): every pinned resource touched with the pinned digest, every touched
-#: resource pinned.
-MAX_RULE = 21
+#: ([`causalab.workflow.conditional.CONDITIONAL_RULE`][], §2.8); 19 is the
+#: declared fan-out's ([`causalab.workflow.fan_out.FAN_OUT_RULE`][], §2.9);
+#: 20 is the nested workflow's ([`causalab.workflow.nested.NESTED_RULE`][],
+#: §2.10).
+MAX_RULE = 20
 
 
 class WorkflowError(ProtocolError):
@@ -359,7 +327,7 @@ class OutputDecl:
     """One declared output: a filename, plus at most one shape promise.
 
     ``columns`` says "an array of row objects" and maps column name to a
-    :data:`COLUMN_DTYPES` entry. ``keys`` says "one object mapping these names
+    [`COLUMN_DTYPES`][] entry. ``keys`` says "one object mapping these names
     to values" and maps each name to a **representative value** — not a type,
     because a step-dependent inner document validates against it and a position
     spec has to type-check as a position spec (§2.3)."""
@@ -394,7 +362,7 @@ class ProtocolStep:
     #: absent when unauthored
     waive: Mapping[str, Mapping[str, str]] | None = None
     #: the failure rate above which this control's certification fails the
-    #: step (§8); absent when unauthored, :data:`DEFAULT_STOP_AFTER_FAILURE_RATE`
+    #: step (§8); absent when unauthored, [`DEFAULT_STOP_AFTER_FAILURE_RATE`][]
     #: at run time
     stop_after_failure_rate: float | None = None
     #: the receipt this step's allocation requires (§2.8): ``{step, outcome}``
@@ -461,7 +429,7 @@ class BehavioralStep:
     ``decoding`` spec, the ``checker`` binding, the ``split`` purpose, the
     ``thresholds``, the ``retain`` bound (absent when unauthored — bounded by
     default at run time) and the typed ``decision``. Parsed and checked by
-    :mod:`causalab.workflow.behavioral`, run by it too."""
+    [`causalab.workflow.behavioral`][], run by it too."""
 
     type: str
     document: str
@@ -491,7 +459,7 @@ class DecisionStep:
     names the producer's ``.json`` values file; ``rule`` maps each declared
     key to exactly one comparator and a JSON literal; ``decision`` maps pass
     and fail to the decision vocabulary, as on a behavioral step. Parsed and
-    checked by :mod:`causalab.workflow.conditional`, run by it too; every
+    checked by [`causalab.workflow.conditional`][], run by it too; every
     field is in the step's canonical entry (§7)."""
 
     type: str
@@ -528,13 +496,13 @@ class ConditionalStep:
 class WorkflowStep:
     """A ``workflow`` step (§2.10): its ``document`` is another workflow
     document, relative to the workflow file, loaded once at the outer's load
-    through the same :func:`load_workflow`; its steps join the run as
+    through the same [`load_workflow`][]; its steps join the run as
     ``<step>/<inner>`` and keep their own identities. ``set`` is the nested
     form — inner step name → that step's own ``set`` map — laid over the named
     inner steps before the inner parse. A container: it publishes no file,
     writes no receipt, is in no schedule and has no status; its canonical
     entry carries the inner document's own digest as ``workflow_digest`` (§7).
-    Parsed and mounted by :mod:`causalab.workflow.nested`."""
+    Parsed and mounted by [`causalab.workflow.nested`][]."""
 
     type: str
     document: str
@@ -566,10 +534,7 @@ class WorkflowDocument:
     output_dir: str
     steps: Mapping[str, Step]
     description: str | None = None
-    #: the authored ``pins`` section (§7), parsed for shape — ``None`` when
-    #: the document carries none (it loads; the first ``run`` stamps it).
-    #: Never canonical: :func:`_canonicalize` reads ``steps`` alone
-    pins: Mapping[str, Mapping[str, str]] | None = None
+    measurement: Mapping[str, Any] | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -583,7 +548,7 @@ class LoadedWorkflow:
     order: tuple[str, ...]
     levels: tuple[tuple[str, ...], ...]
     dependencies: Mapping[str, tuple[str, ...]]
-    inner: Mapping[str, LoadedProtocol]
+    inner: Mapping[str, InnerProtocol]
     inner_digest_kind: Mapping[str, str]  # "campaign" | "authored" | "workflow"
     inner_digests: Mapping[str, str]
     canonical: Mapping[str, Any]
@@ -609,11 +574,6 @@ class LoadedWorkflow:
     equivalence: Mapping[str, Mapping[str, Any]] = dataclasses.field(
         default_factory=dict
     )
-    #: the census of what this load touched, by category (§7,
-    #: :func:`causalab.workflow.pins.collect_pins`) — what a stamp writes into
-    #: the document's ``pins`` section and what an authored section was held
-    #: to (rule 21). Never canonical
-    pins: Mapping[str, Mapping[str, str]] = dataclasses.field(default_factory=dict)
 
     @property
     def nondeterministic(self) -> tuple[str, ...]:
@@ -875,7 +835,7 @@ def _parse_reduction(
     """Rule 12: an authored ``reduction`` is complete and in vocabulary (§2.6);
     rule 13: an authored ``estimand_version`` is one the block computes.
 
-    The block is parsed by :func:`causalab.workflow.reduction.parse_reduction`
+    The block is parsed by [`causalab.workflow.reduction.parse_reduction`][]
     — the same parser the built-in script re-runs at execution — and the
     refusal names the field. Column existence is data and is checked at run
     time against the real table, never here. The parsed form is what enters
@@ -924,7 +884,7 @@ EXECUTION_KEYS = ("batch_rows", "fit_rows")
 
 
 def _execution_block(raw: Any, path: str) -> dict[str, int | None]:
-    """A protocol step's ``execution`` block: each of :data:`EXECUTION_KEYS` a
+    """A protocol step's ``execution`` block: each of [`EXECUTION_KEYS`][] a
     positive integer, or ``null`` for "unbounded for this step" — a value,
     kept, since it overrides an engine-wide bound. Absent means empty."""
     if raw is None:
@@ -947,13 +907,13 @@ def _execution_block(raw: Any, path: str) -> dict[str, int | None]:
 
 def _parse_control(raw: Any, path: str) -> dict[str, Any]:
     """Rule 14: a step's ``control`` declaration is well-formed (§2.2) —
-    ``kind`` from :data:`CONTROL_KINDS`, ``seam`` from :data:`CONTROL_SEAMS`,
+    ``kind`` from [`CONTROL_KINDS`][], ``seam`` from [`CONTROL_SEAMS`][],
     ``seeds`` distinct integers, ``min_draws`` a positive integer. What the
     declaration *claims* about another step — the self-swap predicate, the
     matched-random pairing, the site equivalence rule 16 holds a coverage kind
     to — is checked against the compiled inner documents in
-    :func:`load_workflow`, not here. ``non_equivalence`` (rule 16) names the
-    :data:`EQUIVALENCE_FIELDS` the control knowingly differs from its target
+    [`load_workflow`][], not here. ``non_equivalence`` (rule 16) names the
+    [`EQUIVALENCE_FIELDS`][] the control knowingly differs from its target
     in, with a reason; parsed with its fields sorted so two spellings digest
     identically."""
     if not isinstance(raw, Mapping):
@@ -1032,7 +992,7 @@ def _parse_control(raw: Any, path: str) -> dict[str, Any]:
 
 def _parse_non_equivalence(raw: Any, path: str) -> dict[str, Any]:
     """Rule 16: ``{"fields": [...], "reason": "..."}`` — ``fields`` a non-empty
-    list of distinct names from :data:`EQUIVALENCE_FIELDS`, ``reason`` a
+    list of distinct names from [`EQUIVALENCE_FIELDS`][], ``reason`` a
     non-empty string. A declaration is how a comparison across a known
     difference stays on the record instead of being silently accepted."""
     if not isinstance(raw, Mapping):
@@ -1084,8 +1044,8 @@ def _parse_non_equivalence(raw: Any, path: str) -> dict[str, Any]:
 
 
 def _parse_waive(raw: Any, path: str) -> dict[str, dict[str, str]]:
-    """Rule 14: a waiver names a kind from :data:`CONTROL_KINDS` and a reason
-    from :data:`WAIVER_REASONS` — a bare word, or ``{reason, reference}``;
+    """Rule 14: a waiver names a kind from [`CONTROL_KINDS`][] and a reason
+    from [`WAIVER_REASONS`][] — a bare word, or ``{reason, reference}``;
     ``external`` must carry its ``reference`` and no other reason may. The
     parsed form is the object form, so ``"no_fit"`` and ``{"reason":
     "no_fit"}`` digest identically."""
@@ -1280,7 +1240,7 @@ def _parse_step(name: str, raw: Any, path: str) -> Step:
         )
         # the receipt is this module's field on every kind (§2.8), and the
         # fan-out this module's on both document kinds (§2.9), so the
-        # behavioral parser — unchanged — never sees either
+        # behavioral parser, unchanged, never sees either
         return dataclasses.replace(
             step, requires_receipt=_receipt(raw, path), fan_out=_fan_out(raw, path)
         )
@@ -1579,19 +1539,23 @@ def parse_workflow(raw: Mapping[str, Any]) -> WorkflowDocument:
     description = raw.get("description")
     if description is not None and not isinstance(description, str):
         raise WorkflowError(1, "'description' is free text")
-    pins = None
-    if "pins" in raw:
-        # shape only (rule 1); the section is held to the load's census by
-        # rule 21 in `load_workflow`, once everything it names has resolved
-        from causalab.workflow.pins import parse_pins
+    measurement = None
+    if "measurement" in raw:
+        from causalab.measurement.spec import (
+            MeasurementSpecError,
+            parse_measurement,
+        )
 
-        pins = parse_pins(raw["pins"], "pins")
+        try:
+            measurement = parse_measurement(raw["measurement"], steps)
+        except MeasurementSpecError as exc:
+            raise WorkflowError(1, str(exc), path="measurement") from exc
     return WorkflowDocument(
         version=version,
         output_dir=output_dir,
         steps=steps,
         description=description,
-        pins=pins,
+        measurement=measurement,
     )
 
 
@@ -1607,7 +1571,7 @@ def resolve_script(step: ScriptStep, workflow_dir: Path, path: str) -> Path:
     Two locators, the same shape an ``inputs`` reference uses (§3):
 
     * ``{"module": "causalab.analysis.fit_pca"}`` — an importable module, found
-      with :func:`importlib.util.find_spec`, which resolves a dotted name to a
+      with `importlib.util.find_spec`, which resolves a dotted name to a
       file without executing **that module**. That is what lets a shipped
       script live wherever it belongs by subject (``causalab.analysis``,
       ``causalab.io.plots``, ``causalab.workflow.scripts``) instead of in one
@@ -1620,7 +1584,7 @@ def resolve_script(step: ScriptStep, workflow_dir: Path, path: str) -> Path:
       **every package that can hold a shipped script must be importable without
       numerics.** ``causalab/io/plots/__init__.py`` is lazy (PEP 562) for
       exactly that reason — a shipped script lives under it, and the eager
-      version made ``validate`` of the shipped ``weekdays_8b.json`` pay for the
+      version made ``validate`` of the shipped ``weekdays.json`` pay for the
       plotting stack. Both obligations are checked in
       ``tests/protocol/test_load_is_torch_free.py``: the ``{"path": …}`` case
       for the module never being imported, and a per-package import probe plus
@@ -1677,8 +1641,8 @@ def check_script(target: Path, step: ScriptStep, path: str) -> ScriptIdentity:
     would pull in whatever it links against (§4.2). Hashing needs no import,
     which is what lets the hash reach the digest.
 
-    The hash itself is :func:`causalab.protocol.code.source_sha256`, and the
-    closure :func:`causalab.protocol.code.import_closure` — both shared with an
+    The hash itself is [`causalab.protocol.identity.source_sha256`][], and the
+    closure [`causalab.protocol.identity.import_closure`][] — both shared with an
     intervention specification's ``code`` references (§2.8.1) so a module that
     is both a script step and a referenced function's home cannot acquire two
     identities. The closure walk is as static as the hash: every member is
@@ -1694,7 +1658,7 @@ def check_script(target: Path, step: ScriptStep, path: str) -> ScriptIdentity:
 
     Hashing is only half of it: resolving a dotted locator imports the
     target's parent packages, so the guarantee also needs those to be
-    numerics-free — see :func:`resolve_script`."""
+    numerics-free — see [`resolve_script`][]."""
     source = target.read_bytes()
     try:
         tree = ast.parse(source, filename=str(target))
@@ -1884,23 +1848,16 @@ def load_workflow(
     *,
     workflow_dir: Path | None = None,
     overrides: Mapping[str, Any] | None = None,
-    hold_pins: bool = True,
     _including: tuple[Path, ...] = (),
     _step_set: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> LoadedWorkflow:
     """Load one workflow document through the full pipeline (§5).
 
-    ``hold_pins`` is rule 21's switch: ``True`` (every verb) holds an authored
-    ``pins`` section to the census; ``False`` is for the one caller that
-    exists to *replace* a stale section — ``causalab pin`` — which still
-    computes the census but cannot be refused by the pins it is about to
-    rewrite. The census is on the result either way.
-
     ``_including`` and ``_step_set`` are the recursion's (§2.10): the resolved
     paths of every document being loaded above this one — a document already
     among them is refused as including itself — and the ``set`` an outer
     ``workflow`` step lays over this document's steps before they are parsed.
-    :func:`causalab.workflow.nested.load_nested` passes both; a caller does
+    [`causalab.workflow.nested.load_nested`][] passes both; a caller does
     not."""
     if isinstance(source, Path):
         raw: dict[str, Any] = dict(load_text(source))
@@ -1967,7 +1924,7 @@ def load_workflow(
     # Nothing mounted here enters `canonical`.
     nested: dict[str, LoadedWorkflow] = {}
     mounted: dict[str, str] = {}
-    inner: dict[str, LoadedProtocol] = {}
+    inner: dict[str, InnerProtocol] = {}
     inner_digests: dict[str, str] = {}
     inner_digest_kind: dict[str, str] = {}
     mounted_digests: dict[str, str] = {}
@@ -2257,15 +2214,12 @@ def load_workflow(
         try:
             compiled = compile_protocol(
                 composed[name],
-                inner_dirs.get(name),
-                None,  # `set` is already in the composition
-                load_env.datasets,
-                load_env.artifacts,
-                None,
+                env=load_env,
+                base_dir=inner_dirs.get(name),
+                # `set` is already in the composition; no engine at load
                 point_cap=step.max_points
                 if step.max_points is not None
                 else DEFAULT_POINT_CAP,
-                model_info=load_env.model_info,
             )
         except ProtocolError as err:
             raise WorkflowError(
@@ -2273,7 +2227,9 @@ def load_workflow(
                 f"document {step.document!r} does not load: {err}",
                 path=f"steps.{name}",
             ) from err
-        inner[name] = LoadedProtocol.from_compiled(compiled)
+        # the steps, enumerated and signed against the load-time environment
+        # (the one spelling of the engine's sweep in this layer)
+        inner[name] = InnerProtocol.enumerate(compiled, load_env)
         if deferred:
             inner_digests[name] = _authored_digest(composed[name].raw)
             inner_digest_kind[name] = "authored"
@@ -2286,10 +2242,10 @@ def load_workflow(
             # by digest — before any model exists
             from causalab.workflow.behavioral import check_behavioral
 
-            check_behavioral(name, step, inner[name], env)
+            check_behavioral(name, step, compiled, env)
 
     # ---- rule 19 + the expansion (§2.9): a declared fan-out's children ----- #
-    # The width is a pure function of the compiled document, so the
+    # The width is a pure function of the compiled document (9·8), so the
     # children exist here, after the inner loads and before every check that
     # walks the step table — rule 4's `outputs_of`, rule 14, rule 18 — and the
     # schedule is recomputed over the expanded graph, so rule 5 holds over the
@@ -2364,10 +2320,10 @@ def load_workflow(
         if isinstance(step, BehavioralStep):
             from causalab.workflow.behavioral import BEHAVIORAL_FILES
 
-            saved = {entry.file_path for entry in inner[name].document.save}
+            saved = {entry.file_path for entry in inner[name].compiled.document.save}
             return saved | set(BEHAVIORAL_FILES)
         if isinstance(step, ProtocolStep):
-            return {entry.file_path for entry in inner[name].document.save}
+            return {entry.file_path for entry in inner[name].compiled.document.save}
         if isinstance(step, DecisionStep):
             from causalab.workflow.behavioral import DECISION_FILE
 
@@ -2497,30 +2453,16 @@ def load_workflow(
         }
         check_conditional(sided, deps)
 
-    # ---- rule 21: the pins hold (§7) --------------------------------------- #
-    # the census of what this load touched — every document, script (and
-    # sibling), table, `code` module and artifact, by the name the document
-    # gives it — and, when the document carries a `pins` section, the exact
-    # comparison against it. Never canonical: the section is the workflow's
-    # statement about its closure, not part of any step's identity
-    from causalab.workflow.pins import check_pins, collect_pins
-
-    pins = collect_pins(
-        authored, workflow_dir, inner, nested, env.datasets, frozenset(steps)
-    )
-    if hold_pins and authored.pins is not None:
-        check_pins(authored.pins, pins)
-
     # ---- canonical form + digest (§7) ------------------------------------- #
     # over the authored steps: a fan-out's children are derived and never
     # canonical (§2.9, §6) — the parent's entry carries `fan_out`
     canonical = _canonicalize(authored, inner_digests)
     digest = hashlib.sha256(canonical_bytes(canonical)).hexdigest()
-    # a script step's provenance unit: the digest of its own canonical entry,
-    # which is a pure function of script hash + inputs + outputs + runtime (+
-    # reduction when authored). It
-    # is what a tensor it writes is stamped `produced_by` — the analogue of a
-    # compiled intervention's digest.
+    # a script step's identity: the digest of its own canonical entry, which
+    # is a pure function of script hash + inputs + outputs + runtime (+
+    # reduction when authored). It is what `--resume` compares (the
+    # `_step.json` identity) — the analogue of a compiled intervention's
+    # digest.
     # A behavioral step's identity is its canonical entry too: the decoding
     # (seed included), checker, split, thresholds and decision are in it, so a
     # changed seed or split is a changed identity (§2.7, §7).
@@ -2583,7 +2525,6 @@ def load_workflow(
         children=children,
         nested=nested,
         equivalence=equivalence,
-        pins=pins,
     )
 
 
@@ -2675,11 +2616,11 @@ def certifier_subject(steps: Mapping[str, Step], name: str) -> str | None:
     certifies nothing (§2.2, §8).
 
     A certifying step is recognized by its shape, not its module: it declares
-    an output whose file is :data:`CONTROLS_FILE` and reads, through its
+    an output whose file is [`CONTROLS_FILE`][] and reads, through its
     inputs, exactly one step that declares ``control``. Half the shape is
     refused (rule 14): a ``controls.json`` that reads no control, or two, has
     no subject to attach its statuses to. The runner hands such a step the
-    control's declaration under :data:`CONTROL_INPUT`, so a step authoring an
+    control's declaration under [`CONTROL_INPUT`][], so a step authoring an
     input of that name is refused the way rule 12 refuses ``reduction``."""
     step = steps[name]
     if not isinstance(step, ScriptStep):
@@ -2718,7 +2659,7 @@ def certifier_subject(steps: Mapping[str, Step], name: str) -> str | None:
 def _certifier_or_none(steps: Mapping[str, Step], control: str) -> str | None:
     """The script step certifying ``control`` for the schedule's implicit
     edge (rule 15), or ``None``. A half-shaped certifier (rule 14) is not an
-    answer here — :func:`_check_controls` refuses it after the schedule."""
+    answer here — `_check_controls` refuses it after the schedule."""
     for name in steps:
         try:
             if certifier_subject(steps, name) == control:
@@ -2747,7 +2688,7 @@ def _reaches(graph: Mapping[str, set[str]], start: str, goal: str) -> bool:
 def _path(graph: Mapping[str, set[str]], start: str, goal: str) -> list[str]:
     """One dependency path from ``start`` to ``goal`` in ``graph`` (``{step:
     the steps it depends on}``), ``[start, ..., goal]``, for naming an authored
-    route in a refusal — the caller has established with :func:`_reaches` that
+    route in a refusal — the caller has established with `_reaches` that
     one exists. Edges are walked in sorted order, so the route is stable."""
     parents: dict[str, str | None] = {start: None}
     pending = [start]
@@ -2786,7 +2727,7 @@ def _hop(
 
 def _check_controls(
     steps: Mapping[str, Step],
-    inner: Mapping[str, LoadedProtocol],
+    inner: Mapping[str, InnerProtocol],
     model_info: Callable[[str], ModelInfo],
     flattened: Mapping[str, Step],
 ) -> dict[str, dict[str, Any]]:
@@ -2800,11 +2741,11 @@ def _check_controls(
     ``full_component`` writes the whole component, through no featurizer and
     no ``dims`` — every waiver applies to its kind; and, in a workflow that
     engages the layer at all, every fit and every named target has each of
-    :data:`REQUIRED_CONTROL_KINDS` declared by some step or waived.
+    [`REQUIRED_CONTROL_KINDS`][] declared by some step or waived.
 
-    Rule 16 (§2.2, §5) rides on the same pass: every :data:`COVERAGE_KINDS`
+    Rule 16 (§2.2, §5) rides on the same pass: every [`COVERAGE_KINDS`][]
     control is site-equivalent to its target over the expanded points of both
-    — :func:`causalab.protocol.equivalence.compare` — or declares the differing
+    — [`causalab.protocol.equivalence.compare`][] — or declares the differing
     fields in ``non_equivalence``. The verdicts are returned, one per such
     control, for the record (§8).
 
@@ -2900,7 +2841,7 @@ def _check_controls(
         step.control is not None or step.waive is not None for step in protocol.values()
     )
     for name, step in protocol.items():
-        is_fit = inner[name].document.train is not None
+        is_fit = inner[name].compiled.document.train is not None
         waived = step.waive or {}
         for kind, waiver in waived.items():
             if kind in declared.get(name, {}):
@@ -2911,7 +2852,9 @@ def _check_controls(
                     "declared or waived, never both",
                     path=f"steps.{name}.waive.{kind}",
                 )
-            _check_waiver_applies(name, kind, waiver, inner[name].document, is_fit)
+            _check_waiver_applies(
+                name, kind, waiver, inner[name].compiled.document, is_fit
+            )
         if not engaged or not (is_fit or name in declared):
             continue
         for kind in REQUIRED_CONTROL_KINDS:
@@ -2942,12 +2885,12 @@ def _check_controls(
 
 
 def _info_for(
-    loaded: LoadedProtocol, model_info: Callable[[str], ModelInfo]
+    loaded: InnerProtocol, model_info: Callable[[str], ModelInfo]
 ) -> ModelInfo | None:
     """The registry entry a compiled document was sized against — the compile
     already looked it up, so a miss here means a swept model key, and the
     predicate compares what it can without one."""
-    key = loaded.document.model.key
+    key = loaded.compiled.document.model.key
     if not isinstance(key, str):
         return None
     try:
@@ -2957,7 +2900,7 @@ def _info_for(
 
 
 def _check_full_component(
-    name: str, step: ProtocolStep, loaded: LoadedProtocol, of: str
+    name: str, step: ProtocolStep, loaded: InnerProtocol, of: str
 ) -> None:
     """A ``full_component`` control writes the **whole** component: every
     write its intervened models list goes through no featurizer (or only the
@@ -3014,14 +2957,14 @@ _KIND_ALLOWS: Mapping[str, frozenset[str]] = {
 def _check_equivalence(
     name: str,
     step: ProtocolStep,
-    loaded: LoadedProtocol,
+    loaded: InnerProtocol,
     of: str,
-    target: LoadedProtocol,
+    target: InnerProtocol,
     model_info: Callable[[str], ModelInfo],
 ) -> dict[str, Any]:
     """Rule 16 (§2.2, §5): the control's writes and its target's, over the
     expanded points of both, are site-equivalent — every field of
-    :data:`EQUIVALENCE_FIELDS` agrees, and the two share no coordinate system
+    [`EQUIVALENCE_FIELDS`][] agrees, and the two share no coordinate system
     — or every differing field is named in the control's ``non_equivalence``.
     Refused naming the first undeclared field, with what separates the two
     and what that means for the comparison; a declared field the pair does
@@ -3074,12 +3017,12 @@ def _writes_through(doc: Document, featurizer: str) -> list[str]:
 
 
 def _check_realization(
-    name: str, control: LoadedProtocol, of: str, target: LoadedProtocol
+    name: str, control: InnerProtocol, of: str, target: InnerProtocol
 ) -> None:
     """Rule 15's second clause (§2.2, §5): one realization per control/target
     pair. A control qualifies its target under the target's exact production
     fingerprint, so the two compiled documents' ``model`` blocks are equal as
-    :func:`~causalab.protocol.canonical.canonical_model` materializes them —
+    [`canonical_model`][causalab.protocol.schema.explicit.canonical_model] materializes them —
     key, revision, dtype, quantization, and the attention backend when authored;
     the list is ``canonical_model``'s, not this module's, so a field added there
     is compared here without anyone re-listing it. Refused naming the first
@@ -3089,8 +3032,8 @@ def _check_realization(
     and the two documents digest differently — and the refusal says so. A
     campaign that changes the realization on **both** steps is re-qualified,
     not refused."""
-    mine = canonical_model_ref(control.document.model)
-    theirs = canonical_model_ref(target.document.model)
+    mine = canonical_model_ref(control.compiled.document.model)
+    theirs = canonical_model_ref(target.compiled.document.model)
     if mine == theirs:
         return
     field = next(
@@ -3161,7 +3104,7 @@ def _check_waiver_applies(
 def _check_self_swap(
     name: str,
     step: ProtocolStep,
-    loaded: LoadedProtocol,
+    loaded: InnerProtocol,
     certifiers: Mapping[str, str],
 ) -> None:
     """A ``self_swap`` control's document holds a self-swap model — one whose
@@ -3169,7 +3112,7 @@ def _check_self_swap(
     input at the write's own address (site, pos, featurizer, dims) — and a
     script step certifies it. Rule 21 of the IM spec admits equal depth, so
     the document loads; this is the classification the loader adds."""
-    doc = loaded.document
+    doc = loaded.compiled.document
     of = str(step.control["of"]) if step.control else ""
     failures: list[str] = []
     for im_name, im in doc.intervened_models.items():
@@ -3213,20 +3156,23 @@ def _self_swap_failure(doc: Document, im_name: str, im: IMSpec) -> str | None:
             return f"{prefix} names unknown write {wname!r}"
         if write.do.mechanism != "swap":
             return f"{prefix}: write {wname!r} is a {write.do.mechanism!r}, not a swap"
-        operand = write.do.payload
-        read = doc.reads.get(operand) if isinstance(operand, str) else None
-        if read is None:
+        (ref,) = operand_reads(doc, write.do) or (None,)
+        operand = ref.read if ref is not None else write.do.payload
+        read = doc.reads.get(ref.read) if ref is not None else None
+        if read is None or ref is None:
             return (
                 f"{prefix}: write {wname!r} swaps in {operand!r}, which is not a read"
             )
-        if read.model != "original":
+        if ref.model is None or not doc.is_unwritten(ref.model):
             return (
                 f"{prefix}: operand read {operand!r} is taken from model "
-                f"{read.model!r}, not 'original'"
+                f"{ref.model!r}, which lands writes — a self-swap reads the "
+                "un-intervened model"
             )
-        if read.input != im.input:
+        _model, operand_input = doc.group_of(ref)
+        if operand_input != im.input:
             return (
-                f"{prefix}: operand read {operand!r} has input {read.input!r}, not "
+                f"{prefix}: operand read {operand!r} has input {operand_input!r}, not "
                 f"the model's input {im.input!r}"
             )
         for field in ("site", "pos", "featurizer", "dims"):
@@ -3241,9 +3187,9 @@ def _self_swap_failure(doc: Document, im_name: str, im: IMSpec) -> str | None:
 def _check_shuffled_source(
     name: str,
     step: ProtocolStep,
-    loaded: LoadedProtocol,
+    loaded: InnerProtocol,
     of: str,
-    target: LoadedProtocol,
+    target: InnerProtocol,
 ) -> None:
     """A ``shuffled_source`` control's document is its target's with **one**
     difference: at least one counterfactual role authors ``shuffle: {seed}``
@@ -3253,10 +3199,10 @@ def _check_shuffled_source(
     and the first differing field is named, the way the self-swap predicate
     names its failing field. The rows are then the same rows in a different
     pairing, the base role untouched; the permutation itself is applied by the
-    engine (``resolve_roles``) from the seed alone."""
+    run (``protocol/positions/roles.resolve_roles``) from the seed alone."""
     where = f"steps.{name}.control"
     head = f"control {name!r} declares kind 'shuffled_source' of {of!r}, but "
-    shuffled = _shuffled_roles(loaded.canonical_document)
+    shuffled = _shuffled_roles(loaded.compiled.canonical)
     if not shuffled:
         raise WorkflowError(
             CONTROL_RULE,
@@ -3266,7 +3212,7 @@ def _check_shuffled_source(
             "(IM spec §2.2)",
             path=where,
         )
-    if target_shuffled := _shuffled_roles(target.canonical_document):
+    if target_shuffled := _shuffled_roles(target.compiled.canonical):
         raise WorkflowError(
             CONTROL_RULE,
             head
@@ -3275,8 +3221,8 @@ def _check_shuffled_source(
             path=where,
         )
     difference = _first_difference(
-        _mask_shuffle(loaded.canonical_document),
-        _mask_shuffle(target.canonical_document),
+        _mask_shuffle(loaded.compiled.canonical),
+        _mask_shuffle(target.compiled.canonical),
     )
     if difference is not None:
         field, mine, theirs = difference
@@ -3353,9 +3299,9 @@ def _section_rooted(path: str) -> str:
 def _check_matched_random(
     name: str,
     step: ProtocolStep,
-    loaded: LoadedProtocol,
+    loaded: InnerProtocol,
     of: str,
-    target: LoadedProtocol,
+    target: InnerProtocol,
     model_info: Callable[[str], ModelInfo],
 ) -> list[tuple[str, FeaturizerSpec]]:
     """A ``matched_random`` control pairs its target fit: for every featurizer
@@ -3368,7 +3314,7 @@ def _check_matched_random(
     loads, ``causalab.analysis.random_mask``).
 
     The rank, group and site clauses are the site-equivalence predicate
-    (:mod:`causalab.protocol.equivalence`) read over the writes through the
+    ([`causalab.protocol.equivalence`][]) read over the writes through the
     paired featurizers: a site field the two differ in — unless the control
     declares it in ``non_equivalence`` — or a differing ``k`` / ``group`` /
     ``axis`` is
@@ -3376,7 +3322,7 @@ def _check_matched_random(
     difference is rule 16's."""
     control = dict(step.control or {})
     where = f"steps.{name}.control"
-    if target.document.train is None:
+    if target.compiled.document.train is None:
         raise WorkflowError(
             CONTROL_RULE,
             f"control {name!r} declares kind 'matched_random' of {of!r}, which "
@@ -3405,8 +3351,8 @@ def _check_matched_random(
     pairs: list[tuple[str, FeaturizerSpec]] = []
     trained = [
         fname
-        for fname in target.document.train.params
-        if fname in target.document.featurizers
+        for fname in target.compiled.document.train.params
+        if fname in target.compiled.document.featurizers
     ]
     if not trained:
         raise WorkflowError(
@@ -3416,10 +3362,10 @@ def _check_matched_random(
             path=where,
         )
     for fname in trained:
-        fit_spec = target.document.featurizers[fname]
+        fit_spec = target.compiled.document.featurizers[fname]
         candidates = {
             cname: cspec
-            for cname, cspec in loaded.document.featurizers.items()
+            for cname, cspec in loaded.compiled.document.featurizers.items()
             if cspec.kind == fit_spec.kind
         }
         if fname in candidates:
@@ -3431,7 +3377,7 @@ def _check_matched_random(
                 CONTROL_RULE,
                 f"control {name!r} has no {fit_spec.kind!r} featurizer to pair with "
                 f"fit {of!r}'s {fname!r} (has "
-                f"{sorted(loaded.document.featurizers) or 'none'}"
+                f"{sorted(loaded.compiled.document.featurizers) or 'none'}"
                 f"{'; name it ' + repr(fname) if candidates else ''})",
                 path=where,
             )
@@ -3440,13 +3386,13 @@ def _check_matched_random(
             loaded.point_documents,
             _info_for(loaded, model_info),
             owner=name,
-            writes=_writes_through(loaded.document, cname),
+            writes=_writes_through(loaded.compiled.document, cname),
         )
         fit: frozenset[SiteTuple] = coverage(
             target.point_documents,
             _info_for(target, model_info),
             owner=of,
-            writes=_writes_through(target.document, fname),
+            writes=_writes_through(target.compiled.document, fname),
         )
         fields = compare(ctl, fit)
         if "featurizer" in fields and cspec.k != fit_spec.k:
@@ -3481,8 +3427,8 @@ def _check_matched_random(
         }
         if any(f in SITE_FIELDS and f not in declared for f in fields):
             csite, fsite = (
-                _written_site(loaded.document, cname),
-                _written_site(target.document, fname),
+                _written_site(loaded.compiled.document, cname),
+                _written_site(target.compiled.document, fname),
             )
             raise WorkflowError(
                 CONTROL_RULE,
@@ -3569,29 +3515,30 @@ def _check_seed_provenance(
 
 
 def _bundle_entries(
-    producer: LoadedProtocol, file_path: str
+    producer: InnerProtocol, file_path: str
 ) -> dict[str, dict[str, Any]] | None:
     """The tensor keys a producing document will write into ``file_path``, with
     their coordinates — derivable at load because sweeps expand
     deterministically (§3), which is what lets a wrong selection fail here
     instead of after the producing step has run."""
     entries: dict[str, dict[str, Any]] = {}
-    for save_entry in producer.document.save:
+    document = producer.compiled.document
+    for index, save_entry in enumerate(document.save):
         if save_entry.file_path != file_path:
             continue
-        if save_entry.value in producer.document.metrics:
-            return None  # a metric table, not a tensor bundle
-        if save_entry.value in producer.document.reads:
-            slots: tuple[str, ...] = (save_entry.value,)
+        if document.aggregation_at(f"save[{index}]") is not None:
+            return None  # an aggregation's table, not a tensor bundle
+        if save_entry.read is not None:
+            slots: tuple[str, ...] = (save_entry.read.read,)
         else:
-            spec = producer.document.featurizers.get(save_entry.value)
+            spec = producer.compiled.document.featurizers.get(str(save_entry.value))
             kind = spec.kind if spec is not None and isinstance(spec.kind, str) else ""
             slots = FEATURIZER_SLOTS.get(kind, ())
         if not slots:
             return None
         for point in producer.expansion.points:
-            short = short_coords(point.coords, entry=save_entry.value)
-            label = coordinate_label(point.coords, entry=save_entry.value)
+            short = short_coords(point.coords, entry=save_entry.label)
+            label = coordinate_label(point.coords, entry=save_entry.label)
             for slot in slots:
                 entries[entry_key(slot, label)] = {"slot": slot, "coords": short}
     return entries or None
@@ -3609,7 +3556,7 @@ def _check_script_entry(
     ref: Reference,
     *,
     steps: Mapping[str, Step],
-    inner: Mapping[str, LoadedProtocol],
+    inner: Mapping[str, InnerProtocol],
     outputs_of: Any,
 ) -> None:
     """Rule 9 for a script input: the entry it selects is one the producer will
@@ -3645,8 +3592,8 @@ def _check_script_entry(
 
 def _check_entry_selection(
     *,
-    consumer: LoadedProtocol,
-    producer: LoadedProtocol,
+    consumer: InnerProtocol,
+    producer: InnerProtocol,
     run_path: str,
     rest: str,
     step: str,
@@ -3752,7 +3699,7 @@ def _canonicalize(
             entry["document_digest"] = inner_digests[name]
         elif isinstance(step, BehavioralStep):
             # every behavioral field is identity (§2.7, §7): the decode spec
-            # with its seed, the checker's digest, the split purpose, the
+            # with its seed, the checker's task binding, the split purpose, the
             # thresholds and the decision. Written on behavioral entries
             # **only** — a key here on any other type would move every step
             # identity in the repo (the per-kind key censuses are the guard)
@@ -3840,4 +3787,6 @@ def _canonicalize(
     if document.description is not None:
         canonical["description"] = document.description
     canonical["steps"] = canon_steps
+    if document.measurement is not None:
+        canonical["measurement"] = dict(document.measurement)
     return canonical

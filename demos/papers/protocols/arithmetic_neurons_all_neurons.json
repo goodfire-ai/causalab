@@ -1,0 +1,36 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Control for the DBM mask of arithmetic_neurons_fit.json: swap every one of the 14336 neurons of layer 18's MLP of Llama-3.1-8B from the counterfactual weekdays prompt at the last token and save the held-out interchange intervention accuracy against the counterfactual's output day; arithmetic_neurons_paper_neurons.json swaps only the 28 neurons of Feucht et al. 2026 (arXiv:2605.01148, Figure 8), and workflows/scripts/arithmetic_neurons/figures.py draws both beside the mask."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "arithmetic_neurons/weekdays#test", "field": "input"},
+    "counterfactual": {"dataset": "arithmetic_neurons/weekdays#test", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "sites": {
+      "neurons": {"component": "mlp_neuron_output", "layers": [18]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "reads": {
+      "v_cf": {"site": "neurons", "pos": -1},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "patch": {"site": "neurons", "pos": -1, "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia.json"
+      }
+    ]
+  }
+}

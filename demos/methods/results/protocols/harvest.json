@@ -1,0 +1,43 @@
+{
+  "document": "protocols/harvest.json",
+  "document_digest": "522bb6218f954e087c4b668fc805c1aebd97a2e0de182d6156306be74d962823",
+  "run_digest": "522bb6218f954e087c4b668fc805c1aebd97a2e0de182d6156306be74d962823",
+  "model": "Qwen/Qwen2.5-7B",
+  "engine": "auto",
+  "device": "cuda",
+  "dtype": "engine default",
+  "date": "2026-09-21",
+  "elapsed_s": 44.2,
+  "metrics": {
+    "saved_tensors": {
+      "acts_L21_ans.safetensors": {
+        "acts_L21_ans": [
+          30,
+          1,
+          3584
+        ]
+      },
+      "acts_L21_ent.safetensors": {
+        "acts_L21_ent": [
+          30,
+          1,
+          3584
+        ]
+      },
+      "acts_L7_ans.safetensors": {
+        "acts_L7_ans": [
+          30,
+          1,
+          3584
+        ]
+      },
+      "acts_L7_ent.safetensors": {
+        "acts_L7_ent": [
+          30,
+          1,
+          3584
+        ]
+      }
+    }
+  }
+}

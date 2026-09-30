@@ -6,11 +6,12 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from causalab.neural.engines.pytorch_hooks.cuda_graphs import GraphExecutor
+from causalab.neural.engines.pytorch_hooks.cuda_graphs import GraphExecutor, GraphPool
 from causalab.neural.engines.pytorch_hooks.graph_reuse import (
     FitGraphCache,
     fit_signature,
 )
+from causalab.protocol.engine import RunContext
 from tests.neural.engines.pytorch_hooks._drive import executor_for
 from tests.neural.engines.pytorch_hooks.test_train import (
     ANSWERS,
@@ -20,6 +21,17 @@ from tests.neural.engines.pytorch_hooks.test_train import (
 )
 
 pytestmark = pytest.mark.unit
+
+
+def handoff(tmp_path):
+    """What ``Engine.execute(compiled, run)`` is handed here: a compiled
+    stand-in and a real ``RunContext``. Under a monkeypatched
+    ``execute_request`` the engine reads only ``run.execution`` (its fit
+    bound) and ``run.decoding`` (``None``: no continuations), never the
+    compiled object."""
+    compiled = SimpleNamespace(points=SimpleNamespace(points=()))
+    run = RunContext(output_dir=tmp_path, env=None)  # pyright: ignore[reportArgumentType]
+    return compiled, run
 
 
 def executor(bundle, *, seed=0, rank=4, rows=None):
@@ -109,7 +121,7 @@ def test_failed_fallback_and_empty_fits_release_both_caches(
 
 
 def test_request_failure_releases_cache_without_affecting_another_request(
-    llama_bundle, monkeypatch
+    llama_bundle, monkeypatch, tmp_path
 ):
     from causalab.neural.engines.pytorch_hooks import engine
 
@@ -118,7 +130,7 @@ def test_request_failure_releases_cache_without_affecting_another_request(
     other_bank = other.begin(point, list(point.stage("rot").parameters()))
     observed = []
 
-    def fail_request(request, **kwargs):
+    def fail_request(compiled, run, **kwargs):
         cache = kwargs["train_runner"].keywords["graph_cache"]
         observed.append(cache)
         cache.begin(point, list(point.stage("rot").parameters()))
@@ -128,7 +140,7 @@ def test_request_failure_releases_cache_without_affecting_another_request(
     monkeypatch.setattr(engine, "execute_request", fail_request)
     with pytest.raises(OSError, match="forced output failure"):
         engine.PytorchHooksEngine(cuda_graphs=True).execute(
-            SimpleNamespace(execution={}, decoding=None)  # type: ignore[arg-type]  # forced boundary failure
+            *handoff(tmp_path)  # type: ignore[arg-type]  # forced boundary failure
         )
     assert observed[0].training is observed[0].eval_executor is None
     assert other.training is other_bank
@@ -184,3 +196,63 @@ def test_eval_reuse_does_not_build_or_copy_again(llama_bundle, monkeypatch):
         train._eval_executor(second.doc, second, _train_request(), EVAL_SPLIT) is built
     )
     cache.close()
+
+
+def test_a_fit_graph_cache_borrows_a_pool_and_leaves_it_open(llama_bundle):
+    """Handed the engine's pool, the cache captures its bank into it and its
+    close releases the bank but not the pool; a closed pool is not borrowed
+    — the cache opens one of its own, released with the bank as before."""
+    point = executor(llama_bundle)
+    parameters = list(point.stage("rot").parameters())
+    shared = GraphPool()
+    cache = FitGraphCache(pool=shared)
+    assert cache.pool is None  # nothing until a fit begins
+    assert cache.begin(point, parameters).pool is shared
+    assert cache.pool is shared
+    cache.close()
+    assert not shared.closed
+    assert cache.pool is None
+    shared.close()
+    cache = FitGraphCache(pool=shared)
+    own = cache.begin(point, parameters).pool
+    assert own is not shared and not own.closed
+    cache.close()
+    assert own.closed
+
+
+def test_the_engine_keeps_one_pool_across_requests_and_replaces_a_closed_one(
+    llama_bundle, monkeypatch, tmp_path
+):
+    """One ``GraphPool`` per engine: every request's fit cache and training
+    runner are handed the same pool, which the request's teardown leaves
+    open; a pool closed by an out-of-memory fallback is replaced for the
+    next request. With graphs off there is no pool and no cache."""
+    from causalab.neural.engines.pytorch_hooks import engine
+
+    seen = []
+
+    def record(compiled, run, **kwargs):
+        keywords = kwargs["train_runner"].keywords
+        seen.append((keywords["graph_pool"], keywords["graph_cache"]))
+        return SimpleNamespace(files={})
+
+    monkeypatch.setattr(engine, "execute_request", record)
+    hooks = engine.PytorchHooksEngine(cuda_graphs=True)
+    compiled, run = handoff(tmp_path)
+    hooks.execute(compiled, run)  # type: ignore[arg-type]
+    hooks.execute(compiled, run)  # type: ignore[arg-type]
+    (first, cache), (second, other) = seen
+    assert isinstance(first, GraphPool) and first is second
+    assert cache is not other  # the graphs are the request's; the pool is not
+    assert not first.closed
+    point = executor(llama_bundle)
+    assert cache.begin(point, list(point.stage("rot").parameters())).pool is first
+    cache.close()
+    assert not first.closed
+    first.close()
+    hooks.execute(compiled, run)  # type: ignore[arg-type]
+    third = seen[2][0]
+    assert isinstance(third, GraphPool) and third is not first and not third.closed
+    seen.clear()
+    engine.PytorchHooksEngine(cuda_graphs=False).execute(compiled, run)  # type: ignore[arg-type]
+    assert seen == [(None, None)]

@@ -2,7 +2,7 @@
 
 The pre-flight catches tokenization gotchas — chiefly a trailing-space prompt
 suffix that orphans into its own whitespace token — before any model run, so
-they don't surface downstream as ~0% baseline accuracy.
+they don't surface downstream as a near-zero baseline accuracy.
 
 These run on CPU with the tiny-random Llama tokenizer (no weights, no GPU), so
 they are tiered ``numerical_unit``. Detection is verified to be tokenizer-family
@@ -74,9 +74,9 @@ def test_trailing_newline_suffix_flagged(tokenizer):
 
 
 @pytest.mark.numerical_unit
-def test_shipped_entity_binding_config_fires(tokenizer):
-    """Regression: the shipped
-    entity_binding task ships ``prompt_suffix="\\nAnswer: "`` (trailing space),
+def test_entity_binding_shipped_config_fires(tokenizer):
+    """Regression for the orphaned trailing space, which drives this task's
+    baseline accuracy toward zero: the shipped entity_binding task ships ``prompt_suffix="\\nAnswer: "`` (trailing space),
     so the pre-flight must fire an orphan-whitespace error on its real samples."""
     task = load_task("entity_binding")
     # Sanity-check the fixture still carries the footgun this test exists to catch.

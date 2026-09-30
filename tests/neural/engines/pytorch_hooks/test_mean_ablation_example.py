@@ -1,9 +1,9 @@
 """The shipped mean-replacement example, end to end on tiny-random.
 
-The causal protocol's step 2 says to use zero and mean replacement as a matter
-of course, and the mean is a **two-document handoff** — a harvest that reduces
-its read at save time, then an ablation that swaps the resulting vector in as a
-``params`` operand. That idiom worked and appeared in no shipped example, so
+Zero and mean replacement are the two standard ablation baselines, and the
+mean is a **two-document handoff** — a harvest that reduces its read at save
+time, then an ablation that swaps the resulting vector in as a ``params``
+operand. That idiom worked and appeared in no shipped example, so
 every run re-derived it. This runs the files a reader would copy, through the
 real CLI, and checks the one thing a shipped example must promise: it runs, and
 the mean is one vector rather than the whole corpus.
@@ -23,12 +23,13 @@ from causalab.cli import main
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
 from tests.protocol._env import FIXTURES, fixture_input_overrides
 from tests.tables import frame as table_frame
+from tests._helpers.paths import PROTOCOLS_DIR, WORKFLOWS_DIR
 
 pytestmark = pytest.mark.smoke
 
 REPO = Path(__file__).resolve().parents[4]
-SHIPPED = REPO / "causalab/configs/workflows/mean_ablation.json"
-PROTOCOLS = REPO / "causalab/configs/protocols"
+SHIPPED = WORKFLOWS_DIR / "mean_ablation.json"
+PROTOCOLS = PROTOCOLS_DIR
 
 TINY = {"model.key": TINY_LLAMA, "model.dtype": "fp32"}
 
@@ -62,6 +63,8 @@ def run(tmp_path_factory: pytest.TempPathFactory) -> Path:
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(path),
             "--data-root",
             str(FIXTURES / "data"),

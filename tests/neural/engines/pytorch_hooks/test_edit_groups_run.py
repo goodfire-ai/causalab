@@ -20,17 +20,19 @@ from typing import Any
 import pytest
 import torch
 
-from causalab.causal.pairs import EDIT_GROUPS_COLUMN
+from causalab.causal.pair_validation import EDIT_GROUPS_COLUMN
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.engines.pytorch_hooks.loading import load_model
 from causalab.protocol import run_protocol
-from causalab.protocol.errors import ValidationError
-from causalab.protocol.loader import load
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.protocol.rules.errors import ValidationError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_GPT2, TINY_LLAMA
+from tests.protocol._docs import UNWRITTEN, aggregation, saved
 from tests.protocol._env import CORPUS_DIR, FIXTURES, write_rot_fixture
+
 
 pytestmark = pytest.mark.smoke
 
@@ -89,57 +91,48 @@ def _doc(*positions: str) -> dict[str, Any]:
     """An interchange swapping the counterfactual's value into base at each
     named variable position, all writes in one intervened model."""
     doc: dict[str, Any] = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_GPT2, "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "patched": {"input": "base", "reads": ["logits"], "writes": []}
+            },
             "positions": {name: {"variable": name} for name in positions},
             "sites": {
                 "target": {"component": "block_output", "layers": [1]},
                 "lm_head": {"component": "lm_head"},
             },
-            "reads": {
-                "logits": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                }
-            },
+            "reads": {"logits": {"site": "lm_head", "pos": -1}},
             "writes": {},
-            "intervened_models": {"patched": {"input": "base", "writes": []}},
-            "metrics": {
-                "iia": {
-                    "kind": "match",
-                    "of": "logits",
-                    "expected": "cf_answer",
-                    "token_form": "space_prefixed",
-                }
-            },
             "save": [
-                {
-                    "value": "iia",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "iia.json",
-                }
+                saved(
+                    "logits",
+                    "patched",
+                    "iia.json",
+                    aggregation("match", expected="cf_answer"),
+                )
             ],
         },
     }
     for name in positions:
-        doc["method"]["reads"][f"v_{name}"] = {
-            "site": "target",
-            "pos": name,
-            "model": "original",
-            "input": "counterfactual",
-        }
-        doc["method"]["writes"][f"patch_{name}"] = {
-            "site": "target",
-            "pos": name,
-            "do": {"swap": f"v_{name}"},
-        }
-        doc["method"]["intervened_models"]["patched"]["writes"].append(f"patch_{name}")
+        _add_swap(doc, f"v_{name}", f"patch_{name}", pos=name)
     return doc
+
+
+def _add_swap(doc: dict[str, Any], read: str, write: str, *, pos: Any) -> None:
+    """Read ``read`` at ``pos`` on the un-intervened counterfactual and swap
+    it into base at the same position in ``patched``."""
+    models = doc["method"]["intervened_models"]
+    models.setdefault(UNWRITTEN, {"input": "counterfactual", "reads": []})
+    models[UNWRITTEN]["reads"].append(read)
+    doc["method"]["reads"][read] = {"site": "target", "pos": pos}
+    doc["method"]["writes"][write] = {
+        "site": "target",
+        "pos": pos,
+        "do": {"swap": read},
+    }
+    models["patched"]["writes"].append(write)
 
 
 def _executor(gpt2_bundle, doc: dict[str, Any], atomic: bool | None):
@@ -246,12 +239,12 @@ def test_t9_the_four_row_weekdays_table_runs_the_interchange_document(tmp_path):
     env = _fixture_env(tmp_path)
     rows = env.datasets.rows("weekdays/data#train")
     assert rows and all(EDIT_GROUPS_COLUMN not in row for row in rows)
-    loaded = load(
+    loaded = compile_protocol(
         CORPUS_DIR / "02_interchange_im.json",
-        env,
+        env=env,
         overrides={"model.key": TINY_LLAMA, "sites.target.layers": 1},
     )
-    result = run_protocol(loaded, env, [PytorchHooksEngine()], tmp_path / "run")
+    result = run_protocol(loaded, env, PytorchHooksEngine(), tmp_path / "run")
     assert "iia.json" in result.files
 
 
@@ -263,18 +256,7 @@ def test_t9_twin_the_four_fixture_rows_run_the_interchange_on_tiny_gpt2(
     nothing held, no refusal: the value the patched model reads comes back."""
     rows = _fixture_env(tmp_path).datasets.rows("weekdays/data#train")
     doc = _doc()  # no variable positions: writes/reads added by hand at -1
-    doc["method"]["reads"]["v_cf"] = {
-        "site": "target",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-    }
-    doc["method"]["writes"]["patch"] = {
-        "site": "target",
-        "pos": -1,
-        "do": {"swap": "v_cf"},
-    }
-    doc["method"]["intervened_models"]["patched"]["writes"] = ["patch"]
+    _add_swap(doc, "v_cf", "patch", pos=-1)
     executor = executor_for(
         doc,
         gpt2_bundle,

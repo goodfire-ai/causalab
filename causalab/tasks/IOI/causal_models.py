@@ -31,13 +31,11 @@ run.
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
-from causalab.causal.causal_model import CausalModel, build_output_tokens
-from causalab.causal.scoring import ScoringSpec
-from causalab.causal.trace import CausalTrace, Mechanism, input_var
-
+from causalab.causal import Dom, V, mechanism
+from causalab.causal.model import CausalModel, CausalTrace
+from causalab.causal.scoring import ScoringSpec, build_output_tokens
 
 # ---------------------------------------------------------------------------
 # Data
@@ -69,40 +67,24 @@ TEMPLATES: list[str] = [CANONICAL_TEMPLATE]
 # ---------------------------------------------------------------------------
 
 
-def _fill_template(t: CausalTrace) -> str:
-    """Render ``raw_input`` from the input variables."""
-    s = t["template"]
-    s = s.replace("{name_A}", t["name_A"])
-    s = s.replace("{name_B}", t["name_B"])
-    s = s.replace("{name_C}", t["name_C"])
-    s = s.replace("{place}", t["place"])
-    s = s.replace("{object}", t["object"])
-    return s
-
-
-def _compute_io(t: CausalTrace) -> str:
-    """The indirect object: the name in ``{name_A, name_B}`` that is *not*
-    ``name_C``.
-
-    Sampling rejects ill-formed inputs via ``_input_filter``, but the
-    causal-trace machinery eagerly recomputes descendants before the filter
-    runs, so this function tolerates ``name_C ∉ {name_A, name_B}``. In that
-    case the trace is ill-formed and will be rejected by the filter; we
-    return ``name_A`` as a placeholder so eager recomputation doesn't crash.
-    """
-    name_A = t["name_A"]
-    name_B = t["name_B"]
-    name_C = t["name_C"]
-    if name_C == name_B:
-        return name_A
-    # Covers the well-formed ``name_C == name_A`` case AND the ill-formed
-    # ``name_C ∉ {name_A, name_B}`` fallback (filter rejects the latter).
-    return name_B
-
-
-def _compute_raw_output(t: CausalTrace) -> str:
-    """Expected next-token output: a leading space then the IO name."""
-    return " " + t["IO"]
+@mechanism
+def equations(
+    template: Dom(TEMPLATES),
+    name_A: Dom(NAMES),
+    name_B: Dom(NAMES),
+    name_C: Dom(NAMES),
+    place: Dom(PLACES),
+    object: Dom(OBJECTS),
+):
+    IO = V(name_A if name_C == name_B else name_B, domain=Dom(NAMES))
+    raw_input = V(
+        template.format(
+            name_A=name_A, name_B=name_B, name_C=name_C, place=place, object=object
+        ),
+        domain=Dom(str),
+    )
+    raw_output = V(" " + IO, domain=Dom(str))
+    return IO
 
 
 def _input_filter(t: CausalTrace) -> bool:
@@ -123,42 +105,8 @@ def _input_filter(t: CausalTrace) -> bool:
 
 
 def _build_causal_model() -> CausalModel:
-    mechanisms: dict[str, Mechanism] = {
-        "template": input_var(TEMPLATES),
-        "name_A": input_var(NAMES),
-        "name_B": input_var(NAMES),
-        "name_C": input_var(NAMES),
-        "place": input_var(PLACES),
-        "object": input_var(OBJECTS),
-        "IO": Mechanism(
-            parents=["name_A", "name_B", "name_C"],
-            compute=_compute_io,
-        ),
-        "raw_input": Mechanism(
-            parents=["template", "name_A", "name_B", "name_C", "place", "object"],
-            compute=_fill_template,
-        ),
-        "raw_output": Mechanism(
-            parents=["IO"],
-            compute=_compute_raw_output,
-        ),
-    }
-
-    values: dict[str, list | None] = {
-        "template": TEMPLATES,
-        "name_A": NAMES,
-        "name_B": NAMES,
-        "name_C": NAMES,
-        "place": PLACES,
-        "object": OBJECTS,
-        "IO": NAMES,
-        "raw_input": None,
-        "raw_output": None,
-    }
-
     return CausalModel(
-        mechanisms=mechanisms,
-        values=values,
+        equations,
         id="ioi",
         # The answer is the indirect-object name (``raw_output = " " + IO``);
         # the model emits a single name token, so exact match on the declared

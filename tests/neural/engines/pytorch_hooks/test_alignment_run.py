@@ -1,14 +1,12 @@
 """Alignment cardinality against a real tokenizer (spec §2.3, §4.1) — the
 engine half, on the two tiny fixtures.
 
-* **T4** — a metric that pins ``token_form: "bare"`` over an answer the table
-  carries space-prefixed is refused **before any forward pass** with reason
-  ``alignment_missing``, naming both surface forms decoded — on the
-  byte-level BPE fixture (``tiny-random-gpt2``), where ``"Saturday"`` and
-  ``" Saturday"`` begin with different pieces. On the sentencepiece fixture
-  (``tiny-random-Llama``) the two forms are one token sequence, the refusal
-  has nothing to fire on, and the test **skips** rather than passing: a pass
-  there would test nothing.
+* **T4** — a ``match`` over the answers as the table carries them (space-
+  prefixed, because that is how they follow "tomorrow is") runs: an answer
+  string is tokenized **as written** (§2.10), so the table's form is the
+  form scored and there is no second knob for a document to contradict it
+  with. (The unit half — ``"Saturday"`` and ``" Saturday"`` naming two rows
+  on a byte-level BPE — is ``tests/neural/shared/test_answer_forms.py``.)
 * an **ambiguous** or **absent** ``variable`` row makes a *read* an
   ``unavailable`` cell — ``alignment_ambiguous`` / ``alignment_missing``, the
   detail naming the value, its count and the row — counted in the
@@ -22,7 +20,8 @@ engine half, on the two tiny fixtures.
 * **T6** — both interchange documents (the shipped split application and its
   flat corpus twin) run with no ``alignment`` authored anywhere.
 
-Every refusal has its valid-work twin beside it.
+Every refusal has its valid-work twin beside it, so a check that refuses
+everything cannot pass.
 """
 
 from __future__ import annotations
@@ -39,13 +38,13 @@ from safetensors.torch import load_file
 from causalab.cli import main
 from causalab.neural.engines.pytorch_hooks.engine import PytorchHooksEngine
 from causalab.neural.shared.encoding import candidate_runs, encode
-from causalab.neural.shared.executor_base import RaggedValue
+from causalab.neural.shared.executor import RaggedValue
 from causalab.protocol import run_protocol
-from causalab.protocol.alignment import UnalignableError, alignment_of
-from causalab.protocol.errors import ProtocolError
-from causalab.protocol.loader import load
-from causalab.protocol.resolution import Available, Unavailable
-from causalab.protocol.resolve import (
+from causalab.protocol.positions.alignment import alignment_of
+from causalab.protocol.rules.errors import ProtocolError
+from causalab.protocol.pipeline import compile_protocol
+from causalab.protocol.results import Available, Unavailable
+from causalab.io.env import (
     FileArtifacts,
     FileDatasets,
     ResolutionEnv,
@@ -55,51 +54,41 @@ from causalab.protocol.schema import PositionSpec
 
 from ._drive import base_data_section, executor_for
 from .conftest import TINY_LLAMA
-from tests.protocol._docs import in_order
+from tests.protocol._docs import UNWRITTEN, in_order, saved
 from tests.protocol._env import CORPUS_DIR, FIXTURES, fixture_input_overrides
+from tests._helpers.paths import PROTOCOLS_DIR
 
 pytestmark = pytest.mark.smoke
 
 REPO = Path(__file__).resolve().parents[4]
-INTERCHANGE_PRESET = REPO / "causalab/configs/protocols/interchange.json"
+INTERCHANGE_PRESET = PROTOCOLS_DIR / "interchange.json"
 
 
 # --------------------------------------------------------------------------- #
-# T4 — a bare token where the answer is space-prefixed
+# T4 — the table's answer form is the form scored
 # --------------------------------------------------------------------------- #
 
 
-def _match_doc(token_form: str) -> dict[str, Any]:
+def _match_doc() -> dict[str, Any]:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["logits"]}},
             "sites": {"lm_head": {"component": "lm_head"}},
-            "reads": {
-                "logits": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "original",
-                    "input": "base",
-                }
-            },
-            "metrics": {
-                "iia": {
-                    "kind": "match",
-                    "of": "logits",
-                    "expected": "cf_answer",
-                    "token_form": token_form,
-                    "mode": "first_token",
-                }
-            },
+            "reads": {"logits": {"site": "lm_head", "pos": -1}},
             "save": [
-                {
-                    "value": "iia",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "iia.json",
-                }
+                saved(
+                    "logits",
+                    "original",
+                    "iia.json",
+                    {
+                        "kind": "match",
+                        "expected": "cf_answer",
+                        "mode": "first_token",
+                    },
+                )
             ],
         },
     }
@@ -111,69 +100,18 @@ PROMPTS = ["If today is Friday, tomorrow is", "If today is Monday, tomorrow is"]
 SPACED_ANSWERS = [" Saturday", " Tuesday"]
 
 
-def _forms_coincide(tokenizer: Any) -> bool:
-    """Whether the fixture's tokenizer cannot tell the bare form from the
-    space-prefixed one — every answer encodes to the same ids either way."""
-    return all(
-        tokenizer.encode(a, add_special_tokens=False)
-        == tokenizer.encode(a.lstrip(" "), add_special_tokens=False)
-        for a in SPACED_ANSWERS
-    )
-
-
-def test_t4_a_bare_token_form_over_a_space_prefixed_answer_is_refused(bundle):
-    """Before any forward: reason ``alignment_missing``, both surface forms
-    named and decoded. Skips — never passes — where the tokenizer makes the
-    two forms one sequence, because then there is nothing to refuse."""
-    if _forms_coincide(bundle.tokenizer):
-        pytest.skip(
-            f"{bundle.info.family}: a sentencepiece-style tokenizer encodes "
-            "'Saturday' and ' Saturday' identically, so the bare-vs-space-prefixed "
-            "refusal has nothing to fire on — the test would pass for the wrong "
-            "reason"
-        )
+def test_t4_a_match_over_the_answers_as_the_table_carries_them_runs(bundle):
+    """No pre-flight stands between the table and the forward: the answer
+    string is the token the model emits after "tomorrow is", and the metric
+    scores exactly that string (§2.10)."""
     executor = executor_for(
-        _match_doc("bare"),
-        bundle,
-        base_texts=PROMPTS,
-        extra_columns={"cf_answer": SPACED_ANSWERS},
-    )
-    with pytest.raises(UnalignableError) as err:
-        executor.read_value("logits")
-    assert err.value.reason == "alignment_missing"
-    assert err.value.cardinality == "absent"
-    message = str(err.value)
-    assert "' Saturday'" in message and "'Saturday'" in message  # both forms
-    tok = bundle.tokenizer
-    bare_first = tok.decode([tok.encode("Saturday", add_special_tokens=False)[0]])
-    spaced_first = tok.decode([tok.encode(" Saturday", add_special_tokens=False)[0]])
-    assert bare_first in message and spaced_first in message  # decoded
-    assert "token_form='bare'" in message
-    assert not executor._groups_run  # pyright: ignore[reportPrivateUsage]
-
-
-@pytest.mark.parametrize("token_form", ["space_prefixed", "auto"])
-def test_t4_twin_the_other_forms_over_the_same_column_run(bundle, token_form):
-    executor = executor_for(
-        _match_doc(token_form),
+        _match_doc(),
         bundle,
         base_texts=PROMPTS,
         extra_columns={"cf_answer": SPACED_ANSWERS},
     )
     value = executor.read_value("logits")
     assert isinstance(value, torch.Tensor) and value.shape[0] == 2
-
-
-def test_t4_twin_a_bare_table_value_says_nothing_about_the_form(bundle):
-    """A table that carries ``"Saturday"`` bare has not said the answer is
-    space-prefixed, so ``token_form: bare`` is a choice, not a contradiction."""
-    executor = executor_for(
-        _match_doc("bare"),
-        bundle,
-        base_texts=PROMPTS,
-        extra_columns={"cf_answer": [a.lstrip(" ") for a in SPACED_ANSWERS]},
-    )
-    assert isinstance(executor.read_value("logits"), torch.Tensor)
 
 
 # --------------------------------------------------------------------------- #
@@ -189,50 +127,30 @@ AMBIGUOUS_ROWS = [
 
 def _variable_read_doc(*, with_metric: bool, model_key: str = "test") -> dict[str, Any]:
     doc: dict[str, Any] = {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": model_key, "revision": "main"},
         "data": {"base": {"dataset": "amb/rows", "field": "input"}},
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "positions": {"ent": {"variable": "entity"}},
             "sites": {"tap": {"component": "block_output", "layers": [0]}},
-            "reads": {
-                "r": {"site": "tap", "pos": "ent", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "r.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "ent"}},
+            "save": [saved("r", "original", "r.safetensors")],
         },
     }
     if with_metric:
         # the metric's read is the only user of lm_head, so the site is
         # declared with it — a declared-but-unused site is refused (V11)
         doc["method"]["sites"]["lm_head"] = {"component": "lm_head"}
-        doc["method"]["reads"]["logits"] = {
-            "site": "lm_head",
-            "pos": "ent",
-            "model": "original",
-            "input": "base",
-        }
-        doc["method"]["metrics"] = {
-            "tl": {
-                "kind": "token_logit",
-                "of": "logits",
-                "token": "entity",
-                "token_form": "auto",
-            }
-        }
+        doc["method"]["reads"]["logits"] = {"site": "lm_head", "pos": "ent"}
+        doc["method"]["intervened_models"]["original"]["reads"].append("logits")
         doc["method"]["save"].append(
-            {
-                "value": "tl",
-                "model": "original",
-                "input": "base",
-                "file_path": "tl.json",
-            }
+            saved(
+                "logits",
+                "original",
+                "tl.json",
+                {"kind": "token_logit", "token": "entity"},
+            )
         )
     return doc
 
@@ -258,11 +176,11 @@ def test_an_ambiguous_row_is_an_unavailable_cell_counted_in_the_denominator(
     eligible; the saved gather has width zero on the excluded row and the
     other row's tokens intact."""
     env = _env_with_rows(tmp_path, AMBIGUOUS_ROWS)
-    loaded = load(
-        in_order(_variable_read_doc(with_metric=True, model_key=TINY_LLAMA)), env
+    loaded = compile_protocol(
+        in_order(_variable_read_doc(with_metric=True, model_key=TINY_LLAMA)), env=env
     )
     out = tmp_path / "out"
-    result = run_protocol(loaded, env, [PytorchHooksEngine(device="cpu")], out)
+    result = run_protocol(loaded, env, PytorchHooksEngine(device="cpu"), out)
 
     read_cell, metric_cell = result.cells
     assert isinstance(read_cell, Unavailable)
@@ -330,39 +248,25 @@ def test_twin_a_uniquely_occurring_value_is_an_available_read(llama_bundle):
 
 def _variable_write_doc() -> dict[str, Any]:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                UNWRITTEN: {"input": "counterfactual", "reads": ["v_cf"]},
+                "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+            },
             "positions": {"ent": {"variable": "entity"}},
             "sites": {
                 "tap": {"component": "block_output", "layers": [0]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": "ent",
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "logits": {
-                    "site": "lm_head",
-                    "pos": -1,
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": "ent"},
+                "logits": {"site": "lm_head", "pos": -1},
             },
             "writes": {"patch": {"site": "tap", "pos": "ent", "do": {"swap": "v_cf"}}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-            "save": [
-                {
-                    "value": "logits",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "logits.safetensors",
-                }
-            ],
+            "save": [saved("logits", "patched", "logits.safetensors")],
         },
     }
 
@@ -406,23 +310,15 @@ CF_TEXT, CF_ENTITY = "the caterpillar sat", "caterpillar"
 
 def _declared_doc(alignment: str) -> dict[str, Any]:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "positions": {"ent": {"variable": "entity", "alignment": alignment}},
             "sites": {"tap": {"component": "block_output", "layers": [0]}},
-            "reads": {
-                "r": {"site": "tap", "pos": "ent", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "r.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "ent"}},
+            "save": [saved("r", "original", "r.safetensors")],
         },
     }
 
@@ -537,6 +433,8 @@ def test_t6_an_interchange_document_runs_with_no_alignment_authored(
     code = main(
         [
             "run",
+            "--engine",
+            "auto",
             str(document),
             "--data-root",
             str(FIXTURES / "data"),
@@ -551,6 +449,7 @@ def test_t6_an_interchange_document_runs_with_no_alignment_authored(
             *fixture_inputs,
             "--dtype",
             "fp32",
+            "--record",
         ]
     )
     assert code == 0

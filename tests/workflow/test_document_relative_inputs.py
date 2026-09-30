@@ -33,7 +33,7 @@ from typing import Any
 import pytest
 
 import causalab
-from causalab.protocol.resolve import FileArtifacts, FileDatasets, ResolutionEnv
+from causalab.io.env import FileArtifacts, FileDatasets, ResolutionEnv
 from causalab.workflow.document import load_workflow
 from causalab.workflow.runner import run_workflow
 
@@ -127,7 +127,7 @@ def test_a_relative_path_input_resolves_beside_the_document(
     monkeypatch.chdir(elsewhere)
 
     loaded = load_workflow(doc, _env(root))
-    result = run_workflow(loaded, _env(root), tmp_path / "runs", [])
+    result = run_workflow(loaded, _env(root), tmp_path / "runs", None)
 
     written = json.loads((result.run_root / "only" / "out.json").read_text())
     assert written == {"k": 7}
@@ -159,7 +159,7 @@ def test_an_isolated_step_layers_its_deps_over_the_runners_environment(
     monkeypatch.chdir(elsewhere)
 
     loaded = load_workflow(doc, _env(root))
-    result = run_workflow(loaded, _env(root), tmp_path / "runs", [])
+    result = run_workflow(loaded, _env(root), tmp_path / "runs", None)
 
     written = json.loads((result.run_root / "only" / "out.json").read_text())
     # the dep is there, and causalab is the very install running this test —

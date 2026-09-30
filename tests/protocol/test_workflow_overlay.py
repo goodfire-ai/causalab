@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from causalab.protocol.resolve import FileArtifacts
+from causalab.io.env import FileArtifacts
 from causalab.workflow.runner import OverlayArtifacts
 
 pytestmark = pytest.mark.unit

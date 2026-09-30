@@ -225,7 +225,7 @@ def save_intervention_results(
             - scores_by_variable: dict (unused, kept for compatibility)
             - raw_results: dict with "string" and "sequences" — the legacy
               one-synthetic-batch view producers emit via
-              :meth:`~causalab.neural.pipeline.GenerationResult.to_raw_results`
+              `to_raw_results`
               (the stored-artifact schema is unchanged for runs
               with ``batch_size >= n_examples`` — legacy multi-batch runs
               stored one inner ``"string"`` list per batch, and

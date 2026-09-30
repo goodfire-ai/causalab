@@ -5,7 +5,7 @@ touching* ``causalab/neural/``. This module is that family — a tiny decoder
 whose tree shares **no child name** with the two built-in trees (``tower.stack``
 for the blocks, ``chan_mix`` for the mixer, ``norm_a`` / ``norm_b`` / ``ffn``
 inside a block, ``tok`` / ``final`` / ``head`` at the root) — and its
-:class:`~causalab.protocol.registry.FamilyAdapter`: a structural detection
+[`FamilyAdapter`][causalab.protocol.registry.families.FamilyAdapter]: a structural detection
 predicate, the tree address, the mixer child and its stream, the taps for the
 residual and MLP sites, and the two residual identities every block satisfies.
 Nothing here imports ``causalab.neural``; the engine finds the family through

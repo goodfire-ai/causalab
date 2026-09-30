@@ -3,7 +3,7 @@
 Mirrors the reference ``PySafeSlice``: ``get_shape()``, ``get_dtype()`` and
 ``__getitem__`` over ints, slices (positive step), ``Ellipsis`` and ``None``
 (a new axis), with the reference's error messages. The index becomes a
-:class:`~causalab.io.fastersafetensors._select.Selection` — a box the core resolves to
+`Selection` — a box the core resolves to
 coalesced reads, so an inner-dimension slice reads its runs and not the
 covering block — and the reader hands back a tensor of the result's shape.
 """

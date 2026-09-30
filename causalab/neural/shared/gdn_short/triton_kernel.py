@@ -1,54 +1,25 @@
-"""The single-chunk gated delta rule as an autograd function over the Triton
-programs of ``_triton_kernels.py``, behind FLA's calling convention.
+"""Single-chunk gated delta rule with a Triton forward and backward.
 
-Why a separate kernel for short sequences
------------------------------------------
+For zero initial state and a sequence within one tile, the closed form is::
 
-FLA's ``chunk_gated_delta_rule`` (0.5.2) has one tile size, ``BT = chunk_size
-∈ {16, 32, 64}``, 64 unless the caller says otherwise — and transformers'
-hub wrapper drops the keyword, so the model always runs 64. Nothing in the
-chunked path shortcuts ``T < BT``: ``NT = cdiv(T, BT) = 1`` and every kernel
-runs its full tile with the rows past ``T`` masked. At the workflow's
-``T = 13`` that is 80 % padding in every tile, and the inter-chunk half of
-the algorithm — ``chunk_gated_delta_rule_fwd_h`` (the state carried to the
-next chunk), ``chunk_gated_delta_rule_bwd_dhu`` (its gradient), and the
-``h``/``dh`` terms of ``chunk_bwd_dqkwg`` — is computed for a single chunk
-started from a zero state, where it is identically zero work. (``chunk_size
-= 16`` takes the unfused ``kkt`` + ``solve_tril`` intra-chunk path and a
-tilelang backward whose 16-row tiles it refuses to build; ``32`` runs but
-slower; ``FLA_TILELANG=0`` is refused outright on Hopper with Triton
-3.4–3.7.0, fla-org #640; ``fused_recurrent_gated_delta_rule`` has no
-backward at all. So there was no configuration to switch to.)
+    gc = cumsum(g); D_ij = exp(gc_i - gc_j) [i >= j]
+    A = (I + strict_lower((beta k_hat) k_hat.T * D))^-1
+    u = A (beta v); o = scale * (q_hat k_hat.T * D) u
 
-With ``initial_state=None`` and ``T ≤ BT`` the rule has a closed form in
-``[T, T]`` and ``[T, K]`` tiles (``reference.single_chunk_gated_delta_rule_torch``)::
+One program per sequence and value head computes the tiles in float32.
+Backward recomputes forward tiles. Dots use ``DOT_PRECISION``, with three
+TF32 passes by default. Outputs and gradients round on store. The optional
+final state is ``sum_t exp(gc_T-gc_t) k_hat_t u_t.T``, computed in Torch
+with autograd support.
 
-    gc = cumsum(g);  D_ij = exp(gc_i - gc_j) [i >= j]
-    A  = (I + strict_lower((beta k̂) k̂^T ⊙ D))^-1
-    u  = A (beta v);   o = scale * (q̂ k̂^T ⊙ D) u
+This arithmetic differs from FLA's intermediate bf16 rounding. Parity tests
+measure the difference against the float32 reference. Inputs may be bf16,
+fp16, or fp32. Launches use fixed shapes without host synchronization or
+autotuning and support CUDA capture after warm-up.
 
-One Triton program per (sequence, value head) computes it — forward, or the
-backward with the forward's tiles recomputed — in registers, in float32
-(the dots on tensor cores as three TF32 passes, :data:`DOT_PRECISION`),
-reading each input once and writing each output once. There is no state tile, no scratch, no host synchronization and no
-autotuning: the launch is CUDA-graph capture-safe and compiles in the warm-up
-pass of a capture. The final state, when a caller asks for one, is
-``Σ_t exp(gc_T - gc_t) k̂_t u_t^T`` — a batched matmul in torch over the
-kernel's ``u``, differentiable through autograd like anything else.
-
-Numerics (documented change). FLA rounds the normalized q̂/k̂ to bf16
-before its tiles, keeps ``A``, ``w``, ``u`` and the chunk state ``h`` in
-bf16, and runs its triangular solve at tf32. This kernel keeps everything in
-float32 (its 3×TF32 dots measured identical to IEEE float32 to four digits)
-and rounds only ``o`` and the gradients on store — so it sits
-closer to the float32 oracle than the path it replaces, and differs from
-FLA at bf16 rounding level (the measured deltas are in the parity tests).
-Inputs may be bf16, fp16 or fp32.
-
-Scope: ``T ≤`` :data:`MAX_SEQ_LEN`, ``initial_state=None``, no
-``cu_seqlens``, ``K`` and ``V`` powers of two in ``[16, 256]``, ``H | HV``.
-The binding (``binding.py``) checks all of it before routing a call here;
-a direct call with anything else is refused by name.
+Calls require ``T <= MAX_SEQ_LEN``, zero initial state, fixed-length batches,
+K and V powers of two in [16,256], and H dividing HV. The dispatcher checks
+these conditions; unsupported direct calls raise an error.
 """
 
 from __future__ import annotations
@@ -79,7 +50,7 @@ __all__ = [
 #: keep in registers; longer sequences are FLA's.
 MAX_SEQ_LEN = 32
 
-#: Warps per program. Measured on one H100 (2026-09-15, the
+#: Warps per program. Measured on an H100 (2026-09-15, the
 #: ``_gpu`` matrix, ``[96, 13, 32, 128]`` bf16): forward 4 warps 164 µs vs
 #: 2 warps 192 / 8 warps 245; backward 4 warps 423 µs vs 8 warps 650 (the
 #: dozen ``[16, 128]`` float32 tiles spill less at 4). Module attributes so a

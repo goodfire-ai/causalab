@@ -1,5 +1,5 @@
-"""The differential: two representations of the same task's correct answer
-cannot disagree.
+"""T11 — the differential: two representations of the same task's correct
+answer cannot disagree.
 
 Over every shipped task under ``causalab/tasks/``, for a deterministic sample
 of examples and **both roles** (the base trace and the counterfactual trace),
@@ -7,9 +7,9 @@ three representations of "is this string the right answer" are computed and
 held equal on every candidate string:
 
 * **the string grader** — ``Task.checker``, the spec's
-  :meth:`~causalab.causal.scoring.ScoringSpec.grader`;
+  [`grader`][causalab.causal.scoring.ScoringSpec.grader];
 * **the probability path's form group** — the spec's
-  :meth:`~causalab.causal.scoring.ScoringSpec.forms_of` the answer value, the
+  [`forms_of`][causalab.causal.scoring.ScoringSpec.forms_of] the answer value, the
   group a ``match`` metric's ids are resolved from, compared under the
   spec's ``string_mode``;
 * **the serialized label columns** — the ``base_answer_forms`` /
@@ -21,8 +21,8 @@ declared form of both, and a continuation of the answer (``answer + " and
 then"``) — the string a ``prefix`` task credits and an ``exact`` task does
 not, which is what makes a flipped mode visible.
 
-Before the scoring spec unified them, the three came from three sources and
-disagreed on two shipped tasks. MCQA's checker was keyed on ``answer_position`` (forms ``" 0"`` /
+Before one spec held them, the three came from three sources and disagreed on
+two shipped tasks. MCQA's checker was keyed on ``answer_position`` (forms ``" 0"`` /
 ``" 1"``) and graded the letter only through a literal-match fallback, while
 the table's forms for the same example *were* the digits; entity_binding
 declared entity names under ``positional_answer``, whose values are group
@@ -43,10 +43,9 @@ from typing import Any
 
 import pytest
 
-from causalab.causal.causal_model import CausalModel
+from causalab.causal.model import CausalModel
 from causalab.causal.scoring import (
     PROTOCOL_MODES,
-    SCORING_DIGEST_COLUMN,
     STRING_MODE_COLUMN,
     STRING_MODES,
     ScoringSpec,
@@ -188,14 +187,13 @@ def test_every_shipped_task_declares_one_spec(loaded):
     assert spec.string_mode in STRING_MODES
     assert spec.protocol_mode == PROTOCOL_MODES[spec.string_mode]
     assert task.checker.__module__ == "causalab.causal.scoring"  # the spec's grader
-    # and every row of a table built from it records that spec, constantly
-    assert {row[SCORING_DIGEST_COLUMN] for row in rows} == {spec.digest}
+    # and every row of a table built from it records the spec's mode, constantly
     assert {row[STRING_MODE_COLUMN] for row in rows} == {spec.string_mode}
     assert len(rows) == N_EXAMPLES
 
 
 def test_the_three_representations_agree_on_every_candidate(loaded):
-    """The centre of the contract: string grader, probability-path form group and
+    """The centre of this file: string grader, probability-path form group and
     serialized label columns, on both roles and the label, for every shipped
     task."""
     task, rows, examples = loaded
@@ -211,15 +209,15 @@ def test_the_table_agrees_with_its_own_derived_mode(loaded):
     spec = task.causal_model.scoring
     assert spec is not None
     ok = check_scoring(rows, {"iia": spec.protocol_mode}, where=task.name)
-    assert ok.result == "ok" and ok.digest == spec.digest
+    assert ok.result == "ok" and ok.string_mode == spec.string_mode
     if spec.string_mode == "prefix":
         with pytest.raises(Exception, match="records string_mode 'prefix'"):
             check_scoring(rows, {"iia": "exact"}, where=task.name)
 
 
 def _flipped(task: Task) -> Task:
-    """The same task with its spec's ``string_mode`` flipped — a *new* spec
-    with a new digest, because a spec cannot be edited in place."""
+    """The same task with its spec's ``string_mode`` flipped — a *new* spec,
+    because a spec cannot be edited in place."""
     spec = task.causal_model.scoring
     assert spec is not None
     other = "exact" if spec.string_mode == "prefix" else "prefix"
@@ -231,11 +229,10 @@ def _flipped(task: Task) -> Task:
         invalid_output=spec.invalid_output,
         version=spec.version,
     )
-    assert flipped.digest != spec.digest
+    assert flipped.identity() != spec.identity()
     model = task.causal_model
     mutant = CausalModel(
-        model.mechanisms,
-        model.values,
+        model.definition,
         id=model.id,
         embeddings=model.embeddings,
         periods=model.periods,
@@ -259,9 +256,9 @@ def test_a_flipped_string_mode_fails_the_differential_for_that_task_only(mutated
             task = _flipped(task)
         outcomes[name] = bool(_differential(task, rows, examples))
     assert outcomes == {name: name == mutated for name in ALL_TASKS}, outcomes
-    # and the identity the table records is no longer the spec's
+    # and the string_mode the table records is no longer the spec's
     task = _flipped(load_task(mutated, task_cfg=_config(mutated)))
     rows, _examples_ = _build(load_task(mutated, task_cfg=_config(mutated)))
     check = check_scoring(rows, {}, where=mutated)
     spec = task.causal_model.scoring
-    assert spec is not None and check.digest != spec.digest
+    assert spec is not None and check.string_mode != spec.string_mode

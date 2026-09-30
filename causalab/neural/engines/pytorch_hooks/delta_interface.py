@@ -1,50 +1,30 @@
-"""Taps at the DeltaNet mixer's kernel boundary, where no forward hook reaches.
+"""Tap the Gated DeltaNet convolution and delta-rule boundaries.
 
-Seven of the Gated DeltaNet diagram's boxes are neither module boundaries nor
-locals of one interceptable library call — they are the arguments and returns
-of two **module-global** call sites inside the mixer's forward
-(``modeling_qwen3_5_moe.py``)::
+The mixer calls module-global convolution and delta-rule functions.
+Taps observe the convolution return, post-convolution and pre-normalization
+q/k/v, gates ``beta`` and ``g``, and ``core_attn_out`` before its norm and gate.
+Prefill uses the chunked kernel; cached decode uses the recurrent kernel
+and convolution update. All four globals are wrapped together.
 
-    mixed_qkv = causal_conv1d_fn(mixed_qkv, conv1d.weight.squeeze(1), ...)
-    q, k, v = split(...); ...
-    core_attn_out, S = torch_chunk_gated_delta_rule(q, k, v, g=g, beta=beta, ...)
-                     | torch_recurrent_gated_delta_rule(...)   # cached decode
+Wrappers come from the tapped mixer's modeling module and call the functions
+captured at entry, preserving installed dispatch. Mixer hooks mark the
+active dynamic extent, so other mixers pass through. Exit restores globals.
+A kernelized forward outside the modeling file or a missing required global
+raises an error naming the unsupported path.
 
-📐 The ``conv1d`` *module* is never called (its hook never fires — pinned by
-the suite), so the conv output exists only as this function's return;
-the kernel's arguments are the post-conv, post-tiling, **pre**-l2norm q/k/v
-plus the per-head gates ``beta``/``g``; and its return[0] is the pre-norm,
-pre-gate ``core_attn_out``. During decode the model natively runs the
-*recurrent* kernel and ``causal_conv1d_update`` (📐 measured: chunked once per
-linear layer at prefill, recurrent + conv-update at every cached step), so all
-four globals are swapped together and decode steps are tapped identically to
-prefill.
+Each global is patched through one ``SymbolDispatch`` per (modeling module,
+name) for the whole process; a manager's wrappers are one per-thread layer
+on it, above the torch-path guard's and the short-sequence dispatcher's
+layers. The first layer to enter installs the dispatch, the last to leave
+restores it. A simulated world runs its ranks as threads, so two managers
+can be entered at once.
 
-Containment — the attention interface's replace-restore shape, one level down
------------------------------------------------------------------------------
-
-The globals are resolved **from the tapped mixer's own modeling module**
-(``importlib.import_module(type(mixer).__module__)`` — the
-``module_eager_attention`` pattern), so another family's file is never
-patched. The wrappers are ``**kwargs``-transparent and call through to the
-*original globals captured at entry* — which keeps whatever hub/``fla``
-dispatch the environment resolved, because the taps only touch arguments and
-returns; only interiors care which body runs. Identity is
-bit-exact by construction: 📐 a pass-through wrapper on either surface measured
-0.0.
-
-The wrapper answers for every mixer of the family while installed, so *which*
-call to tap is tracked by dynamic extent: pre/post hooks on each tapped mixer
-mark it active, and an untapped mixer's calls fall straight through.
-
-Two refusals the design has to carry:
-
-* a **kernelized** model (``kernelize()``) replaces the mixer class's
-  ``forward`` wholesale, and no module-global patch applies inside a hub
-  kernel — detected as a ``forward`` defined outside the modeling file, and
-  refused by name;
-* a modeling file that does not export all four globals cannot be tapped —
-  refused rather than served another family's kernels.
+Under context parallelism (model_parallelism.md §6.4, §8.4) the chunked
+kernel receives the previous rank's final state (``context.handoff_state``)
+and the causal conv1d the previous chunk's last inputs
+(``context.chunked_conv``). The wrappers are installed for every DeltaNet
+modeling module whether or not a document taps the boundary, so the
+DeltaNet layers run sequentially across the context group.
 """
 
 from __future__ import annotations
@@ -56,8 +36,15 @@ from typing import Any, Callable, Iterator, Mapping
 
 import torch
 
-from causalab.neural.shared.kernels import KERNEL_GLOBALS
-from causalab.protocol.errors import ProtocolError
+from causalab.neural.shared.kernels import KERNEL_GLOBALS, kernel_modules
+from causalab.neural.shared.parallel.context import (
+    SequenceFrame,
+    chunked_conv,
+    current,
+    handoff_state,
+)
+from causalab.neural.shared.symbol_dispatch import SymbolDispatch, dispatch_for
+from causalab.protocol.rules.errors import ProtocolError
 
 __all__ = [
     "DELTA_SLOTS",
@@ -101,7 +88,7 @@ _GLOBALS: tuple[str, ...] = KERNEL_GLOBALS
 class DeltaTap:
     """One read and/or edit at a named point at the kernel boundary.
 
-    Same contract as :class:`.attention_interface.InterfaceTap`: ``read`` is
+    Same contract as [`.attention_interface.InterfaceTap`][causalab.neural.engines.pytorch_hooks.attention_interface.InterfaceTap]: ``read`` is
     handed the tensor as the function sees it, ``edit`` is handed a **clone**
     and returns the replacement.
 
@@ -132,7 +119,7 @@ class DeltaTap:
 
 
 def _apply(taps: tuple[DeltaTap, ...], slot: str, value: torch.Tensor) -> torch.Tensor:
-    """The ordering contract of :func:`.attention_interface._apply`, verbatim."""
+    """The ordering contract of `.attention_interface._apply`, verbatim."""
     for tap in taps:
         if tap.slot != slot:
             continue
@@ -174,35 +161,58 @@ def _modeling_module(mixer: Any) -> Any:
     return modeling
 
 
+def _chunked() -> SequenceFrame | None:
+    """The forward's frame when its positions are split over a context group
+    above one (§8.4), else ``None``."""
+    frame = current()
+    return frame if frame is not None and frame.size > 1 else None
+
+
 @contextlib.contextmanager
-def delta_kernel_taps(taps: Mapping[Any, tuple[DeltaTap, ...]]) -> Iterator[None]:
-    """Install reads and edits at the DeltaNet kernel boundary.
+def delta_kernel_taps(
+    taps: Mapping[Any, tuple[DeltaTap, ...]], *, model: Any = None
+) -> Iterator[None]:
+    """Install reads and edits at the DeltaNet kernel boundary — and, under
+    context parallelism, the state and conv-history handoffs (module
+    docstring), in every DeltaNet modeling module of ``model``.
 
     Args:
         taps: ``mixer module -> taps`` (keyed by the module object itself —
             unlike the attention registry, the wrappers here never receive the
             module as an argument, so the mixers are also where the dynamic
             extent is tracked). A mixer absent from the mapping is untouched.
+        model: the model the forward runs — under ``cp > 1`` its kernel
+            modeling modules are patched whether or not a mixer is tapped
+            (``kernels.kernel_modules``); ignored otherwise.
 
-    All four globals are restored on exit, in every patched modeling module.
+    All four globals are restored on exit, in every patched modeling module,
+    once the last layer in flight on any thread has left (module docstring).
     """
-    if not taps:
+    chunked = _chunked() is not None
+    if not taps and not (chunked and model is not None):
         yield
         return
 
     #: the mixer whose forward is currently executing, if it is tapped
     active: dict[str, Any] = {"mixer": None, "seq_len": None}
 
-    per_module: dict[int, tuple[Any, dict[str, Any]]] = {}
-    for mixer in taps:
-        modeling = _modeling_module(mixer)
-        if id(modeling) not in per_module:
-            originals = {name: getattr(modeling, name) for name in _GLOBALS}
-            per_module[id(modeling)] = (modeling, originals)
+    per_module: dict[int, Any] = {}
+    modelings = [_modeling_module(mixer) for mixer in taps]
+    if chunked and model is not None:
+        modelings.extend(kernel_modules(model))
+    for modeling in modelings:
+        per_module.setdefault(id(modeling), modeling)
 
-    def conv_wrapper(real: Callable[..., Any]) -> Callable[..., Any]:
+    def conv_wrapper(dispatch: SymbolDispatch, *, prefill: bool) -> Callable[..., Any]:
         def wrapped(hidden_states: torch.Tensor, *args: Any, **kwargs: Any) -> Any:
-            out = real(hidden_states, *args, **kwargs)
+            real = dispatch.real
+            frame = _chunked() if prefill else None
+            if frame is not None:
+                # the previous chunk's tail is this chunk's history (§8.4);
+                # `args[0]` is the conv weight, whose width says how much
+                out = chunked_conv(frame, real, hidden_states, *args, **kwargs)
+            else:
+                out = real(hidden_states, *args, **kwargs)
             current = _by_identity(taps, active["mixer"])
             if not current or not _has(current, "conv"):
                 return out
@@ -222,7 +232,7 @@ def delta_kernel_taps(taps: Mapping[Any, tuple[DeltaTap, ...]]) -> Iterator[None
         return wrapped
 
     def kernel_wrapper(
-        real: Callable[..., Any], originals: dict[str, Any], modeling: Any
+        dispatch: SymbolDispatch, recurrent: SymbolDispatch, modeling: Any
     ) -> Callable[..., Any]:
         def wrapped(
             query: torch.Tensor,
@@ -232,9 +242,14 @@ def delta_kernel_taps(taps: Mapping[Any, tuple[DeltaTap, ...]]) -> Iterator[None
             beta: torch.Tensor | None = None,
             **kwargs: Any,
         ) -> Any:
+            real = dispatch.real
             current = _by_identity(taps, active["mixer"])
-            if not current:
+            frame = _chunked()
+            if not current and frame is None:
                 return real(query, key, value, g=g, beta=beta, **kwargs)
+            # the argument taps run on the rank's own chunk, before the
+            # handoff — their gathers come before the point-to-point, in
+            # the same order on every rank of the group
             query = _apply(current, "query", query)
             key = _apply(current, "key", key)
             value = _apply(current, "value", value)
@@ -242,52 +257,89 @@ def delta_kernel_taps(taps: Mapping[Any, tuple[DeltaTap, ...]]) -> Iterator[None
                 beta = _apply(current, "beta", beta)
             if g is not None:
                 g = _apply(current, "decay", g)
-            if any(tap.slot in _STATE_SLOTS for tap in current):
-                out, state = _with_state_taps(
-                    current,
-                    real,
-                    originals,
-                    modeling,
-                    query,
-                    key,
-                    value,
-                    g,
-                    beta,
-                    kwargs,
-                )
+
+            # the per-step reads are collected inside the kernel call and
+            # applied after it — after the handoff, under cp > 1: a read
+            # gathers over the context group, and a gather between this
+            # rank's kernel and its send would wait on the rank waiting to
+            # receive that very state (the §6.5 rule, "no collective inside
+            # the sequential step")
+            faces: list[tuple[str, torch.Tensor]] = []
+            offset = 0 if frame is None else frame.chunk.start
+
+            def run(
+                initial_state: torch.Tensor | None,
+            ) -> tuple[torch.Tensor, torch.Tensor | None]:
+                call = dict(kwargs)
+                if frame is not None:
+                    if call.get("initial_state") is not None:
+                        raise ProtocolError(
+                            "P4",
+                            f"--parallel.context: the DeltaNet kernel was handed a "
+                            f"cached state under cp={frame.size}; a cached forward "
+                            "(a decode) is not served under context parallelism "
+                            "(docs/model_parallelism.md §8.4)",
+                        )
+                    call["initial_state"] = initial_state
+                    call["output_final_state"] = True
+                if any(tap.slot in _STATE_SLOTS for tap in current):
+                    out, state, deferred = _with_state_taps(
+                        current,
+                        real,
+                        recurrent.real,
+                        modeling,
+                        query,
+                        key,
+                        value,
+                        g,
+                        beta,
+                        call,
+                        offset=offset,
+                    )
+                    faces.extend(deferred)
+                    return out, state
+                return real(query, key, value, g=g, beta=beta, **call)
+
+            if frame is None:
+                out, state = run(None)
             else:
-                out, state = real(query, key, value, g=g, beta=beta, **kwargs)
+                # rank r runs after rank r − 1: its final state is this
+                # chunk's initial state (§6.4); the kernel's state is
+                # (batch, heads, d_k, d_v) in float32. ``value`` links the
+                # received state to this rank's graph, so a fit's gradient
+                # flows back to the chunk below (§7)
+                out, state = handoff_state(
+                    frame,
+                    run,
+                    shape=(key.shape[0], key.shape[2], key.shape[-1], value.shape[-1]),
+                    dtype=torch.float32,
+                    device=value.device,
+                    link=value,
+                )
+                if not kwargs.get("output_final_state", False):
+                    state = None
+            for slot, face in faces:
+                _apply(current, slot, face)
             return _apply(current, "kernel_output", out), state
 
         return wrapped
 
     with contextlib.ExitStack() as stack:
-        for modeling, originals in per_module.values():
-            setattr(
-                modeling,
-                "causal_conv1d_fn",
-                conv_wrapper(originals["causal_conv1d_fn"]),
+        for modeling in per_module.values():
+            conv = dispatch_for(modeling, "causal_conv1d_fn")
+            conv_update = dispatch_for(modeling, "causal_conv1d_update")
+            chunk = dispatch_for(modeling, "torch_chunk_gated_delta_rule")
+            recurrent = dispatch_for(modeling, "torch_recurrent_gated_delta_rule")
+            stack.enter_context(conv.tapped(conv_wrapper(conv, prefill=True)))
+            stack.enter_context(
+                conv_update.tapped(conv_wrapper(conv_update, prefill=False))
             )
-            setattr(
-                modeling,
-                "causal_conv1d_update",
-                conv_wrapper(originals["causal_conv1d_update"]),
+            stack.enter_context(
+                chunk.tapped(kernel_wrapper(chunk, recurrent, modeling))
             )
-            setattr(
-                modeling,
-                "torch_chunk_gated_delta_rule",
-                kernel_wrapper(
-                    originals["torch_chunk_gated_delta_rule"], originals, modeling
-                ),
+            stack.enter_context(
+                recurrent.tapped(kernel_wrapper(recurrent, recurrent, modeling))
             )
-            setattr(
-                modeling,
-                "torch_recurrent_gated_delta_rule",
-                kernel_wrapper(
-                    originals["torch_recurrent_gated_delta_rule"], originals, modeling
-                ),
-            )
-            stack.callback(_restore, modeling, originals)
         for mixer in taps:
             pre = mixer.register_forward_pre_hook(_enter(active, mixer))
             post = mixer.register_forward_hook(_leave(active))
@@ -404,10 +456,13 @@ def _stepwise(
     )
 
 
+Faces = list[tuple[str, torch.Tensor]]
+
+
 def _with_state_taps(
     current: tuple[DeltaTap, ...],
     real: Callable[..., Any],
-    originals: dict[str, Any],
+    real_recurrent: Callable[..., Any],
     modeling: Any,
     query: torch.Tensor,
     key: torch.Tensor,
@@ -415,8 +470,19 @@ def _with_state_taps(
     g: torch.Tensor | None,
     beta: torch.Tensor | None,
     kwargs: dict[str, Any],
-) -> tuple[torch.Tensor, torch.Tensor | None]:
-    """Serve the per-step slots around one kernel call.
+    *,
+    offset: int = 0,
+) -> tuple[torch.Tensor, torch.Tensor | None, Faces]:
+    """Serve the per-step slots around one kernel call: the kernel's output
+    and state, and the per-step faces — ``(slot, tensor)`` for ``kv_mem``,
+    ``state_update`` and ``state`` — for the caller to hand the reads
+    **after** the call (module docstring, "Context parallelism"). ``real``
+    is the kernel the forward dispatched, ``real_recurrent`` the modeling
+    module's own recurrent kernel the per-step loop drives (the same object
+    at a decode step). A state write's ``edit_state`` runs inside, per step,
+    at the step's position in the padded frame: ``offset`` is this rank's
+    first position under context parallelism (the writer's positions are
+    the frame's), zero at ``cp=1``.
 
     Three cases, in the order they are checked:
 
@@ -436,13 +502,12 @@ def _with_state_taps(
     l2norm = _l2norm_of(modeling)
     use_l2 = bool(kwargs.get("use_qk_l2norm_in_kernel", False))
     initial_state = kwargs.get("initial_state")
-    real_recurrent = originals["torch_recurrent_gated_delta_rule"]
     wants_final = bool(kwargs.get("output_final_state", False))
     edits = [tap.edit_state for tap in current if tap.edit_state is not None]
 
     def edit_state(step: int, state: torch.Tensor) -> torch.Tensor:
         for edit in edits:
-            state = edit(step, state)
+            state = edit(step + offset, state)
         return state
 
     if real is real_recurrent and key.shape[1] == 1 and not edits:
@@ -463,11 +528,13 @@ def _with_state_taps(
         kv_mem, delta = _state_faces(
             key[:, 0], value[:, 0], g[:, 0], beta[:, 0], state_fp, l2norm, use_l2
         )
-        _apply(current, "kv_mem", kv_mem.unsqueeze(1))
-        _apply(current, "state_update", delta.unsqueeze(1))
+        faces: Faces = [
+            ("kv_mem", kv_mem.unsqueeze(1)),
+            ("state_update", delta.unsqueeze(1)),
+        ]
         if new_state is not None:
-            _apply(current, "state", new_state.unsqueeze(1))
-        return out, new_state
+            faces.append(("state", new_state.unsqueeze(1)))
+        return out, new_state, faces
 
     if edits:
         # substitution: the loop IS the forward for this layer
@@ -483,10 +550,8 @@ def _with_state_taps(
             use_l2,
             edit_state=edit_state,
         )
-        _apply(current, "kv_mem", kv_mems)
-        _apply(current, "state_update", deltas)
-        _apply(current, "state", states)
-        return out, (final_state if wants_final else None)
+        faces = [("kv_mem", kv_mems), ("state_update", deltas), ("state", states)]
+        return out, (final_state if wants_final else None), faces
 
     # reads only: the base forward is untouched — the chunked kernel still
     # runs and the logits are bit-identical; the loop runs in its shadow
@@ -494,10 +559,8 @@ def _with_state_taps(
     _, _, states, kv_mems, deltas = _stepwise(
         real_recurrent, l2norm, query, key, value, g, beta, initial_state, use_l2
     )
-    _apply(current, "kv_mem", kv_mems)
-    _apply(current, "state_update", deltas)
-    _apply(current, "state", states)
-    return out, state
+    faces = [("kv_mem", kv_mems), ("state_update", deltas), ("state", states)]
+    return out, state, faces
 
 
 def _by_identity(
@@ -528,8 +591,3 @@ def _leave(active: dict[str, Any]) -> Callable[..., None]:
         active["seq_len"] = None
 
     return hook
-
-
-def _restore(modeling: Any, originals: dict[str, Any]) -> None:
-    for name, value in originals.items():
-        setattr(modeling, name, value)

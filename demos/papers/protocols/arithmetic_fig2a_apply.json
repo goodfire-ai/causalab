@@ -1,0 +1,47 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Held-out scoring for Figure 2a of Feucht et al. 2026 (arXiv:2605.01148): apply every rotation the fit saved to the test split with no training and save the interchange intervention accuracy against `label_forms`, which workflows/scripts/arithmetic_fig2a/fig2a_figure.py draws; the rotation bundle fit/rot.safetensors is a run-tree path that only the workflow resolves, so this document does not validate on its own."
+  },
+  "model": {"key": "meta-llama/Llama-3.1-8B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "arithmetic_fig2a/data#test", "field": "input"},
+    "counterfactual": {"dataset": "arithmetic_fig2a/data#test", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "sites": {
+      "target": {
+        "component": {"sweep": ["block_mid", "block_output"]},
+        "layers": {"sweep": {"range": [0, 32]}}
+      },
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "rot": {
+        "kind": "subspace",
+        "k": {"sweep": [1, 2, 4, 8, 16]},
+        "parametrization": "cayley",
+        "file_path": "fit/rot.safetensors"
+      }
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "featurizer": "rot"},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "patch": {"site": "target", "pos": -1, "featurizer": "rot", "do": {"swap": "v_cf"}}
+    },
+    "save": [
+      {
+        "read": "logits",
+        "model": "patched",
+        "aggregation": {"kind": "match", "expected": "label_forms"},
+        "file_path": "iia.json"
+      }
+    ]
+  }
+}

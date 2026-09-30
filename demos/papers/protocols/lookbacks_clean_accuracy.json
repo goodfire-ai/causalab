@@ -1,0 +1,40 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Baseline of the Prakash et al. 2025 (arXiv:2505.14685) replication: score the un-intervened answer on every original and every counterfactual prompt against its own answer; workflows/scripts/lookbacks/lookbacks_figure.py keeps a pair for the solid curves only when both answers are correct."
+  },
+  "model": {
+    "key": "meta-llama/Meta-Llama-3-70B-Instruct",
+    "revision": "50fd307e57011801c7833c87efa1984ddf2db42f",
+    "dtype": "fp16"
+  },
+  "data": {
+    "base": {"dataset": "lookbacks/data_restate#first", "field": "input"},
+    "counterfactual": {"dataset": "lookbacks/data_restate#first", "field": "counterfactual_inputs[0]"}
+  },
+  "method": {
+    "intervened_models": {
+      "original_base": {"input": "base", "reads": ["logits_base"]},
+      "original_counterfactual": {"input": "counterfactual", "reads": ["logits_cf"]}
+    },
+    "sites": {"lm_head": {"component": "lm_head"}},
+    "reads": {
+      "logits_base": {"site": "lm_head", "pos": -1},
+      "logits_cf": {"site": "lm_head", "pos": -1}
+    },
+    "save": [
+      {
+        "read": "logits_base",
+        "model": "original_base",
+        "aggregation": {"kind": "match", "expected": "base_answer_forms"},
+        "file_path": "correct_base.json"
+      },
+      {
+        "read": "logits_cf",
+        "model": "original_counterfactual",
+        "aggregation": {"kind": "match", "expected": "cf_answer_forms"},
+        "file_path": "correct_cf.json"
+      }
+    ]
+  }
+}

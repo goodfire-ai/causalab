@@ -1,0 +1,514 @@
+[
+  {
+    "example_id": "0",
+    "metric": "unpatched_logit_diff",
+    "value": -9.9375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "1",
+    "metric": "unpatched_logit_diff",
+    "value": -5.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "2",
+    "metric": "unpatched_logit_diff",
+    "value": -5.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "3",
+    "metric": "unpatched_logit_diff",
+    "value": -9.9375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "4",
+    "metric": "unpatched_logit_diff",
+    "value": -2.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "5",
+    "metric": "unpatched_logit_diff",
+    "value": -5.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "6",
+    "metric": "unpatched_logit_diff",
+    "value": -8.75,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "7",
+    "metric": "unpatched_logit_diff",
+    "value": -11.0,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "8",
+    "metric": "unpatched_logit_diff",
+    "value": -10.0,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "9",
+    "metric": "unpatched_logit_diff",
+    "value": -8.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "10",
+    "metric": "unpatched_logit_diff",
+    "value": -3.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "11",
+    "metric": "unpatched_logit_diff",
+    "value": -8.3125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "12",
+    "metric": "unpatched_logit_diff",
+    "value": -10.4375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "13",
+    "metric": "unpatched_logit_diff",
+    "value": -10.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "14",
+    "metric": "unpatched_logit_diff",
+    "value": -8.5625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "15",
+    "metric": "unpatched_logit_diff",
+    "value": -10.5625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "16",
+    "metric": "unpatched_logit_diff",
+    "value": -8.1875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "17",
+    "metric": "unpatched_logit_diff",
+    "value": -10.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "18",
+    "metric": "unpatched_logit_diff",
+    "value": -11.3125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "19",
+    "metric": "unpatched_logit_diff",
+    "value": 1.0,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "20",
+    "metric": "unpatched_logit_diff",
+    "value": -9.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "21",
+    "metric": "unpatched_logit_diff",
+    "value": -10.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "22",
+    "metric": "unpatched_logit_diff",
+    "value": -7.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "23",
+    "metric": "unpatched_logit_diff",
+    "value": -6.75,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "24",
+    "metric": "unpatched_logit_diff",
+    "value": -10.9375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "25",
+    "metric": "unpatched_logit_diff",
+    "value": -9.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "26",
+    "metric": "unpatched_logit_diff",
+    "value": -8.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "27",
+    "metric": "unpatched_logit_diff",
+    "value": -9.125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "28",
+    "metric": "unpatched_logit_diff",
+    "value": -11.0625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "29",
+    "metric": "unpatched_logit_diff",
+    "value": -12.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "30",
+    "metric": "unpatched_logit_diff",
+    "value": -0.5,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "31",
+    "metric": "unpatched_logit_diff",
+    "value": -2.0,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "32",
+    "metric": "unpatched_logit_diff",
+    "value": -7.5,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "33",
+    "metric": "unpatched_logit_diff",
+    "value": -11.125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "34",
+    "metric": "unpatched_logit_diff",
+    "value": -5.5,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "35",
+    "metric": "unpatched_logit_diff",
+    "value": -7.6875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "36",
+    "metric": "unpatched_logit_diff",
+    "value": -12.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "37",
+    "metric": "unpatched_logit_diff",
+    "value": -8.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "38",
+    "metric": "unpatched_logit_diff",
+    "value": -7.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "39",
+    "metric": "unpatched_logit_diff",
+    "value": -9.6875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "40",
+    "metric": "unpatched_logit_diff",
+    "value": -9.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "41",
+    "metric": "unpatched_logit_diff",
+    "value": -6.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "42",
+    "metric": "unpatched_logit_diff",
+    "value": -11.75,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "43",
+    "metric": "unpatched_logit_diff",
+    "value": -7.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "44",
+    "metric": "unpatched_logit_diff",
+    "value": -9.625,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "45",
+    "metric": "unpatched_logit_diff",
+    "value": -12.6875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "46",
+    "metric": "unpatched_logit_diff",
+    "value": -3.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "47",
+    "metric": "unpatched_logit_diff",
+    "value": -4.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "48",
+    "metric": "unpatched_logit_diff",
+    "value": -10.75,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "49",
+    "metric": "unpatched_logit_diff",
+    "value": -8.0,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "50",
+    "metric": "unpatched_logit_diff",
+    "value": -10.3125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "51",
+    "metric": "unpatched_logit_diff",
+    "value": -7.375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "52",
+    "metric": "unpatched_logit_diff",
+    "value": -10.1875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "53",
+    "metric": "unpatched_logit_diff",
+    "value": -13.3125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "54",
+    "metric": "unpatched_logit_diff",
+    "value": -5.75,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "55",
+    "metric": "unpatched_logit_diff",
+    "value": -10.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "56",
+    "metric": "unpatched_logit_diff",
+    "value": -5.4375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "57",
+    "metric": "unpatched_logit_diff",
+    "value": -2.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "58",
+    "metric": "unpatched_logit_diff",
+    "value": -9.125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "59",
+    "metric": "unpatched_logit_diff",
+    "value": -12.4375,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "60",
+    "metric": "unpatched_logit_diff",
+    "value": -4.25,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "61",
+    "metric": "unpatched_logit_diff",
+    "value": -6.125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "62",
+    "metric": "unpatched_logit_diff",
+    "value": -7.875,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  },
+  {
+    "example_id": "63",
+    "metric": "unpatched_logit_diff",
+    "value": -10.3125,
+    "unit": "logit",
+    "estimand_version": "logit_diff/v1",
+    "eligible": true
+  }
+]

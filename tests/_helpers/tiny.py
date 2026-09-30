@@ -3,15 +3,15 @@ causal-model construction.
 
 One LM stub and one symbolic causal model live here:
 
-* **tiny-random** — :func:`tiny_random_model` / :func:`tiny_random_tokenizer` /
-  :func:`tiny_random_runner_overrides`. Wraps
+* **tiny-random** — `tiny_random_model` / `tiny_random_tokenizer` /
+  `tiny_random_runner_overrides`. Wraps
   ``hf-internal-testing/tiny-random-LlamaForCausalLM`` (2 hidden layers,
   hidden_size=16, vocab_size=32000). Real Llama architecture, **random
   weights** — fast to load, ideal for the smoke tier which only asserts
   "didn't crash + artifacts exist." Produces numerically nonsensical
   outputs.
-* :func:`tiny_chain_model` — a 3-node ``A → B → C`` symbolic
-  :class:`~causalab.causal.causal_model.CausalModel` for unit/property
+* `tiny_chain_model` — a 3-node ``A → B → C`` symbolic
+  [`CausalModel`][causalab.causal.model.CausalModel] for unit/property
   tests in ``tests/causal/`` and ``tests/io/`` that need a real (but
   minimal) causal model without paying the cost of inline construction
   in every file.
@@ -58,7 +58,7 @@ TINY_RANDOM_MODEL_NAME = "hf-internal-testing/tiny-random-LlamaForCausalLM"
 # tier exercises:
 #
 # * ``input_ids`` / ``attention_mask`` — produced by
-#   :class:`causalab.neural.pipeline.LMPipeline.load` from
+#   `causalab.neural.pipeline.LMPipeline.load` from
 #   ``tokenizer(prompts, ...)``; passed to ``model.generate`` which then
 #   calls ``forward`` with them.
 # * ``position_ids`` — built by ``LMPipeline.load`` via
@@ -90,7 +90,7 @@ RUNNER_FORWARD_KWARGS: frozenset[str] = frozenset(
 
 @functools.lru_cache(maxsize=1)
 def tiny_random_model() -> Any:
-    """Return a cached :class:`transformers.LlamaForCausalLM` instance.
+    """Return a cached `transformers.LlamaForCausalLM` instance.
 
     Module-scope ``lru_cache`` is critical — the smoke tier loads this
     once per pytest session, then every parametrized baseline test reuses
@@ -112,7 +112,7 @@ def tiny_random_model() -> Any:
 
 @functools.lru_cache(maxsize=1)
 def tiny_random_tokenizer() -> Any:
-    """Return a cached :class:`transformers.AutoTokenizer` for the tiny-random stub."""
+    """Return a cached `transformers.AutoTokenizer` for the tiny-random stub."""
     from transformers import AutoTokenizer
 
     return AutoTokenizer.from_pretrained(TINY_RANDOM_MODEL_NAME)
@@ -136,7 +136,7 @@ TINY_RANDOM_GPT2_MODEL_NAME = "hf-internal-testing/tiny-random-gpt2"
 def tiny_random_gpt2_model() -> Any:
     """Return a cached random-weight ``GPT2LMHeadModel`` (absolute positions).
 
-    Same role as :func:`tiny_random_model`, but for the absolute-position family:
+    Same role as `tiny_random_model`, but for the absolute-position family:
     its ``transformer.wpe`` makes collected activations sensitive to the left-pad
     ``position_ids`` convention, where the RoPE stub is not. Outputs are
     numerically meaningless (random weights) — only for tests that need a ``wpe``
@@ -208,11 +208,9 @@ def tiny_random_runner_overrides(experiment_root: Path | str) -> dict[str, Any]:
     ``force_add=True`` so an upstream rename of any of them trips the
     smoke tier loudly instead of silently growing a stale duplicate key.
 
-    Parameters
-    ----------
-    experiment_root:
-        Directory the runner should write its artifacts to. Tests pass
-        ``tmp_path`` so each parametrized run is hermetic.
+    Args:
+        experiment_root: Directory the runner should write its artifacts to. Tests pass
+            ``tmp_path`` so each parametrized run is hermetic.
     """
     return {
         "experiment_root": str(experiment_root),
@@ -233,7 +231,7 @@ def tiny_random_runner_overrides(experiment_root: Path | str) -> dict[str, Any]:
 # yamls under ``tests/end_to_end/configs/golden/<runner>.yaml`` that pin
 # the model (``/model: chat-coherent``) and dataset/batch knobs at golden
 # scale directly; no runtime override layer or Python handle is needed.
-# ``tiny-random`` still uses :func:`tiny_random_runner_overrides` because
+# ``tiny-random`` still uses `tiny_random_runner_overrides` because
 # smoke deliberately exercises the e2e smoke yamls (under
 # ``tests/end_to_end/configs/smoke/``) and swaps in the random stub.
 
@@ -248,7 +246,7 @@ def tiny_chain_model(model_id: str = "tiny_chain_model") -> Any:
 
     ``A`` is a binary input variable. ``B`` and ``C`` are identity-propagating
     mechanisms. ``raw_input`` / ``raw_output`` are present (both are required
-    by :class:`~causalab.causal.causal_model.CausalModel.__init__`).
+    by `__init__`).
 
     Why a factory and not a session-scoped fixture? Several callers mutate
     the returned model (set ``input_filter``, intervene), so handing out the
@@ -257,32 +255,23 @@ def tiny_chain_model(model_id: str = "tiny_chain_model") -> Any:
 
     Consumers (current and planned):
 
-    * ``tests/causal/test_causal_utils.py`` — filter / label / sample
-      helpers in ``causal/causal_utils.py``.
+    * ``tests/causal/test_counterfactuals.py`` — filter / label / sample
+      helpers in ``causal/counterfactuals.py``, and the schema property
+      tests for ``CounterfactualExample``.
     * ``tests/io/plots/test_causal_graph.py`` — DAG / forward-pass
       visualization in ``io/plots/causal_graph.py``.
-    * ``tests/causal/test_counterfactual_dataset.py`` — schema property
-      tests for ``CounterfactualExample``.
 
-    ``tests/causal/test_trace.py`` deliberately does *not* use this — its
-    plan requires raw-``CausalTrace`` construction without ``CausalModel``
-    coupling.
+    ``tests/causal/test_trace.py`` does not use this: it defines the small
+    models each trace test needs.
     """
-    from causalab.causal.causal_model import CausalModel
-    from causalab.causal.trace import Mechanism, input_var
+    from causalab.causal import CausalModel, Dom, V, mechanism
 
-    values = {
-        "A": [0, 1],
-        "B": [0, 1],
-        "C": [0, 1],
-        "raw_input": None,
-        "raw_output": None,
-    }
-    mechanisms = {
-        "A": input_var([0, 1]),
-        "B": Mechanism(parents=["A"], compute=lambda t: t["A"]),
-        "C": Mechanism(parents=["B"], compute=lambda t: t["B"]),
-        "raw_input": Mechanism(parents=["A"], compute=lambda t: f"Input A={t['A']}"),
-        "raw_output": Mechanism(parents=["C"], compute=lambda t: f"Output C={t['C']}"),
-    }
-    return CausalModel(mechanisms, values, id=model_id)
+    @mechanism
+    def equations(A: Dom([0, 1])):
+        B = V(A, domain=Dom([0, 1]))
+        raw_input = V(f"Input A={A}", domain=Dom(str))  # noqa: F841
+        C = V(B, domain=Dom([0, 1]))
+        raw_output = V(f"Output C={C}", domain=Dom(str))  # noqa: F841
+        return C
+
+    return CausalModel(equations, id=model_id)

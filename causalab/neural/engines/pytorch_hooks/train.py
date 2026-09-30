@@ -1,70 +1,27 @@
-"""The train loop (spec §2.11, §8): the document declares the fit, this
-engine owns the loop.
+"""Fit featurizer parameters under the declared training protocol.
 
-Semantics implemented exactly as declared — none of the legacy loop's
-ambient state survives:
+Each member has separate stages, optimizer state, minibatch order, schedules,
+and stopping state. Local generators drive initialization, ordering, and
+hard-concrete masks. Setup also seeds the global generator for Torch's
+orthogonal basis completion. The loop uses per-member generators while
+model weights remain frozen in evaluation mode.
 
-* ``seed`` drives featurizer init, data order, and every draw, so a
-  ``{"sweep": [0,1,2]}`` on ``seed`` yields three genuinely different fits.
-  Init reaches the featurizer as an explicit argument (``executor.seed`` →
-  ``build_stack(seed=…)``, a *local* generator) rather than through the
-  global RNG, because the same construction runs on apply paths where no
-  loop entry ever executes; the batch order has its own local ``order_rng``;
-  ``torch.manual_seed`` as each fit's stages are built — the one deliberate
-  use of the global RNG — seeds what the init draws beyond the local
-  generator (``matrix_exp``/``stiefel`` complete torch's own
-  orthogonal-parametrization basis from it; the ``cayley`` parametrization
-  draws nothing). Nothing draws from the *global* RNG during the loop itself
-  — the model is in eval mode — which is what lets several fits share one
-  loop: at loop entry the global RNG belongs to the last member prepared, and
-  no member's numbers depend on it. The one draw the loop does make is a
-  ``hard_concrete`` gate's training mask, once per optimizer step from the
-  member's own ``mask_rng`` (``Gate.resample``), so a cohort member's samples
-  are a function of its own document and seed whatever fits beside it;
-* ``objective`` terms are differentiable metric tensors (``cross_entropy``,
-  ``logit_diff``, ``soft_accuracy``, ``kl``, ``js`` — the last two toward
-  another read, ``js`` optionally restricted to a per-row answer set; a
-  term's weight is signed, so ``-1`` on a margin maximizes it) plus regularizers
-  (``l1``/``l2`` over the params of one featurizer or of several together; a
-  ``gate``'s l1 is the mean soft mask — the DBM sparsity semantics — and a
-  list of gates is one mean over all their units, so one weight counts
-  selected units across layers; ``l0`` is a ``hard_concrete`` gate's expected
-  kept fraction, the penalty that goes with a sampled mask);
-* ``anneal`` targets ``<featurizer>.<slot>.temperature`` linearly from
-  start to end over the first ``frac`` of total steps, then holds;
-* after every optimizer step each trained stage is **projected** back onto
-  its feasible set (``Stage.project``) — a ``clamp`` gate clips its mask into
-  ``[0, 1]``, everything else is a no-op;
-* a ``trajectory`` save entry (§2.12) photographs the trained slots after the
-  scheduled updates — ``count: n`` equally spaced, the last at the end — with
-  the loss, every term's value and weight, every gate's mask numbers and every
-  controlled value beside each photograph (``TrainOutcome.checkpoints``);
-* ``control`` moves a hyperparameter — a named term's weight, or an
-  anneal-style attribute — every update so a fit signal (the kept-unit count
-  of one gate, or summed over several) follows its declared setpoint ramp
-  (``control.py``); the authored value is the start, the trajectory is
-  recorded on the outcome. Each member of a cohort has its own controllers,
-  checkpoints and live weights;
-* ``eval`` runs on the declared split in eval mode (hard gate, no grad)
-  every N epochs; ``early_stop`` tracks the eval metric with
-  patience;
-* ``batch.pairs`` counts base+counterfactual pairs; roles are sliced together
-  (rows are paired by index, §2.2).
+Objective terms reduce differentiable reads and apply signed weights.
+Regularizers act on the declared featurizer parameters. Gate L1 measures
+the mean soft mask for Desiderata-Based Masking; a list of gates uses one
+mean across their units. Hard-concrete L0 measures expected kept fraction.
+Each update projects stages into their feasible sets.
 
-**Cohorts** (§4). The loop fits several points **together**: the points of
-one cohort (:func:`~causalab.protocol.plan.fit_cohorts` — one realization,
-one row set, one frame) step in lockstep, and each step's forward is one
-model call over the concatenation of every member's minibatch, each member's
-writes on its own rows (``cohort.py``). Every member keeps its own seed,
-stages, optimizer, minibatch order, anneal, eval cadence and early-stop
-state; a member whose budget is spent or whose patience ran out drops out of
-the batch while the rest go on. The summed loss backpropagates into disjoint
-parameters, so each member's gradient is its own. ``fit_rows`` bounds the rows
-of one grad forward (a member's minibatch is never split); the no-grad eval
-passes batch the same way under the engine's ``batch_rows``.
+Annealing and controllers update their declared targets. Trajectory saves
+record scheduled parameters, objective values, gate sizes, and controlled
+values. Evaluation uses the named split with hard gates and gradients off;
+early stopping follows its metric and patience. ``batch.pairs`` slices all
+roles together.
 
-The model's weights are frozen at load; only featurizer slots (and, later,
-free ``params`` tensors) optimize.
+Compatible fits share cohort forwards over concatenated minibatches.
+Each member keeps its own rows and parameter gradients, and stops when
+its budget or patience ends. ``fit_rows`` bounds gradient windows while
+keeping member minibatches whole. Evaluation also honors ``batch_rows``.
 """
 
 from __future__ import annotations
@@ -78,7 +35,20 @@ from typing import Any, Callable, Iterator, Mapping, Sequence
 
 import torch
 
-from causalab.neural.engines.pytorch_hooks.budget import Meter, RowBudget, cuda_meter
+from causalab.neural.engines.pytorch_hooks.budget import (
+    DistributedOutOfMemory,
+    Meter,
+    OOMPolicy,
+    RowBudget,
+    cuda_meter,
+)
+from causalab.neural.engines.pytorch_hooks.rows import RowSplit
+from causalab.neural.engines.pytorch_hooks.stages import TrainedOwner
+from causalab.neural.shared.parallel.agreements import (
+    average_gradients,
+    configured_agreement,
+)
+from causalab.neural.shared.parallel.collective import SOLO, Collective
 from causalab.neural.engines.pytorch_hooks.cohort import (
     cohort_entries,
     groups_read_by,
@@ -92,13 +62,13 @@ from causalab.neural.engines.pytorch_hooks.control import (
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor, document_seed
 from causalab.neural.shared.encoding import EncodedBatch
 from causalab.neural.shared.execution import (
-    MASK_DECISIVE_MARGIN,
     Checkpoint,
     TrainEvalScore,
     TrainOutcome,
 )
+from causalab.neural.shared.results import MASK_DECISIVE_MARGIN
 from causalab.neural.shared.encoding import encode
-from causalab.neural.shared.executor_base import ForwardCache
+from causalab.neural.shared.executor import ForwardCache
 from causalab.neural.shared.featurizers import (
     ORTHONORMAL_TOLERANCE,
     Gate,
@@ -107,33 +77,37 @@ from causalab.neural.shared.featurizers import (
     featurizer_cache,
     orthonormality_deviation,
 )
-from causalab.neural.shared.mechanisms import operand_names
-from causalab.neural.shared.services import input_roles
+from causalab.neural.shared.plan import write_names
+from causalab.protocol.positions.roles import input_roles
 from causalab.neural.shared.metrics import (
     GATHERED_KINDS,
-    column_token_ids,
     compute_metric,
     gathered_metric,
-    metric_token_ids,
     js_divergence,
+)
+from causalab.protocol.answers import (
+    column_token_ids,
+    metric_token_ids,
     restrict_token_ids,
 )
-from causalab.protocol.engine import ExecutionRequest
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.engine import RunContext
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.schema import (
     OBJECTIVE_WEIGHT_PREFIX,
     PER_PARAMS_OPTIMIZER_FIELDS,
-    READ_TARGET_METRIC_KINDS,
     AnnealSchedule,
+    BoundAggregation,
     ConstraintSpec,
     DataRole,
     Document,
     PhaseSpec,
-    MetricSpec,
+    AggregationSpec,
+    ReadRef,
     TrainSpec,
     concrete_int,
     concrete_str,
-    metric_reads_vocabulary,
+    operand_reads,
+    read_is_vocabulary,
 )
 
 from causalab.neural.engines.pytorch_hooks.cuda_graphs import (
@@ -156,7 +130,7 @@ __all__ = ["fit_diagnostics", "metric_tensor", "run_cohort_training", "run_train
 
 
 def metric_tensor(
-    metric: MetricSpec,
+    metric: AggregationSpec,
     of_value: torch.Tensor,
     rows: Sequence[Mapping[str, Any]],
     tokenizer: Any,
@@ -171,7 +145,7 @@ def metric_tensor(
     logits = logits.float()
     kind = str(metric.kind)
 
-    form = str(metric.token_form)  # §2.10; `auto` is the historical default
+    form = metric.token_form  # §2.10: strings as written, or "id"
 
     def ids(field: str) -> torch.Tensor:
         if token_ids is not None:
@@ -198,7 +172,7 @@ def metric_tensor(
     if kind == "soft_accuracy":
         # the same margin through a sigmoid (metrics.py's twin): its gradient
         # vanishes once a row is decided, so the fit spends its updates on the
-        # rows still near the boundary — what a soft-accuracy objective is for
+        # rows still near the boundary, which is why a mask fit trains on it
         margin = logits.gather(1, ids("a").unsqueeze(1)).squeeze(1) - logits.gather(
             1, ids("b").unsqueeze(1)
         ).squeeze(1)
@@ -235,7 +209,7 @@ def _cost(
     ``parameter_count`` divides by the target's own element count — ``theta``
     as stored, so on a grouped gate its *units* (heads, experts; positions
     on a position gate), not the
-    coordinates they span: the same per-unit reading :func:`_regularizer`
+    coordinates they span: the same per-unit reading `_regularizer`
     gives the quantity — so under ``reduce: sum`` the term is a sum of
     per-featurizer means — NeuroSurgeon's λ scaled with the parameter count,
     one weight meaning one thing across featurizers of different sizes
@@ -276,7 +250,7 @@ def _regularizer(
     (expert, neuron) table, not the slots a token happens to fill; on a
     position gate (§2.5 ``axis``) the addressed positions. Under
     ``l0`` it is the gate's **expected kept fraction** per unit
-    (:meth:`Gate.expected_l0`): Louizos et al.'s closed form for a
+    ([`Gate.expected_l0`][causalab.neural.shared.featurizers.gate.Gate.expected_l0]): Louizos et al.'s closed form for a
     ``hard_concrete`` gate, whose sampled training mask makes the soft mask
     the wrong surrogate.
     For every other featurizer (or a gate under ``l2``) it is ``|p|`` or ``p²``
@@ -287,7 +261,7 @@ def _regularizer(
     with no mask, are refused at validation (rule 4) and again here.
 
     ``costs`` scales each target's quantities before the concatenation
-    (:func:`_cost`), so a table ``{"gate_15": 0.25}`` makes a kept unit of
+    (`_cost`), so a table ``{"gate_15": 0.25}`` makes a kept unit of
     that gate a quarter as expensive as one elsewhere, and
     ``"parameter_count"`` makes every target weigh its mean.
     """
@@ -350,20 +324,20 @@ class _Drawn:
     minibatch executors with one member per row.
 
     The draw runs on its own stream: the document seed hashed with the word
-    ``draw`` (:func:`_stream_seed`), not the raw seed the batch order and the
+    ``draw`` (`_stream_seed`), not the raw seed the batch order and the
     mask samples share — both of those call ``torch.rand`` too, and a member
     drawn from the same numbers as a gate's first resample would be
     correlated with the mask noise.
 
     Refusals at prepare, two codes: a row with no members, an ``eval`` past a
     row's count and a per-member sibling of another length are the *data*'s
-    shape (P2); prepared encodings and ``segments`` are things this engine
-    cannot combine with a re-encoded role (P4). Graph capture is neither: a
+    shape (P2); ``segments`` is a declared frame this engine cannot combine
+    with a re-encoded role (P4). Graph capture is neither: a
     run asked to capture fit graphs runs a drawn point eager
     (``cuda_graphs.unsupported_reason``), because the shapes *are*
     epoch-invariant (every minibatch is a ``select`` of one frame) and it is
     the per-epoch rebuild of the minibatch executors, not the draw, that a
-    captured graph cannot follow; :meth:`of` asserts that routing rather
+    captured graph cannot follow; `of` asserts that routing rather
     than refusing a second time."""
 
     def __init__(
@@ -412,7 +386,7 @@ class _Drawn:
             self.expanded[role] = encode(
                 executor.bundle.tokenizer,
                 [str(t) for values in members for t in values],
-                device=executor.bundle.device,
+                device=executor.bundle.devices.embedding,
             )
 
     @classmethod
@@ -447,20 +421,6 @@ class _Drawn:
                 f"data.{role}: the executor reads {executor.role_fields[role]!r}, "
                 f"the draw {spec.resolved_field!r}"
             )
-            # prepared token sequences own their frame (`executor_base._batch`
-            # dispatches to `encode_prepared` on a `<column>_encoding` sibling);
-            # a drawn role is re-encoded from text, so the fit would run on
-            # other tokens than the point's reads and `train.eval` — refused,
-            # for the same reason `segments` is
-            prepared = f"{spec.draw_column}_encoding"
-            if any(prepared in row for row in executor.role_rows[role]):
-                raise ProtocolError(
-                    "P4",
-                    f"data.{role}.draw: prepared inputs ({prepared!r}) own their "
-                    "frame; this engine re-encodes a drawn role from text every "
-                    "epoch, so the fit would train on other tokens than the "
-                    "point reads — drop the encoding sibling or the draw",
-                )
         return cls(doc, executor, roles, seed)
 
     def record(self) -> dict[str, dict[str, Any]]:
@@ -491,7 +451,7 @@ class _Drawn:
 
     def minibatches(self) -> list[PointExecutor]:
         """One epoch's minibatch executors over the partition and frames
-        :meth:`bind` set: a fresh draw, the drawn rows, and per batch a
+        `bind` set: a fresh draw, the drawn rows, and per batch a
         selection of the expanded frame. ``interning=None``: the
         store is not consulted by these executors at all — a source forward
         over a drawn role is constant for no two epochs, and the store is
@@ -522,28 +482,31 @@ class _Drawn:
                 for role, frame in self.frames.items()
             }
             out.append(
-                make_executor(
-                    self.doc,
-                    executor.bundle,
-                    cuda_graphs=False,
-                    role_rows=_slice_rows(role_rows, indices),
-                    # the outer executor's fields as they are: `role_fields[role]`
-                    # is the drawn member's (`of` checks it once, at prepare)
-                    role_fields=executor.role_fields,
-                    load_tensors=executor.load_tensors,
-                    load_table=executor.load_table,
-                    # shared, not per executor: `_prepare_fit` built the
-                    # optimizer's groups over these stages, so a rebuilt
-                    # minibatch's `stage(name)` is a cache hit on the tensors
-                    # being stepped — a fresh cache would re-initialise every
-                    # featurizer each epoch while the optimizer stepped the
-                    # originals (the identity test diverges at the first
-                    # checkpoint)
-                    stage_cache=executor.stage_cache,
-                    grad_enabled=True,
-                    coords=executor.coords,
-                    interning=None,
-                    batches=selected,
+                _derived(
+                    executor,
+                    make_executor(
+                        self.doc,
+                        executor.bundle,
+                        cuda_graphs=False,
+                        role_rows=_slice_rows(role_rows, indices),
+                        # the outer executor's fields as they are: `role_fields[role]`
+                        # is the drawn member's (`of` checks it once, at prepare)
+                        role_fields=executor.role_fields,
+                        load_tensors=executor.load_tensors,
+                        load_table=executor.load_table,
+                        # shared, not per executor: `_prepare_fit` built the
+                        # optimizer's groups over these stages, so a rebuilt
+                        # minibatch's `stage(name)` is a cache hit on the tensors
+                        # being stepped — a fresh cache would re-initialise every
+                        # featurizer each epoch while the optimizer stepped the
+                        # originals (the identity test diverges at the first
+                        # checkpoint)
+                        stage_cache=executor.stage_cache,
+                        grad_enabled=True,
+                        coords=executor.coords,
+                        interning=None,
+                        batches=selected,
+                    ),
                 )
             )
         return out
@@ -552,7 +515,7 @@ class _Drawn:
         self, batches: Sequence[list[int]], frames: Mapping[str, EncodedBatch]
     ) -> None:
         """The fit's minibatch partition and its per-role frames — what every
-        epoch's :meth:`minibatches` selects from; known once the frames are
+        epoch's `minibatches` selects from; known once the frames are
         encoded, and bound before the first draw is taken, so no reader of
         ``fit.drawn`` can find them unset."""
         self.batches = list(batches)
@@ -567,13 +530,9 @@ class _Drawn:
 
 
 #: The per-member siblings of a list column (§2.2): the prompt-variable table
-#: (``encoding.variable_value`` reads ``<column>_variables``) and the prepared
-#: token sequences (``prepared.encoding_field``: ``<column>_encoding``; a drawn
-#: role refuses those in :meth:`_Drawn.of`, so neither consumer below ever
-#: sees one — it is censused here as the convention's second member). Named,
-#: not a prefix: another ``<column>_…`` column is the author's own and is
-#: left alone.
-_MEMBER_SIBLINGS: tuple[str, ...] = ("_variables", "_encoding")
+#: (``encoding.variable_value`` reads ``<column>_variables``). Named, not a
+#: prefix: another ``<column>_…`` column is the author's own and is left alone.
+_MEMBER_SIBLINGS: tuple[str, ...] = ("_variables",)
 
 
 def _member_siblings(row: Mapping[str, Any], column: str) -> list[str]:
@@ -602,11 +561,11 @@ def _check_member_siblings(
 
 def _drawn_row(row: Mapping[str, Any], column: str, member: int) -> dict[str, Any]:
     """The row a minibatch executor reads for a drawn role. The list column
-    and its per-member siblings (:data:`_MEMBER_SIBLINGS`) hold the drawn
+    and its per-member siblings (`_MEMBER_SIBLINGS`) hold the drawn
     member at **every** index, so ``<column>[eval]`` and ``<column>[0]`` alike
     read it inside the fit (``eval`` need not be 0). Every other column — a
     ``<column>_…`` list of the author's own included — is untouched. Pure
-    rewriting: the shape was checked at prepare (:func:`_check_member_siblings`),
+    rewriting: the shape was checked at prepare (`_check_member_siblings`),
     so every list here has one entry per member and its own length is the
     count."""
     out = dict(row)
@@ -661,7 +620,16 @@ class _Fit:
     stages: dict[str, Stage]
     trained_names: tuple[str, ...]
     optimizer: torch.optim.Optimizer
+    #: the minibatches: contiguous blocks of ``train.batch.pairs`` row indices
     batches: list[list[int]]
+    #: this replica's rows of each minibatch — the whole minibatch unless the
+    #: data axis is split over rows (``rows``; docs/model_parallelism.md §8.3)
+    slices: list[list[int]]
+    rows: RowSplit
+    #: the pipeline stage that computes this fit's featurizer gradients, from
+    #: which every rank takes the trained parameters after each update
+    #: (``stages.TrainedOwner``; docs/model_parallelism.md §7, §8.3)
+    owner: TrainedOwner
     minibatch_executors: list[PointExecutor]
     epochs: int
     total_steps: int
@@ -672,7 +640,7 @@ class _Fit:
     #: — this member's own, so a cohort cannot mix members' samples
     mask_rng: torch.Generator
     #: this fit's reads the objective needs, in order — the groups a step runs
-    objective_reads: tuple[str, ...]
+    objective_reads: tuple[ReadRef, ...]
     step: int = 0
     epoch: int = 0
     #: the current epoch's minibatch order and the next position in it
@@ -736,7 +704,7 @@ class _Fit:
     #: the last update's loss and its terms (``term.<name>``, ``weight.<name>``),
     #: what a checkpoint taken after that update records — kept as the
     #: detached device scalars (a weight is the float the update used) and
-    #: read to the host together by :meth:`loss_record` only when a
+    #: read to the host together by `loss_record` only when a
     #: checkpoint asks, so an update pays no round trip for a record it
     #: does not take
     last_loss: torch.Tensor | None = None
@@ -805,15 +773,15 @@ class TrainingObjective:
         self.labels: dict[str, dict[str, torch.Tensor]] = {}
         train = executor.doc.train
         assert train is not None
-        for term in train.objective:
-            target = term.metric
-            if not isinstance(target, str):
+        for index, term in enumerate(train.objective):
+            agg = executor.doc.aggregation_at(term.path(index))
+            if agg is None:
                 continue
-            metric = executor.doc.metrics[target]
+            metric = agg.spec
             fields = {"cross_entropy": ("target",), "logit_diff": ("a", "b")}.get(
                 str(metric.kind), ()
             )
-            self.labels[target] = {
+            self.labels[agg.owner] = {
                 field: torch.tensor(
                     column_token_ids(
                         executor.bundle.tokenizer,
@@ -833,11 +801,12 @@ class TrainingObjective:
                             )
                             for row in executor.rows_for_metrics()
                         ],
-                        token_form=str(metric.token_form),
+                        token_form=metric.token_form,
                         where=f"metric {metric.kind}.{field}",
                     ),
                     dtype=torch.long,
-                    device=executor.bundle.device,
+                    # beside the logits they index: the head's device
+                    device=executor.bundle.devices.head,
                 )
                 for field in fields
             }
@@ -856,8 +825,11 @@ class TrainingObjective:
         mb = self.executor
         train = mb.doc.train
         assert train is not None
-        loss = torch.zeros((), device=mb.bundle.device)
-        for term_spec in train.objective:
+        # the loss scalar follows the ``lm_head`` read: the head's device;
+        # a regularizer over a stage placed on another block's device joins
+        # it there (a 0-d move, differentiable)
+        loss = torch.zeros((), device=mb.bundle.devices.head)
+        for index, term_spec in enumerate(train.objective):
             if term_spec.constraint is not None:
                 # refused before capture in `_prepare_fit`; said again here so a
                 # graph objective can never silently drop the duals
@@ -866,19 +838,20 @@ class TrainingObjective:
                     f"{term_spec.path(0)}: a constraint term's duals step on the "
                     "eager loop, not inside a captured graph",
                 )
-            weight, target = (
-                term_spec.weight,
-                term_spec.metric
-                if term_spec.metric is not None
-                else term_spec.regularizer,
+            weight = term_spec.weight
+            agg = (
+                mb.doc.aggregation_at(term_spec.path(index))
+                if term_spec.aggregation is not None
+                else None
             )
+            target = agg if agg is not None else term_spec.regularizer
             w = float(weight) if isinstance(weight, (int, float)) else 1.0
-            if isinstance(target, str):
-                metric = mb.doc.metrics[target]
-                of_value = mb.dense_value(str(metric.of))
+            if isinstance(target, BoundAggregation):
+                metric = target.spec
+                of_value = mb.dense_value(target.read)
                 target_value = (
-                    mb.dense_value(str(metric.fields["target"]))
-                    if metric.kind == "kl"
+                    mb.dense_value(target.target)
+                    if metric.kind == "kl" and target.target is not None
                     else None
                 )
                 per_row = metric_tensor(
@@ -887,7 +860,7 @@ class TrainingObjective:
                     mb.rows_for_metrics(),
                     mb.bundle.tokenizer,
                     target_value=target_value,
-                    token_ids=self.labels[target],
+                    token_ids=self.labels[target.owner],
                 )
                 if self.weight is None:
                     term = per_row.mean()
@@ -904,29 +877,30 @@ class TrainingObjective:
                 )
             else:
                 raise ProtocolError("P2", f"unresolvable objective term {target!r}")
-            loss = loss + w * term
+            loss = loss + w * term.to(loss.device)
         return loss
 
 
 def run_training(
     doc: Document,
     executor: PointExecutor,
-    request: ExecutionRequest,
+    run: RunContext,
     *,
     graph_cache: FitGraphCache | None = None,
 ) -> TrainOutcome:
-    """Fit one point: :func:`run_cohort_training` over a cohort of one."""
-    return run_cohort_training([doc], [executor], request, graph_cache=graph_cache)[0]
+    """Fit one point: [`run_cohort_training`][] over a cohort of one."""
+    return run_cohort_training([doc], [executor], run, graph_cache=graph_cache)[0]
 
 
 def run_cohort_training(
     docs: Sequence[Document],
     executors: Sequence[PointExecutor],
-    request: ExecutionRequest,
+    run: RunContext,
     *,
     fit_rows: int | None = None,
     meter: Meter | None = None,
     graph_cache: FitGraphCache | None = None,
+    graph_pool: GraphPool | None = None,
 ) -> list[TrainOutcome]:
     """Fit the points of one cohort together (module docstring); one outcome
     per point, in order.
@@ -940,8 +914,8 @@ def run_cohort_training(
     computed and then consumed only inside the ``early_stop`` branch, so a fit
     document's saved metric table was the **train** score under a name a reader
     took for the eval one. Spec §2.12 says every metric a document declares is
-    saved; step 4 of the causal protocol asks for train and eval together. Both
-    were unsatisfiable. :class:`~causalab.neural.shared.execution.TrainOutcome`
+    saved, and a fit is reported with its train and eval scores together. Both
+    were unsatisfiable. [`TrainOutcome`][]
     carries it to the run tree as a sibling record — never as a column in the
     metric table, whose rows are a different split.
 
@@ -959,7 +933,7 @@ def run_cohort_training(
     window that still runs out of memory is retried at half the rows.
     The batched eval passes pack under the engine's ``batch_rows`` when it is
     authored and otherwise under the fit's own bound, in a budget of their own
-    (:func:`_advance_eval_budget`): a measured bound's eval window that runs
+    (`_advance_eval_budget`): a measured bound's eval window that runs
     out of memory shrinks and retries without touching the grad bound, and
     the shrink is kept for every later pass; an authored bound is fixed for
     eval windows too and re-raises. The outcome reports the smaller of the two
@@ -972,6 +946,13 @@ def run_cohort_training(
     a different rounding, not a different fit. ``meter`` is the device the
     probes read — the tests' seam for a simulated one; the engine leaves it
     to be found from the model (``cuda_meter``).
+
+    ``graph_pool`` is the [`GraphPool`][] every graph of a captured fit
+    is captured into — the engine's, kept across fits and requests so the
+    segments one fit's graphs grew serve the next (``cuda_graphs.GraphPool``);
+    the loop borrows it and leaves it open. Without one (or once it is
+    closed by an out-of-memory fallback) the loop opens a pool for this fit
+    and releases it in the ``finally``, after every graph holder.
     """
     if len(docs) != len(executors):
         raise ValueError(
@@ -1005,15 +986,33 @@ def run_cohort_training(
             # (shared sources, prefix resume); decided before they are built
             executor.keep_store = len(docs) > 1
     fits = [_prepare_fit(doc, executor) for doc, executor in zip(docs, executors)]
+    # the §7 gradient agreement check's tolerance, read once per fit from
+    # ``CAUSALAB_GRADIENT_AGREEMENT`` (``agreements.AGREEMENT_VARIABLE``): a
+    # malformed value is refused here, before any forward, on every rank
+    # alike; unset, the guard is the plain mean and costs nothing
+    agreement = configured_agreement()
     if meter is None and executors:
-        meter = cuda_meter(executors[0].bundle.model)
-    budget = RowBudget.of(fit_rows, meter)
+        meter = cuda_meter(executors[0].bundle.devices)
+    # the cohort's collective is its executors' (docs/model_parallelism.md
+    # §3): the budget's two agreements and the gradient guard run through it
+    # — over the data replicas too when the fit's rows are split (§8.3)
+    collective: Collective = executors[0].fragments.collective if executors else SOLO
+    axes = fits[0].rows.budget_axes if fits else RowBudget.axes
+    oom_policy = (
+        OOMPolicy.ABORT
+        if any(
+            OOMPolicy.for_geometry(ex.bundle.geometry) is OOMPolicy.ABORT
+            for ex in executors
+        )
+        else OOMPolicy.RETRY
+    )
+    budget = RowBudget.of(fit_rows, meter, collective, axes, oom_policy=oom_policy)
     batch_rows = executors[0].batch_rows if executors else None
     eval_budget: RowBudget | None = None
     # the floor of a measured bound: the smallest minibatch any member will
     # ever step — known before the loop, so it does not depend on which
     # minibatch the shuffle draws first (an epoch's last one is a remainder)
-    unit = min((len(batch) for fit in fits for batch in fit.batches), default=None)
+    unit = min((len(rows) for fit in fits for rows in fit.slices), default=None)
     cohort_graphs: CohortGraphs | None = None
     evaluation_graphs: EvaluationGraphs | None = None
     # one allocator pool for every graph the fit captures (GraphPool): a
@@ -1023,10 +1022,24 @@ def run_cohort_training(
     # releases them in the finally, after every graph holder; a cached bank's
     # pool belongs to the FitGraphCache.
     cohort_pool: GraphPool | None = None
-    solo_pool: GraphPool | None = None
+    # the engine's pool while it is open; otherwise `own_pool`, the one pool
+    # this call opens — and the only one it releases, in the finally
+    borrowed = graph_pool if graph_pool is not None and not graph_pool.closed else None
+    own_pool: GraphPool | None = None
+
+    def fit_pool() -> GraphPool:
+        nonlocal own_pool
+        if borrowed is not None:
+            return borrowed
+        if own_pool is None:
+            own_pool = GraphPool()
+        return own_pool
+
     if captured_cohort:
-        cohort_pool = GraphPool()
-        evaluation_graphs = EvaluationGraphs(pool=cohort_pool)
+        cohort_pool = fit_pool()
+        # every graph holder takes the fit's policy: under a sharded geometry
+        # an out-of-memory capture or replay ends the run, as a window's does
+        evaluation_graphs = EvaluationGraphs(pool=cohort_pool, oom_policy=oom_policy)
         for fit in fits:
             fit.graph_pool = cohort_pool
         cohort_graphs = CohortGraphs(
@@ -1047,6 +1060,7 @@ def run_cohort_training(
             ],
             make_objective=TrainingObjective,
             pool=cohort_pool,
+            oom_policy=oom_policy,
         )
     for fit in fits:
         # the held-out capture cache is a solo-fit affair: the members of a
@@ -1063,10 +1077,11 @@ def run_cohort_training(
             p for group in fits[0].optimizer.param_groups for p in group["params"]
         ]
         if graph_cache:
-            graphs = graph_cache.begin(fits[0].executor, parameters)
+            graphs = graph_cache.begin(
+                fits[0].executor, parameters, oom_policy=oom_policy
+            )
         else:
-            solo_pool = GraphPool()
-            graphs = TrainingGraphs(parameters, pool=solo_pool)
+            graphs = TrainingGraphs(parameters, pool=fit_pool(), oom_policy=oom_policy)
         fits[0].graph_pool = graphs.pool
     try:
         while True:
@@ -1116,16 +1131,35 @@ def run_cohort_training(
                 fit.optimizer.zero_grad()
                 current.append((fit, minibatch))
             _run_step_windows(
-                current, budget, unit, graphs=graphs, cohort_graphs=cohort_graphs
+                current,
+                budget,
+                unit,
+                graphs=graphs,
+                cohort_graphs=cohort_graphs,
+                agreement=agreement,
             )
             due: list[_Fit] = []
-            for fit, _ in current:
+            for fit, minibatch in current:
                 _apply_lr_schedule(fit)
                 fit.optimizer.step()
                 for stage in fit.stages.values():
                     stage.project()  # back onto the feasible set (a clamp gate)
+                # under a pipeline the featurizer's gradient is made on the
+                # stage owning its site alone (§6.5, §7): every rank — the
+                # publisher included — takes the owner's parameters after the
+                # step, before anything reads them (a checkpoint, the eval's
+                # snapshot, a controller). The identity at world 1.
+                fit.owner.sync(fit.stages.values())
                 fit.step += 1
                 fit.position += 1
+                # Release this step's captured reads now, not when the minibatch
+                # comes round again an epoch later. A member's last-token logits
+                # over the vocabulary are about 4 MB bf16 per minibatch, and one
+                # parked per member per step is members x minibatches of them by
+                # the end of the epoch: at 80 members x 224 minibatches that is
+                # about 70 GB, which exhausts an 80 GB device before the first
+                # eval.
+                minibatch.reset_reads()
             # the members' controllers observe their gates in one host read,
             # after every member has stepped (the members are independent, so
             # the order of stepping and observing across them changes nothing)
@@ -1143,7 +1177,7 @@ def run_cohort_training(
                         due.append(fit)
             if due:
                 eval_budget = _advance_eval_budget(batch_rows, budget, eval_budget)
-                _evaluate(due, request, eval_budget, graphs=evaluation_graphs)
+                _evaluate(due, run, eval_budget, graphs=evaluation_graphs)
             for fit, _ in current:
                 if fit.exhausted:
                     fit.active = False
@@ -1196,11 +1230,11 @@ def run_cohort_training(
             ):
                 evaluation.close()
         # every graph holder of the fit is closed: release the pool the loop
-        # opened. A cached bank's pool stays with the bank (FitGraphCache).
-        if cohort_pool is not None:
-            cohort_pool.close()
-        elif solo_pool is not None:
-            solo_pool.close()
+        # opened. A cached bank's pool stays with the bank (FitGraphCache),
+        # and the engine's stays with the engine, its blocks free for the
+        # next fit's captures.
+        if own_pool is not None:
+            own_pool.close()
 
 
 def _advance_eval_budget(
@@ -1223,13 +1257,29 @@ def _advance_eval_budget(
     the windows of both kinds that packed under the fit's bound and did not
     fit.
     """
+    # both eval budgets agree their out-of-memory windows over the same group
+    # the grad budget does (§3)
     if batch_rows is not None:
         return (
-            previous if previous is not None else RowBudget.of(batch_rows, meter=None)
+            previous
+            if previous is not None
+            else RowBudget.of(
+                batch_rows,
+                meter=None,
+                collective=budget.agreements.collective,
+                axes=budget.axes,
+                oom_policy=budget.oom_policy,
+            )
         )
     if previous is None:
         return RowBudget(
-            bound=budget.bound, fixed=budget.fixed, meter=None, resolved=True
+            bound=budget.bound,
+            fixed=budget.fixed,
+            meter=None,
+            resolved=True,
+            agreements=budget.agreements,
+            axes=budget.axes,
+            oom_policy=budget.oom_policy,
         )
     if budget.bound is not None and (
         previous.bound is None or budget.bound < previous.bound
@@ -1245,21 +1295,24 @@ def _run_step_windows(
     *,
     graphs: TrainingGraphs | None = None,
     cohort_graphs: CohortGraphs | None = None,
+    agreement: float | None = None,
 ) -> None:
     """One optimizer step's grad forwards: the members packed into windows
     under the budget (``budget.py``), each window one forward, one summed
     loss and one backward. A window the device cannot hold is retried at a
     smaller bound: its members have not stepped, so their gradients are
-    zeroed and the window re-packed (:func:`_run_windows`).
+    zeroed and the window re-packed (`_run_windows`).
 
     A captured cohort (``cohort_graphs``) takes the whole step first — every
     stepping member in its slot, one replay — and the budget is not consulted;
-    a step it declines runs as the eager cohort below. Captured work also
+    a step it declines runs as the eager cohort below. Either way the step's
+    reductions follow: the sum over a rows split's replicas, the record's
+    agreement and the mean over the model group. Captured work also
     bypasses the eager per-member tally brackets, so receipt forward/reuse
     counts are not comparable to eager counts; the graph benchmark reports
     captures and replays separately.
 
-    Each eager window runs under one :func:`featurizer_cache` scope: a member's
+    Each eager window runs under one [`featurizer_cache`][causalab.neural.shared.featurizers.sharing.featurizer_cache] scope: a member's
     rotation or mask is evaluated once and serves its read, every write's
     featurize and inverse and — for a subspace, whose penalty reads the
     rotation through ``slot_params`` — the regularizer, with the gradient
@@ -1268,7 +1321,12 @@ def _run_step_windows(
     table: under ``hard_concrete`` the table is the sampled mask and the
     penalty the deterministic one, and a ``head`` / ``site`` group's penalty
     wants the mask before its expansion over the group's coordinates. The
-    scope closes before the optimizer moves the parameter."""
+    scope closes before the optimizer moves the parameter.
+
+    ``agreement`` is the §7 guard's runtime check (``agreements.py``): the
+    tolerance the ranks' gradients are held to before the mean, ``None``
+    for no check."""
+    replayed = False
     if cohort_graphs is not None and not cohort_graphs.disabled:
         items: list[WindowItem] = []
         for fit, minibatch in current:
@@ -1279,13 +1337,14 @@ def _run_step_windows(
             items.append(
                 WindowItem(
                     key=id(fit),
-                    indices=fit.batches[fit.order[fit.position]],
+                    indices=fit.slices[fit.order[fit.position]],
                     minibatch=minibatch,
                     objective=fit.graph_objectives[minibatch],
                 )
             )
-        if cohort_graphs.backward(items):
-            return
+        # a replayed step leaves the gradients where an eager one does, and
+        # the reductions below follow it the same way
+        replayed = cohort_graphs.backward(items)
 
     def body(window: Sequence[tuple[_Fit, PointExecutor]]) -> None:
         if graphs is not None and not graphs.disabled and len(window) == 1:
@@ -1310,7 +1369,13 @@ def _run_step_windows(
             loss = torch.zeros(())
             for fit, minibatch in window:
                 with _tally(fit):
-                    loss = loss + _loss(fit, minibatch)
+                    # under a rows split each replica's loss carries its share
+                    # of the minibatch's rows, so the replicas' gradients sum
+                    # to the unsplit minibatch's (rows.py); the loss itself at
+                    # world 1
+                    loss = loss + fit.rows.weigh(
+                        _loss(fit, minibatch), *_step_rows(fit, minibatch)
+                    )
             loss.backward()
 
     def abandon(window: Sequence[tuple[_Fit, PointExecutor]]) -> None:
@@ -1318,7 +1383,64 @@ def _run_step_windows(
             fit.optimizer.zero_grad()
             minibatch.reset_reads()
 
-    _run_windows(current, budget, body, abandon, unit)
+    if not replayed:
+        _run_windows(current, budget, body, abandon, unit)
+    # §7: every trained parameter's gradient is the mean over the
+    # model-parallel group — identical already at a replicated site, a guard
+    # against a future sharded one; the identity at world 1. After the
+    # step's windows, not inside one, so solo/data-row bodies can retry OOMs
+    # before these reductions. Sharded model bodies contain other collectives
+    # and abort instead. The mean is linear, so averaging accumulated gradients
+    # equals averaging each window's gradients.
+    # Under a rows split (§8.3) the gradient is first summed over the data
+    # replicas — the unsplit minibatch's gradient, the shares having carried
+    # the 1/N — and the update's record (the loss and its terms) agreed the
+    # same way, before any controller reads it (``_after_update``).
+    for fit, minibatch in current:
+        parameters = [
+            p for group in fit.optimizer.param_groups for p in group["params"]
+        ]
+        fit.rows.reduce_gradients(parameters)
+        _agree_record(fit, minibatch)
+        average_gradients(
+            parameters,
+            minibatch.fragments.collective,
+            axis="model",
+            agreement=agreement,
+        )
+
+
+def _step_rows(fit: _Fit, minibatch: PointExecutor) -> tuple[int, int]:
+    """``minibatch`` — one of the fit's minibatch executors — as ``(rows this
+    replica steps, rows the minibatch has)``; equal unless the data axis is
+    split over rows. Read off the executor, not the fit's position: a step's
+    windows are driven with the minibatch in hand."""
+    index = fit.minibatch_executors.index(minibatch)
+    return len(fit.slices[index]), len(fit.batches[index])
+
+
+def _device(fit: _Fit) -> torch.device:
+    """The device a fit's agreed scalars are reduced on: the model's head
+    device (one device per rank under a launched world)."""
+    return fit.executor.bundle.devices.head
+
+
+def _agree_record(fit: _Fit, minibatch: PointExecutor) -> None:
+    """The update's record — ``last_loss`` and the ``term.*`` values — as
+    the means over every replica's rows ([`RowSplit.agree_record`][]), so
+    a trajectory checkpoint and a controller read one number on every
+    replica. Nothing at an inactive split: the record is already the fit's."""
+    if not fit.rows.active:
+        return
+    names = [name for name in fit.term_values if name.startswith("term.")]
+    agreed = fit.rows.agree_record(
+        [fit.last_loss, *(fit.term_values[name] for name in names)],
+        *_step_rows(fit, minibatch),
+        device=_device(fit),
+    )
+    fit.last_loss = agreed[0]
+    for name, value in zip(names, agreed[1:], strict=True):
+        fit.term_values[name] = value
 
 
 def _run_windows(
@@ -1328,12 +1450,12 @@ def _run_windows(
     abandon: Callable[[Sequence[tuple[_Fit, PointExecutor]]], None],
     unit: int | None,
 ) -> None:
-    """Pack ``items`` into windows under ``budget`` and run ``body`` on each.
-    A window that raises the allocator's out-of-memory error is **retried**
-    at a smaller bound: ``abandon`` undoes what the failed attempt left on its
-    members, the allocator's cache is released, the bound halved (never below
-    one member) and the window re-packed; a single member that does not fit
-    is re-raised, since nothing smaller exists.
+    """Run rank-agreed windows, retrying only collective-free auto budgets.
+
+    ``abandon`` clears a failed window before releasing cached memory and
+    retrying at a smaller agreed bound. Fixed budgets and single members
+    cannot shrink. Bodies with model collectives abort immediately on OOM,
+    without entering a retry agreement that peers may never reach.
 
     The release happens *after* the ``except`` block, deliberately: while the
     handler runs, the exception's traceback still holds the failed body's
@@ -1350,26 +1472,49 @@ def _run_windows(
     A failed attempt's tallies (``fit_forwards``, ``prefix_reuse``) stay: its
     forwards did run. A fit whose windows shrank — of either kind, under the
     fit's bound — says so in its receipt (``fit_rows_shrinks``).
+
+    For retryable bodies, all ranks agree failure, shrink eligibility and
+    the new bound. A successful peer abandons the same window too. When no
+    smaller window exists, each rank raises its own or its peer's OOM.
     """
     pending = list(items)
     while pending:
         window, rest = budget.take(pending, _window_rows)
         rows = sum(_window_rows(item) for item in window)
-        failed: tuple[int, int] | None = None
+        largest = max(_window_rows(item) for item in window)
+        failure: torch.OutOfMemoryError | None = None
         try:
             budget.run(rows, lambda: body(window), unit)
-        except torch.OutOfMemoryError:
-            largest = max(_window_rows(item) for item in window)
-            if not budget.can_shrink(rows, largest):
-                raise
-            failed = (rows, largest)
-        if failed is not None:
-            abandon(window)
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            budget.shrink(*failed)
+        except DistributedOutOfMemory:
+            raise
+        except torch.OutOfMemoryError as error:
+            failure = error.with_traceback(None)
+        if not budget.out_of_memory(failure is not None):
+            pending = rest
             continue
-        pending = rest
+        if not budget.can_shrink(rows, largest):
+            if failure is not None:
+                raise failure
+            raise torch.OutOfMemoryError(
+                f"a rank of the model-parallel group ran a window of {rows} rows "
+                "out of memory, and no smaller window exists"
+            )
+        abandon(window)
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        budget.shrink(rows, largest)
+
+
+def _derived(source: PointExecutor, built: PointExecutor) -> PointExecutor:
+    """An executor built for a slice or a split of ``source``'s point runs
+    over the same ranks: it inherits the point executor's ``fragments``
+    (``docs/model_parallelism.md`` §4) — set after construction, as the
+    executor's other class-level defaults are, so ``make_executor``'s
+    signature stays the base constructor's — and the same rows split
+    (§8.3), so every executor of one fit agrees which replica it is."""
+    built.fragments = source.fragments
+    built.rows = source.rows
+    return built
 
 
 def _window_rows(item: tuple[_Fit, PointExecutor]) -> int:
@@ -1440,6 +1585,16 @@ def _prepare_fit(doc: Document, executor: PointExecutor) -> _Fit:
         list(range(start, min(start + pairs, n_examples)))
         for start in range(0, n_examples, pairs)
     ]
+    # data parallelism over rows (docs/model_parallelism.md §8.3): this
+    # replica steps its contiguous slice of every minibatch — the whole
+    # minibatch at world 1 and over points; a minibatch with fewer rows than
+    # replicas (an epoch's remainder) is refused by name, on every rank alike
+    rows = executor.rows
+    slices = [rows.slice_for(indices) for indices in batches]
+    # under a pipeline (§7, §8.3) the stage owning the trained featurizers'
+    # sites computes their gradients; two stages are refused here, before
+    # any forward, identically on every rank
+    owner = executor.trained_owner(trained_names)
     if "epochs" in train.steps:
         epochs = concrete_int(train.steps["epochs"], "train.steps.epochs")
         total_steps = epochs * len(batches)
@@ -1468,11 +1623,11 @@ def _prepare_fit(doc: Document, executor: PointExecutor) -> _Fit:
         )
 
     # A minibatch's rows are a *slice* of the campaign's, so its captures live
-    # under `(digest, indices)` in the shared ForwardCache — never under the
+    # under `(key, indices)` in the shared ForwardCache — never under the
     # whole role's key — and only the groups this fit cannot change are ever
     # read from or written to it (`inner_interning`, §4 "Fits"). For the
     # shipped methods that is the source forward: run once per slice here,
-    # then served on every step, epoch and point that shares the digest.
+    # then served on every step, epoch and point that shares the group key.
     # The minibatch is a row *selection* of the point's frame, not a fresh
     # encode of its rows: every minibatch of every point in a cohort is then
     # in one padded frame, which is what lets their forwards concatenate.
@@ -1487,34 +1642,39 @@ def _prepare_fit(doc: Document, executor: PointExecutor) -> _Fit:
         # §2.2 `draw`: this fit's minibatches read a freshly drawn member per
         # row each epoch, encoded as selections of one expanded frame; the
         # inner store is not consulted for them (a source forward over a
-        # drawn role changes every epoch, so nothing about it is constant)
-        drawn.bind(batches, frames)
+        # drawn role changes every epoch, so nothing about it is constant).
+        # Under `dp=N:rows` (§8.3) the draw is the same on every replica —
+        # one seeded stream — and each replica selects its slice of it
+        drawn.bind(slices, frames)
         minibatch_executors = drawn.minibatches()
     else:
         minibatch_executors = [
-            make_executor(
-                doc,
-                executor.bundle,
-                cuda_graphs=executor.cuda_graphs and executor.fit_cuda_graphs,
-                role_rows=_slice_rows(executor.role_rows, indices),
-                role_fields=executor.role_fields,
-                load_tensors=executor.load_tensors,
-                load_table=executor.load_table,
-                stage_cache=executor.stage_cache,  # shared: one stage per name
-                grad_enabled=True,
-                coords=executor.coords,
-                interning=_inner_interning(executor, tuple(indices)),
-                batches={role: frame.select(indices) for role, frame in frames.items()},
+            _derived(
+                executor,
+                make_executor(
+                    doc,
+                    executor.bundle,
+                    cuda_graphs=executor.cuda_graphs and executor.fit_cuda_graphs,
+                    role_rows=_slice_rows(executor.role_rows, indices),
+                    role_fields=executor.role_fields,
+                    load_tensors=executor.load_tensors,
+                    load_table=executor.load_table,
+                    stage_cache=executor.stage_cache,  # shared: one stage per name
+                    grad_enabled=True,
+                    coords=executor.coords,
+                    interning=_inner_interning(executor, tuple(indices)),
+                    batches={
+                        role: frame.select(indices) for role, frame in frames.items()
+                    },
+                ),
             )
-            for indices in batches
+            for indices in slices
         ]
-    objective_reads: list[str] = []
-    for term in train.objective:
-        if term.metric is not None:
-            metric = doc.metrics[term.metric]
-            objective_reads.append(str(metric.of))
-            if metric.kind in READ_TARGET_METRIC_KINDS:
-                objective_reads.append(str(metric.fields["target"]))
+    objective_reads: list[ReadRef] = []
+    for agg in doc.objective_aggregations():
+        objective_reads.append(agg.read)
+        if agg.target is not None:
+            objective_reads.append(agg.target)
     # §2.11 `control`: the closed-loop schedules, and the live value of every
     # named term's weight (the authored weight is a controller's start)
     live_weights: dict[str, float] = {
@@ -1533,6 +1693,9 @@ def _prepare_fit(doc: Document, executor: PointExecutor) -> _Fit:
         trained_names=trained_names,
         optimizer=optimizer,
         batches=batches,
+        slices=slices,
+        rows=rows,
+        owner=owner,
         minibatch_executors=minibatch_executors,
         epochs=epochs,
         total_steps=total_steps,
@@ -1564,7 +1727,7 @@ def _tally(fit: _Fit) -> Iterator[None]:
     store ran and served, and the forwards that resumed from a prefix, as a
     difference over the shared tallies — per member, since a cohort's passes
     interleave several points'. The one forward several members share (a
-    cohort forward) is credited to each of them by :func:`_run_batched`
+    cohort forward) is credited to each of them by `_run_batched`
     instead, outside any member's bracket."""
     store = fit.store
     if store is None:
@@ -1581,7 +1744,7 @@ def _tally(fit: _Fit) -> Iterator[None]:
 
 
 def _run_batched(
-    members: Sequence[tuple[_Fit, PointExecutor, Sequence[str]]],
+    members: Sequence[tuple[_Fit, PointExecutor, Sequence[ReadRef]]],
     *,
     frames: Mapping[str, EncodedBatch] | None = None,
 ) -> None:
@@ -1596,13 +1759,11 @@ def _run_batched(
     for fit, executor, reads in members:
         with _tally(fit):
             for model, _role in groups_read_by(executor.doc, reads):
-                if model == "original":
-                    continue
-                im = executor.doc.intervened_models[model]
-                for ename in im.writes if isinstance(im.writes, tuple) else ():
-                    for operand in operand_names(executor.doc.writes[ename].do.payload):
-                        if operand in executor.doc.reads:
-                            executor.read_value(operand)
+                for ename in write_names(executor.doc, model) or ():
+                    for ref in operand_reads(
+                        executor.doc, executor.doc.writes[ename].do
+                    ):
+                        executor.read_value(ref)
     by_role = cohort_entries([(executor, reads) for _, executor, reads in members])
     owner = {id(executor): fit for fit, executor, _ in members}
     for role, entries in by_role.items():
@@ -1630,13 +1791,16 @@ def _loss(fit: _Fit, minibatch: PointExecutor) -> torch.Tensor:
         w = float(term.weight) if isinstance(term.weight, (int, float)) else 1.0
         if term.name is not None:
             w = fit.live_weights.get(term.name, w)  # a controlled weight moves
-        if term.metric is not None:
-            metric = fit.doc.metrics[term.metric]
-            of_value = minibatch.dense_value(str(metric.of))
+        agg = (
+            fit.doc.aggregation_at(term.path(index))
+            if term.aggregation is not None
+            else None
+        )
+        if agg is not None:
+            metric = agg.spec
+            of_value = minibatch.dense_value(agg.read)
             target_value = (
-                minibatch.dense_value(str(metric.fields["target"]))
-                if metric.kind in READ_TARGET_METRIC_KINDS
-                else None
+                minibatch.dense_value(agg.target) if agg.target is not None else None
             )
             value = metric_tensor(
                 metric,
@@ -1672,15 +1836,15 @@ def _loss(fit: _Fit, minibatch: PointExecutor) -> torch.Tensor:
 
 def _evaluate(
     due: Sequence[_Fit],
-    request: ExecutionRequest,
+    run: RunContext,
     budget: RowBudget,
     *,
     graphs: EvaluationGraphs | None = None,
 ) -> None:
     """One eval pass for every fit in ``due`` (§2.11), then each fit's
-    early-stop bookkeeping. One fit runs its own pass (:func:`_run_eval`);
+    early-stop bookkeeping. One fit runs its own pass (`_run_eval`);
     several run the trained groups batched across the fits whose split
-    agrees, packed under ``budget`` (:func:`_advance_eval_budget`), and are
+    agrees, packed under ``budget`` (`_advance_eval_budget`), and are
     scored on the result.
 
     Under a captured cohort, ``graphs`` serves the pass: the fits due on one
@@ -1698,10 +1862,8 @@ def _evaluate(
             if fit.graph_pool is not None:
                 # build the fit's eval executor on the fit's pool first; the
                 # pass finds it kept on the point executor (`eval_executor`)
-                _eval_executor(
-                    fit.doc, fit.executor, request, split, pool=fit.graph_pool
-                )
-            scores[id(fit)] = _run_eval(fit.doc, fit.executor, request, split)
+                _eval_executor(fit.doc, fit.executor, run, split, pool=fit.graph_pool)
+            scores[id(fit)] = _run_eval(fit.doc, fit.executor, run, split)
     else:
         prepared: list[tuple[_Fit, PointExecutor]] = []
         by_split: dict[str, list[tuple[_Fit, PointExecutor]]] = {}
@@ -1709,7 +1871,7 @@ def _evaluate(
             assert fit.train.eval is not None
             split = concrete_str(fit.train.eval["split"], "train.eval.split")
             eval_executor = _eval_executor(
-                fit.doc, fit.executor, request, split, pool=fit.graph_pool
+                fit.doc, fit.executor, run, split, pool=fit.graph_pool
             )
             _fresh_for_eval(eval_executor)
             prepared.append((fit, eval_executor))
@@ -1784,7 +1946,8 @@ def _evaluate(
         fit.last_score = score
         if fit.train.early_stop is None:
             continue
-        metric_name = str(fit.train.early_stop["metric"])
+        metric_name = fit.doc.early_stop_label()
+        assert metric_name is not None
         mode = str(fit.train.early_stop["mode"])
         value = score[metric_name]
         improved = (
@@ -1805,14 +1968,14 @@ def _evaluate(
 def _run_eval(
     doc: Document,
     executor: PointExecutor,
-    request: ExecutionRequest,
+    run: RunContext,
     split: str,
 ) -> dict[str, float]:
     """One eval pass over ``split`` for one fit: the declared eval metrics,
     hard-gate eval mode. ``executor`` is the point's full-data executor; the
-    pass runs on its :func:`_eval_executor` (built beforehand on the fit's
+    pass runs on its `_eval_executor` (built beforehand on the fit's
     pool when the fit captures graphs)."""
-    eval_executor = _eval_executor(doc, executor, request, split)
+    eval_executor = _eval_executor(doc, executor, run, split)
     copy_executor_stages(eval_executor, executor)
     _fresh_for_eval(eval_executor)
     try:
@@ -1846,20 +2009,29 @@ def _score(doc: Document, eval_executor: PointExecutor) -> dict[str, float]:
     the ones the whole-vocabulary CPU path computes, to the bit
     (``metrics.gathered_metric``). A replay's values are graph-owned
     storage: they are consumed here and released by the caller before the
-    next replay."""
+    next replay.
+
+    Under a rows split (the executor's ``rows``, inherited from its point's)
+    the executor holds this replica's rows of the split, and each metric's
+    ``(sum, count)`` is agreed over the replicas
+    ([`RowSplit.agree_means`][]) so the score is one number on every
+    replica; the local mean otherwise."""
     assert doc.train is not None and doc.train.eval is not None
-    scores: dict[str, float] = {}
+    aggregations = doc.eval_aggregations()
+    names = [agg.label for agg in aggregations]
+    sums: list[float] = []
+    counts: list[int] = []
     rows = eval_executor.rows_for_metrics()
     tokenizer = eval_executor.bundle.tokenizer
-    host: dict[str, torch.Tensor] = {}
+    host: dict[ReadRef, torch.Tensor] = {}
 
-    def on_host(read: str) -> torch.Tensor:
+    def on_host(read: ReadRef) -> torch.Tensor:
         if read not in host:
             host[read] = eval_executor.dense_value(read).detach().cpu()
         return host[read]
 
-    for name in doc.train.eval["metrics"]:
-        metric = doc.metrics[name]
+    for agg in aggregations:
+        name, metric = agg.label, agg.spec
         if str(metric.kind) in GATHERED_KINDS:
             ids = eval_executor.metric_token_ids.get(name)
             if ids is None:
@@ -1867,7 +2039,7 @@ def _score(doc: Document, eval_executor: PointExecutor) -> dict[str, float]:
                 eval_executor.metric_token_ids[name] = ids
             values = gathered_metric(
                 metric,
-                eval_executor.dense_value(str(metric.of)),
+                eval_executor.dense_value(agg.read),
                 rows,
                 tokenizer,
                 token_ids=ids,
@@ -1875,27 +2047,28 @@ def _score(doc: Document, eval_executor: PointExecutor) -> dict[str, float]:
         else:
             values = compute_metric(
                 metric,
-                on_host(str(metric.of)),
+                on_host(agg.read),
                 rows,
                 tokenizer,
-                target_value=on_host(str(metric.fields["target"]))
-                if metric.kind in READ_TARGET_METRIC_KINDS
-                else None,
-                vocab_axis=metric_reads_vocabulary(doc, metric),
+                target_value=on_host(agg.target) if agg.target is not None else None,
+                vocab_axis=read_is_vocabulary(doc, agg.read.read),
             )
         numeric = [v for v in values if isinstance(v, (int, float))]
-        scores[name] = sum(numeric) / len(numeric) if numeric else 0.0
-    return scores
+        sums.append(sum(numeric))
+        counts.append(len(numeric))
+    means = eval_executor.rows.agree_means(
+        sums, counts, eval_executor.bundle.devices.head
+    )
+    return dict(zip(names, means, strict=True))
 
 
-def _eval_reads(fit: _Fit) -> tuple[str, ...]:
+def _eval_reads(fit: _Fit) -> tuple[ReadRef, ...]:
     assert fit.train.eval is not None
-    reads: list[str] = []
-    for name in fit.train.eval["metrics"]:
-        metric = fit.doc.metrics[name]
-        reads.append(str(metric.of))
-        if metric.kind in READ_TARGET_METRIC_KINDS:
-            reads.append(str(metric.fields["target"]))
+    reads: list[ReadRef] = []
+    for agg in fit.doc.eval_aggregations():
+        reads.append(agg.read)
+        if agg.target is not None:
+            reads.append(agg.target)
     return tuple(reads)
 
 
@@ -2007,7 +2180,7 @@ def _read_signals(fits: Sequence[_Fit]) -> dict[tuple[int, str], float]:
 def _after_update(fit: _Fit, signals: Mapping[tuple[int, str], float]) -> None:
     """What follows one member's optimizer step (``fit.step`` already counts
     it): every controller observes the fit — its signal read by
-    :func:`_read_signals` — and moves its target for the *next* update
+    `_read_signals` — and moves its target for the *next* update
     (§2.11), and a scheduled ``trajectory`` checkpoint (§2.12) photographs
     the slots — so a checkpoint's ``weight.<term>`` is the weight the update
     used and its ``control.<target>`` the value set after it."""
@@ -2125,7 +2298,7 @@ class _Control:
     def signal_counts(self) -> list[tuple[torch.Tensor, int]]:
         """Per observed gate, its kept-unit count through the hard mask as
         the device scalar it is, and its unit count — what
-        :func:`_read_signals` brings to the host for every controller of a
+        `_read_signals` brings to the host for every controller of a
         step in one read."""
         counts: list[tuple[torch.Tensor, int]] = []
         for stage in self.signal_stages:
@@ -2138,7 +2311,7 @@ class _Control:
         # kept-unit counts through the hard mask, summed over the named gates
         # (`hard_mask_size`), or that sum over the gates' total unit count
         # (`hard_mask_fraction`) — CONTROL_SIGNALS; ``kept_counts`` are the
-        # gates' counts as floats, in :meth:`signal_counts` order
+        # gates' counts as floats, in `signal_counts` order
         kept = 0.0
         for count in kept_counts:
             kept += count
@@ -2208,20 +2381,23 @@ def _build_controls(
 def fit_diagnostics(stages: Mapping[str, Stage]) -> dict[str, dict[str, Any]]:
     """What each fit can say about *itself*, saved beside the bundle.
 
-    The case this exists for: a DBM fit whose θ never separates — **no**
-    dimension outside [0.1, 0.9] — can still score **1.000**. The mechanism is
-    that :meth:`Gate._mask` returns a *hard* ``θ > 0`` mask in eval mode, and
-    ``run_training`` puts the stages in eval mode before returning — so the
-    1.000 is the hard mask, and with θ never separated ``θ > 0`` is a coin
-    flip on gradient noise. Roughly half the dimensions swap, which at a
+    The case this exists for: the shipped DBM preset
+    (``demos/methods/protocols/dbm.json``) records, in its committed run
+    ``demos/methods/results/protocols/dbm.json``, a ``decisive_fraction`` of
+    0.0: **no** dimension outside [0.1, 0.9]. A fit like that can still score
+    **1.000** at a readout layer, as the preset's description states. The
+    mechanism is that `Gate._mask` returns a *hard* ``θ > 0`` mask in eval
+    mode, and ``run_training`` puts the stages in eval mode before returning —
+    so the 1.000 is the hard mask, and with θ never separated ``θ > 0`` is a
+    coin flip on gradient noise. Roughly half the dimensions swap, which at the
     readout layer scores 1.000.
 
-    Such a fit produces a **meaningless mask and a perfect number**, and
-    nothing in the run's saved outputs used to say so. These two numbers do:
+    So the preset produced a **meaningless mask and a perfect number**, and
+    nothing in the run's saved outputs said so. These two numbers say so:
 
     ``decisive_fraction``
         The fraction of dimensions where σ(θ) is outside
-        [0.5 − :data:`MASK_DECISIVE_MARGIN`, 0.5 + …]. Near 0 means the gate
+        [0.5 − [`MASK_DECISIVE_MARGIN`][], 0.5 + …]. Near 0 means the gate
         never committed and the score below it describes noise, whatever it
         says.
     ``hard_mask_size``
@@ -2237,7 +2413,7 @@ def fit_diagnostics(stages: Mapping[str, Stage]) -> dict[str, dict[str, Any]]:
 
     Under a ``clamp`` gate (§2.5 ``parametrization``) the soft mask is ``θ``
     itself and the hard split ``θ > ½``, so both numbers are read through
-    :meth:`Gate.soft_mask` / :meth:`Gate.hard_mask` rather than spelled here;
+    [`Gate.soft_mask`][causalab.neural.shared.featurizers.gate.Gate.soft_mask] / [`Gate.hard_mask`][causalab.neural.shared.featurizers.gate.Gate.hard_mask] rather than spelled here;
     ``parametrization`` is recorded so the record says which split it counted.
     Under ``hard_concrete`` the soft mask is the *deterministic* stretched and
     clipped ``σ(θ)`` — the mean of the sampled training mask — and ``stretch``
@@ -2249,7 +2425,7 @@ def fit_diagnostics(stages: Mapping[str, Stage]) -> dict[str, dict[str, Any]]:
     enter the deterministic mask, so an anneal of β leaves the number alone
     where a ``sigmoid`` anneal of ``T → 0`` drives it to 1. The number is the
     right one for the gate it describes, but it is not comparable across maps
-    at one :data:`MASK_DECISIVE_MARGIN`.
+    at one [`MASK_DECISIVE_MARGIN`][].
 
     Both count the gate's *units* — one ``theta`` entry each. On a grouped gate
     (§2.5 ``group``) a unit is a head, or one ``(expert, neuron)`` of the
@@ -2266,14 +2442,14 @@ def fit_diagnostics(stages: Mapping[str, Stage]) -> dict[str, dict[str, Any]]:
 
     A fitted ``subspace`` reports ``orthonormality_deviation`` — ``max|QᵀQ − I|``
     of the rotation the bundle saves — and ``within_tolerance``, its verdict
-    against :data:`~causalab.neural.shared.featurizers.ORTHONORMAL_TOLERANCE`
+    against [`ORTHONORMAL_TOLERANCE`][causalab.neural.shared.featurizers.stages.ORTHONORMAL_TOLERANCE]
     (``1.0``/``0.0``). The verdict is recorded beside the value because the
     value is raw roundoff, whose last digits are accumulation order and differ
     across BLAS and device, while the verdict is what a reader acts on: a
     ``0.0`` is a rotation no later document can name as an ``init``. The
     ``cayley`` map's fp32 error is ~1e-6 where fits live but grows quadratically
     in ``‖X‖`` once ``X⊥`` goes rank-deficient
-    (:class:`~causalab.neural.shared.featurizers.Cayley`, *Conditioning*), and
+    ([`Cayley`][causalab.neural.shared.featurizers.stages.Cayley], *Conditioning*), and
     nothing else checks orthonormality at save time — the next check is
     ``_init_basis`` refusing the rotation as a start in a later run, a
     diagnostic that would otherwise arrive one run away from its cause.
@@ -2307,6 +2483,14 @@ def fit_diagnostics(stages: Mapping[str, Stage]) -> dict[str, dict[str, Any]]:
                 "hard_mask_size": float(stage.hard_mask().sum()),
                 "temperature": float(stage.temperature),
                 "parametrization": stage.parametrization,
+                # §2.5 `boundary`: the learned β itself, beside the rank ⌈β⌉ it
+                # keeps (`hard_mask_size`), so a report can put the fit on the
+                # `k` sweep it replaces
+                **(
+                    {"boundary": stage.boundary()}
+                    if stage.parametrization == "boundary"
+                    else {}
+                ),
                 # §2.5 the mapping form: with it, `decisive_fraction` reports the
                 # backward map's confidence (the forward is 0/1 by construction)
                 # and `hard_mask_size` is the eval split, which the forward's
@@ -2468,7 +2652,7 @@ def _add_dual_groups(
             torch.tensor(
                 list(term.constraint.init),
                 dtype=torch.float32,
-                device=executor.bundle.device,
+                device=executor.bundle.devices.head,
             )
         )
         optimizer.add_param_group(
@@ -2490,7 +2674,7 @@ def _optimizer_default(spec: Mapping[str, Any], field: str, fallback: float) -> 
     document gave, or — when the field is a per-parameter mapping (§2.11) —
     the largest of its values. Torch needs one default even when every
     parameter group overrides it; every group *does* override it here
-    (:func:`_prepare_fit` writes the field on each group), so the default is
+    (`_prepare_fit` writes the field on each group), so the default is
     never the value any tensor is stepped with."""
     value = spec.get(field, fallback)
     if isinstance(value, Mapping):
@@ -2650,7 +2834,7 @@ def _parse_anneals(
 ) -> dict[str, AnnealSchedule]:
     """The loop's open-loop schedules (§2.11), each bound to what it moves: a
     trained featurizer's hyperparameter, or a named objective term's live
-    weight — the same dict a controller writes and :func:`_loss` reads, so an
+    weight — the same dict a controller writes and `_loss` reads, so an
     annealed weight and a controlled one move through one path. Validation
     resolved both target forms at load; this re-checks for a document that
     arrived unvalidated."""
@@ -2723,7 +2907,7 @@ def _set_anneal(
 def _eval_executor(
     doc: Document,
     executor: PointExecutor,
-    request: ExecutionRequest,
+    run: RunContext,
     split: str,
     *,
     pool: GraphPool | None = None,
@@ -2732,7 +2916,7 @@ def _eval_executor(
     pass and kept on the point executor (``eval_executor``) for the rest.
 
     One per fit, not one per pass: the split's rows are read and tokenized
-    once, and its captures live under ``(digest, split)`` in the shared store
+    once, and its captures live under ``(key, split)`` in the shared store
     — the eval split is not the campaign's rows, so it gets its own key —
     with only the fit-constant groups eligible (``inner_interning``). The
     trained model's group is re-run on every pass, as it must be.
@@ -2748,26 +2932,34 @@ def _eval_executor(
     cache = executor.graph_cache
 
     def build() -> PointExecutor:
-        split_rows = request.env.datasets.rows(split)
+        # under a rows split (§8.3) this replica scores its slice of the
+        # eval split — every row at world 1 — and the score is agreed
+        all_rows = run.env.datasets.rows(split)
+        split_rows = [
+            all_rows[index] for index in executor.rows.slice_for(range(len(all_rows)))
+        ]
         # Retained captures must not mutate a prior fit's saved stages.
         stages = (
             copy.deepcopy(executor.stage_cache)
             if cache is not None
             else executor.stage_cache
         )
-        return make_executor(
-            doc,
-            executor.bundle,
-            cuda_graphs=executor.cuda_graphs and executor.fit_cuda_graphs,
-            role_rows={role: split_rows for role in executor.role_rows},
-            role_fields=executor.role_fields,
-            load_tensors=executor.load_tensors,
-            load_table=executor.load_table,
-            stage_cache=stages,
-            grad_enabled=False,
-            coords=executor.coords,
-            batch_rows=executor.batch_rows,
-            interning=_inner_interning(executor, split),
+        return _derived(
+            executor,
+            make_executor(
+                doc,
+                executor.bundle,
+                cuda_graphs=executor.cuda_graphs and executor.fit_cuda_graphs,
+                role_rows={role: split_rows for role in executor.role_rows},
+                role_fields=executor.role_fields,
+                load_tensors=executor.load_tensors,
+                load_table=executor.load_table,
+                stage_cache=stages,
+                grad_enabled=False,
+                coords=executor.coords,
+                batch_rows=executor.batch_rows,
+                interning=_inner_interning(executor, split),
+            ),
         )
 
     built = cache.evaluation(split, build) if cache is not None else build()
@@ -2775,12 +2967,8 @@ def _eval_executor(
     # `_score` gathers the answer columns and copies those, not the
     # vocabulary (ExecutorBase.device_reads). A softmax-class eval keeps the
     # one host copy `_finalize_read` makes
-    train = doc.train
-    eval_metrics = (
-        train.eval["metrics"] if train is not None and train.eval is not None else ()
-    )
     built.device_reads = any(
-        str(doc.metrics[name].kind) in GATHERED_KINDS for name in eval_metrics
+        str(agg.spec.kind) in GATHERED_KINDS for agg in doc.eval_aggregations()
     )
     if isinstance(built, GraphExecutor):
         # its inference replays join the fit's pool (GraphPool); the point

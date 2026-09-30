@@ -1,7 +1,8 @@
-"""One semantic DeltaNet-state intervention through two compatible engines.
+"""A black-box test of one semantic intervention across two engines.
 
-The black-box requirement: the document must remain unchanged while each
-adapter translates it to its own tensor representation.
+    Execute one semantic DeltaNet-state intervention through two compatible
+    engines. The document must remain unchanged while each adapter translates
+    it to its own tensor representation.
 
 Run over the eight tensors the two engines used to reach under two spellings
 (``delta_*`` / ``deltanet_*``), one name each now: the **same parsed
@@ -12,7 +13,7 @@ engine (hooks and kernel-global swaps) and the nnsight engine (envoys and
 and digests to the same document. *Mutation:* the two ``gva_tile`` pairs and
 the ``chunk_boundary`` pair are **not** aliases — ``deltanet_query`` stays its
 own name, the reference engine refuses it by name, and its shape differs from
-``delta_query``'s (a tile, never silent) — which is the §1 boundary biting.
+``delta_query``'s (a tile, never silent) — which is the alias boundary biting.
 """
 
 from __future__ import annotations
@@ -23,8 +24,8 @@ import torch
 from causalab.neural.engines.nnsight_tracing.executor import TracePointExecutor
 from causalab.neural.engines.pytorch_hooks.executor import PointExecutor
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.canonical import canonicalize
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.schema.explicit import canonicalize
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.registry import BACKEND_PAIRS, register_model
 from causalab.protocol.schema import DEPRECATED_COMPONENTS, parse_document
 
@@ -33,6 +34,7 @@ from tests.protocol._docs import base_doc, in_order
 from tests.protocol._env import FIXTURES, build_env
 
 from .conftest import TINY_QWEN35_MOE
+
 
 pytestmark = pytest.mark.smoke
 

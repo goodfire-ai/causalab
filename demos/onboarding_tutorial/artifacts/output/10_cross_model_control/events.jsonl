@@ -1,0 +1,7 @@
+{"schema_version": 1, "event": "phase_started", "seq": 0, "ts": "2026-09-28T12:48:32.835497+00:00", "payload": {"step": "source", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 1, "ts": "2026-09-28T12:48:35.767586+00:00", "payload": {"step": "source", "files": ["acts.safetensors"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 2, "ts": "2026-09-28T12:48:35.767659+00:00", "payload": {"step": "source", "status": "completed", "forwards": 1}}
+{"schema_version": 1, "event": "phase_started", "seq": 3, "ts": "2026-09-28T12:48:35.767725+00:00", "payload": {"step": "graft", "type": "intervention_protocol"}}
+{"schema_version": 1, "event": "result_committed", "seq": 4, "ts": "2026-09-28T12:48:35.982832+00:00", "payload": {"step": "graft", "files": ["iia.json", "said.json", "survived.json"]}}
+{"schema_version": 1, "event": "phase_completed", "seq": 5, "ts": "2026-09-28T12:48:35.982894+00:00", "payload": {"step": "graft", "status": "completed", "forwards": 1}}
+{"schema_version": 1, "event": "campaign_terminal", "seq": 6, "ts": "2026-09-28T12:48:35.983150+00:00", "payload": {"outcome": "completed", "steps": {"source": "completed", "graft": "completed"}}}

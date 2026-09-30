@@ -33,7 +33,7 @@ What is pinned, and how each test fails without the change:
   pins are unchanged; ``seed`` and the bundle bytes are not in the tuple (the
   mutation "include the seed" refuses the pair and fails here). The two
   documents differ in ``model.dtype`` (absent → fp32 vs bf16): that is the
-  model realization, rule 15's clause, and the tuple has no ``model.*`` field.
+  model realization, a separate clause, and the tuple has no ``model.*`` field.
 
 All offline: the predicate is arithmetic on compiled points and ``ModelInfo``;
 no model, no tokenizer, no weights are loaded.
@@ -52,7 +52,7 @@ from typing import Any
 
 import pytest
 
-from causalab.protocol.code import import_closure
+from causalab.protocol.identity import import_closure
 from causalab.protocol.equivalence import (
     EQUIVALENCE_FIELDS,
     FeaturizerStage,
@@ -63,10 +63,10 @@ from causalab.protocol.equivalence import (
     sharing,
     site_tuple,
 )
-from causalab.protocol.loader import load
+from causalab.protocol.pipeline import compile_protocol
 from causalab.protocol.registry import ModelInfo, get_model_info
-from causalab.protocol.resolve import ResolutionEnv
-from causalab.protocol.schema import parse_document
+from causalab.io.env import ResolutionEnv
+from causalab.protocol.schema import METHOD_SECTIONS, PROTOCOL_VERSION, parse_document
 from causalab.workflow.document import (
     CONTROL_KINDS,
     CONTROL_RULE,
@@ -83,6 +83,7 @@ from tests.test_architecture_layering import (
     HEAVY_MODULES,
     _module_level_imports,  # pyright: ignore[reportPrivateUsage]
 )
+from tests.protocol._env import steps_of
 from tests.workflow.test_closure_census import CLOSURES, REDUCE, REDUCE_CLOSURE, SHARED
 from tests.workflow.test_controls import (
     CONTROL_13,
@@ -93,6 +94,7 @@ from tests.workflow.test_controls import (
     _section,  # pyright: ignore[reportPrivateUsage]
     _table,  # pyright: ignore[reportPrivateUsage]
 )
+from tests.protocol._docs import saved, term
 
 pytestmark = pytest.mark.unit
 
@@ -134,16 +136,13 @@ def test_the_tuple_has_exactly_the_vocabulary_fields() -> None:
 def test_full_component_is_a_coverage_kind_and_never_required() -> None:
     assert "full_component" in CONTROL_KINDS
     assert set(COVERAGE_KINDS) == {"full_component", "matched_random"}
-    assert "full_component" not in REQUIRED_CONTROL_KINDS  # coverage, never required
+    assert "full_component" not in REQUIRED_CONTROL_KINDS  # I5
     assert "self_swap" not in COVERAGE_KINDS  # per-point agreement is §8's
     assert set(_members("kind")) == set(CONTROL_KINDS)
     row = next(r for r in _table("kind") if "full_component" in r[0])
     text = " ".join(row[1:])
-    # the measured-ceiling sentence, verbatim
-    assert (
-        "the full-component score is the measured ceiling and need not be 1.0; "
-        "below the readout cell a sparse mask may beat it"
-    ) in text
+    assert "the full-component score provides a comparison" in text
+    assert "a sparse mask may score higher" in text
     assert "`passed` when the swap ran" in text
 
 
@@ -178,6 +177,7 @@ def test_the_module_is_torch_free_at_module_level() -> None:
 
 _IMPORT_PROBE = """
 import importlib, json, sys
+
 importlib.import_module("causalab.protocol.equivalence")
 heavy = sorted(m for m in ("torch", "numpy", "pandas", "matplotlib", "scipy",
                            "sklearn", "safetensors", "transformers")
@@ -215,7 +215,7 @@ def _imports_of(path: Path) -> set[str]:
 def test_the_module_is_in_no_closure_and_only_the_workflow_document_imports_it() -> (
     None
 ):
-    """The module stays outside every digest, pinned three ways: it is a member of no
+    """The module stays digest-neutral, pinned three ways: it is a member of no
     frozen closure; its own closure stays inside the shared protocol core (so
     even if a script came to import it, no *new* module would become
     digest-bearing); and among every module under ``causalab/`` exactly
@@ -255,8 +255,9 @@ DENSE = ModelInfo(
 
 #: A hybrid MoE tower: layer 0 full attention, layer 1 Gated DeltaNet (the
 #: four linear widths declared), eight experts routed top-2 — the shape of
-#: ``tiny-random/qwen3.5-moe`` and the A3B, registered in-test (tiny keys need
-#: a registry entry at load).
+#: the Hugging Face Hub checkpoint ``tiny-random/qwen3.5-moe`` and of
+#: Qwen3.6-35B-A3B, registered in-test (tiny keys need a registry entry at
+#: load).
 HYBRID = ModelInfo(
     key="test/hybrid",
     hidden_size=32,
@@ -284,6 +285,13 @@ EXTERNAL = {"reason": "external", "reference": "runs/2026-09-04/controls"}
 #: a target that trains nothing waives the two required kinds honestly
 WAIVE_TARGET = {"self_swap": EXTERNAL, "matched_random": "no_fit"}
 REASON = "the control covers the readout cell only; the comparison is per layer"
+#: the two aggregations ``_document`` reduces its patched logits to
+IIA = {
+    "kind": "logit_diff",
+    "a": "cf_answer",
+    "b": "base_answer",
+}
+CE = {"kind": "cross_entropy", "target": "label"}
 
 
 def _env(env: Any) -> ResolutionEnv:
@@ -302,12 +310,7 @@ def _document(
 ) -> dict[str, Any]:
     """An interchange at ``site`` (optionally through featurizer ``rot``,
     optionally a fit of it saving ``rot.safetensors``) on the fixture rows."""
-    read: dict[str, Any] = {
-        "site": "target",
-        "pos": -1,
-        "model": "original",
-        "input": "counterfactual",
-    }
+    read: dict[str, Any] = {"site": "target", "pos": -1}
     write: dict[str, Any] = {"site": "target", "pos": -1, "do": {"swap": "v_cf"}}
     featurizers: dict[str, Any] = {}
     if featurizer is not None:
@@ -316,46 +319,19 @@ def _document(
     if dims is not None:
         read["dims"] = write["dims"] = dims
     method: dict[str, Any] = {
+        "intervened_models": {
+            "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+            "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]},
+        },
         "sites": {"target": site, "lm_head": {"component": "lm_head"}},
         "featurizers": featurizers,
-        "reads": {
-            "v_cf": read,
-            "logits": {
-                "site": "lm_head",
-                "pos": -1,
-                "model": "patched",
-                "input": "base",
-            },
-        },
+        "reads": {"v_cf": read, "logits": {"site": "lm_head", "pos": -1}},
         "writes": {"patch": write},
-        "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
-        "metrics": {
-            "iia": {
-                "kind": "logit_diff",
-                "of": "logits",
-                "a": "cf_answer",
-                "b": "base_answer",
-                "token_form": "space_prefixed",
-            }
-        },
-        "save": [
-            {
-                "value": "iia",
-                "model": "patched",
-                "input": "base",
-                "file_path": "iia.json",
-            }
-        ],
+        "save": [saved("logits", "patched", "iia.json", dict(IIA))],
     }
     if train:
-        method["metrics"]["ce"] = {
-            "kind": "cross_entropy",
-            "of": "logits",
-            "target": "label",
-            "token_form": "space_prefixed",
-        }
         method["train"] = {
-            "objective": [[1.0, "ce"]],
+            "objective": [[1.0, term("logits", "patched", dict(CE))]],
             "params": ["rot"],
             "optimizer": {"name": "adamw", "lr": 0.001, "weight_decay": 0.0},
             "steps": {"epochs": 1},
@@ -364,18 +340,17 @@ def _document(
             "eval": {
                 "every": {"epochs": 1},
                 "split": "weekdays/data#test",
-                "metrics": ["iia"],
+                "aggregations": {"iia": term("logits", "patched", dict(IIA))},
             },
             "seed": 0,
         }
-        method["save"].append(
-            {"value": "ce", "model": "patched", "input": "base", "file_path": "ce.json"}
-        )
+        method["save"].append(saved("logits", "patched", "ce.json", dict(CE)))
         method["save"].append(
             {"value": "rot", "site": "target", "file_path": "rot.safetensors"}
         )
+        method = {key: method[key] for key in METHOD_SECTIONS if key in method}
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": model},
         "data": {
             "base": {"dataset": "weekdays/data#train", "field": "input"},
@@ -498,7 +473,7 @@ def test_t13_layer_coverage_is_refused_and_declared(env, tmp_path) -> None:
 
 
 def test_a_band_is_one_site_in_the_tuple() -> None:
-    """Protocol v3: ``SiteSpec.layers`` is a band, a tuple of layer
+    """Protocol v3 (9·1): ``SiteSpec.layers`` is a band, a tuple of layer
     indices, and the tuple carries it whole — ``layers: 0`` and ``layers: [0]``
     are one spelling, ``layers: [0, 1]`` is one two-layer site, never two."""
     for spelling, band in ((0, (0,)), ([0], (0,)), ([0, 1], (0, 1))):
@@ -730,7 +705,7 @@ def test_t13_pre_post_projection_site_is_refused_on_component_and_shape(
 def test_t13_deltanet_inclusion_is_refused_on_stream(env, tmp_path) -> None:
     """On the hybrid tower the fit sweeps a full-attention and a DeltaNet
     layer; the control pinned to the full-attention one differs in ``layers``
-    *and* in ``stream`` — the DeltaNet inclusion the campaign names. Mutation:
+    *and* in ``stream``, because the fit includes a DeltaNet layer. Mutation:
     dropping the stream coverage leaves the declared-``layers`` form loading."""
     fit = _write(
         tmp_path,
@@ -1316,15 +1291,16 @@ def test_t15_the_random_subspace_control_is_equivalent_to_the_das_fit(env) -> No
     every coordinate of it; two names in two documents, so ``distinct``. Only
     the rotation's *values* differ — 13 sweeps ``seed`` where 04 trains.
     The two also differ in ``model.dtype`` (13 is unauthored → fp32, 04 is
-    bf16): the model's realization is rule 15's clause, and the tuple has no
+    bf16): the model's realization is a separate clause, and the tuple has no
     ``model.*`` field — asserted below. Mutation: a ``seed`` (or the bundle
     digest) in the tuple refuses this pair."""
-    control = load(CONTROL_13, env)
-    fit = load(FIT, env)
-    info = get_model_info("meta-llama/Llama-3.1-8B")
-    a = coverage(control.point_documents, info, owner="control")
-    b = coverage(fit.point_documents, info, owner="fit")
-    assert len(control.point_documents) == 3 and len(a) == 1  # three seeds, one site
+    control = compile_protocol(CONTROL_13, env=env)
+    fit = compile_protocol(FIT, env=env)
+    control_steps, fit_steps = steps_of(control, env), steps_of(fit, env)
+    info = get_model_info("Qwen/Qwen3-8B")
+    a = coverage(control_steps.documents, info, owner="control")
+    b = coverage(fit_steps.documents, info, owner="fit")
+    assert len(control_steps.documents) == 3 and len(a) == 1  # three seeds, one site
     (t,) = a
     assert (t.component, sorted(t.layers), t.head, t.expert) == (
         "block_output",
@@ -1343,8 +1319,8 @@ def test_t15_the_random_subspace_control_is_equivalent_to_the_das_fit(env) -> No
         "control": {"status": "equivalent", "fields": [], "sharing": "distinct"}
     }
     pin = CORPUS_PINS["13_random_subspace_control_im.json"]
-    assert control.document_digest == pin["document"]
-    assert list(control.point_digests) == pin["points"]
+    assert control.digests.document == pin["document"]
+    assert list(control_steps.digests) == pin["points"]
 
 
 def test_t15_values_are_not_coordinates() -> None:

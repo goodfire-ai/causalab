@@ -62,3 +62,29 @@ def test_rotated_basis_projection_is_idempotent_and_matches_featurizer():
 def test_invalid_basis_refused(weight):
     with pytest.raises(StepError):
         project(torch.ones(2, 3), weight)
+
+
+@pytest.mark.property
+def test_mask_selects_columns_and_empty_mask_is_zero():
+    generator = torch.Generator().manual_seed(4)
+    q, _ = torch.linalg.qr(torch.randn(8, 4, generator=generator, dtype=torch.float64))
+    acts = torch.randn(7, 1, 8, generator=generator, dtype=torch.float64)
+    coords, reconstructed = project(acts, q, [0, 1, 0, 1])
+    torch.testing.assert_close(coords, acts @ q[:, [1, 3]])
+    torch.testing.assert_close(
+        reconstructed,
+        acts
+        @ q
+        @ torch.diag(torch.tensor([0.0, 1.0, 0.0, 1.0], dtype=torch.float64))
+        @ q.T,
+    )
+    empty, zero = project(acts, q, [0, 0, 0, 0])
+    assert empty.shape == (7, 1, 0)
+    torch.testing.assert_close(zero, torch.zeros_like(acts))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("mask", [[1], [1, 0.5], [1, float("nan")]])
+def test_mask_must_be_binary_and_match_basis(mask):
+    with pytest.raises(StepError, match="binary value"):
+        project(torch.ones(3, 2), torch.eye(2), mask)

@@ -1,0 +1,147 @@
+{
+ "files": 30,
+ "model": "meta-llama/Llama-3.1-70B",
+ "patterns": {
+  "lm_head.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    128256,
+    8192
+   ]
+  },
+  "model.embed_tokens.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    128256,
+    8192
+   ]
+  },
+  "model.layers.*.input_layernorm.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     79
+    ]
+   ],
+   "shape": [
+    8192
+   ]
+  },
+  "model.layers.*.mlp.down_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     79
+    ]
+   ],
+   "shape": [
+    8192,
+    28672
+   ]
+  },
+  "model.layers.*.mlp.gate_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     79
+    ]
+   ],
+   "shape": [
+    28672,
+    8192
+   ]
+  },
+  "model.layers.*.mlp.up_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     79
+    ]
+   ],
+   "shape": [
+    28672,
+    8192
+   ]
+  },
+  "model.layers.*.post_attention_layernorm.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     79
+    ]
+   ],
+   "shape": [
+    8192
+   ]
+  },
+  "model.layers.*.self_attn.k_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     79
+    ]
+   ],
+   "shape": [
+    1024,
+    8192
+   ]
+  },
+  "model.layers.*.self_attn.o_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     79
+    ]
+   ],
+   "shape": [
+    8192,
+    8192
+   ]
+  },
+  "model.layers.*.self_attn.q_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     79
+    ]
+   ],
+   "shape": [
+    8192,
+    8192
+   ]
+  },
+  "model.layers.*.self_attn.v_proj.weight": {
+   "dtype": "BF16",
+   "ranges": [
+    [
+     0,
+     79
+    ]
+   ],
+   "shape": [
+    1024,
+    8192
+   ]
+  },
+  "model.norm.weight": {
+   "dtype": "BF16",
+   "indices": [],
+   "shape": [
+    8192
+   ]
+  }
+ },
+ "provenance": "patterns: the LlamaForCausalLM key set the checkpoint's config.json implies (80 layers, hidden 8192, 64/8 heads of 128, intermediate 28672, vocab 128256, bf16, untied head); files and snapshot: the Hub's listing of main on 2026-09-18, whose 30 shards total 141107497872 bytes = these tensors' 141107412992 + the headers. Held to the node's real headers by `python -m tests._helpers.header_census meta-llama/Llama-3.1-70B --check`; `--out` rewrites it from them.",
+ "snapshot": "349b2ddb53ce8f2849a6c168a81980ab25258dac",
+ "tensors": 723
+}

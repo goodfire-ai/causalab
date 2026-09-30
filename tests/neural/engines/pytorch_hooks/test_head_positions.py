@@ -48,11 +48,11 @@ from causalab.neural.engines.pytorch_hooks.cuda_graphs import (
 )
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
 from causalab.neural.shared import head as head_mod
-from causalab.neural.shared.executor_base import RaggedValue, tap_key
+from causalab.neural.shared.executor import RaggedValue, tap_key
 from causalab.neural.shared.head import HEAD, HEAD_INPUT, head_module
 from causalab.neural.shared.metrics import compute_metric
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.schema import SiteSpec, metric_reads_vocabulary
+from causalab.protocol.schema import SiteSpec, read_is_vocabulary
 
 from tests.neural.engines.pytorch_hooks._drive import base_data_section, executor_for
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA, TINY_QWEN35_MOE
@@ -71,6 +71,7 @@ from tests.neural.engines.pytorch_hooks.test_train import (
     WRONG,
     dbm_doc,
 )
+from tests.protocol._docs import UNWRITTEN, saved
 
 unit = pytest.mark.unit
 prop = pytest.mark.property
@@ -102,84 +103,86 @@ def head_calls(bundle: ModelBundle) -> Iterator[list[tuple[tuple[int, ...], int]
         handle.remove()
 
 
-def _head_read(
-    pos: Any, model: str = "patched", input: str = "base", **extra: Any
-) -> dict:
-    return {"site": "head", "pos": pos, "model": model, "input": input, **extra}
+#: The un-intervened network read on base, beside `UNWRITTEN` on the
+#: counterfactual (§2.9's names for a network read un-intervened on both).
+ORIGINAL_BASE = "original_base"
+
+#: Every model a document here may read, with its input; ``patched`` lands
+#: the swap, and a test declaring ``bumped`` adds its own write.
+INPUT_OF = {
+    UNWRITTEN: "counterfactual",
+    ORIGINAL_BASE: "base",
+    "patched": "base",
+    "bumped": "base",
+}
+
+#: The five distribution aggregations over the patched ``logits`` (§2.10),
+#: by the label each one's table carries.
+AGGREGATIONS: dict[str, dict[str, Any]] = {
+    "ld": {
+        "kind": "logit_diff",
+        "a": "label",
+        "b": "wrong",
+    },
+    "sa": {
+        "kind": "soft_accuracy",
+        "a": "label",
+        "b": "wrong",
+    },
+    "ce": {"kind": "cross_entropy", "target": "label"},
+    # a save holds a read reference in the object form (§2.7)
+    "kl": {"kind": "kl", "target": {"read": "clean", "model": ORIGINAL_BASE}},
+    "tk": {"kind": "top_k", "k": 3, "by": "prob"},
+}
 
 
-def _doc(reads: dict[str, dict[str, Any]], *, metrics: bool = True) -> dict[str, Any]:
+def _head_read(pos: Any, **extra: Any) -> dict:
+    """The address of a read at the head (§2.7); the model that takes it is
+    the caller's to name."""
+    return {"site": "head", "pos": pos, **extra}
+
+
+def _doc(
+    reads: dict[str, tuple[str, dict[str, Any]]], *, metrics: bool = True
+) -> dict[str, Any]:
     """A swap at block 0 read at the head: ``logits`` (patched) and ``clean``
-    (original) at the last token, plus ``reads``; the five distribution
-    metrics over ``logits`` when ``metrics``."""
-    all_reads = {
-        "v_cf": {
-            "site": "tgt",
-            "pos": {"index": -1},
-            "model": "original",
-            "input": "counterfactual",
-        },
-        "logits": _head_read({"index": -1}),
-        "clean": _head_read({"index": -1}, model="original"),
+    (the un-intervened network on base) at the last token, plus ``reads`` —
+    ``name: (model, address)``, every model listing the reads taken on it;
+    the five distribution aggregations over ``logits`` when ``metrics``."""
+    all_reads: dict[str, tuple[str, dict[str, Any]]] = {
+        "v_cf": (UNWRITTEN, {"site": "tgt", "pos": {"index": -1}}),
+        "logits": ("patched", _head_read({"index": -1})),
+        "clean": (ORIGINAL_BASE, _head_read({"index": -1})),
         **reads,
     }
+    models: dict[str, dict[str, Any]] = {}
+    for name, (model, _) in all_reads.items():
+        models.setdefault(model, {"input": INPUT_OF[model], "reads": []})
+        models[model]["reads"].append(name)
+    models["patched"]["writes"] = ["patch"]
     method: dict[str, Any] = {
+        "intervened_models": models,
         "sites": {
             "tgt": {"component": "block_output", "layers": [0]},
             "head": {"component": "lm_head"},
         },
-        "reads": all_reads,
+        "reads": {name: address for name, (_, address) in all_reads.items()},
         "writes": {
             "patch": {"site": "tgt", "pos": {"index": -1}, "do": {"swap": "v_cf"}}
         },
-        "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
         "save": [
-            {
-                "value": name,
-                "model": read["model"],
-                "input": read["input"],
-                "file_path": f"{name}.safetensors",
-            }
-            for name, read in all_reads.items()
+            saved(name, model, f"{name}.safetensors")
+            for name, (model, _) in all_reads.items()
             if name != "v_cf"
         ],
     }
     if metrics:
-        method["metrics"] = {
-            "ld": {
-                "kind": "logit_diff",
-                "of": "logits",
-                "a": "label",
-                "b": "wrong",
-                "token_form": "space_prefixed",
-            },
-            "sa": {
-                "kind": "soft_accuracy",
-                "of": "logits",
-                "a": "label",
-                "b": "wrong",
-                "token_form": "space_prefixed",
-            },
-            "ce": {
-                "kind": "cross_entropy",
-                "of": "logits",
-                "target": "label",
-                "token_form": "space_prefixed",
-            },
-            "kl": {"kind": "kl", "of": "logits", "target": "clean"},
-            "tk": {"kind": "top_k", "of": "logits", "k": 3, "by": "prob"},
-        }
         method["save"] += [
-            {
-                "value": name,
-                "model": "patched",
-                "input": "base",
-                "file_path": f"{name}.json",
-            }
-            for name in method["metrics"]
+            saved("logits", "patched", f"{label}.json", dict(spec))
+            for label, spec in AGGREGATIONS.items()
         ]
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": "4"},
         "model": {"key": TINY_LLAMA, "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": method,
@@ -240,19 +243,15 @@ def _tables(executor: Any) -> dict[str, list[Any]]:
         executor.bundle.tokenizer,
     )
     out: dict[str, list[Any]] = {}
-    for name, metric in doc.metrics.items():
-        target = (
-            executor.dense_value(str(metric.fields["target"]))
-            if metric.kind == "kl"
-            else None
-        )
-        out[name] = compute_metric(
-            metric,
-            executor.dense_value(str(metric.of)),
+    for agg in doc.saved_aggregations():
+        target = executor.dense_value(agg.target) if agg.target is not None else None
+        out[agg.label] = compute_metric(
+            agg.spec,
+            executor.dense_value(agg.read),
             rows,
             tokenizer,
             target_value=target,
-            vocab_axis=metric_reads_vocabulary(doc, metric),
+            vocab_axis=read_is_vocabulary(doc, agg.read.read),
         )
     return out
 
@@ -280,8 +279,8 @@ class TestTheProjection:
         is ``rows × vocab`` where the full path built ``rows × seq × vocab``."""
         raw = _doc(
             {
-                "early": _head_read({"index": 1}, model="original"),
-                "sliced": _head_read({"index": -1}, dims=[0, 1, 2, 3]),
+                "early": (ORIGINAL_BASE, _head_read({"index": 1})),
+                "sliced": ("patched", _head_read({"index": -1}, dims=[0, 1, 2, 3])),
             }
         )
         with head_calls(bundle) as projected:
@@ -312,7 +311,7 @@ class TestTheProjection:
     def test_a_whole_sequence_read_keeps_the_head_beside_a_projected_one(
         self, llama: ModelBundle, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        raw = _doc({"whole": _head_read("all")}, metrics=False)
+        raw = _doc({"whole": ("patched", _head_read("all"))}, metrics=False)
         with head_calls(llama) as calls:
             executor = _executor(raw, llama)
             got = _values(executor)
@@ -338,10 +337,8 @@ class TestTheProjection:
     ) -> None:
         raw = _doc(
             {
-                "head_cf": _head_read(
-                    {"index": -1}, model="original", input="counterfactual"
-                ),
-                "after_bump": _head_read({"index": -1}, model="bumped"),
+                "head_cf": (UNWRITTEN, _head_read({"index": -1})),
+                "after_bump": ("bumped", _head_read({"index": -1})),
             },
             metrics=False,
         )
@@ -350,10 +347,7 @@ class TestTheProjection:
             "pos": {"index": -1},
             "do": {"swap": "head_cf"},
         }
-        raw["method"]["intervened_models"]["bumped"] = {
-            "input": "base",
-            "writes": ["swap_head"],
-        }
+        raw["method"]["intervened_models"]["bumped"]["writes"] = ["swap_head"]
         with head_calls(llama) as calls:
             executor = _executor(raw, llama)
             got = _values(executor)
@@ -372,8 +366,9 @@ class TestTheProjection:
     ) -> None:
         raw = _doc(
             {
-                "gen": _head_read(
-                    {"index": 0, "generated": {"max_new_tokens": 2}}, model="original"
+                "gen": (
+                    ORIGINAL_BASE,
+                    _head_read({"index": 0, "generated": {"max_new_tokens": 2}}),
                 )
             },
             metrics=False,
@@ -417,15 +412,15 @@ class TestTheProjection:
         value equal to the first's, and runs no forward for the group."""
         raws = [
             _doc({}, metrics=False),
-            _doc({"extra": _head_read({"index": -1}, model="original")}, metrics=False),
+            _doc({"extra": (ORIGINAL_BASE, _head_read({"index": -1}))}, metrics=False),
         ]
         _docs, handles = _campaign(raws)
         store = handles[0].cache
         first = _executor(raws[0], llama, interning=handles[0])
         second = _executor(raws[1], llama, interning=handles[1])
         clean = first.read_value("clean")
-        digest = handles[0].digests[("original", "base")]
-        captured = store.captured[digest]
+        key = handles[0].keys[(ORIGINAL_BASE, "base")]
+        captured = store.captured[key]
         norm_key = tap_key(resolve_site(llama, SiteSpec(component=HEAD_INPUT)))
         head_key = tap_key(resolve_site(llama, SiteSpec(component=HEAD)))
         assert norm_key in captured and head_key not in captured
@@ -442,7 +437,9 @@ class TestTheProjection:
         """``GraphExecutor`` gathers the last column by a slice rather than
         an index; its projected read is the eager executor's to the bit."""
         monkeypatch.setattr(
-            cuda_graphs_module, "unsupported_reason", lambda doc, bundle: None
+            cuda_graphs_module,
+            "unsupported_reason",
+            lambda doc, bundle, collective: None,
         )
         raw = _doc({}, metrics=False)
         eager = _executor(raw, llama)
@@ -565,19 +562,24 @@ class TestFits:
         read too."""
         raw = das_doc(epochs=1)
         raw["method"]["reads"]["clean"] = {
-            **_head_read({"index": -1}, model="original"),
+            **_head_read({"index": -1}),
             "site": "lm_head",  # das_doc's name for the head site
         }
-        raw["method"]["metrics"]["kl"] = {
-            "kind": "kl",
-            "of": "logits",
-            "target": "clean",
+        raw["method"]["intervened_models"][ORIGINAL_BASE] = {
+            "input": "base",
+            "reads": ["clean"],
         }
         raw["method"]["save"].append(
-            {"value": "kl", "model": "patched", "input": "base", "file_path": "kl.json"}
+            saved(
+                "logits",
+                "patched",
+                "kl.json",
+                {"kind": "kl", "target": {"read": "clean", "model": ORIGINAL_BASE}},
+            )
         )
         reference = _executor(raw, llama, grad_enabled=True)
-        assert reference.fit_constant_models == {"original"}
+        # the un-intervened network, once per input it is read on
+        assert reference.fit_constant_models == {ORIGINAL_BASE, UNWRITTEN}
         taps = reference._read_taps(
             "patched", "base", [("logits", reference.doc.reads["logits"])]
         )
@@ -585,7 +587,7 @@ class TestFits:
             taps["logits"].capture.component == HEAD and taps["logits"].project is None
         )
         taps = reference._read_taps(
-            "original", "base", [("clean", reference.doc.reads["clean"])]
+            ORIGINAL_BASE, "base", [("clean", reference.doc.reads["clean"])]
         )
         assert (
             taps["clean"].capture.component == HEAD_INPUT
@@ -646,7 +648,7 @@ def _both_paths(rows: list[int], index: int) -> tuple[dict[str, Any], dict[str, 
     """The read values of a document reading the head at content ``index``
     over ``POOL``'s rows ``rows``, projected and on the full path."""
     bundle = load_model(TINY_LLAMA, device="cpu")
-    raw = _doc({"at": _head_read({"index": index}, model="original")}, metrics=False)
+    raw = _doc({"at": (ORIGINAL_BASE, _head_read({"index": index}))}, metrics=False)
     texts = [POOL[i] for i in rows]
     counterfactuals = [POOL[(i + 1) % len(POOL)] for i in rows]
 

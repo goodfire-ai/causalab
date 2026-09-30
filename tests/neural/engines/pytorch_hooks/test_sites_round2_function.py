@@ -3,11 +3,11 @@
 These four are not module boundaries. ``transformers`` computes them inside one
 ``attention_interface(...)`` call, so a ``register_forward_hook`` on the mixer
 fires after they have been consumed — which is why writing the attention pattern
-was already a special case among the module-boundary components.
+was already a special case.
 
-The scores are the interesting one, and the reason this vocabulary is smaller
-than one might expect. The first pattern tap reached the pattern by calling the
-real eager function and then **redoing** the two lines after its softmax — correct, but a transcription
+The scores are the interesting one, and the reason this file stays small. An
+earlier version reached the pattern by calling the real eager function and
+then **redoing** the two lines after its softmax — correct, but a transcription
 of library internals that has to resolve a per-family ``eager_attention_forward``
 to perform. A ``TorchFunctionMode`` scoped to the real call reaches the scores
 with nothing transcribed at all:
@@ -20,7 +20,7 @@ with nothing transcribed at all:
 
 and knocking one head off one token moved the qwen logits by 0.3114.
 
-The capability that follows is the point of the interior: ``attention_probs``
+The capability that follows is the point: ``attention_probs``
 accepts only ``swap``, because a delta leaves rows that no longer sum to 1 and
 nothing renormalizes them. One step earlier, the model's own softmax does.
 Attention knockout, head boosting and every other arithmetic mechanism are legal
@@ -38,9 +38,11 @@ from causalab.neural.engines.pytorch_hooks.attention_interface import (
 )
 from causalab.neural.engines.pytorch_hooks.loading import ModelBundle, load_model
 from causalab.neural.shared.sites import resolve_site
-from causalab.protocol.errors import ProtocolError
+from causalab.protocol.rules.errors import ProtocolError
 from causalab.protocol.registry import component_shape
-from causalab.protocol.schema import SiteSpec
+from causalab.protocol.schema import PROTOCOL_VERSION, SiteSpec
+
+from tests.protocol._docs import saved
 
 from ._drive import base_data_section, bundle_loader, executor_for
 from .conftest import TINY_GPT2, TINY_LLAMA
@@ -74,74 +76,65 @@ QWEN_INTERFACE: dict[str, tuple[tuple[int, ...], tuple[int, ...]]] = {
 
 def _read_doc(component: str, layer: int = FULL_ATTENTION_LAYER) -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=False),
         "method": {
+            "intervened_models": {"original": {"input": "base", "reads": ["r"]}},
             "sites": {"tap": {"component": component, "layers": [layer]}},
-            "reads": {
-                "r": {"site": "tap", "pos": "all", "model": "original", "input": "base"}
-            },
-            "save": [
-                {
-                    "value": "r",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "a.safetensors",
-                }
-            ],
+            "reads": {"r": {"site": "tap", "pos": "all"}},
+            "save": [saved("r", "original", "a.safetensors")],
         },
     }
 
 
 def _write_doc(component: str, do: dict, *, layer: int = FULL_ATTENTION_LAYER) -> dict:
     return {
-        "header": {"protocol_version": "3"},
+        "header": {"protocol_version": PROTOCOL_VERSION},
         "model": {"key": "test", "revision": "main"},
         "data": base_data_section(with_counterfactual=True),
         "method": {
+            "intervened_models": {
+                "original_counterfactual": {
+                    "input": "counterfactual",
+                    "reads": ["v_cf"],
+                },
+                "original_base": {"input": "base", "reads": ["clean"]},
+                "patched": {"input": "base", "reads": ["after"], "writes": ["patch"]},
+            },
             "sites": {
                 "tap": {"component": component, "layers": [layer]},
                 "lm_head": {"component": "lm_head"},
             },
             "reads": {
-                "v_cf": {
-                    "site": "tap",
-                    "pos": "all",
-                    "model": "original",
-                    "input": "counterfactual",
-                },
-                "clean": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "original",
-                    "input": "base",
-                },
-                "after": {
-                    "site": "lm_head",
-                    "pos": {"index": -1},
-                    "model": "patched",
-                    "input": "base",
-                },
+                "v_cf": {"site": "tap", "pos": "all"},
+                "clean": {"site": "lm_head", "pos": {"index": -1}},
+                "after": {"site": "lm_head", "pos": {"index": -1}},
             },
             "writes": {"patch": {"site": "tap", "pos": "all", "do": do}},
-            "intervened_models": {"patched": {"input": "base", "writes": ["patch"]}},
             "save": [
-                {
-                    "value": "after",
-                    "model": "patched",
-                    "input": "base",
-                    "file_path": "p.safetensors",
-                },
-                {
-                    "value": "clean",
-                    "model": "original",
-                    "input": "base",
-                    "file_path": "c.safetensors",
-                },
+                saved("after", "patched", "p.safetensors"),
+                saved("clean", "original_base", "c.safetensors"),
             ],
         },
     }
+
+
+def _self_swap(doc: dict) -> dict:
+    """Take ``v_cf`` on the un-intervened *base* forward instead of the
+    counterfactual one, so the write substitutes the tap's own value."""
+    models = doc["method"]["intervened_models"]
+    del models["original_counterfactual"]
+    models["original_base"]["reads"].append("v_cf")
+    return doc
+
+
+def _without_operand(doc: dict) -> dict:
+    """Drop ``v_cf`` — and the model that read it — from a `_write_doc`
+    whose ``do`` names no read operand."""
+    del doc["method"]["reads"]["v_cf"]
+    del doc["method"]["intervened_models"]["original_counterfactual"]
+    return doc
 
 
 def _moved(bundle: ModelBundle, doc: dict, **kw) -> float:
@@ -250,8 +243,7 @@ def test_swapping_a_tap_with_its_own_value_moves_nothing(
 ):
     """The non-vacuity half: an edit that substitutes the same tensor must be
     exactly the identity, or the write is landing somewhere it should not."""
-    doc = _write_doc(component, {"swap": "v_cf"})
-    doc["method"]["reads"]["v_cf"]["input"] = "base"
+    doc = _self_swap(_write_doc(component, {"swap": "v_cf"}))
     assert _moved(qwen35moe_bundle, doc) == 0.0, component
 
 
@@ -265,9 +257,10 @@ def test_attention_knockout_is_expressible_on_the_scores(qwen35moe_bundle):
     """
     mask = torch.zeros(1, 8, 5, 5)
     mask[:, 0, :, 0] = -1e4
-    doc = _write_doc("attention_scores", {"add_scaled": {"op": "knock", "alpha": 1.0}})
+    doc = _without_operand(
+        _write_doc("attention_scores", {"add_scaled": {"op": "knock", "alpha": 1.0}})
+    )
     doc["method"]["params"] = {"knock": {"file_path": "k.safetensors"}}
-    del doc["method"]["reads"]["v_cf"]
     assert (
         _moved(
             qwen35moe_bundle,
@@ -286,8 +279,9 @@ def test_a_uniform_shift_of_the_scores_is_a_no_op_because_softmax_is_shift_invar
     shift along the axis it normalizes. A knockout therefore has to be targeted,
     which is why the recipe above uses a full-shape mask rather than a scalar.
     """
-    doc = _write_doc("attention_scores", {"add_scaled": {"op": -10000.0, "alpha": 1.0}})
-    del doc["method"]["reads"]["v_cf"]
+    doc = _without_operand(
+        _write_doc("attention_scores", {"add_scaled": {"op": -10000.0, "alpha": 1.0}})
+    )
     assert _moved(qwen35moe_bundle, doc) < 1e-3
 
 
@@ -306,8 +300,7 @@ def test_every_arithmetic_mechanism_is_legal_on_the_scores(qwen35moe_bundle, do:
     Both have the same axes. Only one is followed by a softmax, and that is the
     whole reason one accepts arithmetic and the other does not.
     """
-    doc = _write_doc("attention_scores", do)
-    del doc["method"]["reads"]["v_cf"]
+    doc = _without_operand(_write_doc("attention_scores", do))
     executor_for(doc, qwen35moe_bundle, base_texts=[TEXT]).read_value("after")
 
 
@@ -320,8 +313,7 @@ def test_every_arithmetic_mechanism_is_legal_on_the_scores(qwen35moe_bundle, do:
     ids=["delta", "clamp"],
 )
 def test_the_same_mechanism_is_refused_on_the_pattern(qwen35moe_bundle, do: dict):
-    doc = _write_doc("attention_probs", do)
-    del doc["method"]["reads"]["v_cf"]
+    doc = _without_operand(_write_doc("attention_probs", do))
     with pytest.raises(ProtocolError) as excinfo:
         executor_for(doc, qwen35moe_bundle, base_texts=[TEXT]).read_value("after")
     message = str(excinfo.value)
@@ -336,11 +328,12 @@ def test_gaussian_is_refused_where_there_is_no_feature_axis(qwen35moe_bundle):
     positions the draw does not even fit (measured: "shape '[1, 8, 5, 5]' is
     invalid for input of size 40"), so it is refused rather than reshaped into
     something that would run."""
-    doc = _write_doc(
-        "attention_scores",
-        {"gaussian": {"seed": 0, "scale": 1.0, "axis": "tp_duplicated"}},
+    doc = _without_operand(
+        _write_doc(
+            "attention_scores",
+            {"gaussian": {"seed": 0, "scale": 1.0, "axis": "tp_duplicated"}},
+        )
     )
-    del doc["method"]["reads"]["v_cf"]
     with pytest.raises(ProtocolError, match="no feature axis at all"):
         executor_for(doc, qwen35moe_bundle, base_texts=[TEXT]).read_value("after")
 
@@ -498,7 +491,7 @@ def test_a_continuation_read_of_a_query_indexed_tap_works(component: str):
 
 
 def test_gpt2_reads_the_function_interior_too():
-    """Unlike the attention module-boundary components, these four do **not**
+    """Unlike the module-boundary components, these four do **not**
     depend on separate q/k/v projections: the interface receives q, k and v as
     arguments however the mixer produced them. 📐 gpt2's eager also calls
     softmax exactly once, so the scores tap works there as well."""
@@ -544,37 +537,26 @@ def test_a_read_of_a_written_slot_matches_the_module_hook_path(qwen35moe_bundle)
 
     def written_minus_read(component: str) -> float:
         doc = {
-            "header": {"protocol_version": "3"},
+            "header": {"protocol_version": PROTOCOL_VERSION},
             "model": {"key": "test", "revision": "main"},
             "data": base_data_section(with_counterfactual=True),
             "method": {
+                "intervened_models": {
+                    "original_counterfactual": {
+                        "input": "counterfactual",
+                        "reads": ["src"],
+                    },
+                    "patched": {"input": "base", "reads": ["obs"], "writes": ["p"]},
+                },
                 "sites": {
                     "tap": {"component": component, "layers": [FULL_ATTENTION_LAYER]}
                 },
                 "reads": {
-                    "src": {
-                        "site": "tap",
-                        "pos": "all",
-                        "model": "original",
-                        "input": "counterfactual",
-                    },
-                    "obs": {
-                        "site": "tap",
-                        "pos": "all",
-                        "model": "patched",
-                        "input": "base",
-                    },
+                    "src": {"site": "tap", "pos": "all"},
+                    "obs": {"site": "tap", "pos": "all"},
                 },
                 "writes": {"p": {"site": "tap", "pos": "all", "do": {"swap": "src"}}},
-                "intervened_models": {"patched": {"input": "base", "writes": ["p"]}},
-                "save": [
-                    {
-                        "value": "obs",
-                        "model": "patched",
-                        "input": "base",
-                        "file_path": "o.safetensors",
-                    }
-                ],
+                "save": [saved("obs", "patched", "o.safetensors")],
             },
         }
         executor = executor_for(

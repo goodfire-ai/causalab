@@ -17,6 +17,7 @@ from .test_sites_round3_moe_interior import (
     MOE_LAYER,
     TEXT,
     _moved,
+    _own_value,
     _read_doc,
     _write_doc,
 )
@@ -65,7 +66,7 @@ def test_complete_neuron_swap_moves_logits_and_self_swap_is_exact(
     doc["method"]["reads"]["v_cf"]["pos"] = -1
     doc["method"]["writes"]["patch"]["pos"] = -1
     assert _moved(bundle, doc) > 1e-5
-    doc["method"]["reads"]["v_cf"]["input"] = "base"
+    _own_value(doc)  # the self-swap: the operand is the tap's own base value
     assert _moved(bundle, doc) == 0.0
 
 
@@ -159,5 +160,5 @@ def test_expert_taps_preserve_the_activation_call_with_gate_fusion(
     assert fused_calls
     doc = _write_doc(component, {"swap": "v_cf"})
     assert _moved(bundle, doc) > 1e-5
-    doc["method"]["reads"]["v_cf"]["input"] = "base"
+    _own_value(doc)  # the self-swap: the operand is the tap's own base value
     assert _moved(bundle, doc) == 0.0

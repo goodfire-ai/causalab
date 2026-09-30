@@ -1,0 +1,23 @@
+{
+  "version": "1",
+  "description": "Figure 3b of Wang et al. 2022 (arXiv:2211.00593), path patching h -> logits for every attention head of GPT-2 small at the END position of the IOI task: the head's output is replaced by its value on the pABC prompt while every later attention layer is held at its clean value and the MLPs recompute, and the logit difference IO - S is read at the logits. The scan is fanned out one child per sender layer, for host memory. Two steps because a freeze band runs between two layers: `scan` is layers 0-10 with their downstream attention frozen, `last` is layer 11, which has no attention downstream. The figure is drawn from both by workflows/scripts/ioi_fig3b/fig3b_figure.py.",
+  "output_dir": "ioi_fig3b",
+  "steps": {
+    "scan": {
+      "type": "intervention_protocol",
+      "document": "../protocols/ioi_fig3b_direct_effect.json",
+      "fan_out": {
+        "over": {
+          "axis": "axes.sender"
+        },
+        "join": {
+          "require": "all"
+        }
+      }
+    },
+    "last": {
+      "type": "intervention_protocol",
+      "document": "../protocols/ioi_fig3b_direct_effect_last_layer.json"
+    }
+  }
+}

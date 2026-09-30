@@ -1,14 +1,9 @@
-"""The causalab-owned workflow runner (docs/workflow_protocol.md §8).
+"""Execute workflows and write step records and the run manifest.
 
-The document model (parse/validate/schedule/digest) lives in
-:mod:`causalab.workflow.document` — engine- and torch-free; this package
-executes loaded workflows: protocol steps through engine routing over the
-run-tree artifact overlay, script steps by resolving their inputs and calling
-``main(inputs, outputs)``, then the per-step ``_step.json`` records and the
-``workflow.json`` run manifest.
-
-There is no publication step: the run tree *is* the publication (§0).
-"""
+The document module parses and schedules workflows. Protocol steps use the
+selected engine; script steps receive resolved inputs through
+``main(inputs, outputs)``. Each step writes ``_step.json``, and ``workflow.json``
+records the run state. See docs/workflow_protocol_internals.md §8."""
 
 from causalab.workflow.runner import (
     OverlayArtifacts,

@@ -31,7 +31,7 @@ import pytest
 from safetensors.torch import load_file
 
 from causalab.neural.engines.pytorch_hooks.loading import load_model
-from causalab.neural.shared.metrics import column_first_token_id
+from causalab.protocol.answers import column_first_token_id
 from causalab.cli import main
 
 from tests.neural.engines.pytorch_hooks.conftest import TINY_LLAMA
@@ -76,6 +76,8 @@ def _run(out: Path, layer: int) -> int:
     return main(
         [
             "run",
+            "--engine",
+            "auto",
             str(CORPUS_DIR / DOCUMENT),
             "--data-root",
             str(FIXTURES / "data"),

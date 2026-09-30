@@ -1,0 +1,76 @@
+{
+  "header": {
+    "protocol_version": "4",
+    "description": "Boundless DAS (Wu et al. 2023, arXiv 2305.08809): das.json's rotation widened to k = 64 with a boundary gate behind it, so the fit learns its own rank instead of sweeping k. `bnd` has ONE parameter theta in [0, 1], the boundary as a fraction of the rotation's 64 ordered columns (beta = 64 theta): the training mask is sigmoid((beta - i) / T) over the column index i, the eval mask keeps the first ceil(beta) columns, and the l1 term is the kept fraction (the paper's boundary-width penalty, weight 1.0 as in Wu et al.) - so ce pulls beta up, l1 pulls it down, and a column stays kept while it lowers ce by more than lambda / k = 1/64 nats; 0.05 would hold nothing against ce at this width. The boundary trains at lr 1e-2, ten times the rotation's (pyvene's recipe): at the rotation's 1e-3 an Adam step moves theta by ~0.001 of the width per update and the boundary barely leaves its start while the rotation fills whatever prefix is open. The temperature anneals 1.0 -> 0.1 over the WHOLE run, not to 0.01 by mid-run: below ~0.1 the sigmoid's gradient is a spike narrower than one column and the boundary freezes wherever it stands. The start is the default theta = 1/2, beta = 32 (fill 1/2). k is the width the boundary may reach, not the rank claimed. fit_diagnostics.json records `boundary` (beta) and `hard_mask_size` (the learned rank) beside the rotation's orthonormality, so a report can place this fit on the IIA-vs-k curve of weekdays_das_sweep.json as one point. The size-matched control is random_subspace_control.json with k set to the learned rank. Everything else is das.json."
+  },
+  "model": {"key": "Qwen/Qwen2.5-7B", "revision": "main", "dtype": "bf16"},
+  "data": {
+    "base": {"dataset": "natural_domains_arithmetic/data/weekdays#train", "field": "input"},
+    "counterfactual": {
+      "dataset": "natural_domains_arithmetic/data/weekdays#train",
+      "field": "counterfactual_inputs[0]"
+    }
+  },
+  "method": {
+    "intervened_models": {
+      "original_counterfactual": {"input": "counterfactual", "reads": ["v_cf"]},
+      "patched": {"input": "base", "reads": ["logits"], "writes": ["patch"]}
+    },
+    "sites": {
+      "target": {"component": "block_output", "layers": [23]},
+      "lm_head": {"component": "lm_head"}
+    },
+    "featurizers": {
+      "rot": {"kind": "subspace", "k": 64, "parametrization": "cayley"},
+      "bnd": {"kind": "gate", "parametrization": "boundary"}
+    },
+    "reads": {
+      "v_cf": {"site": "target", "pos": -1, "featurizer": ["rot", "bnd"]},
+      "logits": {"site": "lm_head", "pos": -1}
+    },
+    "writes": {
+      "patch": {
+        "site": "target",
+        "pos": -1,
+        "featurizer": ["rot", "bnd"],
+        "do": {"swap": "v_cf"}
+      }
+    },
+    "train": {
+      "objective": {
+        "ce": {
+          "weight": 1.0,
+          "read": "logits",
+          "model": "patched",
+          "aggregation": {"kind": "cross_entropy", "target": "label"}
+        },
+        "l1": {"weight": 1.0, "l1": "bnd"}
+      },
+      "params": ["rot", "bnd"],
+      "optimizer": {"name": "adamw", "lr": {"rot": 0.001, "bnd": 0.01}, "weight_decay": 0.0},
+      "steps": {"epochs": 10},
+      "batch": {"pairs": 16},
+      "anneal": {"bnd.theta.temperature": [1.0, 0.1, 1.0]},
+      "precision": {"feature": "fp32", "loss": "fp32"},
+      "eval": {
+        "every": {"epochs": 1},
+        "aggregations": {
+          "iia": {
+            "read": "logits",
+            "model": "patched",
+            "aggregation": {"kind": "logit_diff", "a": "cf_answer", "b": "base_answer"}
+          }
+        },
+        "split": "natural_domains_arithmetic/data/weekdays#test"
+      },
+      "early_stop": {"on": "iia", "patience": 3, "mode": "max"},
+      "seed": 0
+    },
+    "save": [
+      {"train": "iia", "file_path": "iia.json"},
+      {"train": "ce", "file_path": "ce.json"},
+      {"value": "rot", "site": "target", "file_path": "rot.safetensors"},
+      {"value": "bnd", "site": "target", "file_path": "bnd.safetensors"}
+    ]
+  }
+}
