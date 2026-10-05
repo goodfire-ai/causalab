@@ -173,6 +173,23 @@ def test_io_has_no_upward_imports():
     )
 
 
+def test_no_references_into_retired_runner_package():
+    """Reject deleted module/file targets, allowing historical package mentions."""
+    package_dir = IO_DIR.parent
+    text_suffixes = {".py", ".md", ".json", ".ipynb", ".yaml", ".yml"}
+    retired_prefixes = ("causalab.runner.", "causalab/runner/")
+    offenders = [
+        f"{path.relative_to(REPO)}:{lineno}"
+        for path in sorted(package_dir.rglob("*"))
+        if path.is_file() and path.suffix in text_suffixes
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if any(prefix in line for prefix in retired_prefixes)
+    ]
+    assert not offenders, (
+        "References into the retired runner package:\n  " + "\n  ".join(offenders)
+    )
+
+
 def test_sequences_imports_nothing_from_the_neural_layer_at_any_level():
     offenders = _offenders(
         SEQUENCES_FILE, ("causalab.neural",), module_scope_only=False
