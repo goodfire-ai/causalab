@@ -12,7 +12,8 @@ Run the fixture on CPU to check the interface with random weights:
 uv run causalab validate tests/workflow/fixtures/behavioral/qualify.json \
     --engine auto \
     --data-root tests/workflow/fixtures/behavioral \
-    --artifacts-root tests/workflow/fixtures/behavioral
+    --artifacts-root tests/workflow/fixtures/behavioral \
+    --register-from-hf
 uv run causalab run tests/workflow/fixtures/behavioral/qualify.json \
     --data-root tests/workflow/fixtures/behavioral \
     --artifacts-root tests/workflow/fixtures/behavioral \
