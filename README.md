@@ -92,7 +92,8 @@ Show its plan, then run it. Both commands take a few seconds:
 ```bash
 uv run causalab explain demos/methods/protocols/minimal_cpu.json \
     --engine auto \
-    --data-root tests/protocol/fixtures/data
+    --data-root tests/protocol/fixtures/data \
+    --register-from-hf
 uv run causalab run demos/methods/protocols/minimal_cpu.json \
     --engine auto \
     --data-root tests/protocol/fixtures/data \
