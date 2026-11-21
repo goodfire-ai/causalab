@@ -61,6 +61,7 @@ paths per (pair, step) in the same coordinates.
 
 from __future__ import annotations
 
+import hashlib
 import itertools
 import json
 import sys
@@ -77,7 +78,12 @@ from splines import (  # noqa: E402  (a sibling module, hashed into the step's c
     wrapped_delta,
 )
 
-from causalab.io.step_io import StepError, read_tensor, write_table  # noqa: E402
+from causalab.io.step_io import (  # noqa: E402
+    StepError,
+    read_tensor,
+    write_table,
+    write_values,
+)
 from causalab.io.step_record import EXAMPLE_COLUMN  # noqa: E402
 from causalab.protocol.results import example_labels  # noqa: E402
 
@@ -148,7 +154,13 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
     mean = read_tensor(Path(inputs["mean"]), what="manifold_path: 'mean'")
     basis = basis.detach().cpu().double().numpy()  # (d, k)
     mean = mean.detach().cpu().double().numpy()  # (d,)
-    rows = json.loads(Path(inputs["table"]).read_text())
+    table = Path(inputs["table"]).read_bytes()
+    if "contract" in inputs:
+        if hashlib.sha256(table).hexdigest() != inputs["contract"]["fit_table_sha256"]:
+            raise StepError(
+                "manifold_path: the fitting dataset changed; regenerate the documents"
+            )
+    rows = json.loads(table)
     steps = int(inputs.get("steps", 50))
     if steps < 2:
         raise StepError("manifold_path: 'steps' must be at least 2")
@@ -162,23 +174,27 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
             "manifold_path: basis / mean width does not match the activations"
         )
     k = basis.shape[1]
-    # the ground-truth day of each prompt (App. A.3), not the model's answer
-    labels = [str(row["result"]) for row in rows]
+    classes = list(inputs.get("classes", DAYS))
+    label_field = inputs.get("label_field", "result")
+    labels = [str(row[label_field]) for row in rows]
     # the label the metric tables give each row, so the two point tables join
     ids = example_labels(rows)
-    unknown = sorted(set(labels) - set(DAYS))
-    if unknown:
-        raise StepError(f"manifold_path: unknown answer days in the table: {unknown}")
+    if set(labels) != set(classes):
+        raise StepError(
+            "manifold_path: the table must cover exactly the configured classes"
+        )
+    if k < 2:
+        raise StepError("manifold_path: at least two PCA dimensions are required")
 
     # 1. the PCA subspace, the centroids and their knots
     coords = (acts - mean) @ basis  # (n, k)
     centroid_u = np.stack(
-        [coords[[label == d for label in labels]].mean(axis=0) for d in DAYS]
+        [coords[[label == d for label in labels]].mean(axis=0) for d in classes]
     )
     centroid_x = np.stack(
-        [acts[[label == d for label in labels]].mean(axis=0) for d in DAYS]
+        [acts[[label == d for label in labels]].mean(axis=0) for d in classes]
     )
-    counts = [int(sum(label == d for label in labels)) for d in DAYS]
+    counts = [int(sum(label == d for label in labels)) for d in classes]
     theta = periodic_angle(centroid_u)
 
     # 2. the activation manifold: a periodic cubic spline through the centroids
@@ -188,14 +204,15 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
         raise StepError(
             f"manifold_path: the spline misses a centroid by {reconstruction:.2e}"
         )
-    order = [DAYS[i] for i in np.argsort(theta)]
-    ring = DAYS + DAYS
-    forward = any(order == ring[i : i + 7] for i in range(7))
-    backward = any(order == ring[i : i + 7][::-1] for i in range(7))
+    order = [classes[i] for i in np.argsort(theta)]
+    ring = classes + classes
+    n = len(classes)
+    forward = any(order == ring[i : i + n] for i in range(n))
+    backward = any(order == ring[i : i + n][::-1] for i in range(n))
     if not (forward or backward):
         print(
             f"manifold_path: WARNING: the centroids' knot order {order} is not the "
-            "weekday ring; the manifold path interpolates the loop as fitted"
+            "configured cycle; the manifold path interpolates the loop as fitted"
         )
 
     # 3. one manifold path and one chord per centroid pair
@@ -203,8 +220,23 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
     waypoints: dict[str, dict[str, tuple[np.ndarray, dict[str, Any]]]] = {}
     chords: dict[str, dict[str, tuple[np.ndarray, dict[str, Any]]]] = {}
     path_rows: list[dict[str, Any]] = []
-    for name, (i, j) in zip(path_names(), centroid_pairs()):
+    lengths = []
+    projected_chord = inputs.get("projected_chord", False)
+    for i, j in centroid_pairs(n):
+        name = f"{classes[i]}_{classes[j]}"
+        if f"waypoints_{name}" not in outputs:
+            continue
         delta_theta = wrapped_delta(theta[i], theta[j])
+        arc = spline(theta[i] + np.linspace(0, 1, 151) * delta_theta)
+        lengths.append(
+            {
+                "pair": name,
+                "manifold_length": float(
+                    np.linalg.norm(np.diff(arc, axis=0), axis=1).sum()
+                ),
+                "linear_length": float(np.linalg.norm(centroid_u[j] - centroid_u[i])),
+            }
+        )
         waypoints[name], chords[name] = {}, {}
         for step in range(steps):
             t = step / (steps - 1)
@@ -213,10 +245,13 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
             manifold_x = mean + basis @ u
             linear_x = (1.0 - t) * centroid_x[i] + t * centroid_x[j]
             linear_u = (linear_x - mean) @ basis
+            if projected_chord:
+                linear_x = mean + basis @ linear_u
             step_coords = {"step": step}
             key = f"value{_label(step_coords)}"
             waypoints[name][key] = (pca_mean_feature + u, step_coords)
-            chords[name][key] = (linear_x, step_coords)
+            chord = pca_mean_feature + linear_u if projected_chord else linear_x
+            chords[name][key] = (chord, step_coords)
             path_rows.append(
                 {
                     "pair": name,
@@ -245,7 +280,7 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
                 )
             _save_bundle(Path(outputs[slot]), entries)
 
-    grid = np.linspace(0.0, TWO_PI, 7 * SPLINE_SAMPLES_PER_SEGMENT, endpoint=False)
+    grid = np.linspace(0.0, TWO_PI, n * SPLINE_SAMPLES_PER_SEGMENT, endpoint=False)
     dense = spline(grid)
     write_table(
         Path(outputs["centroids"]),
@@ -259,7 +294,7 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
                 "pc3": float(centroid_u[i, 2]) if k > 2 else 0.0,
                 "norm": float(np.linalg.norm(centroid_x[i])),
             }
-            for i, d in enumerate(DAYS)
+            for i, d in enumerate(classes)
         ],
     )
     write_table(
@@ -288,3 +323,7 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
         ],
     )
     write_table(Path(outputs["path"]), path_rows)
+    if "lengths" in outputs:
+        write_table(Path(outputs["lengths"]), lengths)
+    if "contract" in outputs:
+        write_values(Path(outputs["contract"]), inputs["contract"])
