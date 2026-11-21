@@ -96,6 +96,7 @@ def class_probs(value: Any) -> dict[str, float]:
 def probabilities_by_example(
     tables: Sequence[list[dict[str, Any]]],
     key: tuple[str, ...] = (EXAMPLE_COLUMN,),
+    classes: Sequence[str] = DAYS,
 ) -> dict[tuple[Any, ...], np.ndarray]:
     """``p`` per key (the metric table's example label, `EXAMPLE_COLUMN`,
     plus any sweep coordinates): each day's mass summed over the spelling
@@ -116,14 +117,14 @@ def probabilities_by_example(
     for row in first:
         k = tuple(row[c] for c in key)
         values = class_probs(row["value"])
-        missing = sorted(set(DAYS) - set(values))
+        missing = sorted(set(classes) - set(values))
         if missing:
             raise StepError(f"behavior: row {k} of the first table lacks {missing}")
-        days = np.array([values[d] for d in DAYS], dtype=np.float64)
+        days = np.array([values[d] for d in classes], dtype=np.float64)
         for table in others:
             if k not in table:
                 raise StepError(f"behavior: row {k} is missing from a spelling table")
-            days = days + np.array([table[k].get(d, 0.0) for d in DAYS])
+            days = days + np.array([table[k].get(d, 0.0) for d in classes])
         total = float(days.sum())
         if total > 1.0 + 1e-6:
             raise StepError(f"behavior: row {k} sums to {total:.6f} > 1")
@@ -162,12 +163,18 @@ class BehaviorManifold:
         )
 
     @classmethod
-    def fit(cls, p: np.ndarray, labels: Sequence[str]) -> "BehaviorManifold":
+    def fit(
+        cls, p: np.ndarray, labels: Sequence[str], classes: Sequence[str] = DAYS
+    ) -> "BehaviorManifold":
         """The manifold of per-prompt distributions ``p`` ``(n, C)`` whose
         ground-truth days are ``labels``, with the code's knots."""
         p = np.asarray(p, dtype=np.float64)
+        if set(labels) != set(classes):
+            raise StepError(
+                "behavior: the table must cover exactly the configured classes"
+            )
         centroids = np.stack(
-            [p[[label == d for label in labels]].mean(axis=0) for d in DAYS]
+            [p[[label == d for label in labels]].mean(axis=0) for d in classes]
         )
         mean, components = hellinger_pca(p, 3)
         projected = (np.sqrt(np.clip(centroids, EPS, None)) - mean) @ components.T
@@ -224,22 +231,29 @@ class BehaviorManifold:
         return h / np.clip(np.linalg.norm(h, axis=1, keepdims=True), EPS, None)
 
     @classmethod
-    def from_rows(cls, rows: list[dict[str, Any]]) -> "BehaviorManifold":
+    def from_rows(
+        cls, rows: list[dict[str, Any]], classes: Sequence[str] = DAYS
+    ) -> "BehaviorManifold":
         """The manifold the ``behavior`` step fitted, from its
         ``behavior_centroids.json`` rows (knot and distribution per day)."""
         by_day = {row["day"]: row for row in rows}
-        if set(by_day) != set(DAYS):
+        if set(by_day) != set(classes) or len(by_day) != len(rows):
             raise StepError(f"behavior: centroid rows name {sorted(by_day)}")
-        theta = np.array([float(by_day[d]["theta"]) for d in DAYS])
-        centroids = np.array([[float(by_day[d][c]) for c in CLASSES] for d in DAYS])
+        theta = np.array([float(by_day[d]["theta"]) for d in classes])
+        centroids = np.array(
+            [[float(by_day[d][c]) for c in (*classes, "other")] for d in classes]
+        )
         return cls(theta, centroids)
 
 
 def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
-    tables = [read_table(Path(inputs[spelling])) for spelling in SPELLINGS]
+    classes = list(inputs.get("classes", DAYS))
+    bins = [*classes, "other"]
+    spellings = inputs.get("spellings", SPELLINGS)
+    tables = [read_table(Path(inputs[spelling])) for spelling in spellings]
     rows = json.loads(Path(inputs["table"]).read_text())
     samples = int(inputs.get("samples", 1050))
-    probs = probabilities_by_example(tables)
+    probs = probabilities_by_example(tables, classes=classes)
     n = len(rows)
     # the metric tables label each row the way the run did: the dataset's
     # example_id, else the row index as a string
@@ -249,10 +263,11 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
             f"behavior: the baseline tables cover examples {sorted(k[0] for k in probs)[:5]}… "
             f"but the table has {n} rows labelled {ids[:5]}…"
         )
-    labels = [str(row["result"]) for row in rows]
+    label_field = inputs.get("label_field", "result")
+    labels = [str(row[label_field]) for row in rows]
     p = np.stack([probs[(label,)] for label in ids])  # (n, 8)
-    manifold = BehaviorManifold.fit(p, labels)
-    counts = [int(sum(label == d for label in labels)) for d in DAYS]
+    manifold = BehaviorManifold.fit(p, labels, classes)
+    counts = [int(sum(label == d for label in labels)) for d in classes]
     decoded = manifold.decode(manifold.theta)
     if np.abs(decoded - unit(manifold.sqrt_centroids)).max() > 1e-6:
         raise StepError("behavior: the decoded spline misses a centroid")
@@ -264,22 +279,22 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
         Path(outputs["centroids"]),
         [
             {"day": d, "n": counts[i], "theta": float(manifold.theta[i])}
-            | {c: float(manifold.centroids[i, j]) for j, c in enumerate(CLASSES)}
-            for i, d in enumerate(DAYS)
+            | {c: float(manifold.centroids[i, j]) for j, c in enumerate(bins)}
+            for i, d in enumerate(classes)
         ],
     )
     write_table(
         Path(outputs["points"]),
         [
             {EXAMPLE_COLUMN: ids[i], "day": labels[i]}
-            | {c: float(p[i, j]) for j, c in enumerate(CLASSES)}
+            | {c: float(p[i, j]) for j, c in enumerate(bins)}
             for i in range(n)
         ],
     )
     write_table(
         Path(outputs["spline"]),
         [
-            {"theta": float(g)} | {c: float(q[j]) for j, c in enumerate(CLASSES)}
+            {"theta": float(g)} | {c: float(q[j]) for j, c in enumerate(bins)}
             for g, q in zip(grid, dense)
         ],
     )

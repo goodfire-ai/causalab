@@ -1,0 +1,24 @@
+{
+  "model": {
+    "key": "meta-llama/Llama-3.1-8B",
+    "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+    "dtype": "bf16"
+  },
+  "layer": 28,
+  "classes": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+  "pca_components": 48,
+  "fit_dataset": "manifold_fig4/data",
+  "steering_dataset": "manifold_fig4/steer_prompts",
+  "projected_chord": false,
+  "answer_groups": [
+    {
+      "Monday": [" Monday"], "Tuesday": [" Tuesday"], "Wednesday": [" Wednesday"],
+      "Thursday": [" Thursday"], "Friday": [" Friday"], "Saturday": [" Saturday"], "Sunday": [" Sunday"]
+    },
+    {
+      "Monday": ["Monday"], "Tuesday": ["Tuesday"], "Wednesday": ["Wednesday"],
+      "Thursday": ["Thursday"], "Friday": ["Friday"], "Saturday": ["Saturday"], "Sunday": ["Sunday"]
+    },
+    {"Monday": [" monday"], "Friday": [" friday"], "Sunday": [" sunday"]}
+  ]
+}

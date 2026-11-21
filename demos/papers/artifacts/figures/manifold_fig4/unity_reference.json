@@ -1,0 +1,447 @@
+{
+  "model": {
+    "key": "meta-llama/Llama-3.1-8B",
+    "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+    "dtype": "bf16"
+  },
+  "jobs": {
+    "fit": 2052796,
+    "steering": [
+      "2052797_0",
+      "2052797_1",
+      "2052797_2"
+    ]
+  },
+  "source_commit": "4636b82c4e74c2cca9787f11cef707032541e018",
+  "device": "NVIDIA L40S",
+  "batch_rows": 16,
+  "waypoints": 50,
+  "prompts": 16,
+  "overall": {
+    "pairs": 21,
+    "spline": 0.32926837653632623,
+    "chord": 0.9261683729956294,
+    "spline_wins": 14,
+    "chord_wins": 7,
+    "paired_t": 5.174552261805742,
+    "paired_p": 4.607402232463301e-05
+  },
+  "by_cyclic_separation": {
+    "1": {
+      "pairs": 7,
+      "spline": 0.3285358244869765,
+      "chord": 0.23440246982034915,
+      "spline_wins": 0,
+      "chord_wins": 7,
+      "paired_t": -2.561615815931771,
+      "paired_p": 0.04281543454541399
+    },
+    "2": {
+      "pairs": 7,
+      "spline": 0.32816955190411257,
+      "chord": 1.144400663576143,
+      "spline_wins": 7,
+      "chord_wins": 0,
+      "paired_t": 14.170384488905482,
+      "paired_p": 7.716780237255378e-06
+    },
+    "3": {
+      "pairs": 7,
+      "spline": 0.33109975321788965,
+      "chord": 1.399701985590396,
+      "spline_wins": 7,
+      "chord_wins": 0,
+      "paired_t": 17.5548387914936,
+      "paired_p": 2.1924761651981943e-06
+    }
+  },
+  "source_figure_delta": {
+    "spline": -0.019335262526722574,
+    "chord": -0.002816204947521883
+  },
+  "reference_tolerance": {
+    "spline": 0.03,
+    "chord": 0.02
+  },
+  "inside_tolerance": true,
+  "energies": [
+    {
+      "method": "manifold",
+      "pair": "Monday_Tuesday",
+      "n_prompts": 16,
+      "energy_sum": 0.4538898614585892,
+      "energy_sum_dense": 0.4539209026430899,
+      "coherence": 0.7990198198838749,
+      "worst_coherence": 0.7738878414916499
+    },
+    {
+      "method": "linear",
+      "pair": "Monday_Tuesday",
+      "n_prompts": 16,
+      "energy_sum": 0.32676452152452623,
+      "energy_sum_dense": 0.326336443000724,
+      "coherence": 0.7758328394333996,
+      "worst_coherence": 0.7485071615666783
+    },
+    {
+      "method": "manifold",
+      "pair": "Monday_Wednesday",
+      "n_prompts": 16,
+      "energy_sum": 0.5786613800511637,
+      "energy_sum_dense": 0.5787067523991333,
+      "coherence": 0.803529112880161,
+      "worst_coherence": 0.7738084822927647
+    },
+    {
+      "method": "linear",
+      "pair": "Monday_Wednesday",
+      "n_prompts": 16,
+      "energy_sum": 1.1239170669250313,
+      "energy_sum_dense": 1.101251040709965,
+      "coherence": 0.7127568336159397,
+      "worst_coherence": 0.6309486436041425
+    },
+    {
+      "method": "manifold",
+      "pair": "Monday_Thursday",
+      "n_prompts": 16,
+      "energy_sum": 0.47310763004591017,
+      "energy_sum_dense": 0.47312292302494086,
+      "coherence": 0.7969334290355793,
+      "worst_coherence": 0.7606763939764534
+    },
+    {
+      "method": "linear",
+      "pair": "Monday_Thursday",
+      "n_prompts": 16,
+      "energy_sum": 1.5072371209603972,
+      "energy_sum_dense": 1.5072305990944788,
+      "coherence": 0.7050569069599456,
+      "worst_coherence": 0.6237239881146479
+    },
+    {
+      "method": "manifold",
+      "pair": "Monday_Friday",
+      "n_prompts": 16,
+      "energy_sum": 0.2175985168134508,
+      "energy_sum_dense": 0.21765291361833738,
+      "coherence": 0.7625165084836142,
+      "worst_coherence": 0.6926162414248687
+    },
+    {
+      "method": "linear",
+      "pair": "Monday_Friday",
+      "n_prompts": 16,
+      "energy_sum": 1.513483433077139,
+      "energy_sum_dense": 1.5123373109934062,
+      "coherence": 0.7214967755616282,
+      "worst_coherence": 0.6356671691742122
+    },
+    {
+      "method": "manifold",
+      "pair": "Monday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 0.22923755148125657,
+      "energy_sum_dense": 0.22929947948873775,
+      "coherence": 0.7460035905975673,
+      "worst_coherence": 0.6925014895117094
+    },
+    {
+      "method": "linear",
+      "pair": "Monday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 1.0112920388569195,
+      "energy_sum_dense": 1.0008192441840946,
+      "coherence": 0.7253126739044575,
+      "worst_coherence": 0.6588176173883653
+    },
+    {
+      "method": "manifold",
+      "pair": "Monday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 0.18119383776953737,
+      "energy_sum_dense": 0.18126133654992593,
+      "coherence": 0.7249052472831997,
+      "worst_coherence": 0.6908948751482455
+    },
+    {
+      "method": "linear",
+      "pair": "Monday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 0.1267584051059487,
+      "energy_sum_dense": 0.12682551970674405,
+      "coherence": 0.7220155827207267,
+      "worst_coherence": 0.6893317821753868
+    },
+    {
+      "method": "manifold",
+      "pair": "Tuesday_Wednesday",
+      "n_prompts": 16,
+      "energy_sum": 0.7033720744049543,
+      "energy_sum_dense": 0.7034414310080974,
+      "coherence": 0.8088523643122536,
+      "worst_coherence": 0.7889196313637967
+    },
+    {
+      "method": "linear",
+      "pair": "Tuesday_Wednesday",
+      "n_prompts": 16,
+      "energy_sum": 0.4019237386947019,
+      "energy_sum_dense": 0.40199230395730956,
+      "coherence": 0.7913271335850964,
+      "worst_coherence": 0.7631716162869111
+    },
+    {
+      "method": "manifold",
+      "pair": "Tuesday_Thursday",
+      "n_prompts": 16,
+      "energy_sum": 0.4802801846646743,
+      "energy_sum_dense": 0.4802936627656883,
+      "coherence": 0.7965221400998953,
+      "worst_coherence": 0.7646403392662364
+    },
+    {
+      "method": "linear",
+      "pair": "Tuesday_Thursday",
+      "n_prompts": 16,
+      "energy_sum": 1.1885803810281321,
+      "energy_sum_dense": 1.1788792852364882,
+      "coherence": 0.756665337138929,
+      "worst_coherence": 0.7011296939325575
+    },
+    {
+      "method": "manifold",
+      "pair": "Tuesday_Friday",
+      "n_prompts": 16,
+      "energy_sum": 0.4151936109274457,
+      "energy_sum_dense": 0.41522318685472315,
+      "coherence": 0.7956434058616062,
+      "worst_coherence": 0.7627071298747694
+    },
+    {
+      "method": "linear",
+      "pair": "Tuesday_Friday",
+      "n_prompts": 16,
+      "energy_sum": 1.4390767389764179,
+      "energy_sum_dense": 1.439031222500494,
+      "coherence": 0.7502102579634834,
+      "worst_coherence": 0.6716126887486098
+    },
+    {
+      "method": "manifold",
+      "pair": "Tuesday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 0.294360695882922,
+      "energy_sum_dense": 0.2944107957322677,
+      "coherence": 0.7621324752410124,
+      "worst_coherence": 0.6949654906018665
+    },
+    {
+      "method": "linear",
+      "pair": "Tuesday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 1.4299840324370203,
+      "energy_sum_dense": 1.4294749750761393,
+      "coherence": 0.7330868917629538,
+      "worst_coherence": 0.6505801351762557
+    },
+    {
+      "method": "manifold",
+      "pair": "Tuesday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 0.31319693611065313,
+      "energy_sum_dense": 0.3132467636322038,
+      "coherence": 0.762145207736896,
+      "worst_coherence": 0.693321520037653
+    },
+    {
+      "method": "linear",
+      "pair": "Tuesday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 1.1632356639347563,
+      "energy_sum_dense": 1.1446937408170537,
+      "coherence": 0.720135366063858,
+      "worst_coherence": 0.6579195405082459
+    },
+    {
+      "method": "manifold",
+      "pair": "Wednesday_Thursday",
+      "n_prompts": 16,
+      "energy_sum": 0.31148483540061145,
+      "energy_sum_dense": 0.3114307914383602,
+      "coherence": 0.7872806268181844,
+      "worst_coherence": 0.7630897690075216
+    },
+    {
+      "method": "linear",
+      "pair": "Wednesday_Thursday",
+      "n_prompts": 16,
+      "energy_sum": 0.2607947775890953,
+      "energy_sum_dense": 0.26082980156818936,
+      "coherence": 0.774531509200701,
+      "worst_coherence": 0.7447197042311302
+    },
+    {
+      "method": "manifold",
+      "pair": "Wednesday_Friday",
+      "n_prompts": 16,
+      "energy_sum": 0.27646962353754334,
+      "energy_sum_dense": 0.2764568637705038,
+      "coherence": 0.7887453350750593,
+      "worst_coherence": 0.7619121279199703
+    },
+    {
+      "method": "linear",
+      "pair": "Wednesday_Friday",
+      "n_prompts": 16,
+      "energy_sum": 1.1765777303202316,
+      "energy_sum_dense": 1.1543780185436177,
+      "coherence": 0.7472069680570723,
+      "worst_coherence": 0.6776488159377436
+    },
+    {
+      "method": "manifold",
+      "pair": "Wednesday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 0.24623555626906524,
+      "energy_sum_dense": 0.24624393446855142,
+      "coherence": 0.7937062265011926,
+      "worst_coherence": 0.7627088677549523
+    },
+    {
+      "method": "linear",
+      "pair": "Wednesday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 1.3060410915792766,
+      "energy_sum_dense": 1.3059569917933795,
+      "coherence": 0.7305760341904408,
+      "worst_coherence": 0.6502440319760296
+    },
+    {
+      "method": "manifold",
+      "pair": "Wednesday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 0.44800965484396765,
+      "energy_sum_dense": 0.4480611642585411,
+      "coherence": 0.7777353323139681,
+      "worst_coherence": 0.6953287592283459
+    },
+    {
+      "method": "linear",
+      "pair": "Wednesday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 1.2198952051018939,
+      "energy_sum_dense": 1.2198968223203652,
+      "coherence": 0.7035029586990086,
+      "worst_coherence": 0.6277862506748875
+    },
+    {
+      "method": "manifold",
+      "pair": "Thursday_Friday",
+      "n_prompts": 16,
+      "energy_sum": 0.2110839968281195,
+      "energy_sum_dense": 0.21116239413862842,
+      "coherence": 0.7901353451995845,
+      "worst_coherence": 0.7631123799341992
+    },
+    {
+      "method": "linear",
+      "pair": "Thursday_Friday",
+      "n_prompts": 16,
+      "energy_sum": 0.15260055186551846,
+      "energy_sum_dense": 0.15267100076498263,
+      "coherence": 0.7821221147875582,
+      "worst_coherence": 0.7529951083587889
+    },
+    {
+      "method": "manifold",
+      "pair": "Thursday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 0.1921913051138138,
+      "energy_sum_dense": 0.1922569748233003,
+      "coherence": 0.7984335169631049,
+      "worst_coherence": 0.7641631549676333
+    },
+    {
+      "method": "linear",
+      "pair": "Thursday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 1.1306411204957678,
+      "energy_sum_dense": 1.119301195276802,
+      "coherence": 0.7547312392865149,
+      "worst_coherence": 0.7038117559578154
+    },
+    {
+      "method": "manifold",
+      "pair": "Thursday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 0.22319260774246588,
+      "energy_sum_dense": 0.22325381960434265,
+      "coherence": 0.7806469156646995,
+      "worst_coherence": 0.733360302520552
+    },
+    {
+      "method": "linear",
+      "pair": "Thursday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 1.3821962770006269,
+      "energy_sum_dense": 1.3822416474474948,
+      "coherence": 0.7159346494315464,
+      "worst_coherence": 0.6605375780110307
+    },
+    {
+      "method": "manifold",
+      "pair": "Friday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 0.17713254894140254,
+      "energy_sum_dense": 0.17718254897625482,
+      "coherence": 0.8061997632575779,
+      "worst_coherence": 0.7893951189163744
+    },
+    {
+      "method": "linear",
+      "pair": "Friday_Saturday",
+      "n_prompts": 16,
+      "energy_sum": 0.16005403982397426,
+      "energy_sum_dense": 0.16011367245801963,
+      "coherence": 0.7974288286894002,
+      "worst_coherence": 0.7792390793150901
+    },
+    {
+      "method": "manifold",
+      "pair": "Friday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 0.22714988236968298,
+      "energy_sum_dense": 0.22720357216813913,
+      "coherence": 0.7781491078839619,
+      "worst_coherence": 0.7322330551296545
+    },
+    {
+      "method": "linear",
+      "pair": "Friday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 1.2165606434721616,
+      "energy_sum_dense": 1.2090354099509129,
+      "coherence": 0.740820470545791,
+      "worst_coherence": 0.6968958785489008
+    },
+    {
+      "method": "manifold",
+      "pair": "Saturday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 0.26159361660562114,
+      "energy_sum_dense": 0.26164445242974477,
+      "coherence": 0.7604206705804054,
+      "worst_coherence": 0.7303754343715809
+    },
+    {
+      "method": "linear",
+      "pair": "Saturday_Sunday",
+      "n_prompts": 16,
+      "energy_sum": 0.2119212541386793,
+      "energy_sum_dense": 0.21197209118398277,
+      "coherence": 0.7554595991163875,
+      "worst_coherence": 0.7266247096544447
+    }
+  ]
+}
